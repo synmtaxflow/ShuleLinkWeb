@@ -80,17 +80,89 @@
             }
             
             /* Service Section */
+            .service-title {
+                margin-bottom: 2rem !important;
+                padding-right: 0 !important;
+            }
             .service-title h1.display-6 {
                 font-size: 1.5rem !important;
+                line-height: 1.3 !important;
+            }
+            .service-title p.fs-5 {
+                font-size: 0.95rem !important;
             }
             .service-item {
-                margin-bottom: 1.5rem;
+                margin-bottom: 1.5rem !important;
+                padding: 25px 20px !important;
             }
             .service-item h3 {
-                font-size: 1.25rem;
+                font-size: 1.15rem !important;
+                min-height: auto !important;
+                margin-bottom: 12px !important;
             }
             .service-item p {
-                font-size: 0.9rem;
+                font-size: 0.9rem !important;
+                line-height: 1.6 !important;
+                margin-bottom: 15px !important;
+            }
+            .service-item .btn-square {
+                width: 60px !important;
+                height: 60px !important;
+                margin-bottom: 20px !important;
+            }
+            .service-item .btn-square i {
+                font-size: 24px !important;
+            }
+            .service-item a {
+                font-size: 0.9rem !important;
+            }
+            
+            /* Header/Navbar Mobile */
+            .top-bar {
+                padding: 10px 0 !important;
+            }
+            .top-bar .row {
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+            }
+            .container-fluid.px-0 {
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+            }
+            .nav-bar {
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+            }
+            .nav-bar .navbar {
+                padding: 12px 0 !important;
+            }
+            .navbar h4.d-lg-none {
+                font-size: 1.1rem !important;
+                margin: 0 !important;
+                padding-right: 15px !important;
+                padding-left: 0 !important;
+            }
+            .navbar-toggler {
+                padding: 8px 12px !important;
+                margin-left: auto !important;
+                margin-right: 0 !important;
+                border-width: 2px !important;
+                border-radius: 5px !important;
+            }
+            .navbar-toggler-icon {
+                width: 24px !important;
+                height: 24px !important;
+            }
+            .navbar-collapse {
+                margin-top: 15px !important;
+                padding-top: 15px !important;
+                border-top: 1px solid rgba(148, 0, 0, 0.1) !important;
+            }
+            .navbar-nav .nav-link {
+                padding: 10px 15px !important;
+                margin: 5px 0 !important;
+                border-radius: 5px !important;
+                display: block !important;
             }
             
             /* Features Section */
@@ -282,6 +354,57 @@
             .g-4 {
                 gap: 1rem !important;
             }
+            
+            /* Service Items - Extra Small */
+            .service-title h1.display-6 {
+                font-size: 1.3rem !important;
+            }
+            .service-item {
+                padding: 20px 15px !important;
+                margin-bottom: 1.25rem !important;
+            }
+            .service-item h3 {
+                font-size: 1.05rem !important;
+                margin-bottom: 10px !important;
+            }
+            .service-item p {
+                font-size: 0.85rem !important;
+                line-height: 1.5 !important;
+            }
+            .service-item .btn-square {
+                width: 50px !important;
+                height: 50px !important;
+                margin-bottom: 15px !important;
+            }
+            .service-item .btn-square i {
+                font-size: 20px !important;
+            }
+            
+            /* Header/Navbar - Extra Small */
+            .top-bar {
+                padding: 8px 0 !important;
+            }
+            .nav-bar {
+                padding-left: 0.75rem !important;
+                padding-right: 0.75rem !important;
+            }
+            .nav-bar .navbar {
+                padding: 10px 0 !important;
+            }
+            .navbar h4.d-lg-none {
+                font-size: 1rem !important;
+                padding-right: 10px !important;
+                padding-left: 0 !important;
+            }
+            .navbar-toggler {
+                padding: 6px 10px !important;
+                margin-right: 0 !important;
+            }
+            .navbar-nav .nav-link {
+                padding: 8px 12px !important;
+                margin: 3px 0 !important;
+                font-size: 0.9rem !important;
+            }
             .g-3 {
                 gap: 0.75rem !important;
             }
@@ -387,11 +510,579 @@
                 align-items: center;
             }
         }
+        
+        /* Gradient Background Styles */
+        .btn-primary {
+            background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important;
+            border: none !important;
+            box-shadow: 0 2px 5px rgba(148, 0, 0, 0.2) !important;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #940000 0%, #ed9999 100%) !important;
+            box-shadow: 0 3px 8px rgba(148, 0, 0, 0.3) !important;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #940000 0%, #ed9999 100%) !important;
+            border: none !important;
+            box-shadow: 0 2px 5px rgba(148, 0, 0, 0.2) !important;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important;
+            box-shadow: 0 3px 8px rgba(148, 0, 0, 0.3) !important;
+            transform: translateY(-2px);
+        }
+        
+        /* Carousel Styling */
+        .carousel-img img {
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(148, 0, 0, 0.15) !important;
+            transition: transform 0.3s ease;
+        }
+        
+        .carousel-img img:hover {
+            transform: scale(1.02);
+        }
+        
+        .carousel-text {
+            position: relative;
+        }
+        
+        .carousel-text::before {
+            content: '';
+            position: absolute;
+            left: -20px;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, #ed9999 0%, #940000 100%);
+            border-radius: 2px;
+        }
+        
+        /* Reduce Box Shadows - Light shadows only */
+        .card, .service-item, .donation-item, .event-item, .team-item, 
+        .testimonial-item, .banner-inner, .donate-text, .donate-form {
+            box-shadow: 0 2px 8px rgba(148, 0, 0, 0.1) !important;
+            border-radius: 8px;
+        }
+        
+        .card:hover, .service-item:hover, .event-item:hover, .team-item:hover {
+            box-shadow: 0 4px 12px rgba(148, 0, 0, 0.15) !important;
+            transform: translateY(-2px);
+            transition: all 0.3s ease;
+        }
+        
+        /* Background Primary with Gradient */
+        .bg-primary {
+            background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important;
+        }
+        
+        /* Section Titles Styling */
+        .section-title {
+            color: #940000 !important;
+            font-weight: 600;
+            position: relative;
+            padding-left: 15px;
+        }
+        
+        .section-title::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(180deg, #ed9999 0%, #940000 100%);
+            border-radius: 2px;
+        }
+        
+        .section-title.bg-white {
+            background: transparent !important;
+        }
+        
+        /* Service Items Styling - Complete Redesign */
+        .service-item {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(237, 153, 153, 0.03) 100%) !important;
+            border: 2px solid #940000 !important;
+            border-radius: 12px !important;
+            padding: 35px 25px !important;
+            margin-bottom: 30px !important;
+            transition: all 0.4s ease;
+            box-shadow: 0 3px 15px rgba(148, 0, 0, 0.08) !important;
+            position: relative;
+            overflow: hidden;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .service-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #ed9999 0%, #940000 100%);
+            transform: scaleX(1);
+            transition: transform 0.4s ease;
+        }
+        
+        .service-item:hover {
+            box-shadow: 0 8px 25px rgba(148, 0, 0, 0.15) !important;
+            transform: translateY(-8px);
+        }
+        
+        .service-item .btn-square {
+            width: 70px !important;
+            height: 70px !important;
+            border-radius: 12px !important;
+            background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important;
+            margin-bottom: 25px !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(148, 0, 0, 0.2) !important;
+            transition: all 0.3s ease;
+        }
+        
+        .service-item:hover .btn-square {
+            transform: rotate(5deg) scale(1.1);
+            box-shadow: 0 6px 20px rgba(148, 0, 0, 0.3) !important;
+        }
+        
+        .service-item .btn-square i {
+            color: #ffffff !important;
+            font-size: 28px !important;
+        }
+        
+        .service-item h3 {
+            font-size: 22px !important;
+            font-weight: 700 !important;
+            color: #940000 !important;
+            margin-bottom: 18px !important;
+            line-height: 1.3;
+            min-height: 60px;
+        }
+        
+        .service-item p {
+            font-size: 15px !important;
+            line-height: 1.8 !important;
+            color: #555 !important;
+            margin-bottom: 20px !important;
+            flex-grow: 1;
+        }
+        
+        .service-item a {
+            color: #940000 !important;
+            font-weight: 600 !important;
+            font-size: 15px !important;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            transition: all 0.3s ease;
+            margin-top: auto;
+        }
+        
+        .service-item a:hover {
+            color: #ed9999 !important;
+            transform: translateX(5px);
+        }
+        
+        .service-item a::after {
+            content: '→';
+            margin-left: 8px;
+            transition: transform 0.3s ease;
+        }
+        
+        .service-item a:hover::after {
+            transform: translateX(5px);
+        }
+        
+        .service-title {
+            padding-right: 20px;
+        }
+        
+        .service-title h1 {
+            font-size: 36px !important;
+            font-weight: 800 !important;
+            color: #940000 !important;
+            line-height: 1.2;
+            margin-bottom: 20px !important;
+        }
+        
+        .service-title p {
+            font-size: 17px !important;
+            line-height: 1.8 !important;
+            color: #666 !important;
+        }
+        
+        /* Button Square with Gradient */
+        .btn-square {
+            background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important;
+            box-shadow: 0 2px 5px rgba(148, 0, 0, 0.15) !important;
+        }
+        
+        /* Footer Styling - Override external CSS */
+        .footer,
+        .container-fluid.footer,
+        div.footer,
+        .footer.container-fluid {
+            background-color: #000000 !important;
+            background: #000000 !important;
+            background-image: none !important;
+            color: #ffffff !important;
+        }
+        
+        /* Ensure no gradient or image background */
+        .footer::before,
+        .footer::after {
+            display: none !important;
+        }
+        
+        .footer h4 {
+            color: #ffffff !important;
+        }
+        
+        .footer p,
+        .footer .text-light {
+            color: #cccccc !important;
+        }
+        
+        .footer a {
+            color: #cccccc !important;
+        }
+        
+        .footer .btn-link {
+            color: #cccccc !important;
+        }
+        
+        /* Footer Links Hover */
+        .footer a:hover,
+        .footer .btn-link:hover {
+            color: #ed9999 !important;
+            transition: color 0.3s ease;
+        }
+        
+        /* Footer Powered By */
+        .footer-powered-by {
+            color: #ed9999 !important;
+            font-weight: 600;
+        }
+        
+        /* Progress Bar Gradient */
+        .progress-bar {
+            background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important;
+        }
+        
+        /* Social Buttons */
+        .btn-square.btn-primary {
+            background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important;
+        }
+        
+        .btn-square.btn-primary:hover {
+            background: linear-gradient(135deg, #940000 0%, #ed9999 100%) !important;
+        }
+        
+        /* Text Primary Color */
+        .text-primary {
+            color: #940000 !important;
+        }
+        
+        /* Top Bar Styling - White Background with Gradient */
+        .top-bar,
+        .container-fluid.top-bar,
+        .top-bar.bg-primary {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, #ed9999 0%, #940000 100%) 1;
+            box-shadow: 0 1px 5px rgba(148, 0, 0, 0.1);
+        }
+        
+        .top-bar *,
+        .top-bar h1,
+        .top-bar .display-5,
+        .top-bar h6,
+        .top-bar span,
+        .top-bar a,
+        .top-bar p,
+        .top-bar div {
+            color: #940000 !important;
+        }
+        
+        .top-bar .btn-square {
+            background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important;
+        }
+        
+        .top-bar .btn-square i {
+            color: #ffffff !important;
+        }
+        
+        /* Header/Navbar Styling - White Background with Gradient */
+        .navbar,
+        .navbar.bg-primary,
+        .nav-bar .navbar,
+        .navbar.bg-primary.navbar-dark {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            box-shadow: 0 2px 10px rgba(148, 0, 0, 0.15);
+            border-bottom: 3px solid transparent;
+            border-image: linear-gradient(90deg, #ed9999 0%, #940000 100%) 1;
+            padding: 15px 0 !important;
+        }
+        
+        .navbar .nav-link,
+        .navbar-nav .nav-link {
+            color: #940000 !important;
+            font-weight: 500;
+            padding: 8px 15px !important;
+            margin: 0 5px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .navbar .nav-link:hover {
+            color: #ffffff !important;
+            background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important;
+            transform: translateY(-2px);
+        }
+        
+        .navbar .nav-link.active {
+            color: #ffffff !important;
+            background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important;
+            font-weight: 600;
+        }
+        
+        .navbar-toggler-icon {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(148, 0, 0, 1)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
+        }
+        
+        .navbar-toggler {
+            border-color: #940000 !important;
+            border-width: 2px !important;
+            padding: 8px 12px !important;
+            border-radius: 5px !important;
+        }
+        
+        /* Ensure navbar has proper spacing on mobile */
+        @media (max-width: 991px) {
+            .navbar {
+                position: relative !important;
+            }
+            .navbar > .container-fluid {
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+            }
+            .nav-bar {
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+            }
+            .navbar .navbar-brand,
+            .navbar h4.d-lg-none {
+                margin-right: 10px !important;
+            }
+            .navbar-toggler {
+                margin-left: auto !important;
+                margin-right: 0 !important;
+            }
+        }
+        
+        .navbar h4 {
+            color: #940000 !important;
+        }
+        
+        .dropdown-menu {
+            background: #ffffff !important;
+            border: 1px solid rgba(148, 0, 0, 0.1);
+            box-shadow: 0 4px 15px rgba(148, 0, 0, 0.1);
+        }
+        
+        .dropdown-item {
+            color: #940000 !important;
+            padding: 10px 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .dropdown-item:hover {
+            background: linear-gradient(135deg, rgba(237, 153, 153, 0.1) 0%, rgba(148, 0, 0, 0.1) 100%) !important;
+            color: #940000 !important;
+        }
+        
+        .navbar .btn-square.btn-dark {
+            background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important;
+            border: none;
+            color: #ffffff;
+        }
+        
+        .navbar .btn-square.btn-dark:hover {
+            background: linear-gradient(135deg, #940000 0%, #ed9999 100%) !important;
+            transform: scale(1.1);
+        }
+        
+        .navbar .btn-square.btn-dark i {
+            color: #ffffff !important;
+        }
+        
+        /* Override any remaining heavy shadows */
+        .shadow, .shadow-sm, .shadow-lg {
+            box-shadow: 0 2px 8px rgba(148, 0, 0, 0.1) !important;
+        }
+        
+        /* Testimonial Styling */
+        .testimonial-item {
+            background: #ffffff !important;
+            border-radius: 15px !important;
+            padding: 30px !important;
+            box-shadow: 0 5px 20px rgba(148, 0, 0, 0.1) !important;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(148, 0, 0, 0.1);
+        }
+        
+        .testimonial-item:hover {
+            box-shadow: 0 8px 30px rgba(148, 0, 0, 0.2) !important;
+            transform: translateY(-5px);
+        }
+        
+        .testimonial-text {
+            position: relative;
+        }
+        
+        .testimonial-text p {
+            line-height: 1.8;
+            color: #333;
+        }
+        
+        .testimonial-icon-bg {
+            transition: transform 0.3s ease;
+        }
+        
+        .testimonial-item:hover .testimonial-icon-bg {
+            transform: scale(1.05);
+        }
+        
+        .testimonial-title h1 {
+            color: #940000 !important;
+            font-weight: 700;
+        }
+        
+        .testimonial-title p {
+            color: #666;
+            line-height: 1.8;
+        }
+        
+        /* Splash Screen */
+        #splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #940000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease-out;
+        }
+        
+        #splash-screen.hide {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .splash-content {
+            text-align: center;
+            color: #ffffff;
+        }
+        
+        .splash-icon {
+            font-size: 80px;
+            color: #ffffff;
+            margin-bottom: 30px;
+            animation: bounce 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0) rotate(0deg);
+            }
+            25% {
+                transform: translateY(-15px) rotate(5deg);
+            }
+            50% {
+                transform: translateY(-25px) rotate(0deg);
+            }
+            75% {
+                transform: translateY(-15px) rotate(-5deg);
+            }
+        }
+        
+        .splash-text {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+        
+        .splash-powered {
+            font-size: 16px;
+            color: #ffffff;
+            margin-top: 20px;
+            opacity: 0.9;
+        }
+        
+        .splash-loader {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 
 </head>
 
 <body>
+
+<!-- Splash Screen -->
+<div id="splash-screen">
+    <div class="splash-content">
+        <div class="splash-icon">
+            <i class="fa fa-graduation-cap"></i>
+        </div>
+        <div class="splash-text">ShuleLink</div>
+        <div class="splash-loader"></div>
+        <div class="splash-powered">Powered by EmCa Techonology</div>
+    </div>
+</div>
+
+<script>
+    // Hide splash screen after 1 second
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            var splash = document.getElementById('splash-screen');
+            splash.classList.add('hide');
+            setTimeout(function() {
+                splash.style.display = 'none';
+            }, 500);
+        }, 1000);
+    });
+</script>
 
 @include('includes.web_nav')
     <!-- Carousel Start -->
@@ -430,7 +1121,45 @@
                     </div>
                     <div class="col-lg-6">
                         <div class="carousel-img">
-                            <img class="w-100" src="img/carousel-2.jpg" alt="Image">
+                            <img class="w-100" src="{{ asset('images/S1.jpg') }}" alt="Image">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="container py-5">
+                <div class="row g-5 align-items-center">
+                    <div class="col-lg-6">
+                        <div class="carousel-text">
+                            <h1 class="display-1 text-uppercase mb-3">Comprehensive School Management</h1>
+                            <p class="fs-5 mb-5">Manage all your school operations from one centralized platform. Track attendance, manage results, handle fees, and communicate effectively with parents and students.</p>
+                            <div class="d-flex flex-wrap gap-2 mt-4">
+                                <a class="btn btn-primary py-3 px-4 me-3" href="#!">Learn More</a>
+                                <a class="btn btn-secondary py-3 px-4" href="#!">Get Started</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="carousel-img">
+                            <img class="w-100" src="{{ asset('images/S2.jpg') }}" alt="Image">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="container py-5">
+                <div class="row g-5 align-items-center">
+                    <div class="col-lg-6">
+                        <div class="carousel-text">
+                            <h1 class="display-1 text-uppercase mb-3">Empower Your Educational Institution</h1>
+                            <p class="fs-5 mb-5">Experience the power of digital transformation in education. Join schools across Tanzania that are revolutionizing their management with ShuleLink.</p>
+                            <div class="d-flex flex-wrap gap-2 mt-4">
+                                <a class="btn btn-primary py-3 px-4 me-3" href="#!">Request Demo</a>
+                                <a class="btn btn-secondary py-3 px-4" href="#!">Contact Us</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="carousel-img">
+                            <img class="w-100" src="{{ asset('images/S3.webp') }}" alt="Image">
                         </div>
                     </div>
                 </div>
@@ -492,7 +1221,7 @@
             <div class="row g-5 align-items-center">
                 <div class="col-lg-6 wow fadeIn" data-wow-delay="0.2s">
                     <div class="about-img">
-                        <img class="img-fluid w-100" src="img/about.jpg" alt="Image">
+                        <img class="img-fluid w-100" src="{{ asset('images/c1.webp') }}" alt="Image">
                     </div>
                 </div>
                 <div class="col-lg-6">
@@ -662,102 +1391,70 @@
     <!-- Features End -->
 
 
-    <!-- Donation Start -->
+    <!-- Key Features Start -->
     <div class="container-fluid py-5">
         <div class="container">
-            <div class="text-center mx-auto wow fadeIn" data-wow-delay="0.1s" style="max-width: 500px;">
-                <p class="section-title bg-white text-center text-primary px-3">Donation</p>
-                <h1 class="display-6 mb-4">Our Donation Causes Around the World</h1>
+            <div class="text-center mx-auto wow fadeIn" data-wow-delay="0.1s" style="max-width: 700px;">
+                <p class="section-title bg-white text-center text-primary px-3">Features</p>
+                <h1 class="display-6 mb-4">Powerful Features for Modern School Management</h1>
+                <p class="fs-5 mb-4">ShuleLink provides comprehensive solutions for schools, teachers, parents, and students. Powered by EmCa Technology.</p>
             </div>
             <div class="row g-4">
                 <div class="col-md-6 col-lg-4 wow fadeIn" data-wow-delay="0.1s">
-                    <div class="donation-item d-flex h-100 p-4">
-                        <div class="donation-progress d-flex flex-column flex-shrink-0 text-center me-4">
-                            <h6 class="mb-0">Raised</h6>
-                            <span class="mb-2">$8000</span>
-                            <div class="progress d-flex align-items-end w-100 h-100 mb-2">
-                                <div class="progress-bar w-100 bg-secondary" role="progressbar" aria-valuenow="85"
-                                    aria-valuemin="0" aria-valuemax="100">
-                                    <span class="fs-4">85%</span>
-                                </div>
-                            </div>
-                            <h6 class="mb-0">Goal</h6>
-                            <span>$10000</span>
-                        </div>
+                    <div class="donation-item h-100 p-4">
                         <div class="donation-detail">
                             <div class="position-relative mb-4">
-                                <img class="img-fluid w-100" src="img/donation-1.jpg" alt="">
-                                <a href="#!"
-                                    class="btn btn-sm btn-secondary px-3 position-absolute top-0 end-0">Food</a>
+                                <img class="img-fluid w-100 rounded" src="{{ asset('images/exam.jpg') }}" alt="Fee Payment Management" style="height: 200px; object-fit: cover;">
+                                <span class="badge bg-primary px-3 py-2 position-absolute top-0 end-0 m-3" style="font-size: 0.85rem;">Payments</span>
                             </div>
-                            <a href="#!" class="h3 d-inline-block">Healthy Food</a>
-                            <p>Through your donations and volunteer work, we spread kindness and support to children.
-                            </p>
-                            <a href="#!" class="btn btn-primary w-100 py-3"><i class="fa fa-plus me-2"></i>Donate
-                                Now</a>
+                            <h3 class="mb-3">Easy Fee Payment Management</h3>
+                            <p class="mb-4">ShuleLink provides easy payment of fees using control numbers through different banks or Mobile Network Operators (MNO). Parents can pay school fees conveniently from anywhere, anytime with clear fee structures and payment tracking.</p>
+                            <ul class="list-unstyled mb-4">
+                                <li><i class="fa fa-check text-primary me-2"></i>Control number payment system</li>
+                                <li><i class="fa fa-check text-primary me-2"></i>Multiple payment channels (Banks & MNO)</li>
+                                <li><i class="fa fa-check text-primary me-2"></i>Clear fee structure & tracking</li>
+                            </ul>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-4 wow fadeIn" data-wow-delay="0.13s">
-                    <div class="donation-item d-flex h-100 p-4">
-                        <div class="donation-progress d-flex flex-column flex-shrink-0 text-center me-4">
-                            <h6 class="mb-0">Raised</h6>
-                            <span class="mb-2">$8000</span>
-                            <div class="progress d-flex align-items-end w-100 h-100 mb-2">
-                                <div class="progress-bar w-100 bg-secondary" role="progressbar" aria-valuenow="95"
-                                    aria-valuemin="0" aria-valuemax="100">
-                                    <span class="fs-4">95%</span>
-                                </div>
-                            </div>
-                            <h6 class="mb-0">Goal</h6>
-                            <span>$10000</span>
-                        </div>
+                <div class="col-md-6 col-lg-4 wow fadeIn" data-wow-delay="0.3s">
+                    <div class="donation-item h-100 p-4">
                         <div class="donation-detail">
                             <div class="position-relative mb-4">
-                                <img class="img-fluid w-100" src="img/donation-2.jpg" alt="">
-                                <a href="#!"
-                                    class="btn btn-sm btn-secondary px-3 position-absolute top-0 end-0">Health</a>
+                                <img class="img-fluid w-100 rounded" src="{{ asset('images/biometric.jpg') }}" alt="Biometric Attendance" style="height: 200px; object-fit: cover;">
+                                <span class="badge bg-primary px-3 py-2 position-absolute top-0 end-0 m-3" style="font-size: 0.85rem;">Attendance</span>
                             </div>
-                            <a href="#!" class="h3 d-inline-block">Water Treatment</a>
-                            <p>Through your donations and volunteer work, we spread kindness and support to children.
-                            </p>
-                            <a href="#!" class="btn btn-primary w-100 py-3"><i class="fa fa-plus me-2"></i>Donate
-                                Now</a>
+                            <h3 class="mb-3">Biometric Fingerprint Attendance</h3>
+                            <p class="mb-4">Maintain accurate attendance records for staff, teachers, and students using advanced biometric fingerprint devices. Real-time tracking ensures accountability and provides instant attendance data for better management.</p>
+                            <ul class="list-unstyled mb-4">
+                                <li><i class="fa fa-check text-primary me-2"></i>Fingerprint biometric technology</li>
+                                <li><i class="fa fa-check text-primary me-2"></i>Real-time attendance tracking</li>
+                                <li><i class="fa fa-check text-primary me-2"></i>Staff, teachers & student management</li>
+                            </ul>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-6 col-lg-4 wow fadeIn" data-wow-delay="0.5s">
-                    <div class="donation-item d-flex h-100 p-4">
-                        <div class="donation-progress d-flex flex-column flex-shrink-0 text-center me-4">
-                            <h6 class="mb-0">Raised</h6>
-                            <span class="mb-2">$8000</span>
-                            <div class="progress d-flex align-items-end w-100 h-100 mb-2">
-                                <div class="progress-bar w-100 bg-secondary" role="progressbar" aria-valuenow="75"
-                                    aria-valuemin="0" aria-valuemax="100">
-                                    <span class="fs-4">75%</span>
-                                </div>
-                            </div>
-                            <h6 class="mb-0">Goal</h6>
-                            <span>$10000</span>
-                        </div>
+                    <div class="donation-item h-100 p-4">
                         <div class="donation-detail">
                             <div class="position-relative mb-4">
-                                <img class="img-fluid w-100" src="img/donation-3.jpg" alt="">
-                                <a href="#!"
-                                    class="btn btn-sm btn-secondary px-3 position-absolute top-0 end-0">Education</a>
+                                <img class="img-fluid w-100 rounded" src="{{ asset('images/timetable.jpg') }}" alt="Timetable & Examination Management" style="height: 200px; object-fit: cover;">
+                                <span class="badge bg-primary px-3 py-2 position-absolute top-0 end-0 m-3" style="font-size: 0.85rem;">Management</span>
                             </div>
-                            <a href="#!" class="h3 d-inline-block">Education Support</a>
-                            <p>Through your donations and volunteer work, we spread kindness and support to children.
-                            </p>
-                            <a href="#!" class="btn btn-primary w-100 py-3"><i class="fa fa-plus me-2"></i>Donate
-                                Now</a>
+                            <h3 class="mb-3">Timetable & Examination Management</h3>
+                            <p class="mb-4">Streamline timetable management, examination scheduling, and class sessions. Easier examination management and results processing with SMS notifications to parents. Real-time session alerts keep teachers informed via mobile application.</p>
+                            <ul class="list-unstyled mb-4">
+                                <li><i class="fa fa-check text-primary me-2"></i>Timetable & class session management</li>
+                                <li><i class="fa fa-check text-primary me-2"></i>Examination & results management</li>
+                                <li><i class="fa fa-check text-primary me-2"></i>Real-time SMS result notifications</li>
+                            </ul>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <!-- Donation End -->
+    <!-- Key Features End -->
 
 
     <!-- Banner Start -->
@@ -780,57 +1477,55 @@
     <!-- Banner End -->
 
 
-    <!-- Event Start -->
+    <!-- Additional Features Start -->
     <div class="container-fluid py-5">
         <div class="container">
-            <div class="text-center mx-auto wow fadeIn" data-wow-delay="0.1s" style="max-width: 500px;">
-                <p class="section-title bg-white text-center text-primary px-3">Events</p>
-                <h1 class="display-6 mb-4">Upcoming School Events & Trainings</h1>
+            <div class="text-center mx-auto wow fadeIn" data-wow-delay="0.1s" style="max-width: 700px;">
+                <p class="section-title bg-white text-center text-primary px-3">Features</p>
+                <h1 class="display-6 mb-4">More Powerful Features</h1>
+                <p class="fs-5 mb-4">Discover additional capabilities that make ShuleLink the complete school management solution. Powered by EmCa Technology.</p>
             </div>
             <div class="row g-4">
                 <div class="col-md-6 col-lg-4 wow fadeIn" data-wow-delay="0.1s">
                     <div class="event-item h-100 p-4">
-                        <img class="img-fluid w-100 mb-4" src="img/event-1.jpg" alt="">
-                        <a href="#!" class="h3 d-inline-block">ShuleLink Training Workshop</a>
-                        <p>Learn how to maximize ShuleLink features for your school operations and improve management efficiency.</p>
-                        <div class="bg-light p-4">
-                            <p class="mb-1"><i class="fa fa-clock text-primary me-2"></i>10:00 AM - 18:00 PM</p>
-                            <p class="mb-1"><i class="fa fa-calendar-alt text-primary me-2"></i>Jan 01 - Jan 10</p>
-                            <p class="mb-0"><i class="fa fa-map-marker-alt text-primary me-2"></i>123 Street, New York,
-                                USA</p>
+                        <img class="img-fluid w-100 mb-4 rounded" src="{{ asset('images/S1.jpg') }}" alt="ShuleLink Mobile App" style="height: 220px; object-fit: cover;">
+                        <h3 class="mb-3">ShuleLink Mobile App & Real-time Alerts</h3>
+                        <p class="mb-4">Access ShuleLink on the go with our mobile applications available for iOS and Android. Teachers and parents can stay connected with real-time session alerts and instant notifications delivered directly to their mobile devices.</p>
+                        <div class="bg-light p-4 rounded">
+                            <p class="mb-2"><i class="fa fa-mobile-alt text-primary me-2"></i><strong>Mobile App:</strong> iOS and Android apps for teachers and parents</p>
+                            <p class="mb-2"><i class="fa fa-bell text-primary me-2"></i><strong>Real-time Alerts:</strong> Session notifications to teachers via mobile app</p>
+                            <p class="mb-0"><i class="fa fa-comments text-primary me-2"></i><strong>Better Communication:</strong> Enhanced parent-teacher communication</p>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-6 col-lg-4 wow fadeIn" data-wow-delay="0.3s">
                     <div class="event-item h-100 p-4">
-                        <img class="img-fluid w-100 mb-4" src="img/event-2.jpg" alt="">
-                        <a href="#!" class="h3 d-inline-block">Student Performance Analytics</a>
-                        <p>Discover how ShuleLink helps schools track and improve student performance with comprehensive analytics.</p>
-                        <div class="bg-light p-4">
-                            <p class="mb-1"><i class="fa fa-clock text-primary me-2"></i>10:00 AM - 18:00 PM</p>
-                            <p class="mb-1"><i class="fa fa-calendar-alt text-primary me-2"></i>Jan 01 - Jan 10</p>
-                            <p class="mb-0"><i class="fa fa-map-marker-alt text-primary me-2"></i>123 Street, New York,
-                                USA</p>
+                        <img class="img-fluid w-100 mb-4 rounded" src="{{ asset('images/S2.jpg') }}" alt="Trust & Insights" style="height: 220px; object-fit: cover;">
+                        <h3 class="mb-3">Trust & Insights, Communication & Reports</h3>
+                        <p class="mb-4">Build trust through comprehensive analytics and insights. Enable better communication between parents and teachers, and facilitate suggestion and incidence reporting for continuous improvement.</p>
+                        <div class="bg-light p-4 rounded">
+                            <p class="mb-2"><i class="fa fa-chart-line text-primary me-2"></i><strong>Trust & Insights:</strong> Analytics and reporting for better decision making</p>
+                            <p class="mb-2"><i class="fa fa-clipboard-list text-primary me-2"></i><strong>Suggestion & Reports:</strong> Incidence reporting and feedback system</p>
+                            <p class="mb-0"><i class="fa fa-users text-primary me-2"></i><strong>Communication:</strong> Better connection between parents and teachers</p>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-6 col-lg-4 wow fadeIn" data-wow-delay="0.5s">
                     <div class="event-item h-100 p-4">
-                        <img class="img-fluid w-100 mb-4" src="img/event-3.jpg" alt="">
-                        <a href="#!" class="h3 d-inline-block">Digital Transformation Summit</a>
-                        <p>Join us for a summit on digitalizing school operations and achieving educational excellence with technology.</p>
-                        <div class="bg-light p-4">
-                            <p class="mb-1"><i class="fa fa-clock text-primary me-2"></i>10:00 AM - 18:00 PM</p>
-                            <p class="mb-1"><i class="fa fa-calendar-alt text-primary me-2"></i>Jan 01 - Jan 10</p>
-                            <p class="mb-0"><i class="fa fa-map-marker-alt text-primary me-2"></i>123 Street, New York,
-                                USA</p>
+                        <img class="img-fluid w-100 mb-4 rounded" src="{{ asset('images/S3.webp') }}" alt="Management Features" style="height: 220px; object-fit: cover;">
+                        <h3 class="mb-3">Accommodation, Roles & SMS Notifications</h3>
+                        <p class="mb-4">Complete boarding management system with accommodation tracking. Manage teachers and staff roles and permissions efficiently. Send SMS notifications for results and important updates to parents.</p>
+                        <div class="bg-light p-4 rounded">
+                            <p class="mb-2"><i class="fa fa-bed text-primary me-2"></i><strong>Accommodation:</strong> Complete boarding management system</p>
+                            <p class="mb-2"><i class="fa fa-user-shield text-primary me-2"></i><strong>Roles & Permissions:</strong> Teachers and staff role management</p>
+                            <p class="mb-0"><i class="fa fa-sms text-primary me-2"></i><strong>SMS Notifications:</strong> Result alerts and updates to parents</p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <!-- Event End -->
+    <!-- Additional Features End -->
 
 
     <!-- Donate Start -->
@@ -902,9 +1597,9 @@
                 <div class="col-md-6 col-lg-4 wow fadeIn" data-wow-delay="0.1s">
                     <div class="team-item d-flex h-100 p-4">
                         <div class="team-detail pe-4">
-                            <img class="img-fluid mb-4" src="img/team-1.jpg" alt="">
-                            <h3>Boris Johnson</h3>
-                            <span>Founder & CEO</span>
+                            <img class="img-fluid mb-4" src="{{ asset('images/H.jpg') }}" alt="Hassani Saidi Hassani" style="width: 200px; height: 200px; object-fit: cover; border-radius: 8px;">
+                            <h3>Hassani Saidi Hassani</h3>
+                            <span>Software Developer</span>
                         </div>
                         <div class="team-social bg-light d-flex flex-column justify-content-center flex-shrink-0 p-4">
                             <a class="btn btn-square btn-primary my-2" href="#!"><i class="fab fa-facebook-f"></i></a>
@@ -956,8 +1651,8 @@
             <div class="row g-5">
                 <div class="col-md-12 col-lg-4 col-xl-3 wow fadeIn" data-wow-delay="0.1s">
                     <div class="testimonial-title">
-                        <h1 class="display-6 mb-4">What People Say About Our Activities.</h1>
-                        <p class="fs-5 mb-0">We work to bring smiles, hope, and a brighter future to those in need.</p>
+                        <h1 class="display-6 mb-4">What Our Users Say About ShuleLink</h1>
+                        <p class="fs-5 mb-0">Discover how ShuleLink is transforming school management and improving communication between schools, teachers, and parents across Tanzania.</p>
                     </div>
                 </div>
                 <div class="col-md-12 col-lg-8 col-xl-9">
@@ -966,28 +1661,28 @@
                             <div class="row g-5 align-items-center">
                                 <div class="col-md-6">
                                     <div class="testimonial-img">
-                                        <img class="img-fluid" src="img/testimonial-1.jpg" alt="">
+                                        <div class="testimonial-icon-bg" style="background: linear-gradient(135deg, #ed9999 0%, #940000 100%); width: 100%; height: 300px; border-radius: 15px; display: flex; align-items: center; justify-content: center;">
+                                            <i class="fa fa-user-tie fa-5x text-white"></i>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="testimonial-text pb-5 pb-md-0">
-                                        <div class="mb-2">
+                                        <div class="mb-3">
                                             <i class="fa fa-star text-primary"></i>
                                             <i class="fa fa-star text-primary"></i>
                                             <i class="fa fa-star text-primary"></i>
                                             <i class="fa fa-star text-primary"></i>
                                             <i class="fa fa-star text-primary"></i>
                                         </div>
-                                        <p class="fs-5">Education is the foundation of change. By funding schools,
-                                            scholarships, and training programs, we can help children and adults unlock
-                                            their potential for a better future.</p>
+                                        <p class="fs-5 mb-4">ShuleLink has revolutionized how we manage our school operations. The biometric attendance system saves us hours of manual work, and parents love receiving instant SMS notifications about their children's performance and attendance. It's truly transformed our school management!</p>
                                         <div class="d-flex align-items-center">
-                                            <div class="btn-lg-square bg-light text-secondary flex-shrink-0">
-                                                <i class="fa fa-quote-right fa-2x"></i>
+                                            <div class="btn-lg-square bg-light text-secondary flex-shrink-0" style="background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important;">
+                                                <i class="fa fa-quote-right fa-2x text-white"></i>
                                             </div>
                                             <div class="ps-3">
-                                                <h5 class="mb-0">Alexander Bell</h5>
-                                                <span>CEO, Founder</span>
+                                                <h5 class="mb-0 fw-bold">Dr. Sarah Mwanga</h5>
+                                                <span class="text-muted">School Principal, Kilimanjaro Secondary School</span>
                                             </div>
                                         </div>
                                     </div>
@@ -998,28 +1693,28 @@
                             <div class="row g-5 align-items-center">
                                 <div class="col-md-6">
                                     <div class="testimonial-img">
-                                        <img class="img-fluid" src="img/testimonial-2.jpg" alt="">
+                                        <div class="testimonial-icon-bg" style="background: linear-gradient(135deg, #ed9999 0%, #940000 100%); width: 100%; height: 300px; border-radius: 15px; display: flex; align-items: center; justify-content: center;">
+                                            <i class="fa fa-chalkboard-teacher fa-5x text-white"></i>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="testimonial-text pb-5 pb-md-0">
-                                        <div class="mb-2">
+                                        <div class="mb-3">
                                             <i class="fa fa-star text-primary"></i>
                                             <i class="fa fa-star text-primary"></i>
                                             <i class="fa fa-star text-primary"></i>
                                             <i class="fa fa-star text-primary"></i>
                                             <i class="fa fa-star text-primary"></i>
                                         </div>
-                                        <p class="fs-5">Every hand extended in kindness brings us closer to a world free
-                                            from suffering. Be part of a global movement dedicated to building a future
-                                            where equality and compassion thrive.</p>
+                                        <p class="fs-5 mb-4">As a teacher, ShuleLink has made my work so much easier. I can record results, track attendance, and communicate with parents instantly. The mobile app keeps me updated with real-time alerts about my sessions. It's an essential tool for modern teaching!</p>
                                         <div class="d-flex align-items-center">
-                                            <div class="btn-lg-square bg-light text-secondary flex-shrink-0">
-                                                <i class="fa fa-quote-right fa-2x"></i>
+                                            <div class="btn-lg-square bg-light text-secondary flex-shrink-0" style="background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important;">
+                                                <i class="fa fa-quote-right fa-2x text-white"></i>
                                             </div>
                                             <div class="ps-3">
-                                                <h5 class="mb-0">Donald Pakura</h5>
-                                                <span>CEO, Founder</span>
+                                                <h5 class="mb-0 fw-bold">John Mtei</h5>
+                                                <span class="text-muted">Mathematics Teacher, Moshi High School</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1030,28 +1725,28 @@
                             <div class="row g-5 align-items-center">
                                 <div class="col-md-6">
                                     <div class="testimonial-img">
-                                        <img class="img-fluid" src="img/testimonial-3.jpg" alt="">
+                                        <div class="testimonial-icon-bg" style="background: linear-gradient(135deg, #ed9999 0%, #940000 100%); width: 100%; height: 300px; border-radius: 15px; display: flex; align-items: center; justify-content: center;">
+                                            <i class="fa fa-user-friends fa-5x text-white"></i>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="testimonial-text pb-5 pb-md-0">
-                                        <div class="mb-2">
+                                        <div class="mb-3">
                                             <i class="fa fa-star text-primary"></i>
                                             <i class="fa fa-star text-primary"></i>
                                             <i class="fa fa-star text-primary"></i>
                                             <i class="fa fa-star text-primary"></i>
                                             <i class="fa fa-star text-primary"></i>
                                         </div>
-                                        <p class="fs-5">Love and compassion have the power to heal. Through your
-                                            donations and volunteer work, we can spread kindness and support to
-                                            children, families, and communities struggling to find stability.</p>
+                                        <p class="fs-5 mb-4">I love how ShuleLink keeps me connected with my child's education. I receive SMS notifications for results, attendance, and school events. The fee payment system is so convenient - I can pay from anywhere using my mobile money. It gives me peace of mind knowing I'm always informed!</p>
                                         <div class="d-flex align-items-center">
-                                            <div class="btn-lg-square bg-light text-secondary flex-shrink-0">
-                                                <i class="fa fa-quote-right fa-2x"></i>
+                                            <div class="btn-lg-square bg-light text-secondary flex-shrink-0" style="background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important;">
+                                                <i class="fa fa-quote-right fa-2x text-white"></i>
                                             </div>
                                             <div class="ps-3">
-                                                <h5 class="mb-0">Boris Johnson</h5>
-                                                <span>CEO, Founder</span>
+                                                <h5 class="mb-0 fw-bold">Amina Hassan</h5>
+                                                <span class="text-muted">Parent, Arusha Primary School</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1066,36 +1761,16 @@
     <!-- Testimonial End -->
 
 
-    <!-- Newsletter Start -->
-    <div class="container-fluid bg-primary py-5 mt-5 wow fadeIn" data-wow-delay="0.1s">
-        <div class="container">
-            <div class="row justify-content-center">
-                <div class="col-lg-7 text-center wow fadeIn" data-wow-delay="0.5s">
-                    <h1 class="display-6 mb-4">Stay Updated with ShuleLink</h1>
-                    <div class="position-relative w-100 mb-2">
-                        <input class="form-control border-0 w-100 ps-4 pe-5" type="text" placeholder="Enter Your Email"
-                            style="height: 60px;">
-                        <button type="button"
-                            class="btn btn-lg-square shadow-none position-absolute top-0 end-0 mt-2 me-2"><i
-                                class="fa fa-paper-plane text-primary fs-4"></i></button>
-                    </div>
-                    <p class="mb-0">Get the latest updates on features, tips, and school management best practices.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Newsletter End -->
-
-
     <!-- Footer Start -->
-    <div class="container-fluid footer py-5 wow fadeIn" data-wow-delay="0.1s">
+    <div class="container-fluid footer py-5 wow fadeIn" data-wow-delay="0.1s" style="background-color: #000000 !important; background: #000000 !important;">
         <div class="container">
             <div class="row g-5 py-5">
                 <div class="col-lg-3 col-md-6">
                     <h4 class="text-light mb-4">ShuleLink Office</h4>
-                    <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>Dar es Salaam, Tanzania</p>
-                    <p class="mb-2"><i class="fa fa-phone-alt me-3"></i>+255 754 000 000</p>
+                    <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>Moshi, Kilimanjaro</p>
+                    <p class="mb-2"><i class="fa fa-phone-alt me-3"></i>+255757166599</p>
                     <p class="mb-2"><i class="fa fa-envelope me-3"></i>emca@emca.tech</p>
+                    <p class="mb-3 mt-3"><span class="footer-powered-by">Powered by EmCa Techonology</span></p>
                     <div class="d-flex pt-3">
                         <a class="btn btn-square btn-primary me-2" href="#!"><i class="fab fa-x-twitter"></i></a>
                         <a class="btn btn-square btn-primary me-2" href="#!"><i class="fab fa-facebook-f"></i></a>
@@ -1110,6 +1785,7 @@
                     <a class="btn btn-link" href="#!">Our Services</a>
                     <a class="btn btn-link" href="#!">Pricing</a>
                     <a class="btn btn-link" href="#!">Documentation</a>
+                    <p class="mb-0 mt-3"><span class="footer-powered-by">Powered by EmCa Techonology</span></p>
                 </div>
                 <div class="col-lg-3 col-md-6">
                     <h4 class="text-light mb-4">Business Hours</h4>
@@ -1119,29 +1795,31 @@
                     <h6 class="text-light">09:00 am - 12:00 pm</h6>
                     <p class="mb-1">Sunday</p>
                     <h6 class="text-light">Closed</h6>
+                    <p class="mb-0 mt-3"><span class="footer-powered-by">Powered by EmCa Techonology</span></p>
                 </div>
                 <div class="col-lg-3 col-md-6">
                     <h4 class="text-light mb-4">Gallery</h4>
                     <div class="row g-2">
                         <div class="col-4">
-                            <img class="img-fluid w-100" src="img/gallery-1.jpg" alt="">
+                            <img class="img-fluid w-100" src="{{ asset('images/S1.jpg') }}" alt="Gallery Image 1" style="height: 80px; object-fit: cover; border-radius: 4px;">
                         </div>
                         <div class="col-4">
-                            <img class="img-fluid w-100" src="img/gallery-2.jpg" alt="">
+                            <img class="img-fluid w-100" src="{{ asset('images/S2.jpg') }}" alt="Gallery Image 2" style="height: 80px; object-fit: cover; border-radius: 4px;">
                         </div>
                         <div class="col-4">
-                            <img class="img-fluid w-100" src="img/gallery-3.jpg" alt="">
+                            <img class="img-fluid w-100" src="{{ asset('images/S3.webp') }}" alt="Gallery Image 3" style="height: 80px; object-fit: cover; border-radius: 4px;">
                         </div>
                         <div class="col-4">
-                            <img class="img-fluid w-100" src="img/gallery-4.jpg" alt="">
+                            <img class="img-fluid w-100" src="{{ asset('images/timetable.jpg') }}" alt="Timetable" style="height: 80px; object-fit: cover; border-radius: 4px;">
                         </div>
                         <div class="col-4">
-                            <img class="img-fluid w-100" src="img/gallery-5.jpg" alt="">
+                            <img class="img-fluid w-100" src="{{ asset('images/exam.jpg') }}" alt="Examination" style="height: 80px; object-fit: cover; border-radius: 4px;">
                         </div>
                         <div class="col-4">
-                            <img class="img-fluid w-100" src="img/gallery-6.jpg" alt="">
+                            <img class="img-fluid w-100" src="{{ asset('images/biometric.jpg') }}" alt="Biometric" style="height: 80px; object-fit: cover; border-radius: 4px;">
                         </div>
                     </div>
+                    <p class="mb-0 mt-3"><span class="footer-powered-by">Powered by EmCa Techonology</span></p>
                 </div>
             </div>
             <div class="copyright pt-5">
@@ -1150,7 +1828,7 @@
                         &copy; <a class="fw-semi-bold" href="#!">ShuleLink</a>, All Right Reserved.
                     </div>
                     <div class="col-md-6 text-center text-md-end">
-                        Powered by <a class="fw-semi-bold" href="https://emca.tech">EMCATechnology</a>
+                        <span class="footer-powered-by">Powered by EmCa Techonology</span>
                     </div>
                 </div>
             </div>

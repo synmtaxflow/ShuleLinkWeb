@@ -89,7 +89,7 @@ class ResultManagementController extends Controller
                 }
             }
         }
-        
+
         // SECURITY: For teachers, always verify they have access to the selected subclass
         // This prevents teachers from changing subclass via form manipulation or refresh
         if ($userType === 'Teacher' && !empty($teacherID)) {
@@ -102,24 +102,24 @@ class ResultManagementController extends Controller
                     $isTeacherView = true;
                 }
             }
-            
+
             // Priority 2: If subclassFilter is set (from form submission), verify access
             if (!empty($subclassFilter) && !$isTeacherView) {
                 $subclass = Subclass::with('class')->find($subclassFilter);
                 if (!$subclass) {
                     return redirect()->route('AdmitedClasses')->with('error', 'Invalid class ID');
                 }
-                
+
                 // Verify teacher is the class teacher of this subclass
                 if ($subclass->teacherID != $teacherID) {
                     return redirect()->route('AdmitedClasses')->with('error', 'You do not have access to view results for this class');
                 }
-                
+
                 // Force teacher view mode and lock filters
                 $isTeacherView = true;
                 $classFilter = $subclass->classID; // Ensure class filter matches subclass
             }
-            
+
             // If isTeacherView is true, subclassFilter MUST be set
             if ($isTeacherView && empty($subclassFilter)) {
                 return redirect()->route('AdmitedClasses')->with('error', 'Please select a class to view results');
@@ -142,7 +142,7 @@ class ResultManagementController extends Controller
         // Get subclasses for filter (only for selected main class) with display names
         $subclasses = collect();
         $allSubclasses = collect();
-        
+
         // If coordinator view, get all subclasses for the main class
         if ($isCoordinatorResultsView && $classFilter) {
             $classSubclasses = Subclass::with('class')
@@ -150,7 +150,7 @@ class ResultManagementController extends Controller
                 ->where('status', 'Active')
                 ->orderBy('subclass_name')
                 ->get();
-            
+
             // Group by classID for consistency with other views
             $allSubclasses = $classSubclasses->groupBy('classID');
         } elseif ($userType === 'Teacher' && !empty($teacherID) && !$isCoordinatorResultsView) {
@@ -197,7 +197,7 @@ class ResultManagementController extends Controller
                 ->get()
                 ->groupBy('classID');
         }
-        
+
         // Format subclasses with display names
         foreach ($allSubclasses as $classID => $classSubclasses) {
             // If class has only one subclass and it's default (empty name), include it but show only class name
@@ -214,7 +214,7 @@ class ResultManagementController extends Controller
             } else {
                 // Single subclass with name
                 $subclassName = trim($subclass->subclass_name);
-                $displayName = $isCoordinatorResultsView 
+                $displayName = $isCoordinatorResultsView
                     ? (empty($subclassName) ? $subclass->class->class_name : $subclass->class->class_name . ' - ' . $subclassName)
                     : $subclass->class->class_name . ' ' . $subclass->subclass_name;
                 $subclasses->push((object)[
@@ -228,12 +228,12 @@ class ResultManagementController extends Controller
             // Multiple subclasses - show all with class_name + subclass_name
             foreach ($classSubclasses as $subclass) {
                 $subclassName = trim($subclass->subclass_name);
-                $displayName = empty($subclassName) 
-                    ? $subclass->class->class_name 
-                    : ($isCoordinatorResultsView 
-                        ? $subclass->class->class_name . ' - ' . $subclassName 
+                $displayName = empty($subclassName)
+                    ? $subclass->class->class_name
+                    : ($isCoordinatorResultsView
+                        ? $subclass->class->class_name . ' - ' . $subclassName
                         : $subclass->class->class_name . ' ' . $subclassName);
-                    
+
                     $subclasses->push((object)[
                         'subclassID' => $subclass->subclassID,
                         'subclass_name' => $subclass->subclass_name,
@@ -243,7 +243,7 @@ class ResultManagementController extends Controller
                 }
             }
         }
-        
+
         // Sort by class_name then subclass_name
         $subclasses = $subclasses->sortBy(function($item) {
             return $item->class_name . ' ' . $item->subclass_name;
@@ -253,7 +253,7 @@ class ResultManagementController extends Controller
         $getSubjectDetails = $request->get('getSubjectDetails', false);
         $studentIDFilter = $request->get('studentID', '');
         $typeFilterForDetails = $request->get('type', 'exam');
-        
+
         // Support both exam and term report subject details
         if ($getSubjectDetails && $studentIDFilter && (($typeFilterForDetails === 'exam' && $examFilter) || ($typeFilterForDetails === 'report' && $termFilter && $yearFilter))) {
             // Return JSON response with subject details
@@ -261,24 +261,24 @@ class ResultManagementController extends Controller
                 ->where('schoolID', $schoolID)
                 ->with(['subclass.class', 'oldSubclass.class'])
                 ->first();
-            
+
             if (!$student) {
                 return response()->json([
                     'error' => 'Student not found'
                 ], 404);
             }
-            
+
             // Check if exam has ended (for exam type only)
             if ($typeFilterForDetails === 'exam' && $examFilter) {
                 $exam = Examination::where('examID', $examFilter)
                     ->where('schoolID', $schoolID)
                     ->first();
-                
+
                 if ($exam) {
                     // Check if exam has ended (for Weekly/Monthly tests, check differently)
                     $isWeeklyTest = ($exam->exam_name === 'Weekly Test' || $exam->start_date === 'every_week' || $exam->end_date === 'every_week');
                     $isMonthlyTest = ($exam->exam_name === 'Monthly Test' || $exam->start_date === 'every_month' || $exam->end_date === 'every_month');
-                    
+
                     $examHasEnded = false;
                     if (!$isWeeklyTest && !$isMonthlyTest) {
                         try {
@@ -293,7 +293,7 @@ class ResultManagementController extends Controller
                         // For Weekly/Monthly tests, they are always ongoing, so allow viewing
                         $examHasEnded = true;
                     }
-                    
+
                     // If exam hasn't ended, don't allow viewing results
                     if (!$examHasEnded) {
                         return response()->json([
@@ -302,7 +302,7 @@ class ResultManagementController extends Controller
                     }
                 }
             }
-            
+
             // Get results for this student
             if ($typeFilterForDetails === 'report') {
                 // For term report: get all exams in the term
@@ -313,7 +313,7 @@ class ResultManagementController extends Controller
                     ->orderBy('start_date');
                 $examinations = $examinationsQuery->get();
                 $examIDs = $examinations->pluck('examID')->toArray();
-                
+
                 $results = Result::where('studentID', $studentIDFilter)
                     ->whereIn('examID', $examIDs)
                     ->whereNotNull('marks')
@@ -329,7 +329,7 @@ class ResultManagementController extends Controller
                     ->with(['classSubject.subject'])
                     ->get();
             }
-            
+
             // Get class name and classID
             $className = '';
             $classID = null;
@@ -340,13 +340,13 @@ class ResultManagementController extends Controller
                 $className = $student->oldSubclass->class->class_name ?? '';
                 $classID = $student->oldSubclass->class->classID ?? null;
             }
-            
+
             // Process results differently for exam vs term report
             $examsData = []; // Initialize outside if block for use in response
             if ($typeFilterForDetails === 'report') {
                 // For term report: group by subject and collect exam results
                 $subjectData = [];
-                
+
                 // Get all exams
                 $examinationsQuery = Examination::where('schoolID', $schoolID)
                     ->where('year', $yearFilter)
@@ -354,7 +354,7 @@ class ResultManagementController extends Controller
                     ->where('approval_status', 'Approved')
                     ->orderBy('start_date');
                 $examinations = $examinationsQuery->get();
-                
+
                 foreach ($examinations as $exam) {
                     $examsData[$exam->examID] = [
                         'examID' => $exam->examID,
@@ -362,12 +362,12 @@ class ResultManagementController extends Controller
                         'start_date' => $exam->start_date
                     ];
                 }
-                
+
                 // Group results by subject
                 foreach ($results as $result) {
                     $subjectName = $result->classSubject->subject->subject_name ?? 'N/A';
                     $examID = $result->examID;
-                    
+
                     if (!isset($subjectData[$subjectName])) {
                         $subjectData[$subjectName] = [
                             'subject_name' => $subjectName,
@@ -376,12 +376,12 @@ class ResultManagementController extends Controller
                             'marks_count' => 0
                         ];
                     }
-                    
+
                     if ($result->marks !== null && $result->marks !== '') {
                         $marks = (float)$result->marks;
                         $gradePoints = $this->calculateGradePoints($marks, $schoolType, $className, $classID);
                         $grade = $result->grade ?? $gradePoints['grade'];
-                        
+
                         // Get exam name from $examsData or from result relationship
                         $examName = 'N/A';
                         if (isset($examsData[$examID]) && isset($examsData[$examID]['exam_name'])) {
@@ -389,27 +389,27 @@ class ResultManagementController extends Controller
                         } elseif ($result->examination && $result->examination->exam_name) {
                             $examName = $result->examination->exam_name;
                         }
-                        
+
                         $subjectData[$subjectName]['exams'][$examID] = [
                             'marks' => $marks,
                             'grade' => $grade,
                             'exam_name' => $examName
                         ];
-                        
+
                         $subjectData[$subjectName]['marks_sum'] += $marks;
                         $subjectData[$subjectName]['marks_count']++;
                     }
                 }
-                
+
                 // Calculate average and overall grade for each subject
                 $subjects = [];
                 $totalMarks = 0;
                 $subjectCount = 0;
                 $subjectPoints = [];
-                
+
                 foreach ($subjectData as $subjectName => $data) {
                     $average = $data['marks_count'] > 0 ? $data['marks_sum'] / $data['marks_count'] : 0;
-                    
+
                     // Calculate grade based on average using grade_definitions
                     $overallGrade = null;
                     if ($classID && $average > 0) {
@@ -423,17 +423,17 @@ class ResultManagementController extends Controller
                         elseif ($average >= 30) $overallGrade = 'D';
                         else $overallGrade = 'F';
                     }
-                    
+
                     $subjects[] = [
                         'subject_name' => $subjectName,
                         'exams' => array_values($data['exams']),
                         'average' => $average,
                         'grade' => $overallGrade
                     ];
-                    
+
                     $totalMarks += $data['marks_sum'];
                     $subjectCount += $data['marks_count'];
-                    
+
                     // Store points for division calculation
                     if ($schoolType === 'Secondary' && $average > 0) {
                         $avgGradePoints = $this->calculateGradePoints($average, $schoolType, $className, $classID);
@@ -443,7 +443,7 @@ class ResultManagementController extends Controller
                         ];
                     }
                 }
-                
+
                 $averageMarks = $subjectCount > 0 ? $totalMarks / $subjectCount : 0;
             } else {
                 // For exam: original logic
@@ -451,7 +451,7 @@ class ResultManagementController extends Controller
                 $subjectCount = 0;
                 $subjects = [];
                 $subjectPoints = [];
-                
+
                 foreach ($results as $result) {
                     if ($result->marks !== null && $result->marks !== '') {
                         $totalMarks += (float)$result->marks;
@@ -463,7 +463,7 @@ class ResultManagementController extends Controller
                         'marks' => $result->marks,
                         'grade' => $result->grade ?? $gradePoints['grade'],
                     ];
-                    
+
                     if ($schoolType === 'Secondary' && $result->marks !== null && $result->marks !== '') {
                         $subjectPoints[] = [
                             'points' => $gradePoints['points'] ?? 5,
@@ -471,15 +471,15 @@ class ResultManagementController extends Controller
                         ];
                     }
                 }
-                
+
                 $averageMarks = $subjectCount > 0 ? $totalMarks / $subjectCount : 0;
             }
-            
+
             // Calculate total points for secondary school (best 7 subjects for O-Level, best 3 for A-Level)
             $totalPoints = 0;
             if ($schoolType === 'Secondary' && !empty($subjectPoints)) {
                 $classNameLower = strtolower(preg_replace('/[\s\-]+/', '_', $className));
-                
+
                 if (in_array($classNameLower, ['form_one', 'form_two', 'form_three', 'form_four'])) {
                     // O-Level: Best 7 subjects (ascending order of points = best)
                     usort($subjectPoints, function($a, $b) {
@@ -501,21 +501,21 @@ class ResultManagementController extends Controller
                 } else {
                     $bestSubjects = $subjectPoints;
                 }
-                
+
                 // Sum points of best subjects
                 foreach ($bestSubjects as $subject) {
                     $totalPoints += $subject['points'];
                 }
             }
-            
+
             // Calculate grade/division
             $gradeDivision = $this->calculateGradeDivision($totalMarks, $averageMarks, $subjectCount, $schoolType, $className, $totalPoints, $classID);
-            
+
             // Get total students count and position for this student in their class
             // Position should be calculated per class (not overall)
             $totalStudentsCount = 0;
             $studentPosition = 0;
-            
+
             // Get student's class ID
             $studentClassID = null;
             if ($student->subclass && $student->subclass->class) {
@@ -523,7 +523,7 @@ class ResultManagementController extends Controller
             } elseif ($student->oldSubclass && $student->oldSubclass->class) {
                 $studentClassID = $student->oldSubclass->class->classID;
             }
-            
+
             if ($studentClassID) {
                 // Get all students in the same class
                 $classStudents = Student::where('schoolID', $schoolID)
@@ -537,7 +537,7 @@ class ResultManagementController extends Controller
                     })
                     ->with(['subclass.class', 'oldSubclass.class'])
                     ->get();
-                
+
                 // Get results for all students in this class
                 $classStudentsWithResults = [];
                 foreach ($classStudents as $classStudent) {
@@ -549,7 +549,7 @@ class ResultManagementController extends Controller
                             ->where('approval_status', 'Approved');
                         $examinations = $examinationsQuery->get();
                         $examIDs = $examinations->pluck('examID')->toArray();
-                        
+
                         $classStudentResults = Result::where('studentID', $classStudent->studentID)
                             ->whereIn('examID', $examIDs)
                             ->whereNotNull('marks')
@@ -565,32 +565,32 @@ class ResultManagementController extends Controller
                             ->with(['classSubject.subject'])
                             ->get();
                     }
-                    
+
                     if ($classStudentResults->isNotEmpty()) {
                         if ($typeFilterForDetails === 'report') {
                             // For term report: calculate average per exam, then overall average
                             $examAverages = [];
                             $examResultsByExam = $classStudentResults->groupBy('examID');
-                            
+
                             foreach ($examResultsByExam as $examID => $examResults) {
                                 $examTotalMarks = 0;
                                 $examSubjectCount = 0;
-                                
+
                                 foreach ($examResults as $examResult) {
                                     if ($examResult->marks !== null && $examResult->marks !== '') {
                                         $examTotalMarks += (float)$examResult->marks;
                                         $examSubjectCount++;
                                     }
                                 }
-                                
+
                                 if ($examSubjectCount > 0) {
                                     $examAverages[] = $examTotalMarks / $examSubjectCount;
                                 }
                             }
-                            
+
                             // Overall average is average of exam averages
                             $overallAverage = count($examAverages) > 0 ? array_sum($examAverages) / count($examAverages) : 0;
-                            
+
                             $classStudentsWithResults[] = [
                                 'student' => $classStudent,
                                 'average_marks' => $overallAverage,
@@ -602,13 +602,13 @@ class ResultManagementController extends Controller
                             $classStudentTotalMarks = 0;
                             $classStudentSubjectCount = 0;
                             $classStudentSubjectPoints = [];
-                            
+
                             foreach ($classStudentResults as $classResult) {
                                 if ($classResult->marks !== null && $classResult->marks !== '') {
                                     $classStudentTotalMarks += (float)$classResult->marks;
                                     $classStudentSubjectCount++;
                                 }
-                                
+
                                 if ($schoolType === 'Secondary' && $classResult->marks !== null && $classResult->marks !== '') {
                                     // Get classID for this student
                                     $studentClassID = null;
@@ -621,7 +621,7 @@ class ResultManagementController extends Controller
                                     $classStudentSubjectPoints[] = $classGradePoints['points'] ?? 5;
                                 }
                             }
-                            
+
                             // Calculate total points for secondary
                             $classStudentTotalPoints = 0;
                             if ($schoolType === 'Secondary' && !empty($classStudentSubjectPoints)) {
@@ -638,7 +638,7 @@ class ResultManagementController extends Controller
                                     $classStudentTotalPoints = array_sum($bestSubjects);
                                 }
                             }
-                            
+
                             $classStudentsWithResults[] = [
                                 'student' => $classStudent,
                                 'total_marks' => $classStudentTotalMarks,
@@ -648,9 +648,9 @@ class ResultManagementController extends Controller
                         }
                     }
                 }
-                
+
                 $totalStudentsCount = count($classStudentsWithResults);
-                
+
                 // Sort students by performance (same logic as in frontend)
                 if ($typeFilterForDetails === 'report') {
                     // For term report: sort by average (descending for primary, by grade then average for secondary)
@@ -661,7 +661,7 @@ class ResultManagementController extends Controller
                             // Calculate grade for average using grade_definitions
                             $avgA = $a['average_marks'] ?? 0;
                             $avgB = $b['average_marks'] ?? 0;
-                            
+
                             // Get classID for students
                             $classIDA = null;
                             $classIDB = null;
@@ -679,14 +679,14 @@ class ResultManagementController extends Controller
                                     $classIDB = $b['student']->oldSubclass->class->classID ?? null;
                                 }
                             }
-                            
+
                             $gradeResultA = $classIDA ? $this->getGradeFromDefinition($avgA, $classIDA) : null;
                             $gradeResultB = $classIDB ? $this->getGradeFromDefinition($avgB, $classIDB) : null;
                             $gradeA = $gradeResultA['grade'] ?? (($avgA >= 75) ? 'A' : (($avgA >= 65) ? 'B' : (($avgA >= 45) ? 'C' : (($avgA >= 30) ? 'D' : 'F'))));
                             $gradeB = $gradeResultB['grade'] ?? (($avgB >= 75) ? 'A' : (($avgB >= 65) ? 'B' : (($avgB >= 45) ? 'C' : (($avgB >= 30) ? 'D' : 'F'))));
                             $orderA = $gradeOrder[$gradeA] ?? 999;
                             $orderB = $gradeOrder[$gradeB] ?? 999;
-                            
+
                             if ($orderA != $orderB) {
                                 return $orderA <=> $orderB; // Lower number = better grade
                             }
@@ -716,7 +716,7 @@ class ResultManagementController extends Controller
                         });
                     }
                 }
-                
+
                 // Find position of current student
                 foreach ($classStudentsWithResults as $index => $classStudentData) {
                     if ($classStudentData['student']->studentID == $studentIDFilter) {
@@ -725,19 +725,19 @@ class ResultManagementController extends Controller
                     }
                 }
             }
-            
+
             // Get student photo path or placeholder
             $studentPhoto = null;
             if ($student->photo) {
                 $studentPhoto = asset('userImages/' . $student->photo);
             } else {
                 // Use placeholder based on gender
-                $placeholderPath = $student->gender === 'Female' 
+                $placeholderPath = $student->gender === 'Female'
                     ? asset('placeholder/female.png')
                     : asset('placeholder/male.png');
                 $studentPhoto = $placeholderPath;
             }
-            
+
             $responseData = [
                 'subjects' => $subjects,
                 'student' => [
@@ -757,7 +757,7 @@ class ResultManagementController extends Controller
                 'totalStudentsCount' => $totalStudentsCount,
                 'position' => $studentPosition
             ];
-            
+
             // For term report, include exams data
             if ($typeFilterForDetails === 'report') {
                 // Use the exams we already fetched earlier
@@ -765,7 +765,7 @@ class ResultManagementController extends Controller
                 $responseData['term'] = $termFilter;
                 $responseData['year'] = $yearFilter;
             }
-            
+
             return response()->json($responseData);
         }
 
@@ -790,7 +790,7 @@ class ResultManagementController extends Controller
                 // Check if exam has ended (for Weekly/Monthly tests, check differently)
                 $isWeeklyTest = ($exam->exam_name === 'Weekly Test' || $exam->start_date === 'every_week' || $exam->end_date === 'every_week');
                 $isMonthlyTest = ($exam->exam_name === 'Monthly Test' || $exam->start_date === 'every_month' || $exam->end_date === 'every_month');
-                
+
                 $examHasEnded = false;
                 if (!$isWeeklyTest && !$isMonthlyTest) {
                     try {
@@ -805,7 +805,7 @@ class ResultManagementController extends Controller
                     // For Weekly/Monthly tests, they are always ongoing, so allow viewing
                     $examHasEnded = true;
                 }
-                
+
                 // If exam hasn't ended, don't allow viewing results
                 if (!$examHasEnded) {
                     return view('Admin.result_management', [
@@ -818,6 +818,7 @@ class ResultManagementController extends Controller
                             ->where('status', 'Active')
                             ->orderBy('subject_name')
                             ->get(),
+                            'students' => collect(),
                         'filters' => [
                             'term' => $termFilter,
                             'year' => $yearFilter,
@@ -832,7 +833,7 @@ class ResultManagementController extends Controller
                         'resultsData' => [],
                     ]);
                 }
-                
+
                 // Get all result approvals for this exam
                 $resultApprovals = ResultApproval::where('examID', $examFilter)
                     ->orderBy('approval_order')
@@ -848,7 +849,7 @@ class ResultManagementController extends Controller
                     if (! $allApproved) {
                         // Find the first pending approval
                         $firstPendingApproval = $resultApprovals->firstWhere('status', 'pending');
-                        
+
                         if ($firstPendingApproval) {
                             // Get role name
                             $role = Role::find($firstPendingApproval->role_id);
@@ -857,7 +858,7 @@ class ResultManagementController extends Controller
                             if ($role && method_exists($role, 'getNameAttribute')) {
                                 $roleName = $role->name ?? 'Unknown Role';
                             }
-                            
+
                             return view('Admin.result_management', [
                                 'error' => "Result unavailable. Wait approval of {$roleName}.",
                                 'availableYears' => $availableYears,
@@ -868,6 +869,7 @@ class ResultManagementController extends Controller
                                     ->where('status', 'Active')
                                     ->orderBy('subject_name')
                                     ->get(),
+                                'students' => collect(),
                                 'filters' => [
                                     'term' => $termFilter,
                                     'year' => $yearFilter,
@@ -891,7 +893,7 @@ class ResultManagementController extends Controller
                                 if ($role && method_exists($role, 'getNameAttribute')) {
                                     $roleName = $role->name ?? 'Unknown Role';
                                 }
-                                
+
                                 return view('Admin.result_management', [
                                     'error' => "Result unavailable. Approval was rejected by {$roleName}.",
                                     'availableYears' => $availableYears,
@@ -902,6 +904,7 @@ class ResultManagementController extends Controller
                                         ->where('status', 'Active')
                                         ->orderBy('subject_name')
                                         ->get(),
+                                        'students' => collect(),
                                     'filters' => [
                                         'term' => $termFilter,
                                         'year' => $yearFilter,
@@ -941,13 +944,13 @@ class ResultManagementController extends Controller
                     // If isTeacherView is true but no subclassFilter, redirect back
                     return redirect()->route('AdmitedClasses')->with('error', 'Please select a class to view results');
                 }
-                
+
                 // Verify teacher has access to this subclass
                 $subclass = Subclass::find($subclassFilter);
                 if (!$subclass || $subclass->teacherID != $teacherID) {
                     return redirect()->route('AdmitedClasses')->with('error', 'You do not have access to view results for this class');
                 }
-                
+
                 // ALWAYS filter by the specific subclass - no exceptions
                 $studentQuery->where('subclassID', $subclassFilter);
             } elseif ($subclassFilter) {
@@ -983,7 +986,7 @@ class ResultManagementController extends Controller
 
         // Get results data
         $resultsData = [];
-        
+
         // Only process if we have term and year (required for results)
         if ($termFilter && $yearFilter) {
             if ($typeFilter === 'exam') {
@@ -1012,7 +1015,7 @@ class ResultManagementController extends Controller
                 $studentsWithResults = $studentsWithResults->sortBy(function($item) use ($gradeOrder, $schoolType) {
                     $grade = $item['result']['grade'] ?? 'F';
                     $order = $gradeOrder[strtoupper($grade)] ?? 999;
-                    
+
                     // For secondary, also consider division if grade is not available
                     if ($schoolType === 'Secondary' && ($order === 999 || !isset($item['result']['grade']))) {
                         $division = $item['result']['division'] ?? '';
@@ -1021,7 +1024,7 @@ class ResultManagementController extends Controller
                             $order = (int)$matches[2]; // Lower points = better
                         }
                     }
-                    
+
                     return $order;
                 });
 
@@ -1094,7 +1097,7 @@ class ResultManagementController extends Controller
                 // Check if exam has ended (for Weekly/Monthly tests, check differently)
                 $isWeeklyTest = ($exam->exam_name === 'Weekly Test' || $exam->start_date === 'every_week' || $exam->end_date === 'every_week');
                 $isMonthlyTest = ($exam->exam_name === 'Monthly Test' || $exam->start_date === 'every_month' || $exam->end_date === 'every_month');
-                
+
                 $examHasEnded = false;
                 if (!$isWeeklyTest && !$isMonthlyTest) {
                     try {
@@ -1109,12 +1112,12 @@ class ResultManagementController extends Controller
                     // For Weekly/Monthly tests, they are always ongoing, so allow viewing
                     $examHasEnded = true;
                 }
-                
+
                 // Skip this exam if it hasn't ended yet
                 if (!$examHasEnded) {
                     continue;
                 }
-                
+
                 // Get results for this student and exam - only get results with marks and allowed status
                 $results = Result::where('studentID', $student->studentID)
                     ->where('examID', $exam->examID)
@@ -1148,7 +1151,7 @@ class ResultManagementController extends Controller
                     if ($result->marks !== null && $result->marks !== '') {
                         $totalMarks += (float) $result->marks;
                         $subjectCount++;
-                        
+
                         // Calculate points for this subject
                         $gradePoints = $this->calculateGradePoints($result->marks, $schoolType, $className, $classID);
                         if ($gradePoints['points'] !== null) {
@@ -1174,7 +1177,7 @@ class ResultManagementController extends Controller
                 // Calculate total points for division (for O-Level and A-Level)
                 $totalPoints = 0;
                 $bestSevenTotalMarks = 0;
-                
+
                 if ($schoolType === 'Secondary' && in_array(strtolower(preg_replace('/[\s\-]+/', '_', $className)), ['form_one', 'form_two', 'form_three', 'form_four'])) {
                     // O-Level: Use 7 best subjects (lowest points = best performance)
                     // Sort ascending (lowest points first = best performance)
@@ -1189,7 +1192,7 @@ class ResultManagementController extends Controller
                                 ];
                             }
                         }
-                        
+
                         // Sort by points ascending (lowest points first = best)
                         usort($marksPointsArray, function($a, $b) {
                             if ($a['points'] != $b['points']) {
@@ -1198,13 +1201,13 @@ class ResultManagementController extends Controller
                             // If points are equal, sort by marks descending (higher marks = better)
                             return $b['marks'] <=> $a['marks'];
                         });
-                        
+
                         // Get best 7 (lowest points)
                         $bestSeven = array_slice($marksPointsArray, 0, min(7, count($marksPointsArray)));
-                        
+
                         // Calculate total points
                         $totalPoints = array_sum(array_column($bestSeven, 'points'));
-                        
+
                         // Calculate total marks for best 7 subjects
                         $bestSevenTotalMarks = array_sum(array_column($bestSeven, 'marks'));
                     }
@@ -1259,18 +1262,18 @@ class ResultManagementController extends Controller
         }
 
         $examinations = $examinationsQuery->orderBy('start_date')->get();
-        
+
         // Filter out exams that haven't ended yet
         $endedExaminations = $examinations->filter(function($exam) {
             // Check if exam has ended (for Weekly/Monthly tests, check differently)
             $isWeeklyTest = ($exam->exam_name === 'Weekly Test' || $exam->start_date === 'every_week' || $exam->end_date === 'every_week');
             $isMonthlyTest = ($exam->exam_name === 'Monthly Test' || $exam->start_date === 'every_month' || $exam->end_date === 'every_month');
-            
+
             if ($isWeeklyTest || $isMonthlyTest) {
                 // For Weekly/Monthly tests, they are always ongoing, so allow viewing
                 return true;
             }
-            
+
             try {
                 $today = now()->startOfDay();
                 $endDate = \Carbon\Carbon::parse($exam->end_date)->startOfDay();
@@ -1280,7 +1283,7 @@ class ResultManagementController extends Controller
                 return true;
             }
         });
-        
+
         $examIDs = $endedExaminations->pluck('examID')->toArray();
 
         if ($endedExaminations->isEmpty()) {
@@ -1343,7 +1346,7 @@ class ResultManagementController extends Controller
                         $marks = (float) $result->marks;
                         $examTotalMarks += $marks;
                         $examSubjectCount++;
-                        
+
                         // OPTIMIZATION: Calculate points here instead of querying again
                         $gradePoints = $this->calculateGradePoints($marks, $schoolType, $className, $classID);
                         if ($gradePoints['points'] !== null) {
@@ -1354,7 +1357,7 @@ class ResultManagementController extends Controller
 
                 if ($examSubjectCount > 0) {
                     $examAverage = $examTotalMarks / $examSubjectCount;
-                    
+
                     // Calculate grade for this exam based on average using grade_definitions
                     $examGrade = null;
                     if ($classID && $examAverage > 0) {
@@ -1374,7 +1377,7 @@ class ResultManagementController extends Controller
                             $examGrade = 'F';
                         }
                     }
-                    
+
                     $allExamResults[] = [
                         'exam' => $exam,
                         'total_marks' => $examTotalMarks,
@@ -1432,7 +1435,7 @@ class ResultManagementController extends Controller
                         $overallGrade = 'F';
                     }
                 }
-                
+
                 // Calculate division for Secondary using points
                 $gradeDivision = $this->calculateGradeDivision($totalMarksAllExams, $overallAverage, $totalSubjectCount, $schoolType, $className, $totalPoints, $classID);
 
@@ -1603,7 +1606,7 @@ class ResultManagementController extends Controller
                 $gradeResult = $this->getGradeFromDefinition($averageMarks, $classID);
                 return ['grade' => $gradeResult['grade'], 'division' => null];
             }
-            
+
             // Fallback to old logic if classID not provided
             if ($averageMarks >= 75) {
                 return ['grade' => 'A', 'division' => null];
@@ -1631,7 +1634,7 @@ class ResultManagementController extends Controller
         } elseif ($student->oldSubclass) {
             $mainClassID = $student->oldSubclass->classID ?? null;
         }
-        
+
         if (!$mainClassID) {
             return null;
         }
@@ -1646,7 +1649,7 @@ class ResultManagementController extends Controller
 
         // Calculate averages for all students in the class
         $studentAverages = [];
-        
+
         foreach ($classStudents as $classStudent) {
             $examinationsQuery = Examination::where('schoolID', Session::get('schoolID'))
                 ->where('year', $year)
@@ -1657,7 +1660,7 @@ class ResultManagementController extends Controller
             }
 
             $examinations = $examinationsQuery->get();
-            
+
             $totalMarks = 0;
             $totalSubjects = 0;
 
@@ -1797,7 +1800,7 @@ class ResultManagementController extends Controller
         } else {
             $title = 'Term Report';
         }
-        
+
         if ($termFilter) {
             $title .= ' - ' . ucfirst(str_replace('_', ' ', $termFilter));
         }
@@ -1945,7 +1948,7 @@ class ResultManagementController extends Controller
         } else {
             $title = 'Term Report';
         }
-        
+
         if ($termFilter) {
             $title .= ' - ' . ucfirst(str_replace('_', ' ', $termFilter));
         }
@@ -1954,12 +1957,12 @@ class ResultManagementController extends Controller
         // Add school name and title
         $sheet->setCellValue('A1', $school->school_name ?? 'School');
         $sheet->setCellValue('A2', $title);
-        
+
         // Merge cells for better appearance
         $lastCol = 'K'; // Adjust based on number of columns
         $sheet->mergeCells('A1:' . $lastCol . '1');
         $sheet->mergeCells('A2:' . $lastCol . '2');
-        
+
         // Style header
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(12);
@@ -1999,7 +2002,7 @@ class ResultManagementController extends Controller
         foreach ($students as $student) {
             if (isset($resultsData[$student->studentID])) {
                 $result = $resultsData[$student->studentID];
-                
+
                 $className = '';
                 $subclassName = '';
                 if ($student->subclass && $student->subclass->class) {

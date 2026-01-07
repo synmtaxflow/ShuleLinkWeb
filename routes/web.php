@@ -24,12 +24,24 @@ use App\Http\Controllers\ParentsContoller;
 use App\Http\Controllers\ZKTecoPushController;
 use App\Http\Controllers\ZKTecoController;
 use App\Http\Controllers\GradeDefinitionController;
+use App\Http\Controllers\PricingController;
+use App\Http\Controllers\OnlineApplicationController;
+use App\Http\Controllers\StudentRegistrationController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 
 Route::get('/', function () {
     return view('home');
 });
+
+// Pricing Route
+Route::get('pricing', [PricingController::class, 'index'])->name('pricing');
+
+// Online Application Routes
+Route::get('online-application', [OnlineApplicationController::class, 'index'])->name('online_application');
+Route::get('online-application/school/{schoolID}', [OnlineApplicationController::class, 'getSchoolDetails'])->name('online_application.school_details');
+Route::get('online-application/apply', [OnlineApplicationController::class, 'showApplicationForm'])->name('online_application.apply');
+Route::post('online-application/apply', [OnlineApplicationController::class, 'storeApplication'])->name('online_application.store');
 
 // school management route
 Route::get('school', [SchoolController::class, 'school'])->name('school');
@@ -48,6 +60,7 @@ Route::get('logout', [Auth::class, 'logout'])->name('logout');
 
 // Admin Routes
 Route::get('AdminDashboard', [AdminController::class, 'AdminDashboard'])->name('AdminDashboard');
+Route::get('admin/scheme-of-work', [AdminController::class, 'adminSchemeOfWork'])->name('admin.schemeOfWork');
 Route::get('task-management', [AdminController::class, 'taskManagement'])->name('taskManagement');
 Route::get('admin/get-teacher-tasks', [AdminController::class, 'getTeacherTasks'])->name('admin.get_teacher_tasks');
 Route::post('approve-task/{taskID}', [AdminController::class, 'approveTask'])->name('approve_task');
@@ -146,6 +159,24 @@ Route::get('teacher/update-attendance', [TeachersController::class, 'updateAtten
 Route::get('teacher/get-collected-attendance', [TeachersController::class, 'getCollectedAttendance'])->name('teacher.get_collected_attendance');
 Route::get('teacher/get-session-attendance-for-update', [TeachersController::class, 'getSessionAttendanceForUpdate'])->name('teacher.get_session_attendance_for_update');
 Route::get('teacherSubjects', [TeachersController::class, 'teacherSubjects'])->name('teacherSubjects');
+Route::get('teacher/scheme-of-work', [TeachersController::class, 'schemeOfWork'])->name('teacher.schemeOfWork');
+Route::get('teacher/scheme-of-work/create/{classSubjectID}', [TeachersController::class, 'createNewScheme'])->name('teacher.createSchemeOfWork');
+Route::post('teacher/scheme-of-work/store', [TeachersController::class, 'storeNewScheme'])->name('teacher.storeSchemeOfWork');
+Route::post('teacher/scheme-of-work/check-existing', [TeachersController::class, 'checkExistingScheme'])->name('teacher.checkExistingScheme');
+Route::get('teacher/scheme-of-work/view/{schemeOfWorkID}', [TeachersController::class, 'viewSchemeOfWork'])->name('teacher.viewSchemeOfWork');
+Route::get('teacher/scheme-of-work/manage/{schemeOfWorkID}', [TeachersController::class, 'manageSchemeOfWork'])->name('teacher.manageSchemeOfWork');
+Route::post('teacher/scheme-of-work/update/{schemeOfWorkID}', [TeachersController::class, 'updateSchemeOfWork'])->name('teacher.updateSchemeOfWork');
+Route::post('teacher/scheme-of-work/update/{schemeOfWorkID}/remark', [TeachersController::class, 'updateSchemeOfWorkRemark'])->name('teacher.updateSchemeOfWorkRemark');
+Route::get('teacher/scheme-of-work/use-existing/{classSubjectID}', [TeachersController::class, 'useExistingSchemes'])->name('teacher.useExistingSchemes');
+Route::post('teacher/scheme-of-work/use-this/{schemeOfWorkID}', [TeachersController::class, 'useThisScheme'])->name('teacher.useThisScheme');
+Route::delete('teacher/scheme-of-work/delete/{schemeOfWorkID}', [TeachersController::class, 'deleteSchemeOfWork'])->name('teacher.deleteSchemeOfWork');
+Route::get('teacher/scheme-of-work/export-pdf/{schemeOfWorkID}', [TeachersController::class, 'exportSchemeOfWorkPDF'])->name('teacher.exportSchemeOfWorkPDF');
+Route::get('teacher/scheme-of-work/export-excel/{schemeOfWorkID}', [TeachersController::class, 'exportSchemeOfWorkExcel'])->name('teacher.exportSchemeOfWorkExcel');
+Route::get('teacher/lesson-plans', [TeachersController::class, 'lessonPlans'])->name('teacher.lessonPlans');
+Route::get('teacher/get-session-attendance-stats', [TeachersController::class, 'getSessionAttendanceStats'])->name('teacher.get_session_attendance_stats');
+Route::post('teacher/lesson-plan/store', [TeachersController::class, 'storeLessonPlan'])->name('teacher.store_lesson_plan');
+Route::get('teacher/lesson-plan/get', [TeachersController::class, 'getLessonPlan'])->name('teacher.get_lesson_plan');
+Route::post('teacher/lesson-plan/update/{lessonPlanID}', [TeachersController::class, 'updateLessonPlan'])->name('teacher.update_lesson_plan');
 Route::get('teacher/exam-attendance/{classSubjectID}', [TeachersController::class, 'examAttendance'])->name('teacher.exam_attendance');
 Route::get('teacher/get-terms-for-year', [TeachersController::class, 'getTermsForYear'])->name('teacher.get_terms_for_year');
 Route::get('teacher/get-exams-for-year-term', [TeachersController::class, 'getExamsForYearTerm'])->name('teacher.get_exams_for_year_term');
@@ -204,6 +235,25 @@ Route::delete('grade_definitions/{id}', [GradeDefinitionController::class, 'dest
 // Student Management Routes
 Route::get('manage_student', [ManageStudentController::class, 'manage_student'])->name('manage_student');
 Route::get('get_students_list', [ManageStudentController::class, 'get_students'])->name('get_students_list');
+Route::get('get_student_statistics', [ManageStudentController::class, 'get_student_statistics'])->name('get_student_statistics');
+Route::get('export_students_pdf', [ManageStudentController::class, 'export_students_pdf'])->name('export_students_pdf');
+Route::get('export_students_excel', [ManageStudentController::class, 'export_students_excel'])->name('export_students_excel');
+Route::get('get_subclasses_with_stats', [ManageStudentController::class, 'getSubclassesWithStats'])->name('get_subclasses_with_stats');
+// Student Registration Routes
+Route::get('student/registration/step1', [StudentRegistrationController::class, 'showStep1'])->name('student.registration.step1');
+Route::post('student/registration/store-step1', [StudentRegistrationController::class, 'storeStep1'])->name('student.registration.store-step1');
+Route::get('student/registration/step2', [StudentRegistrationController::class, 'showStep2'])->name('student.registration.step2');
+Route::post('student/registration/store-step2', [StudentRegistrationController::class, 'storeStep2'])->name('student.registration.store-step2');
+Route::get('student/registration/step3', [StudentRegistrationController::class, 'showStep3'])->name('student.registration.step3');
+Route::post('student/registration/store-step3', [StudentRegistrationController::class, 'storeStep3'])->name('student.registration.store-step3');
+Route::get('student/registration/step4', [StudentRegistrationController::class, 'showStep4'])->name('student.registration.step4');
+Route::post('student/registration/store-step4', [StudentRegistrationController::class, 'storeStep4'])->name('student.registration.store-step4');
+Route::get('student/registration/step5', [StudentRegistrationController::class, 'showStep5'])->name('student.registration.step5');
+Route::post('student/registration/store-step5', [StudentRegistrationController::class, 'storeStep5'])->name('student.registration.store-step5');
+Route::get('student/registration/success/{studentID}', [StudentRegistrationController::class, 'showSuccess'])->name('student.registration.success');
+Route::get('student/registration/cancel', [StudentRegistrationController::class, 'cancelRegistration'])->name('student.registration.cancel');
+Route::post('student/registration/search-parent', [StudentRegistrationController::class, 'searchParentByPhone'])->name('student.registration.search-parent');
+Route::post('student/registration/store-complete', [StudentRegistrationController::class, 'storeComplete'])->name('student.registration.store-complete');
 Route::get('get_student_details/{studentID}', [ManageStudentController::class, 'get_student_details'])->name('get_student_details');
 Route::post('save_student', [ManageStudentController::class, 'save_student'])->name('save_student');
 Route::post('test_device_connection', [ManageStudentController::class, 'test_device_connection'])->name('test_device_connection');
@@ -305,6 +355,7 @@ Route::post('admin/save-session-timetable-definition', [TimeTableController::cla
 Route::get('admin/get-session-types', [TimeTableController::class, 'getSessionTypes'])->name('get_session_types');
 Route::get('admin/get-selected-subjects-for-subclass', [TimeTableController::class, 'getSelectedSubjectsForSubclass'])->name('get_selected_subjects_for_subclass');
 Route::get('admin/check-subclass-has-timetable', [TimeTableController::class, 'checkSubclassHasTimetable'])->name('check_subclass_has_timetable');
+Route::get('admin/get-all-subclasses-with-timetables', [TimeTableController::class, 'getAllSubclassesWithTimetables'])->name('get_all_subclasses_with_timetables');
 Route::get('admin/get-session-timetable', [TimeTableController::class, 'getSessionTimetable'])->name('get_session_timetable');
 Route::post('admin/save-class-session-timetables', [TimeTableController::class, 'saveClassSessionTimetables'])->name('save_class_session_timetables');
 Route::post('admin/delete-class-session-timetable', [TimeTableController::class, 'deleteClassSessionTimetable'])->name('delete_class_session_timetable');

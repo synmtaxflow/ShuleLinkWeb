@@ -43,7 +43,7 @@
     color: #940000 !important;
     font-weight: 600;
     background-color: transparent !important;
-    font-family: Arial, sans-serif !important;
+    font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif !important;
 }
 
 /* Rangi ya icon ndani ya links */
@@ -185,7 +185,7 @@
                         <li><a href="{{ route('school') }}" class="nav-link"><i class="fa fa-building"></i> School Management</a></li>
                         <li><a href="{{ route('manageTeachers') }}" class="nav-link"><i class="fa fa-users"></i> Teachers Management</a></li>
                         <li><a href="{{ route('manage_student') }}" class="nav-link"><i class="fa fa-user"></i> Students Management</a></li>
-                        <li><a href="{{ route('manage_parents') }}" class="nav-link"><i class="fa fa-user-plus"></i> Parents Management</a></li>
+
                         <li><a href="{{ route('manage_fees') }}" class="nav-link"><i class="fa fa-money"></i> Fees Management</a></li>
                         <li><a href="{{ route('manage_library') }}" class="nav-link"><i class="fa fa-book"></i> Library Management</a></li>
                         <li><a href="{{ route('manageClasses') }}" class="nav-link"><i class="fa fa-columns"></i> Classes Management</a></li>
@@ -199,6 +199,7 @@
                         <li><a href="{{ route('fingerprint_device_settings') }}" class="nav-link"><i class="fa fa-fingerprint"></i> Fingerprint Device Settings</a></li>
                         <li><a href="{{ route('timeTable') }}" class="nav-link"><i class="fa fa-clock-o"></i> Time Tables Management</a></li>
                         <li><a href="{{ route('admin.calendar') }}" class="nav-link"><i class="fa fa-calendar"></i> Calendar Management</a></li>
+                        <li><a href="{{ route('admin.schemeOfWork') }}" class="nav-link"><i class="fa fa-book"></i> Scheme of Work</a></li>
                         <li><a href="#" class="nav-link"><i class="fa fa-lightbulb-o"></i> Suggestions Management</a></li>
                         <li><a href="#" class="nav-link"><i class="fa fa-exclamation-triangle"></i> Incidence Management</a></li>
                         <li><a href="#" class="nav-link"><i class="fa fa-line-chart"></i> Performance Management</a></li>

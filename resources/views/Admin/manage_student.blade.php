@@ -40,7 +40,7 @@
         border-color: #940000;
         box-shadow: 0 0 0 0.2rem rgba(148, 0, 0, 0.25);
     }
-    
+
     /* School Details Card Styles (like manage_school) */
     .school-details-card {
         background: white;
@@ -49,7 +49,7 @@
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
         margin-bottom: 25px;
     }
-    
+
     .school-header {
         display: flex;
         align-items: center;
@@ -58,14 +58,14 @@
         padding-bottom: 15px;
         border-bottom: 2px solid #e9ecef;
     }
-    
+
     .school-title {
         font-size: 1.5rem;
         font-weight: 600;
         color: #212529;
         margin: 0;
     }
-    
+
     .school-logo-preview {
         width: 80px;
         height: 80px;
@@ -77,19 +77,19 @@
         overflow: hidden;
         border: 2px solid #e9ecef;
     }
-    
+
     .school-logo-preview img {
         max-width: 100%;
         max-height: 100%;
         object-fit: cover;
     }
-    
+
     .school-info-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
         gap: 15px;
     }
-    
+
     .info-item {
         display: flex;
         align-items: flex-start;
@@ -97,7 +97,7 @@
         background: #f8f9fa;
         border-radius: 8px;
     }
-    
+
     .info-item i {
         color: #6c757d;
         margin-right: 10px;
@@ -105,11 +105,11 @@
         font-size: 18px;
         width: 20px;
     }
-    
+
     .info-item-content {
         flex: 1;
     }
-    
+
     .info-item-label {
         font-size: 0.75rem;
         color: #6c757d;
@@ -117,13 +117,13 @@
         letter-spacing: 0.5px;
         margin-bottom: 3px;
     }
-    
+
     .info-item-value {
         font-size: 0.95rem;
         color: #212529;
         font-weight: 500;
     }
-    
+
     /* No Data Available Message Styles */
     .no-data-message {
         min-height: 300px;
@@ -132,11 +132,11 @@
         align-items: center;
         justify-content: center;
     }
-    
+
     .no-data-message i {
         opacity: 0.5;
     }
-    
+
     /* Manual Modal Styles (when Bootstrap JS is not loaded) */
     .modal {
         position: fixed;
@@ -150,18 +150,18 @@
         overflow-y: auto;
         outline: 0;
     }
-    
+
     .modal.show {
         display: block !important;
     }
-    
+
     .modal-dialog {
         position: relative;
         width: auto;
         margin: 0.5rem;
         pointer-events: none;
     }
-    
+
     .modal-content {
         position: relative;
         display: flex;
@@ -174,7 +174,7 @@
         border-radius: 0.3rem;
         outline: 0;
     }
-    
+
     .modal-backdrop {
         position: fixed;
         top: 0;
@@ -184,60 +184,60 @@
         height: 100vh;
         background-color: #000;
     }
-    
+
     .modal-backdrop.show {
         opacity: 0.5;
     }
-    
+
     @media (min-width: 576px) {
         .modal-dialog {
             max-width: 500px;
             margin: 1.75rem auto;
         }
     }
-    
+
     @media (min-width: 992px) {
         .modal-lg {
             max-width: 800px;
         }
-        
+
         .modal-xl {
             max-width: 1140px;
         }
     }
-    
+
     /* Select2 Custom Styles */
     .select2-container {
         width: 100% !important;
     }
-    
+
     .select2-container--bootstrap-5 .select2-dropdown {
         z-index: 9999;
     }
-    
+
     .select2-container--bootstrap-5 .select2-selection {
         min-height: 38px;
         border: 1px solid #ced4da;
     }
-    
+
     .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
         line-height: 36px;
     }
-    
+
     .select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {
         height: 36px;
     }
-    
+
     /* Ensure Select2 dropdown is visible in modals */
     .select2-container--bootstrap-5 .select2-dropdown {
         z-index: 10000 !important;
     }
-    
+
     /* Search Input Styles */
     .search-input-wrapper {
         position: relative;
     }
-    
+
     .search-input-wrapper i {
         position: absolute;
         left: 12px;
@@ -246,7 +246,7 @@
         color: #6c757d;
         z-index: 1;
     }
-    
+
     .search-input-wrapper #searchInput {
         padding-left: 40px;
         border-radius: 8px;
@@ -255,18 +255,18 @@
         height: 45px;
         font-size: 0.95rem;
     }
-    
+
     .search-input-wrapper #searchInput:focus {
         border-color: #940000;
         box-shadow: 0 0 0 0.2rem rgba(148, 0, 0, 0.25);
         outline: none;
     }
-    
+
     .search-input-wrapper #searchInput::placeholder {
         color: #adb5bd;
         font-style: italic;
     }
-    
+
     /* Status Filter Select Styles */
     #statusFilter {
         border-radius: 8px;
@@ -275,13 +275,13 @@
         height: 45px;
         font-size: 0.95rem;
     }
-    
+
     #statusFilter:focus {
         border-color: #940000;
         box-shadow: 0 0 0 0.2rem rgba(148, 0, 0, 0.25);
         outline: none;
     }
-    
+
     /* Student ID Card Styles */
     .id-card-container {
         display: flex;
@@ -291,7 +291,7 @@
         min-height: 500px;
         width: 100%;
     }
-    
+
     .student-id-card {
         width: 100%;
         max-width: 450px;
@@ -309,11 +309,11 @@
         display: flex;
         flex-direction: column;
     }
-    
+
     .student-id-card {
         --card-color: #940000;
     }
-    
+
     .student-id-card::before {
         content: '';
         position: absolute;
@@ -323,7 +323,7 @@
         height: 4px;
         background: var(--card-color, #940000);
     }
-    
+
     .id-card-header {
         display: flex;
         justify-content: space-between;
@@ -332,7 +332,7 @@
         padding-bottom: 15px;
         border-bottom: 2px solid #e9ecef;
     }
-    
+
     .id-card-school-logo {
         width: 60px;
         height: 60px;
@@ -344,31 +344,31 @@
         overflow: hidden;
         border: 1px solid #e9ecef;
     }
-    
+
     .id-card-school-logo img {
         max-width: 100%;
         max-height: 100%;
         object-fit: contain;
     }
-    
+
     .id-card-school-info {
         flex: 1;
         margin-left: 15px;
     }
-    
+
     .id-card-school-name {
         font-size: 1rem;
         font-weight: 700;
         margin: 0;
         line-height: 1.2;
     }
-    
+
     .id-card-school-reg {
         font-size: 0.75rem;
         color: #6c757d;
         margin: 3px 0 0 0;
     }
-    
+
     .id-card-body {
         display: flex;
         gap: 15px;
@@ -376,11 +376,11 @@
         flex: 0 1 auto;
         min-height: 0;
     }
-    
+
     .id-card-photo-section {
         flex-shrink: 0;
     }
-    
+
     .id-card-photo {
         width: 110px;
         height: 130px;
@@ -392,17 +392,17 @@
         overflow: hidden;
         border: 2px solid #940000;
     }
-    
+
     .id-card-photo img {
         width: 100%;
         height: 100%;
         object-fit: cover;
     }
-    
+
     .id-card-details {
         flex: 1;
     }
-    
+
     .id-card-title {
         font-size: 0.9rem;
         font-weight: 700;
@@ -411,26 +411,26 @@
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
-    
+
     .id-card-info-row {
         display: flex;
         margin-bottom: 6px;
         align-items: center;
     }
-    
+
     .id-card-info-label {
         font-weight: 600;
         color: #495057;
         width: 100px;
         font-size: 0.75rem;
     }
-    
+
     .id-card-info-value {
         color: #212529;
         font-size: 0.8rem;
         flex: 1;
     }
-    
+
     .id-card-footer {
         text-align: center;
         margin-top: 15px;
@@ -440,7 +440,7 @@
         width: 100%;
         display: block;
     }
-    
+
     .id-card-footer-text {
         font-size: 0.7rem;
         color: #6c757d;
@@ -448,7 +448,7 @@
         margin: 0;
         display: block;
     }
-    
+
     .id-card-header {
         display: flex;
         justify-content: space-between;
@@ -457,18 +457,18 @@
         padding-bottom: 8px;
         border-bottom: 1px solid #e9ecef;
     }
-    
+
     @media print {
         body * {
             visibility: hidden;
         }
-        
+
         .student-id-card,
         .student-id-card *,
         .id-card-container {
             visibility: visible !important;
         }
-        
+
         .id-card-container {
             position: absolute;
             left: 50%;
@@ -477,7 +477,7 @@
             width: 420px;
             height: 270px;
         }
-        
+
         .id-card-container {
             position: absolute;
             left: 50%;
@@ -486,7 +486,7 @@
             width: 450px;
             max-width: 100%;
         }
-        
+
         .student-id-card {
             position: relative;
             width: 100%;
@@ -499,7 +499,7 @@
             margin: 0;
             page-break-after: always;
         }
-        
+
         .modal-header,
         .modal-footer,
         #printIdCardBtn,
@@ -510,7 +510,7 @@
             display: none !important;
             visibility: hidden !important;
         }
-        
+
         .modal,
         .modal-dialog,
         .modal-content,
@@ -523,7 +523,7 @@
             border: none !important;
             background: white !important;
         }
-        
+
         @page {
             size: A4 landscape;
             margin: 0;
@@ -552,7 +552,7 @@
                         $canDelete = ($user_type ?? '') == 'Admin' || ($teacherPermissions ?? collect())->contains('student_delete');
                     @endphp
                     @if($canCreate)
-                    <button class="btn btn-outline-primary-custom fw-bold" id="addStudentBtn" type="button" data-bs-toggle="modal" data-bs-target="#addStudentModal">
+                    <button class="btn btn-outline-primary-custom fw-bold" id="addStudentBtn" type="button" data-bs-toggle="modal" data-bs-target="#classSelectorModal">
                         <i class="bi bi-person-plus"></i> Register New Student
                     </button>
                     @endif
@@ -735,9 +735,9 @@
 </div>
 
 <!-- Register Student Modal -->
-<div class="modal fade" id="addStudentModal" tabindex="-1" aria-labelledby="addStudentModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+<div class="modal fade" id="addStudentModal" tabindex="-1" aria-labelledby="addStudentModalLabel" aria-hidden="true" style="width: 80%">
+    <div style="width: 80%" class="modal-dialog modal-lg">
+        <div style="width: 80%" class="modal-content">
             <div class="modal-header bg-primary-custom text-white">
                 <h5 class="modal-title" id="addStudentModalLabel">
                     <i class="bi bi-person-plus"></i> Register New Student
@@ -818,7 +818,7 @@
                         <input type="file" class="form-control" id="photo" name="photo" accept="image/*">
                         <small class="text-muted">Max size: 2MB (jpg, jpeg, png)</small>
                     </div>
-                    
+
                     <!-- Health Information Section -->
                     <hr class="my-4">
                     <h6 class="mb-3 text-primary-custom"><i class="bi bi-heart-pulse"></i> Health Information</h6>
@@ -900,10 +900,10 @@
                 @csrf
                 <div class="modal-body">
                     <input type="hidden" id="editStudentID" name="studentID">
-                    
+
                     <!-- Photo Preview -->
                     <div class="mb-3 text-center" id="editPhotoPreview"></div>
-                    
+
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label for="edit_first_name" class="form-label">First Name <span class="text-danger">*</span></label>
@@ -977,7 +977,7 @@
                         <input type="file" class="form-control" id="edit_photo" name="photo" accept="image/*">
                         <small class="text-muted">Max size: 2MB (jpg, jpeg, png). Leave empty to keep current photo.</small>
                     </div>
-                    
+
                     <!-- Health Information Section -->
                     <hr class="my-4">
                     <h6 class="mb-3 text-primary-custom"><i class="bi bi-heart-pulse"></i> Health Information</h6>
@@ -1083,11 +1083,47 @@
     const canCreate = {{ ($canCreate ?? false) ? 'true' : 'false' }};
     const canUpdate = {{ ($canUpdate ?? false) ? 'true' : 'false' }};
     const canDelete = {{ ($canDelete ?? false) ? 'true' : 'false' }};
-    
+
     $(document).ready(function() {
         let activeTable, appliedTable, graduatedTable, inactiveTable, transferredTable;
         let currentStatus = 'Active';
-        
+
+        // Handle Register New Student Button Click
+        $('#addStudentBtn').on('click', function(e) {
+            e.preventDefault();
+            const modal = document.getElementById('classSelectorModal');
+            if (modal) {
+                // Try Bootstrap 5 modal
+                if (window.bootstrap && typeof bootstrap.Modal === 'function') {
+                    const bsModal = new bootstrap.Modal(modal, {
+                        backdrop: 'static',
+                        keyboard: true
+                    });
+                    bsModal.show();
+                } else if (window.jQuery && typeof jQuery.fn.modal === 'function') {
+                    // Fallback to jQuery Bootstrap modal
+                    jQuery(modal).modal('show');
+                } else {
+                    // Manual fallback
+                    modal.style.display = 'block';
+                    modal.classList.add('show');
+                    document.body.classList.add('modal-open');
+                    const backdrop = document.createElement('div');
+                    backdrop.className = 'modal-backdrop fade show';
+                    backdrop.id = 'classSelectorBackdrop';
+                    document.body.appendChild(backdrop);
+                }
+            } else {
+                console.error('classSelectorModal not found');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Class selector modal not found. Please refresh the page.',
+                    confirmButtonColor: '#940000'
+                });
+            }
+        });
+
         // Show/hide allergies details based on checkbox
         $('#has_allergies').on('change', function() {
             if ($(this).is(':checked')) {
@@ -1097,7 +1133,7 @@
                 $('#allergies_details').val('');
             }
         });
-        
+
         // Show/hide allergies details for edit form
         $('#edit_has_allergies').on('change', function() {
             if ($(this).is(':checked')) {
@@ -1118,19 +1154,19 @@
                 success: function(response) {
                     if (response.success) {
                         let subclassSelect = $('#subclassID');
-                        
+
                         // Destroy existing Select2 if it exists
                         if (subclassSelect.hasClass('select2-hidden-accessible')) {
                             subclassSelect.select2('destroy');
                         }
-                        
+
                         subclassSelect.html('<option value="">Choose a class...</option>');
                         response.subclasses.forEach(function(subclass) {
                             // Display display_name (class_name + subclass_name) e.g., "Form Four A"
                             const displayName = subclass.display_name || (subclass.class_name + ' ' + subclass.subclass_name) || subclass.subclass_name;
                             subclassSelect.append('<option value="' + subclass.subclassID + '">' + displayName + '</option>');
                         });
-                        
+
                         // Initialize Select2 for class select with search
                         subclassSelect.select2({
                             theme: 'bootstrap-5',
@@ -1159,14 +1195,14 @@
                             let displayText = fullName + (parent.phone ? ' (' + parent.phone + ')' : '');
                             parentSelect.append('<option value="' + parent.parentID + '">' + displayText + '</option>');
                         });
-                        
+
                         // Initialize Select2 for parent select with search
                         if (parentSelect.length) {
                             // Destroy existing Select2 if it exists
                             if (parentSelect.hasClass('select2-hidden-accessible')) {
                                 parentSelect.select2('destroy');
                             }
-                            
+
                             parentSelect.select2({
                                 theme: 'bootstrap-5',
                                 placeholder: 'Search and select a parent...',
@@ -1183,14 +1219,14 @@
         // Load students for a specific status
         function loadStudents(status, tableId) {
             console.log('Loading students with status:', status, 'for table:', tableId);
-            
+
             // Show loading state
             let tableContainer = $('#' + tableId).closest('.table-responsive');
             let existingNoData = tableContainer.find('.no-data-message');
             if (existingNoData.length) {
                 existingNoData.remove();
             }
-            
+
             $.ajax({
                 url: '{{ route("get_students_list") }}',
                 type: 'GET',
@@ -1201,21 +1237,21 @@
                 dataType: 'json',
                 success: function(response) {
                     console.log('Response received:', response);
-                    
+
                     if (response.success) {
                         let table = $('#' + tableId).DataTable();
                         if (!table) {
                             console.error('Table not found:', tableId);
                             return;
                         }
-                        
+
                         table.clear();
-                        
+
                         if (response.students && response.students.length > 0) {
                             console.log('Adding', response.students.length, 'students to table');
                             response.students.forEach(function(student) {
                                 let imageHtml = '<img src="' + student.photo + '" alt="' + student.full_name + '" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">';
-                                
+
                                 // Fingerprint ID display
                                 let fingerprintIdHtml = '';
                                 if (student.fingerprint_id) {
@@ -1231,14 +1267,14 @@
                                         '<button class="btn btn-sm btn-info view-student-btn" data-student-id="' + student.studentID + '" title="View More Details" style="padding: 5px 10px;">' +
                                         '<i class="bi bi-eye"></i>' +
                                         '</button>';
-                                    
+
                                     // Edit button - only if user has update permission
                                     if (canUpdate) {
                                         actionsHtml += '<button class="btn btn-sm btn-warning edit-student-btn" data-student-id="' + student.studentID + '" title="Edit Student" style="padding: 5px 10px;">' +
                                             '<i class="bi bi-pencil-square"></i>' +
                                             '</button>';
                                     }
-                                    
+
                                     // Only show fingerprint button if student doesn't have fingerprint_id
                                     if (!student.fingerprint_id) {
                                         actionsHtml += '<a href="#" class="btn btn-sm btn-success text-white send-student-to-fingerprint-btn" data-student-id="' + student.studentID + '" data-student-name="' + (student.first_name || student.full_name || '') + '" data-fingerprint-id="' + (student.fingerprint_id || '') + '" title="Send to Fingerprint Device" style="padding: 5px 10px;">' +
@@ -1250,18 +1286,18 @@
                                             '<i class="bi bi-device-hdd"></i>' +
                                             '</button>';
                                     }
-                                    
+
                                     actionsHtml += '<button class="btn btn-sm btn-primary generate-id-btn" data-student-id="' + student.studentID + '" title="Generate Student ID Card" style="padding: 5px 10px;">' +
                                         '<i class="bi bi-card-text"></i>' +
                                         '</button>';
-                                    
+
                                     // Delete button - only if user has delete permission
                                     if (canDelete) {
                                         actionsHtml += '<button class="btn btn-sm btn-danger delete-student-btn" data-student-id="' + student.studentID + '" data-student-name="' + student.full_name + '" title="Delete Student" style="padding: 5px 10px;">' +
                                             '<i class="bi bi-trash"></i>' +
                                             '</button>';
                                     }
-                                    
+
                                     actionsHtml += '</div>';
                                 } else {
                                     // For other statuses, only show view button
@@ -1274,12 +1310,12 @@
 
                                 // Add red alarm icon if student has health conditions
                                 let healthAlarmIcon = '';
-                                if ((student.is_disabled && student.is_disabled == 1) || 
-                                    (student.has_epilepsy && student.has_epilepsy == 1) || 
+                                if ((student.is_disabled && student.is_disabled == 1) ||
+                                    (student.has_epilepsy && student.has_epilepsy == 1) ||
                                     (student.has_allergies && student.has_allergies == 1)) {
                                     healthAlarmIcon = ' <i class="bi bi-exclamation-triangle-fill text-danger" title="Health Condition Alert"></i>';
                                 }
-                                
+
                                 table.row.add([
                                     imageHtml,
                                     student.admission_number,
@@ -1291,34 +1327,34 @@
                                     actionsHtml
                                 ]);
                             });
-                            
+
                             // Remove any existing no-data message
                             tableContainer.find('.no-data-message').remove();
                         } else {
                             console.log('No students found for status:', status);
-                            
+
                             // Show "No data available" message
-                            let statusText = status === 'Applied' ? 'Applied Students' : 
+                            let statusText = status === 'Applied' ? 'Applied Students' :
                                            status === 'Graduated' ? 'Graduated Students' :
                                            status === 'Transferred' ? 'Transferred Students' :
                                            status === 'Inactive' ? 'Inactive Students' :
                                            'Students';
-                            
+
                             let noDataHtml = '<div class="no-data-message text-center py-5">' +
                                 '<i class="bi bi-inbox" style="font-size: 3rem; color: #6c757d;"></i>' +
                                 '<h5 class="mt-3 text-muted">No Data Available</h5>' +
-                                '<p class="text-muted">No ' + statusText.toLowerCase() + ' found' + 
-                                (status === 'Graduated' ? ' where status = Graduated' : '') + 
+                                '<p class="text-muted">No ' + statusText.toLowerCase() + ' found' +
+                                (status === 'Graduated' ? ' where status = Graduated' : '') +
                                 (status === 'Inactive' ? ' where status = Inactive' : '') +
                                 (status === 'Transferred' ? ' where status = Transferred' : '') +
-                                (status === 'Applied' ? ' where status = Applied' : '') + 
+                                (status === 'Applied' ? ' where status = Applied' : '') +
                                 '.</p>' +
                                 '</div>';
-                            
+
                             tableContainer.find('.no-data-message').remove();
                             tableContainer.append(noDataHtml);
                         }
-                        
+
                         table.draw();
                     } else {
                         let table = $('#' + tableId).DataTable();
@@ -1326,7 +1362,7 @@
                             table.clear();
                             table.draw();
                         }
-                        
+
                         // Show no data message
                         let tableContainer = $('#' + tableId).closest('.table-responsive');
                         let noDataHtml = '<div class="no-data-message text-center py-5">' +
@@ -1343,21 +1379,21 @@
                     console.error('Response:', xhr.responseText);
                     console.error('Status:', status);
                     console.error('XHR:', xhr);
-                    
+
                     let errorMessage = 'Failed to load students';
                     if (xhr.responseJSON && xhr.responseJSON.message) {
                         errorMessage = xhr.responseJSON.message;
                     }
-                    
+
                     // Clear table on error
                     let table = $('#' + tableId).DataTable();
                     let tableContainer = $('#' + tableId).closest('.table-responsive');
-                    
+
                     if (table) {
                         table.clear();
                         table.draw();
                     }
-                    
+
                     // Show no data message
                     let noDataHtml = '<div class="no-data-message text-center py-5">' +
                         '<i class="bi bi-exclamation-triangle" style="font-size: 3rem; color: #dc3545;"></i>' +
@@ -1473,16 +1509,16 @@
             // Remove active class from all tabs
             $('#studentTabs .nav-link').removeClass('active').attr('aria-selected', 'false');
             $('#studentTabsContent .tab-pane').removeClass('show active');
-            
+
             // Add active class to clicked tab
             $('#' + tabButtonId).addClass('active').attr('aria-selected', 'true');
             $('#' + tabPaneId).addClass('show active');
-            
+
             // Load data
             console.log('Switching to tab:', tabPaneId, 'Status:', status);
             loadStudents(status, tableId);
         }
-        
+
         // Click handlers for each tab - manual switching without Bootstrap JS
         $('#active-tab').off('click').on('click', function(e) {
             e.preventDefault();
@@ -1514,14 +1550,14 @@
         $('#searchInput').on('keyup', function() {
             clearTimeout(searchTimeout);
             let searchValue = $(this).val().trim();
-            
+
             searchTimeout = setTimeout(function() {
                 let activeTabButton = $('#studentTabs button.nav-link.active');
                 let status = activeTabButton.data('status') || 'Active';
                 let activeTab = activeTabButton.data('bs-target').replace('#', '');
-                
+
                 console.log('Search triggered. Status:', status, 'Tab:', activeTab, 'Search:', searchValue);
-                
+
                 let tableMap = {
                     'active': 'activeStudentsTable',
                     'applied': 'appliedStudentsTable',
@@ -1529,7 +1565,7 @@
                     'inactive': 'inactiveStudentsTable',
                     'transferred': 'transferredStudentsTable'
                 };
-                
+
                 if (tableMap[activeTab]) {
                     loadStudents(status, tableMap[activeTab]);
                 }
@@ -1539,12 +1575,12 @@
         // Status filter - AJAX search (works with Select2)
         $('#statusFilter').on('change', function() {
             let status = $(this).val();
-            
+
             if (!status) {
                 // If "All Statuses" is selected, show Active tab
                 status = 'Active';
             }
-            
+
             // Switch to the appropriate tab
             let tabMap = {
                 'Active': 'active-tab',
@@ -1553,15 +1589,15 @@
                 'Inactive': 'inactive-tab',
                 'Transferred': 'transferred-tab'
             };
-            
+
             if (tabMap[status]) {
                 // Manually switch tab
                 $('#studentTabs button.nav-link').removeClass('active');
                 $('.tab-pane').removeClass('active show');
-                
+
                 $('#' + tabMap[status]).addClass('active');
                 $('#' + tabMap[status].replace('-tab', '')).addClass('active show');
-                
+
                 // Load students for the selected status
                 let tableMap = {
                     'Active': 'activeStudentsTable',
@@ -1570,13 +1606,13 @@
                     'Inactive': 'inactiveStudentsTable',
                     'Transferred': 'transferredStudentsTable'
                 };
-                
+
                 if (tableMap[status]) {
                     loadStudents(status, tableMap[status]);
                 }
             }
         });
-        
+
         // Also handle Select2 change event
         $('#statusFilter').on('select2:select', function() {
             $(this).trigger('change');
@@ -1585,7 +1621,7 @@
         // View Student Details
         $(document).on('click', '.view-student-btn', function() {
             let studentID = $(this).data('student-id');
-            
+
             $.ajax({
                 url: '{{ route("get_student_details", ":id") }}'.replace(':id', studentID),
                 type: 'GET',
@@ -1606,23 +1642,23 @@
                         html += '</div>';
                         html += '<span class="badge bg-' + (student.status === 'Active' ? 'success' : 'secondary') + '">' + student.status + '</span>';
                         html += '</div>';
-                        
+
                         html += '<div class="school-info-grid">';
                         html += '<div class="info-item"><i class="bi bi-gender-ambiguous"></i><div class="info-item-content"><div class="info-item-label">Gender</div><div class="info-item-value">' + student.gender + '</div></div></div>';
                         html += '<div class="info-item"><i class="bi bi-calendar-event"></i><div class="info-item-content"><div class="info-item-label">Date of Birth</div><div class="info-item-value">' + student.date_of_birth + '</div></div></div>';
                         html += '<div class="info-item"><i class="bi bi-calendar-check"></i><div class="info-item-content"><div class="info-item-label">Admission Date</div><div class="info-item-value">' + student.admission_date + '</div></div></div>';
                         html += '<div class="info-item"><i class="bi bi-book"></i><div class="info-item-content"><div class="info-item-label">Class</div><div class="info-item-value">' + student.class + '</div></div></div>';
                         html += '<div class="info-item"><i class="bi bi-geo-alt"></i><div class="info-item-content"><div class="info-item-label">Address</div><div class="info-item-value">' + student.address + '</div></div></div>';
-                        
+
                         if (student.parent) {
                             html += '<div class="info-item"><i class="bi bi-person-heart"></i><div class="info-item-content"><div class="info-item-label">Parent Name</div><div class="info-item-value">' + student.parent.full_name + '</div></div></div>';
                             html += '<div class="info-item"><i class="bi bi-telephone"></i><div class="info-item-content"><div class="info-item-label">Parent Phone</div><div class="info-item-value">' + student.parent.phone + '</div></div></div>';
                             html += '<div class="info-item"><i class="bi bi-envelope"></i><div class="info-item-content"><div class="info-item-label">Parent Email</div><div class="info-item-value">' + student.parent.email + '</div></div></div>';
                             html += '<div class="info-item"><i class="bi bi-briefcase"></i><div class="info-item-content"><div class="info-item-label">Parent Occupation</div><div class="info-item-value">' + student.parent.occupation + '</div></div></div>';
                         }
-                        
+
                         html += '</div></div>';
-                        
+
                         $('#studentDetailsContent').html(html);
                         showModal('viewStudentModal');
                     }
@@ -1640,7 +1676,7 @@
         // Edit Student Button Click
         $(document).on('click', '.edit-student-btn', function() {
             let studentID = $(this).data('student-id');
-            
+
             // Load student data
             $.ajax({
                 url: '{{ route("get_student", ":id") }}'.replace(':id', studentID),
@@ -1649,7 +1685,7 @@
                 success: function(response) {
                     if (response.success && response.student) {
                         let student = response.student;
-                        
+
                         // Set form values
                         $('#editStudentID').val(student.studentID);
                         $('#edit_first_name').val(student.first_name || '');
@@ -1663,30 +1699,30 @@
                         $('#edit_status').val(student.status || 'Active');
                         $('#edit_parentID').val(student.parentID || '');
                         $('#edit_subclassID').val(student.subclassID || '');
-                        
+
                         // Set health information fields
                         $('#edit_is_disabled').prop('checked', student.is_disabled == 1 || student.is_disabled === true);
                         $('#edit_has_epilepsy').prop('checked', student.has_epilepsy == 1 || student.has_epilepsy === true);
                         $('#edit_has_allergies').prop('checked', student.has_allergies == 1 || student.has_allergies === true);
                         $('#edit_allergies_details').val(student.allergies_details || '');
-                        
+
                         // Show/hide allergies details container based on checkbox
                         if (student.has_allergies == 1 || student.has_allergies === true) {
                             $('#editAllergiesDetailsContainer').show();
                         } else {
                             $('#editAllergiesDetailsContainer').hide();
                         }
-                        
+
                         // Show photo preview
                         let photoPreview = '';
                         if (student.photo) {
                             photoPreview = '<img src="' + student.photo + '" alt="Current Photo" class="img-fluid rounded" style="max-width: 150px; max-height: 150px; border: 2px solid #e9ecef;">';
                         }
                         $('#editPhotoPreview').html(photoPreview);
-                        
+
                         // Load subclasses and parents
                         loadEditFormData();
-                        
+
                         // Show modal
                         showModal('editStudentModal');
                     } else {
@@ -1706,7 +1742,7 @@
                 }
             });
         });
-        
+
         // Load form data for edit modal
         function loadEditFormData() {
             // Load subclasses
@@ -1718,12 +1754,12 @@
                     if (response.success) {
                         let subclassSelect = $('#edit_subclassID');
                         let currentSubclassID = subclassSelect.val();
-                        
+
                         // Destroy existing Select2 if it exists
                         if (subclassSelect.hasClass('select2-hidden-accessible')) {
                             subclassSelect.select2('destroy');
                         }
-                        
+
                         subclassSelect.html('<option value="">Choose a class...</option>');
                         response.subclasses.forEach(function(subclass) {
                             // Display display_name (class_name + subclass_name) e.g., "Form Four A"
@@ -1731,7 +1767,7 @@
                             let selected = (subclass.subclassID == currentSubclassID) ? 'selected' : '';
                             subclassSelect.append('<option value="' + subclass.subclassID + '" ' + selected + '>' + displayName + '</option>');
                         });
-                        
+
                         // Initialize Select2 for class select with search
                         subclassSelect.select2({
                             theme: 'bootstrap-5',
@@ -1740,7 +1776,7 @@
                             width: '100%',
                             dropdownParent: $('#editStudentModal')
                         });
-                        
+
                         // Set the selected value after initialization
                         if (currentSubclassID) {
                             subclassSelect.val(currentSubclassID).trigger('change');
@@ -1748,7 +1784,7 @@
                     }
                 }
             });
-            
+
             // Load parents
             $.ajax({
                 url: '{{ route("get_parents") }}',
@@ -1758,12 +1794,12 @@
                     if (response.success) {
                         let parentSelect = $('#edit_parentID');
                         let currentParentID = parentSelect.val();
-                        
+
                         // Destroy existing Select2 if it exists
                         if (parentSelect.hasClass('select2-hidden-accessible')) {
                             parentSelect.select2('destroy');
                         }
-                        
+
                         parentSelect.html('<option value="">Choose a parent...</option>');
                         response.parents.forEach(function(parent) {
                             // Build full name from first_name, middle_name, last_name
@@ -1773,7 +1809,7 @@
                             let selected = (parent.parentID == currentParentID) ? 'selected' : '';
                             parentSelect.append('<option value="' + parent.parentID + '" ' + selected + '>' + displayText + '</option>');
                         });
-                        
+
                         // Initialize Select2 for parent select with search
                         parentSelect.select2({
                             theme: 'bootstrap-5',
@@ -1782,7 +1818,7 @@
                             width: '100%',
                             dropdownParent: $('#editStudentModal')
                         });
-                        
+
                         // Set the selected value after initialization
                         if (currentParentID) {
                             parentSelect.val(currentParentID).trigger('change');
@@ -1796,7 +1832,7 @@
         // Generate ID Card Button Click
         $(document).on('click', '.generate-id-btn', function() {
             let studentID = $(this).data('student-id');
-            
+
             if (!studentID) {
                 Swal.fire({
                     icon: 'error',
@@ -1805,11 +1841,11 @@
                 });
                 return;
             }
-            
+
             // Show loading
             $('#studentIdCardContent').html('<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-3">Loading ID Card...</p></div>');
             showModal('studentIdCardModal');
-            
+
             // Load student details and school details
             $.when(
                 $.ajax({
@@ -1827,21 +1863,21 @@
                     let student = studentResponse[0].student;
                     let school = schoolResponse[0].school;
                     let cardColor = $('#idCardColorPicker').val() || '#940000';
-                    
+
                     // Generate barcode value (using admission number)
                     let barcodeValue = student.admission_number || student.studentID.toString();
-                    
+
                     // Build ID Card HTML with dynamic color
                     let idCardHtml = '<div class="student-id-card" data-card-color="' + cardColor + '" style="border-color: ' + cardColor + '; --card-color: ' + cardColor + ';">' +
                         '<div class="id-card-header" style="border-bottom-color: ' + cardColor + ';">' +
                         '<div class="id-card-school-logo">';
-                    
+
                     if (school.school_logo) {
                         idCardHtml += '<img src="' + school.school_logo + '" alt="School Logo">';
                     } else {
                         idCardHtml += '<i class="bi bi-building" style="font-size: 30px; color: #6c757d;"></i>';
                     }
-                    
+
                     idCardHtml += '</div>' +
                         '<div class="id-card-school-info">' +
                         '<h4 class="id-card-school-name" style="color: ' + cardColor + ';">' + school.school_name + '</h4>' +
@@ -1872,7 +1908,7 @@
                         '<span class="id-card-info-label">Gender:</span>' +
                         '<span class="id-card-info-value">' + student.gender + '</span>' +
                         '</div>';
-                    
+
                     // Extract only class name (not subclass name)
                     let className = 'N/A';
                     if (student.class && student.class !== 'N/A') {
@@ -1880,20 +1916,20 @@
                         let classParts = student.class.split(' ');
                         className = classParts[0] || student.class;
                     }
-                    
+
                     idCardHtml += '</div>' +
                         '</div>' +
                         '<div class="id-card-footer" style="border-top-color: ' + cardColor + ';">' +
                         '<p class="id-card-footer-text">This card is the property of ' + school.school_name + '</p>' +
                         '</div>' +
                         '</div>';
-                    
+
                     // Update class value in the HTML
                     idCardHtml = idCardHtml.replace(
                         '<span class="id-card-info-value">' + student.class + '</span>',
                         '<span class="id-card-info-value">' + className + '</span>'
                     );
-                    
+
                     $('#studentIdCardContent').html(idCardHtml);
                 } else {
                     Swal.fire({
@@ -1912,7 +1948,7 @@
                 hideModal('studentIdCardModal');
             });
         });
-        
+
         // Color Picker Change Handler
         $('#idCardColorPicker').on('change', function() {
             let newColor = $(this).val();
@@ -1926,17 +1962,17 @@
                 idCard.find('.id-card-photo').css('border-color', newColor);
                 idCard.find('.id-card-footer').css('border-top-color', newColor);
                 idCard.attr('data-card-color', newColor);
-                
+
                 // Update ::before pseudo-element background
                 idCard[0].style.setProperty('--card-color', newColor);
             }
         });
-        
+
         // Print ID Card
         $('#printIdCardBtn').on('click', function() {
             window.print();
         });
-        
+
         // Download ID Card (as image)
         $('#downloadIdCardBtn').on('click', function() {
             // Use html2canvas to convert ID card to image
@@ -1952,7 +1988,7 @@
                 downloadIdCard();
             }
         });
-        
+
         function downloadIdCard() {
             let idCard = document.querySelector('.student-id-card');
             if (!idCard) {
@@ -1963,7 +1999,7 @@
                 });
                 return;
             }
-            
+
             html2canvas(idCard, {
                 backgroundColor: '#ffffff',
                 scale: 2,
@@ -1986,13 +2022,13 @@
                 });
             });
         }
-        
+
         // Register Student to Device Button Click (similar to sample project)
         $(document).on('click', '.register-student-to-device-btn', function() {
             let studentId = $(this).data('student-id');
             let studentName = $(this).data('student-name');
             let fingerprintId = $(this).data('fingerprint-id');
-            
+
             // Show warning about firmware compatibility issue (similar to sample project)
             const warning = `⚠️ DIRECT REGISTRATION WARNING
 
@@ -2004,7 +2040,7 @@ Your device (UF200-S firmware 6.60) may have firmware compatibility issues with 
 3. Student will appear automatically!
 
 Would you like to try direct registration anyway, or use the manual method?`;
-            
+
             Swal.fire({
                 title: 'Register Student to Device?',
                 html: warning,
@@ -2035,7 +2071,7 @@ Would you like to try direct registration anyway, or use the manual method?`;
                         if (result.isConfirmed && result.value) {
                             let ip = result.value.ip;
                             let port = result.value.port;
-                            
+
                             // Show loading
                             Swal.fire({
                                 title: 'Registering...',
@@ -2045,7 +2081,7 @@ Would you like to try direct registration anyway, or use the manual method?`;
                                     Swal.showLoading();
                                 }
                             });
-                            
+
                             // Make AJAX call
                             $.ajax({
                                 url: '{{ route("students.register-device", ":id") }}'.replace(':id', studentId),
@@ -2072,17 +2108,17 @@ Would you like to try direct registration anyway, or use the manual method?`;
                                         });
                                     } else {
                                         let errorMsg = '✗ ' + (response.message || 'Registration Failed');
-                                        
+
                                         // Show troubleshooting guide if provided
                                         if (response.troubleshooting) {
                                             errorMsg += '\n\n' + response.troubleshooting;
                                         }
-                                        
+
                                         // Show quick solution
                                         if (response.quick_solution) {
                                             errorMsg += '\n\n💡 QUICK SOLUTION:\n' + response.quick_solution;
                                         }
-                                        
+
                                         Swal.fire({
                                             icon: 'error',
                                             title: 'Registration Failed',
@@ -2090,7 +2126,7 @@ Would you like to try direct registration anyway, or use the manual method?`;
                                             confirmButtonColor: '#dc3545',
                                             width: '600px'
                                         });
-                                        
+
                                         // If user might be registered, offer to sync
                                         if (response.might_be_registered) {
                                             Swal.fire({
@@ -2162,7 +2198,7 @@ Would you like to try direct registration anyway, or use the manual method?`;
         $(document).on('click', '.delete-student-btn', function() {
             let studentID = $(this).data('student-id');
             let studentName = $(this).data('student-name');
-            
+
             Swal.fire({
                 title: 'Delete Student?',
                 html: 'Are you sure you want to delete <strong>' + studentName + '</strong>?<br><br>This action cannot be undone!',
@@ -2219,41 +2255,41 @@ Would you like to try direct registration anyway, or use the manual method?`;
         // Register Student Form
         $('#addStudentForm').on('submit', function(e) {
             e.preventDefault();
-            
+
             // Client-side validation
             let first_name = $('#first_name').val().trim();
             let last_name = $('#last_name').val().trim();
             let gender = $('#gender').val();
             let subclassID = $('#subclassID').val();
             let admission_number = $('#admission_number').val().trim();
-            
+
             // Clear previous error messages
             $('.text-danger.validation-error').remove();
             $('.form-control, .form-select').removeClass('is-invalid');
-            
+
             let hasErrors = false;
-            
+
             // Validate required fields
             if (!first_name) {
                 $('#first_name').addClass('is-invalid').after('<div class="text-danger validation-error small">First name is required</div>');
                 hasErrors = true;
             }
-            
+
             if (!last_name) {
                 $('#last_name').addClass('is-invalid').after('<div class="text-danger validation-error small">Last name is required</div>');
                 hasErrors = true;
             }
-            
+
             if (!gender) {
                 $('#gender').addClass('is-invalid').after('<div class="text-danger validation-error small">Gender is required</div>');
                 hasErrors = true;
             }
-            
+
             if (!subclassID) {
                 $('#subclassID').addClass('is-invalid').after('<div class="text-danger validation-error small">Class is required</div>');
                 hasErrors = true;
             }
-            
+
             if (hasErrors) {
                 Swal.fire({
                     icon: 'warning',
@@ -2263,14 +2299,14 @@ Would you like to try direct registration anyway, or use the manual method?`;
                 });
                 return;
             }
-            
+
             let formData = new FormData(this);
             let submitBtn = $(this).find('button[type="submit"]');
             let originalBtnText = submitBtn.html();
-            
+
             // Show loading state
             submitBtn.prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> Registering...');
-            
+
             $.ajax({
                 url: '{{ route("save_student") }}',
                 type: 'POST',
@@ -2285,7 +2321,7 @@ Would you like to try direct registration anyway, or use the manual method?`;
                 success: function(response) {
                     $('#formLoadingOverlay').remove();
                     submitBtn.prop('disabled', false).html(originalBtnText);
-                    
+
                     if (response.success) {
                         // Close the registration modal first
                         if ($('#parentID').hasClass('select2-hidden-accessible')) {
@@ -2298,7 +2334,7 @@ Would you like to try direct registration anyway, or use the manual method?`;
                         $('#addStudentForm')[0].reset();
                         $('.is-invalid').removeClass('is-invalid');
                         $('.validation-error').remove();
-                        
+
                         // Show simple SweetAlert message with fingerprintID
                         var fingerprintId = response.fingerprint_id || '';
                         Swal.fire({
@@ -2326,15 +2362,15 @@ Would you like to try direct registration anyway, or use the manual method?`;
                 error: function(xhr) {
                     $('#formLoadingOverlay').remove();
                     submitBtn.prop('disabled', false).html(originalBtnText);
-                    
+
                     let errors = xhr.responseJSON?.errors || {};
                     let errorMessage = xhr.responseJSON?.message || 'Failed to register student';
-                    
+
                     // Handle admission number duplicate error
                     if (xhr.responseJSON?.errors?.admission_number) {
                         $('#admission_number').addClass('is-invalid').after('<div class="text-danger validation-error small">' + xhr.responseJSON.errors.admission_number[0] + '</div>');
                     }
-                    
+
                     if (Object.keys(errors).length > 0) {
                         let errorList = Object.entries(errors).map(([field, msg]) => {
                             if (Array.isArray(msg)) {
@@ -2344,7 +2380,7 @@ Would you like to try direct registration anyway, or use the manual method?`;
                         }).join('<br>');
                         errorMessage = errorList;
                     }
-                    
+
                     Swal.fire({
                         icon: 'error',
                         title: 'Validation Error!',
@@ -2358,46 +2394,46 @@ Would you like to try direct registration anyway, or use the manual method?`;
         // Edit Student Form
         $('#editStudentForm').on('submit', function(e) {
             e.preventDefault();
-            
+
             // Client-side validation
             let first_name = $('#edit_first_name').val().trim();
             let last_name = $('#edit_last_name').val().trim();
             let gender = $('#edit_gender').val();
             let subclassID = $('#edit_subclassID').val();
             let admission_number = $('#edit_admission_number').val().trim();
-            
+
             // Clear previous error messages
             $('#editStudentModal .text-danger.validation-error').remove();
             $('#editStudentModal .form-control, #editStudentModal .form-select').removeClass('is-invalid');
-            
+
             let hasErrors = false;
-            
+
             // Validate required fields
             if (!first_name) {
                 $('#edit_first_name').addClass('is-invalid').after('<div class="text-danger validation-error small">First name is required</div>');
                 hasErrors = true;
             }
-            
+
             if (!last_name) {
                 $('#edit_last_name').addClass('is-invalid').after('<div class="text-danger validation-error small">Last name is required</div>');
                 hasErrors = true;
             }
-            
+
             if (!gender) {
                 $('#edit_gender').addClass('is-invalid').after('<div class="text-danger validation-error small">Gender is required</div>');
                 hasErrors = true;
             }
-            
+
             if (!subclassID) {
                 $('#edit_subclassID').addClass('is-invalid').after('<div class="text-danger validation-error small">Class is required</div>');
                 hasErrors = true;
             }
-            
+
             if (!admission_number) {
                 $('#edit_admission_number').addClass('is-invalid').after('<div class="text-danger validation-error small">Admission number is required</div>');
                 hasErrors = true;
             }
-            
+
             if (hasErrors) {
                 Swal.fire({
                     icon: 'warning',
@@ -2407,14 +2443,14 @@ Would you like to try direct registration anyway, or use the manual method?`;
                 });
                 return;
             }
-            
+
             let formData = new FormData(this);
             let submitBtn = $(this).find('button[type="submit"]');
             let originalBtnText = submitBtn.html();
-            
+
             // Show loading state
             submitBtn.prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> Updating...');
-            
+
             $.ajax({
                 url: '{{ route("update_student") }}',
                 type: 'POST',
@@ -2432,7 +2468,7 @@ Would you like to try direct registration anyway, or use the manual method?`;
                 success: function(response) {
                     $('#editFormLoadingOverlay').remove();
                     submitBtn.prop('disabled', false).html(originalBtnText);
-                    
+
                     if (response.success) {
                         Swal.fire({
                             icon: 'success',
@@ -2466,15 +2502,15 @@ Would you like to try direct registration anyway, or use the manual method?`;
                 error: function(xhr) {
                     $('#editFormLoadingOverlay').remove();
                     submitBtn.prop('disabled', false).html(originalBtnText);
-                    
+
                     let errors = xhr.responseJSON?.errors || {};
                     let errorMessage = xhr.responseJSON?.message || 'Failed to update student';
-                    
+
                     // Handle admission number duplicate error
                     if (xhr.responseJSON?.errors?.admission_number) {
                         $('#edit_admission_number').addClass('is-invalid').after('<div class="text-danger validation-error small">' + xhr.responseJSON.errors.admission_number[0] + '</div>');
                     }
-                    
+
                     if (Object.keys(errors).length > 0) {
                         let errorList = Object.entries(errors).map(([field, msg]) => {
                             if (Array.isArray(msg)) {
@@ -2484,7 +2520,7 @@ Would you like to try direct registration anyway, or use the manual method?`;
                         }).join('<br>');
                         errorMessage = errorList;
                     }
-                    
+
                     Swal.fire({
                         icon: 'error',
                         title: 'Error!',
@@ -2498,12 +2534,12 @@ Would you like to try direct registration anyway, or use the manual method?`;
         // Transfer Student Form
         $('#transferStudentForm').on('submit', function(e) {
             e.preventDefault();
-            
+
             let formData = {
                 studentID: $('#transferStudentID').val(),
                 new_subclassID: $('#newSubclassID').val()
             };
-            
+
             if (!formData.new_subclassID) {
                 Swal.fire({
                     icon: 'warning',
@@ -2513,7 +2549,7 @@ Would you like to try direct registration anyway, or use the manual method?`;
                 });
                 return;
             }
-            
+
             Swal.fire({
                 title: 'Transfer Student?',
                 html: 'Are you sure you want to transfer this student to the selected class?',
@@ -2581,12 +2617,12 @@ Would you like to try direct registration anyway, or use the manual method?`;
             }).addClass('show');
             $('body').append('<div class="modal-backdrop fade show" style="z-index: 1040;"></div>');
         }
-        
+
         // Function to hide modal manually
         function hideModal(modalId) {
             $('#' + modalId).removeClass('show').css('display', 'none');
             $('.modal-backdrop').remove();
-            
+
             // Destroy Select2 instances in the modal to prevent conflicts
             $('#' + modalId + ' select').each(function() {
                 if ($(this).hasClass('select2-hidden-accessible')) {
@@ -2594,7 +2630,7 @@ Would you like to try direct registration anyway, or use the manual method?`;
                 }
             });
         }
-        
+
         // Close modal handlers for all modals
         $(document).on('click', '.modal .btn-close, .modal .btn-secondary[data-bs-dismiss="modal"], .modal button[data-bs-dismiss="modal"]', function() {
             let modal = $(this).closest('.modal');
@@ -2602,14 +2638,14 @@ Would you like to try direct registration anyway, or use the manual method?`;
                 hideModal(modal.attr('id'));
             }
         });
-        
+
         // Close modal when clicking backdrop
         $(document).on('click', '.modal-backdrop', function() {
             $('.modal.show').each(function() {
                 hideModal($(this).attr('id'));
             });
         });
-        
+
         // Initialize Select2 for Status Filter
         $('#statusFilter').select2({
             theme: 'bootstrap-5',
@@ -2618,11 +2654,11 @@ Would you like to try direct registration anyway, or use the manual method?`;
             width: '100%',
             minimumResultsForSearch: 0 // Always show search box
         });
-        
+
         // Initialize on page load
         loadFormData();
         initializeTables();
-        
+
         // Load initial data for active tab
         setTimeout(function() {
             loadStudents('Active', 'activeStudentsTable');
@@ -2661,7 +2697,7 @@ Would you like to try direct registration anyway, or use the manual method?`;
             showLoaderOnConfirm: true,
             preConfirm: () => {
                 $btn.prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> Sending...');
-                
+
                 return $.ajax({
                     url: "{{ route('send_student_to_fingerprint') }}",
                     type: "POST",
@@ -2712,3 +2748,8 @@ Would you like to try direct registration anyway, or use the manual method?`;
     });
 </script>
 
+<!-- Include Class Selector Modal -->
+@include('student_registration.class-selector')
+
+<!-- Include Registration Modal -->
+@include('student_registration.modal')

@@ -693,7 +693,7 @@
             console.log('Showing fingerprint section');
             if (fingerprintTab) fingerprintTab.classList.add('active');
             if (fingerprintSection) {
-                fingerprintSection.style.display = 'block';
+            fingerprintSection.style.display = 'block';
                 console.log('Fingerprint section displayed');
             }
         } else if (tab === 'exam') {

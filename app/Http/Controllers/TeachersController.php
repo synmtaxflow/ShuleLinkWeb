@@ -20,6 +20,16 @@ use App\Models\StudentSessionAttendance;
 use App\Models\SessionTask;
 use App\Models\Holiday;
 use App\Models\Event;
+use App\Models\SchemeOfWork;
+use App\Models\SchemeOfWorkItem;
+use App\Models\SchemeOfWorkLearningObjective;
+use App\Models\LessonPlan;
+use Barryvdh\DomPDF\Facade\Pdf as PDF;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 use App\Services\SmsService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -1207,6 +1217,856 @@ class TeachersController extends Controller
             ->values(); // Re-index array after filtering
 
         return view('Teacher.teacher_subjects', compact('classSubjects'));
+    }
+
+    public function schemeOfWork()
+    {
+        $user = Session::get('user_type');
+
+        if (!$user)
+        {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $teacherID = Session::get('teacherID');
+
+        if (!$teacherID) {
+            return redirect()->route('login')->with('error', 'Teacher ID not found');
+        }
+
+        // Get all class subjects assigned to this teacher
+        // Only show subjects where both ClassSubject and SchoolSubject have status = Active
+        $teacherSubjects = ClassSubject::with(['subject' => function($query) {
+                $query->where('status', 'Active');
+            }, 'class', 'subclass.class'])
+            ->where('teacherID', $teacherID)
+            ->where('status', 'Active')
+            ->whereHas('subject', function($query) {
+                $query->where('status', 'Active');
+            })
+            ->get()
+            ->filter(function($classSubject) {
+                // Additional filter: ensure subject relationship exists and has Active status
+                return $classSubject->subject && $classSubject->subject->status === 'Active';
+            })
+            ->values(); // Re-index array after filtering
+
+        return view('Teacher.scheme_of_work', compact('teacherSubjects'));
+    }
+
+    public function checkExistingScheme(Request $request)
+    {
+        $teacherID = Session::get('teacherID');
+        $classSubjectID = $request->input('class_subjectID');
+        $year = $request->input('year', date('Y'));
+
+        if (!$teacherID || !$classSubjectID) {
+            return response()->json([
+                'exists' => false,
+                'message' => 'Invalid parameters'
+            ]);
+        }
+
+        $existingScheme = SchemeOfWork::where('class_subjectID', $classSubjectID)
+            ->where('year', $year)
+            ->first();
+
+        return response()->json([
+            'exists' => $existingScheme !== null,
+            'scheme' => $existingScheme ? [
+                'id' => $existingScheme->scheme_of_workID,
+                'status' => $existingScheme->status,
+                'created_by' => $existingScheme->created_by
+            ] : null
+        ]);
+    }
+
+    public function createNewScheme($classSubjectID)
+    {
+        $user = Session::get('user_type');
+        $teacherID = Session::get('teacherID');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || !$teacherID) {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        // Get class subject details
+        $classSubject = ClassSubject::with(['subject', 'class', 'subclass.class'])
+            ->where('class_subjectID', $classSubjectID)
+            ->where('teacherID', $teacherID)
+            ->where('status', 'Active')
+            ->first();
+
+        if (!$classSubject) {
+            return redirect()->route('teacher.schemeOfWork')->with('error', 'Subject not found or you are not assigned to teach it');
+        }
+
+        // Check if scheme already exists for current year
+        $currentYear = date('Y');
+        $existingScheme = SchemeOfWork::where('class_subjectID', $classSubjectID)
+            ->where('year', $currentYear)
+            ->first();
+
+        if ($existingScheme) {
+            return redirect()->route('teacher.schemeOfWork')->with('error', 'Scheme of work already exists for this subject and year. Please use "Manage" to edit it.');
+        }
+
+        // Get holidays for the year (including those that span across years)
+        $holidays = Holiday::where('schoolID', $schoolID)
+            ->where(function($query) use ($currentYear) {
+                $query->whereYear('start_date', $currentYear)
+                      ->orWhereYear('end_date', $currentYear)
+                      ->orWhere(function($q) use ($currentYear) {
+                          $q->whereYear('start_date', '<', $currentYear)
+                            ->whereYear('end_date', '>', $currentYear);
+                      });
+            })
+            ->get()
+            ->map(function($holiday) use ($currentYear) {
+                // Format dates properly
+                $startDate = \Carbon\Carbon::parse($holiday->start_date);
+                $endDate = \Carbon\Carbon::parse($holiday->end_date);
+                
+                return [
+                    'name' => $holiday->holiday_name,
+                    'start_date' => $startDate->format('Y-m-d'),
+                    'end_date' => $endDate->format('Y-m-d'),
+                    'start_month' => $startDate->format('F'),
+                    'end_month' => $endDate->format('F'),
+                    'start_day' => $startDate->format('j'),
+                    'end_day' => $endDate->format('j'),
+                    'type' => $holiday->type
+                ];
+            });
+
+        // Get non-working events and format them as holidays
+        $nonWorkingEvents = Event::where('schoolID', $schoolID)
+            ->whereYear('event_date', $currentYear)
+            ->where('is_non_working_day', true)
+            ->get()
+            ->map(function($event) {
+                $eventDate = \Carbon\Carbon::parse($event->event_date);
+                return [
+                    'name' => $event->event_name,
+                    'start_date' => $eventDate->format('Y-m-d'),
+                    'end_date' => $eventDate->format('Y-m-d'),
+                    'start_month' => $eventDate->format('F'),
+                    'end_month' => $eventDate->format('F'),
+                    'start_day' => $eventDate->format('j'),
+                    'end_day' => $eventDate->format('j'),
+                    'type' => $event->type
+                ];
+            });
+        
+        // Merge holidays and non-working events
+        $allHolidays = $holidays->merge($nonWorkingEvents);
+
+        return view('Teacher.create_scheme_of_work', compact('classSubject', 'currentYear', 'holidays', 'nonWorkingEvents', 'allHolidays'));
+    }
+
+    public function storeNewScheme(Request $request)
+    {
+        $teacherID = Session::get('teacherID');
+        $classSubjectID = $request->input('class_subjectID');
+        $year = $request->input('year', date('Y'));
+
+        if (!$teacherID || !$classSubjectID) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid parameters'
+            ], 400);
+        }
+
+        // Validate class subject belongs to teacher
+        $classSubject = ClassSubject::where('class_subjectID', $classSubjectID)
+            ->where('teacherID', $teacherID)
+            ->where('status', 'Active')
+            ->first();
+
+        if (!$classSubject) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Subject not found or unauthorized'
+            ], 403);
+        }
+
+        // Check if scheme already exists
+        $existingScheme = SchemeOfWork::where('class_subjectID', $classSubjectID)
+            ->where('year', $year)
+            ->first();
+
+        if ($existingScheme) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Scheme of work already exists for this subject and year'
+            ], 400);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Create scheme of work
+            $scheme = SchemeOfWork::create([
+                'class_subjectID' => $classSubjectID,
+                'year' => $year,
+                'status' => 'Draft',
+                'created_by' => $teacherID
+            ]);
+
+            // Store learning objectives
+            $objectives = $request->input('learning_objectives', []);
+            foreach ($objectives as $index => $objective) {
+                if (!empty(trim($objective))) {
+                    SchemeOfWorkLearningObjective::create([
+                        'scheme_of_workID' => $scheme->scheme_of_workID,
+                        'objective_text' => trim($objective),
+                        'order' => $index
+                    ]);
+                }
+            }
+
+            // Store scheme items
+            $items = $request->input('items', []);
+            foreach ($items as $item) {
+                if (!empty($item['month'])) {
+                    SchemeOfWorkItem::create([
+                        'scheme_of_workID' => $scheme->scheme_of_workID,
+                        'month' => $item['month'],
+                        'main_competence' => $item['main_competence'] ?? '',
+                        'specific_competences' => $item['specific_competences'] ?? '',
+                        'learning_activities' => $item['learning_activities'] ?? '',
+                        'specific_activities' => $item['specific_activities'] ?? '',
+                        'week' => !empty($item['week']) ? $item['week'] : null,
+                        'number_of_periods' => !empty($item['number_of_periods']) ? (int)$item['number_of_periods'] : 0,
+                        'teaching_methods' => $item['teaching_methods'] ?? '',
+                        'teaching_resources' => $item['teaching_resources'] ?? '',
+                        'assessment_tools' => $item['assessment_tools'] ?? '',
+                        'references' => $item['references'] ?? '',
+                        'remarks' => (isset($item['is_done']) && $item['is_done']) ? 'done' : (isset($item['remark']) && !empty($item['remark']) ? $item['remark'] : ''),
+                        'row_order' => $item['row_order'] ?? 0
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Scheme of work created successfully',
+                'scheme_id' => $scheme->scheme_of_workID,
+                'redirect' => route('teacher.schemeOfWork')
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error creating scheme of work: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create scheme of work: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function viewSchemeOfWork($schemeOfWorkID)
+    {
+        $user = Session::get('user_type');
+        $teacherID = Session::get('teacherID');
+
+        if (!$user || !$teacherID) {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        // Get scheme of work with relationships
+        $scheme = SchemeOfWork::with(['classSubject.subject', 'classSubject.class', 'classSubject.subclass.class', 
+                                      'items' => function($query) {
+                                          $query->orderBy('month')->orderBy('row_order');
+                                      }, 
+                                      'learningObjectives' => function($query) {
+                                          $query->orderBy('order');
+                                      },
+                                      'createdBy'])
+            ->where('scheme_of_workID', $schemeOfWorkID)
+            ->first();
+
+        if (!$scheme) {
+            return redirect()->route('teacher.schemeOfWork')->with('error', 'Scheme of work not found');
+        }
+
+        // Verify teacher has access (either created it or is assigned to the subject)
+        $classSubject = $scheme->classSubject;
+        if ($classSubject->teacherID != $teacherID && $scheme->created_by != $teacherID) {
+            return redirect()->route('teacher.schemeOfWork')->with('error', 'You do not have access to this scheme of work');
+        }
+
+        // Get school info
+        $school = School::where('schoolID', Session::get('schoolID'))->first();
+
+        return view('Teacher.view_scheme_of_work', compact('scheme', 'school'));
+    }
+
+    public function manageSchemeOfWork($schemeOfWorkID)
+    {
+        $user = Session::get('user_type');
+        $teacherID = Session::get('teacherID');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || !$teacherID) {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        // Get scheme of work with relationships
+        $scheme = SchemeOfWork::with(['classSubject.subject', 'classSubject.class', 'classSubject.subclass.class', 
+                                      'items' => function($query) {
+                                          $query->orderBy('month')->orderBy('row_order');
+                                      }, 
+                                      'learningObjectives' => function($query) {
+                                          $query->orderBy('order');
+                                      },
+                                      'createdBy'])
+            ->where('scheme_of_workID', $schemeOfWorkID)
+            ->first();
+
+        if (!$scheme) {
+            return redirect()->route('teacher.schemeOfWork')->with('error', 'Scheme of work not found');
+        }
+
+        // Verify teacher has access
+        $classSubject = $scheme->classSubject;
+        if ($classSubject->teacherID != $teacherID && $scheme->created_by != $teacherID) {
+            return redirect()->route('teacher.schemeOfWork')->with('error', 'You do not have access to this scheme of work');
+        }
+
+        // Get holidays for the year
+        $currentYear = $scheme->year;
+        $holidays = Holiday::where('schoolID', $schoolID)
+            ->where(function($query) use ($currentYear) {
+                $query->whereYear('start_date', $currentYear)
+                      ->orWhereYear('end_date', $currentYear);
+            })
+            ->get()
+            ->map(function($holiday) use ($currentYear) {
+                $startDate = \Carbon\Carbon::parse($holiday->start_date);
+                $endDate = \Carbon\Carbon::parse($holiday->end_date);
+                
+                return [
+                    'name' => $holiday->holiday_name,
+                    'start_date' => $startDate->format('Y-m-d'),
+                    'end_date' => $endDate->format('Y-m-d'),
+                    'start_month' => $startDate->format('F'),
+                    'end_month' => $endDate->format('F'),
+                    'start_day' => $startDate->format('j'),
+                    'end_day' => $endDate->format('j'),
+                    'type' => $holiday->type
+                ];
+            });
+
+        $nonWorkingEvents = Event::where('schoolID', $schoolID)
+            ->whereYear('event_date', $currentYear)
+            ->where('is_non_working_day', true)
+            ->get()
+            ->map(function($event) {
+                $eventDate = \Carbon\Carbon::parse($event->event_date);
+                return [
+                    'name' => $event->event_name,
+                    'start_date' => $eventDate->format('Y-m-d'),
+                    'end_date' => $eventDate->format('Y-m-d'),
+                    'start_month' => $eventDate->format('F'),
+                    'end_month' => $eventDate->format('F'),
+                    'start_day' => $eventDate->format('j'),
+                    'end_day' => $eventDate->format('j'),
+                    'type' => $event->type
+                ];
+            });
+        
+        $allHolidays = $holidays->merge($nonWorkingEvents);
+
+        return view('Teacher.manage_scheme_of_work', compact('scheme', 'allHolidays', 'currentYear'));
+    }
+
+    public function updateSchemeOfWork(Request $request, $schemeOfWorkID)
+    {
+        $teacherID = Session::get('teacherID');
+
+        if (!$teacherID) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        $scheme = SchemeOfWork::find($schemeOfWorkID);
+        if (!$scheme) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Scheme of work not found'
+            ], 404);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Update learning objectives
+            if ($request->has('learning_objectives')) {
+                // Delete existing objectives
+                SchemeOfWorkLearningObjective::where('scheme_of_workID', $schemeOfWorkID)->delete();
+                
+                // Add new objectives
+                $objectives = $request->input('learning_objectives', []);
+                foreach ($objectives as $index => $objective) {
+                    if (!empty(trim($objective))) {
+                        SchemeOfWorkLearningObjective::create([
+                            'scheme_of_workID' => $schemeOfWorkID,
+                            'objective_text' => trim($objective),
+                            'order' => $index
+                        ]);
+                    }
+                }
+            }
+
+            // Update scheme items
+            if ($request->has('items')) {
+                // Get existing items to update or delete
+                $existingItems = SchemeOfWorkItem::where('scheme_of_workID', $schemeOfWorkID)->get()->keyBy('itemID');
+                
+                // Process items from request
+                $items = $request->input('items', []);
+                $processedItemIds = [];
+                
+                foreach ($items as $itemData) {
+                    // Check if this is an existing item (has itemID) or new item
+                    if (isset($itemData['itemID']) && is_numeric($itemData['itemID']) && $existingItems->has($itemData['itemID'])) {
+                        // Update existing item
+                        $itemId = $itemData['itemID'];
+                        $existingItem = $existingItems->get($itemId);
+                        $existingItem->update([
+                            'month' => $itemData['month'] ?? $existingItem->month,
+                            'main_competence' => $itemData['main_competence'] ?? '',
+                            'specific_competences' => $itemData['specific_competences'] ?? '',
+                            'learning_activities' => $itemData['learning_activities'] ?? '',
+                            'specific_activities' => $itemData['specific_activities'] ?? '',
+                            'week' => !empty($itemData['week']) ? $itemData['week'] : null,
+                            'number_of_periods' => !empty($itemData['number_of_periods']) ? (int)$itemData['number_of_periods'] : 0,
+                            'teaching_methods' => $itemData['teaching_methods'] ?? '',
+                            'teaching_resources' => $itemData['teaching_resources'] ?? '',
+                            'assessment_tools' => $itemData['assessment_tools'] ?? '',
+                            'references' => $itemData['references'] ?? '',
+                            'remarks' => (isset($itemData['is_done']) && $itemData['is_done']) ? 'done' : (isset($itemData['remark']) && !empty($itemData['remark']) ? $itemData['remark'] : ''),
+                            'row_order' => $existingItem->row_order
+                        ]);
+                        $processedItemIds[] = $itemId;
+                    } else {
+                        // Create new item
+                        if (!empty($itemData['month'])) {
+                            // Get max row_order for this month
+                            $maxOrder = SchemeOfWorkItem::where('scheme_of_workID', $schemeOfWorkID)
+                                ->where('month', $itemData['month'])
+                                ->max('row_order') ?? 0;
+                            
+                            SchemeOfWorkItem::create([
+                                'scheme_of_workID' => $schemeOfWorkID,
+                                'month' => $itemData['month'],
+                                'main_competence' => $itemData['main_competence'] ?? '',
+                                'specific_competences' => $itemData['specific_competences'] ?? '',
+                                'learning_activities' => $itemData['learning_activities'] ?? '',
+                                'specific_activities' => $itemData['specific_activities'] ?? '',
+                                'week' => !empty($itemData['week']) ? $itemData['week'] : null,
+                                'number_of_periods' => !empty($itemData['number_of_periods']) ? (int)$itemData['number_of_periods'] : 0,
+                                'teaching_methods' => $itemData['teaching_methods'] ?? '',
+                                'teaching_resources' => $itemData['teaching_resources'] ?? '',
+                                'assessment_tools' => $itemData['assessment_tools'] ?? '',
+                                'references' => $itemData['references'] ?? '',
+                                'remarks' => (isset($itemData['is_done']) && $itemData['is_done']) ? 'done' : (isset($itemData['remark']) && !empty($itemData['remark']) ? $itemData['remark'] : ''),
+                                'row_order' => $maxOrder + 1
+                            ]);
+                        }
+                    }
+                }
+                
+                // Delete items that were not in the request (removed by user)
+                $itemsToDelete = $existingItems->keys()->diff($processedItemIds);
+                if ($itemsToDelete->count() > 0) {
+                    SchemeOfWorkItem::whereIn('itemID', $itemsToDelete)->delete();
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Scheme of work updated successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating scheme of work: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update scheme of work: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function updateSchemeOfWorkRemark(Request $request, $schemeOfWorkID)
+    {
+        $teacherID = Session::get('teacherID');
+
+        if (!$teacherID) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        $scheme = SchemeOfWork::find($schemeOfWorkID);
+        if (!$scheme) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Scheme of work not found'
+            ], 404);
+        }
+
+        // Verify teacher has access
+        $classSubject = $scheme->classSubject;
+        if ($classSubject->teacherID != $teacherID && $scheme->created_by != $teacherID) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have access to this scheme of work'
+            ], 403);
+        }
+
+        $itemId = $request->input('item_id');
+        $remark = $request->input('remark', '');
+
+        try {
+            // Check if item exists
+            if (is_numeric($itemId)) {
+                $item = SchemeOfWorkItem::where('itemID', $itemId)
+                    ->where('scheme_of_workID', $schemeOfWorkID)
+                    ->first();
+
+                if ($item) {
+                    $item->update([
+                        'remarks' => $remark
+                    ]);
+
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Remarks updated successfully'
+                    ]);
+                } else {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Item not found'
+                    ], 404);
+                }
+            } else {
+                // New item - can't update remark for new items that don't exist yet
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Please save the scheme first before updating remarks'
+                ], 400);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error updating remark: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update remarks: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function useExistingSchemes($classSubjectID)
+    {
+        $user = Session::get('user_type');
+        $teacherID = Session::get('teacherID');
+
+        if (!$user || !$teacherID) {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        // Get class subject
+        $classSubject = ClassSubject::with(['subject', 'class', 'subclass.class'])
+            ->where('class_subjectID', $classSubjectID)
+            ->where('teacherID', $teacherID)
+            ->where('status', 'Active')
+            ->first();
+
+        if (!$classSubject) {
+            return redirect()->route('teacher.schemeOfWork')->with('error', 'Subject not found or you are not assigned to teach it');
+        }
+
+        // Get all existing schemes for this subject (across all years and class subjects with same subject)
+        $subjectID = $classSubject->subjectID;
+        
+        // Get all schemes for this subject (from any class subject with same subjectID)
+        $existingSchemes = SchemeOfWork::with(['classSubject.subject', 'classSubject.class', 'classSubject.subclass.class', 'createdBy', 'items', 'learningObjectives'])
+            ->whereHas('classSubject', function($query) use ($subjectID) {
+                $query->where('subjectID', $subjectID);
+            })
+            ->orderBy('year', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('Teacher.use_existing_schemes', compact('classSubject', 'existingSchemes'));
+    }
+
+    public function useThisScheme(Request $request, $schemeOfWorkID)
+    {
+        $teacherID = Session::get('teacherID');
+        $classSubjectID = $request->input('class_subjectID');
+
+        if (!$teacherID || !$classSubjectID) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid parameters'
+            ], 400);
+        }
+
+        // Check if class subject already has a scheme for current year
+        $currentYear = date('Y');
+        $existingScheme = SchemeOfWork::where('class_subjectID', $classSubjectID)
+            ->where('year', $currentYear)
+            ->first();
+
+        if ($existingScheme) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You already have a scheme of work for this subject and year. Please go to "Manage" to edit it.',
+                'manageUrl' => route('teacher.manageSchemeOfWork', $existingScheme->scheme_of_workID)
+            ], 400);
+        }
+
+        // Get the scheme to copy
+        $sourceScheme = SchemeOfWork::with(['items', 'learningObjectives'])
+            ->where('scheme_of_workID', $schemeOfWorkID)
+            ->first();
+
+        if (!$sourceScheme) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Scheme of work not found'
+            ], 404);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Create new scheme for this class subject
+            $newScheme = SchemeOfWork::create([
+                'class_subjectID' => $classSubjectID,
+                'year' => $currentYear,
+                'status' => 'Draft',
+                'created_by' => $teacherID
+            ]);
+
+            // Copy learning objectives
+            foreach ($sourceScheme->learningObjectives as $objective) {
+                SchemeOfWorkLearningObjective::create([
+                    'scheme_of_workID' => $newScheme->scheme_of_workID,
+                    'objective_text' => $objective->objective_text,
+                    'order' => $objective->order
+                ]);
+            }
+
+            // Copy scheme items
+            foreach ($sourceScheme->items as $item) {
+                SchemeOfWorkItem::create([
+                    'scheme_of_workID' => $newScheme->scheme_of_workID,
+                    'month' => $item->month,
+                    'main_competence' => $item->main_competence,
+                    'specific_competences' => $item->specific_competences,
+                    'learning_activities' => $item->learning_activities,
+                    'specific_activities' => $item->specific_activities,
+                    'week' => $item->week,
+                    'number_of_periods' => $item->number_of_periods,
+                    'teaching_methods' => $item->teaching_methods,
+                    'teaching_resources' => $item->teaching_resources,
+                    'assessment_tools' => $item->assessment_tools,
+                    'references' => $item->references,
+                    'remarks' => '',
+                    'row_order' => $item->row_order
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Scheme of work copied successfully!',
+                'redirect' => route('teacher.manageSchemeOfWork', $newScheme->scheme_of_workID)
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error using existing scheme: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to use scheme: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function deleteSchemeOfWork($schemeOfWorkID)
+    {
+        $teacherID = Session::get('teacherID');
+
+        if (!$teacherID) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        $scheme = SchemeOfWork::find($schemeOfWorkID);
+        if (!$scheme) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Scheme of work not found'
+            ], 404);
+        }
+
+        // Verify teacher has access
+        $classSubject = $scheme->classSubject;
+        if ($classSubject->teacherID != $teacherID && $scheme->created_by != $teacherID) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have access to this scheme of work'
+            ], 403);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Delete related data (cascade should handle this, but being explicit)
+            SchemeOfWorkLearningObjective::where('scheme_of_workID', $schemeOfWorkID)->delete();
+            SchemeOfWorkItem::where('scheme_of_workID', $schemeOfWorkID)->delete();
+
+            // Delete scheme
+            $scheme->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Scheme of work deleted successfully!',
+                'redirect' => route('teacher.schemeOfWork')
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error deleting scheme of work: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete scheme: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function exportSchemeOfWorkPDF($schemeOfWorkID)
+    {
+        $teacherID = Session::get('teacherID');
+        
+        $scheme = SchemeOfWork::with(['classSubject.subject', 'classSubject.class', 'classSubject.subclass.class', 
+                                      'items' => function($query) {
+                                          $query->orderBy('month')->orderBy('row_order');
+                                      }, 
+                                      'learningObjectives' => function($query) {
+                                          $query->orderBy('order');
+                                      },
+                                      'createdBy'])
+            ->where('scheme_of_workID', $schemeOfWorkID)
+            ->first();
+
+        if (!$scheme) {
+            return redirect()->back()->with('error', 'Scheme of work not found');
+        }
+
+        $school = School::where('schoolID', Session::get('schoolID'))->first();
+        $teacher = Teacher::find($teacherID);
+
+        $data = [
+            'scheme' => $scheme,
+            'school' => $school,
+            'teacher' => $teacher
+        ];
+
+        $pdf = PDF::loadView('Teacher.pdf.scheme_of_work', $data);
+        $pdf->setPaper('A4', 'landscape');
+
+        $filename = 'Scheme_of_Work_' . str_replace(' ', '_', $scheme->classSubject->subject->subject_name ?? 'Subject') . '_' . $scheme->year . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    public function exportSchemeOfWorkExcel($schemeOfWorkID)
+    {
+        $teacherID = Session::get('teacherID');
+        
+        $scheme = SchemeOfWork::with(['classSubject.subject', 'classSubject.class', 'classSubject.subclass.class', 
+                                      'items' => function($query) {
+                                          $query->orderBy('month')->orderBy('row_order');
+                                      }, 
+                                      'learningObjectives' => function($query) {
+                                          $query->orderBy('order');
+                                      },
+                                      'createdBy'])
+            ->where('scheme_of_workID', $schemeOfWorkID)
+            ->first();
+
+        if (!$scheme) {
+            return redirect()->back()->with('error', 'Scheme of work not found');
+        }
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        
+        // Set headers
+        $headers = ['#', 'Main Competence', 'Specific Competences', 'Learning Activities', 'Specific Activities', 
+                   'Month', 'Week', 'Number of Periods', 'Teaching and Learning Methods', 
+                   'Teaching and Learning Resources', 'Assessment Tools', 'References', 'Remarks'];
+        
+        $col = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . '1', $header);
+            $col++;
+        }
+
+        // Add data rows
+        $row = 2;
+        $rowNum = 1;
+        foreach ($scheme->items as $item) {
+            $sheet->setCellValue('A' . $row, $rowNum);
+            $sheet->setCellValue('B' . $row, $item->main_competence ?? '');
+            $sheet->setCellValue('C' . $row, $item->specific_competences ?? '');
+            $sheet->setCellValue('D' . $row, $item->learning_activities ?? '');
+            $sheet->setCellValue('E' . $row, $item->specific_activities ?? '');
+            $sheet->setCellValue('F' . $row, $item->month ?? '');
+            $sheet->setCellValue('G' . $row, $item->week ?? '');
+            $sheet->setCellValue('H' . $row, $item->number_of_periods ?? '');
+            $sheet->setCellValue('I' . $row, $item->teaching_methods ?? '');
+            $sheet->setCellValue('J' . $row, $item->teaching_resources ?? '');
+            $sheet->setCellValue('K' . $row, $item->assessment_tools ?? '');
+            $sheet->setCellValue('L' . $row, $item->references ?? '');
+            $sheet->setCellValue('M' . $row, $item->remarks ?? '');
+            $row++;
+            $rowNum++;
+        }
+
+        // Auto-size columns
+        foreach (range('A', 'M') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        $filename = 'Scheme_of_Work_' . str_replace(' ', '_', $scheme->classSubject->subject->subject_name ?? 'Subject') . '_' . $scheme->year . '.xlsx';
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        $writer->save('php://output');
+        exit;
     }
 
     public function getSubjectStudents($classSubjectID)
@@ -5816,5 +6676,394 @@ class TeachersController extends Controller
             Log::error('Error getting session attendance for update: ' . $e->getMessage());
             return response()->json(['success' => false, 'error' => $e->getMessage()]);
         }
+    }
+
+    /**
+     * Display Lesson Plans Management page
+     */
+    public function lessonPlans()
+    {
+        $user = Session::get('user_type');
+        if (!$user || $user !== 'Teacher') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $teacherID = Session::get('teacherID');
+        $schoolID = Session::get('schoolID');
+
+        if (!$teacherID || !$schoolID) {
+            return redirect()->route('login')->with('error', 'Session expired');
+        }
+
+        // Get school info
+        $school = School::find($schoolID);
+        $schoolType = $school && $school->school_type ? strtolower($school->school_type) : 'primary';
+        $isPrimary = strpos($schoolType, 'primary') !== false || strpos($schoolType, 'pre') !== false;
+
+        // Get active session timetable definition
+        $definition = DB::table('session_timetable_definitions')
+            ->where('schoolID', $schoolID)
+            ->first();
+
+        if (!$definition) {
+            return view('Teacher.lesson_plans', [
+                'sessions' => collect(),
+                'message' => 'No timetable definition found. Please contact admin.',
+                'schoolType' => $isPrimary ? 'PRE AND PRIMARY SCHOOL' : 'SECONDARY SCHOOL',
+                'currentYear' => Carbon::now()->year,
+            ]);
+        }
+
+        // Get all sessions for this teacher
+        $sessions = ClassSessionTimetable::with(['subclass.class', 'subject', 'classSubject.subject'])
+            ->where('teacherID', $teacherID)
+            ->where('definitionID', $definition->definitionID)
+            ->orderByRaw("FIELD(day, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday')")
+            ->orderBy('start_time')
+            ->get();
+
+        return view('Teacher.lesson_plans', [
+            'sessions' => $sessions,
+            'schoolType' => $isPrimary ? 'PRE AND PRIMARY SCHOOL' : 'SECONDARY SCHOOL',
+            'currentYear' => Carbon::now()->year,
+            'teacherID' => $teacherID,
+            'schoolID' => $schoolID,
+        ]);
+    }
+
+    /**
+     * Get attendance statistics for a session on a specific date
+     */
+    public function getSessionAttendanceStats(Request $request)
+    {
+        try {
+            $teacherID = Session::get('teacherID');
+            $schoolID = Session::get('schoolID');
+            $sessionTimetableID = $request->input('session_timetableID');
+            $date = $request->input('date');
+
+            if (!$teacherID || !$schoolID || !$sessionTimetableID || !$date) {
+                return response()->json(['success' => false, 'error' => 'Missing required parameters']);
+            }
+
+            // Get session details
+            $session = ClassSessionTimetable::with(['subclass.class', 'subject', 'classSubject.subject'])
+                ->where('session_timetableID', $sessionTimetableID)
+                ->where('teacherID', $teacherID)
+                ->first();
+
+            if (!$session) {
+                return response()->json(['success' => false, 'error' => 'Session not found']);
+            }
+
+            // Get subclass students
+            $students = Student::where('subclassID', $session->subclassID)
+                ->where('status', 'Active')
+                ->get();
+
+            // Count registered students
+            $registeredGirls = $students->where('gender', 'Female')->count();
+            $registeredBoys = $students->where('gender', 'Male')->count();
+            $registeredTotal = $students->count();
+
+            // Get attendance records for this date
+            $attendanceRecords = StudentSessionAttendance::where('session_timetableID', $sessionTimetableID)
+                ->where('attendance_date', $date)
+                ->get();
+
+            // Count present students
+            $presentGirls = 0;
+            $presentBoys = 0;
+            $presentTotal = 0;
+
+            foreach ($attendanceRecords as $record) {
+                $student = $students->where('studentID', $record->studentID)->first();
+                if ($student && $record->status === 'Present') {
+                    if ($student->gender === 'Female') {
+                        $presentGirls++;
+                    } else {
+                        $presentBoys++;
+                    }
+                    $presentTotal++;
+                }
+            }
+
+            // Get subject name
+            $subjectName = 'N/A';
+            if ($session->classSubject && $session->classSubject->subject) {
+                $subjectName = $session->classSubject->subject->subject_name;
+            } elseif ($session->subject) {
+                $subjectName = $session->subject->subject_name;
+            }
+
+            // Get class name
+            $className = 'N/A';
+            if ($session->subclass && $session->subclass->class) {
+                $className = $session->subclass->class->class_name;
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'registered_girls' => $registeredGirls,
+                    'registered_boys' => $registeredBoys,
+                    'registered_total' => $registeredTotal,
+                    'present_girls' => $presentGirls,
+                    'present_boys' => $presentBoys,
+                    'present_total' => $presentTotal,
+                    'subject' => $subjectName,
+                    'class_name' => $className,
+                    'start_time' => $session->start_time,
+                    'end_time' => $session->end_time,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting attendance stats: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Store new lesson plan
+     */
+    public function storeLessonPlan(Request $request)
+    {
+        try {
+            $teacherID = Session::get('teacherID');
+            $schoolID = Session::get('schoolID');
+
+            if (!$teacherID || !$schoolID) {
+                return response()->json(['success' => false, 'error' => 'Session expired']);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'session_timetableID' => 'required|exists:class_session_timetables,session_timetableID',
+                'lesson_date' => 'required|date',
+                'main_competence' => 'nullable|string',
+                'specific_competence' => 'nullable|string',
+                'main_activity' => 'nullable|string',
+                'specific_activity' => 'nullable|string',
+                'teaching_learning_resources' => 'nullable|string',
+                'references' => 'nullable|string',
+                'lesson_stages' => 'nullable|array',
+                'remarks' => 'nullable|string',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['success' => false, 'error' => $validator->errors()->first()]);
+            }
+
+            // Check if lesson plan already exists
+            $existing = LessonPlan::where('session_timetableID', $request->input('session_timetableID'))
+                ->where('lesson_date', $request->input('lesson_date'))
+                ->first();
+
+            if ($existing) {
+                return response()->json(['success' => false, 'error' => 'Lesson plan already exists for this session and date']);
+            }
+
+            // Get session details
+            $session = ClassSessionTimetable::find($request->input('session_timetableID'));
+            if (!$session || $session->teacherID != $teacherID) {
+                return response()->json(['success' => false, 'error' => 'Session not found or unauthorized']);
+            }
+
+            // Get attendance stats
+            $attendanceStats = $this->getAttendanceStatsForDate($request->input('session_timetableID'), $request->input('lesson_date'));
+
+            // Get subject and class
+            $subjectName = 'N/A';
+            if ($session->classSubject && $session->classSubject->subject) {
+                $subjectName = $session->classSubject->subject->subject_name;
+            } elseif ($session->subject) {
+                $subjectName = $session->subject->subject_name;
+            }
+
+            $className = 'N/A';
+            if ($session->subclass && $session->subclass->class) {
+                $className = $session->subclass->class->class_name;
+            }
+
+            $lessonPlan = LessonPlan::create([
+                'schoolID' => $schoolID,
+                'session_timetableID' => $request->input('session_timetableID'),
+                'teacherID' => $teacherID,
+                'lesson_date' => $request->input('lesson_date'),
+                'lesson_time_start' => $session->start_time,
+                'lesson_time_end' => $session->end_time,
+                'subject' => $subjectName,
+                'class_name' => $className,
+                'year' => Carbon::now()->year,
+                'registered_girls' => $attendanceStats['registered_girls'],
+                'registered_boys' => $attendanceStats['registered_boys'],
+                'registered_total' => $attendanceStats['registered_total'],
+                'present_girls' => $attendanceStats['present_girls'],
+                'present_boys' => $attendanceStats['present_boys'],
+                'present_total' => $attendanceStats['present_total'],
+                'main_competence' => $request->input('main_competence'),
+                'specific_competence' => $request->input('specific_competence'),
+                'main_activity' => $request->input('main_activity'),
+                'specific_activity' => $request->input('specific_activity'),
+                'teaching_learning_resources' => $request->input('teaching_learning_resources'),
+                'references' => $request->input('references'),
+                'lesson_stages' => $request->input('lesson_stages'),
+                'remarks' => $request->input('remarks'),
+                'status' => 'draft',
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Lesson plan created successfully',
+                'lesson_planID' => $lessonPlan->lesson_planID
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error storing lesson plan: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Get existing lesson plan
+     */
+    public function getLessonPlan(Request $request)
+    {
+        try {
+            $teacherID = Session::get('teacherID');
+            $sessionTimetableID = $request->input('session_timetableID');
+            $date = $request->input('date');
+
+            $lessonPlan = LessonPlan::where('session_timetableID', $sessionTimetableID)
+                ->where('lesson_date', $date)
+                ->where('teacherID', $teacherID)
+                ->first();
+
+            if (!$lessonPlan) {
+                return response()->json(['success' => false, 'error' => 'Lesson plan not found']);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $lessonPlan
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting lesson plan: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Update lesson plan
+     */
+    public function updateLessonPlan(Request $request, $lessonPlanID)
+    {
+        try {
+            $teacherID = Session::get('teacherID');
+
+            $lessonPlan = LessonPlan::where('lesson_planID', $lessonPlanID)
+                ->where('teacherID', $teacherID)
+                ->first();
+
+            if (!$lessonPlan) {
+                return response()->json(['success' => false, 'error' => 'Lesson plan not found']);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'main_competence' => 'nullable|string',
+                'specific_competence' => 'nullable|string',
+                'main_activity' => 'nullable|string',
+                'specific_activity' => 'nullable|string',
+                'teaching_learning_resources' => 'nullable|string',
+                'references' => 'nullable|string',
+                'lesson_stages' => 'nullable|array',
+                'remarks' => 'nullable|string',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['success' => false, 'error' => $validator->errors()->first()]);
+            }
+
+            // Update attendance stats
+            $attendanceStats = $this->getAttendanceStatsForDate($lessonPlan->session_timetableID, $lessonPlan->lesson_date);
+
+            $lessonPlan->update([
+                'registered_girls' => $attendanceStats['registered_girls'],
+                'registered_boys' => $attendanceStats['registered_boys'],
+                'registered_total' => $attendanceStats['registered_total'],
+                'present_girls' => $attendanceStats['present_girls'],
+                'present_boys' => $attendanceStats['present_boys'],
+                'present_total' => $attendanceStats['present_total'],
+                'main_competence' => $request->input('main_competence', $lessonPlan->main_competence),
+                'specific_competence' => $request->input('specific_competence', $lessonPlan->specific_competence),
+                'main_activity' => $request->input('main_activity', $lessonPlan->main_activity),
+                'specific_activity' => $request->input('specific_activity', $lessonPlan->specific_activity),
+                'teaching_learning_resources' => $request->input('teaching_learning_resources', $lessonPlan->teaching_learning_resources),
+                'references' => $request->input('references', $lessonPlan->references),
+                'lesson_stages' => $request->input('lesson_stages', $lessonPlan->lesson_stages),
+                'remarks' => $request->input('remarks', $lessonPlan->remarks),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Lesson plan updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error updating lesson plan: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Helper method to get attendance stats for a date
+     */
+    private function getAttendanceStatsForDate($sessionTimetableID, $date)
+    {
+        $session = ClassSessionTimetable::find($sessionTimetableID);
+        if (!$session) {
+            return [
+                'registered_girls' => 0,
+                'registered_boys' => 0,
+                'registered_total' => 0,
+                'present_girls' => 0,
+                'present_boys' => 0,
+                'present_total' => 0,
+            ];
+        }
+
+        $students = Student::where('subclassID', $session->subclassID)
+            ->where('status', 'Active')
+            ->get();
+
+        $registeredGirls = $students->where('gender', 'Female')->count();
+        $registeredBoys = $students->where('gender', 'Male')->count();
+        $registeredTotal = $students->count();
+
+        $attendanceRecords = StudentSessionAttendance::where('session_timetableID', $sessionTimetableID)
+            ->where('attendance_date', $date)
+            ->get();
+
+        $presentGirls = 0;
+        $presentBoys = 0;
+        $presentTotal = 0;
+
+        foreach ($attendanceRecords as $record) {
+            $student = $students->where('studentID', $record->studentID)->first();
+            if ($student && $record->status === 'Present') {
+                if ($student->gender === 'Female') {
+                    $presentGirls++;
+                } else {
+                    $presentBoys++;
+                }
+                $presentTotal++;
+            }
+        }
+
+        return [
+            'registered_girls' => $registeredGirls,
+            'registered_boys' => $registeredBoys,
+            'registered_total' => $registeredTotal,
+            'present_girls' => $presentGirls,
+            'present_boys' => $presentBoys,
+            'present_total' => $presentTotal,
+        ];
     }
 }

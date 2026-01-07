@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('student_session_attendance')) {
+            return; // Table already exists, skip migration
+        }
+        
         Schema::create('student_session_attendance', function (Blueprint $table) {
             $table->id('session_attendanceID');
             $table->foreignId('schoolID')->constrained('schools', 'schoolID')->onDelete('cascade');

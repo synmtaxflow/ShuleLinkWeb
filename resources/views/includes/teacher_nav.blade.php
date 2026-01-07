@@ -40,7 +40,7 @@
     color: #940000 !important;
     font-weight: 600;
     background-color: transparent !important;
-    font-family: Arial, sans-serif !important;
+    font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif !important;
 }
 
 /* Rangi ya icon ndani ya links */
@@ -90,6 +90,7 @@
 #left-panel .navbar-brand,
 #left-panel .navbar-brand:hover {
     color: #940000 !important;
+    font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif !important;
 }
 
 /* Rangi ya navbar brand */
@@ -116,6 +117,16 @@
 /* Ensure all text in sidebar is #940000 */
 #left-panel * {
     color: #940000 !important;
+}
+
+/* Apply Century Gothic to text elements only, not icons */
+#left-panel, #left-panel p, #left-panel span, #left-panel a, #left-panel li, #left-panel .navbar-brand {
+    font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif !important;
+}
+
+/* Exclude Font Awesome icons from font-family override */
+#left-panel .fa, #left-panel .fa:before, #left-panel i.fa, #left-panel [class*="fa-"]:before, #left-panel [class^="fa-"]:before {
+    font-family: 'FontAwesome' !important;
 }
 
 /* Exception for icons - keep them #940000 */
@@ -189,11 +200,13 @@
 
                 <!-- Sidebar Links -->
                 <li class="sidebar-links-container">
-                    <ul style="list-style: none; padding: 0; margin: 0; font-family: Arial, sans-serif;">
+                    <ul style="list-style: none; padding: 0; margin: 0; font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif;">
                         <li><a href="{{ route('teachersDashboard') }}" class="nav-link"><i class="fa fa-building"></i> Dashboard</a></li>
                         <li><a href="{{ route('teacher.mySessions') }}" class="nav-link"><i class="fa fa-clock-o"></i> My Sessions</a></li>
                         <li><a href="{{ route('teacher.myTasks') }}" class="nav-link"><i class="fa fa-tasks"></i> My Tasks</a></li>
                         <li><a href="{{ route('teacherSubjects') }}" class="nav-link"><i class="fa fa-book"></i> My Subjects</a></li>
+                        <li><a href="{{ route('teacher.schemeOfWork') }}" class="nav-link"><i class="fa fa-file-text-o"></i> Scheme of Work</a></li>
+                        <li><a href="{{ route('teacher.lessonPlans') }}" class="nav-link"><i class="fa fa-book"></i> Lesson Plans</a></li>
                         <li><a href="{{ route('teacher.calendar') }}" class="nav-link"><i class="fa fa-calendar"></i> Calendar</a></li>
                         @if (isset($hasAssignedClass) && $hasAssignedClass)
                         <li><a href="{{ route('AdmitedClasses') }}" class="nav-link"><i class="fa fa-users"></i> My Class</a></li>
@@ -330,7 +343,7 @@
                         @endif
 
                         @if($hasParentPermission)
-                            <li><a href="{{ route('manage_parents') }}" class="nav-link"><i class="fa fa-user-plus"></i> Parent Management</a></li>
+    
                         @endif
 
                         @if($hasTimetablePermission)

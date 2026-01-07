@@ -50,4 +50,9 @@ class ClassSubject extends Model
     {
         return $this->hasMany(SubjectElector::class, 'classSubjectID', 'class_subjectID');
     }
+
+    public function schemeOfWork()
+    {
+        return $this->hasMany(SchemeOfWork::class, 'class_subjectID', 'class_subjectID');
+    }
 }

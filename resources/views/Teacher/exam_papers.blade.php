@@ -168,9 +168,14 @@
                                         <select class="form-control" id="class_subject" name="class_subjectID" required>
                                             <option value="">Select Subject</option>
                                             @foreach($teacherSubjects as $subject)
+                                                @php
+                                                    $subjectName = $subject->subject->subject_name ?? 'N/A';
+                                                    $className = $subject->class->class_name ?? '';
+                                                    $subclassName = $subject->subclass ? $subject->subclass->subclass_name : '';
+                                                    $classDisplay = trim($className . ' ' . $subclassName);
+                                                @endphp
                                                 <option value="{{ $subject->class_subjectID }}">
-                                                    {{ $subject->subject->subject_name ?? 'N/A' }} -
-                                                    {{ $subject->subclass ? $subject->subclass->subclass_name : ($subject->class->class_name ?? 'N/A') }}
+                                                    {{ $subjectName }}@if($classDisplay) ({{ $classDisplay }})@endif
                                                 </option>
                                             @endforeach
                                         </select>
@@ -342,9 +347,14 @@
                         <select class="form-control" id="modal_class_subject" name="class_subjectID" required>
                             <option value="">Select Subject</option>
                             @foreach($teacherSubjects as $subject)
+                                @php
+                                    $subjectName = $subject->subject->subject_name ?? 'N/A';
+                                    $className = $subject->class->class_name ?? '';
+                                    $subclassName = $subject->subclass ? $subject->subclass->subclass_name : '';
+                                    $classDisplay = trim($className . ' ' . $subclassName);
+                                @endphp
                                 <option value="{{ $subject->class_subjectID }}">
-                                    {{ $subject->subject->subject_name ?? 'N/A' }} -
-                                    {{ $subject->subclass ? $subject->subclass->subclass_name : ($subject->class->class_name ?? 'N/A') }}
+                                    {{ $subjectName }}@if($classDisplay) ({{ $classDisplay }})@endif
                                 </option>
                             @endforeach
                         </select>

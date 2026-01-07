@@ -731,10 +731,56 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
+// Store subclasses with timetables globally
+let subclassesWithTimetables = [];
+
+// Load all subclasses with timetables
+function loadSubclassesWithTimetables() {
+    $.ajax({
+        url: '/admin/get-all-subclasses-with-timetables',
+        method: 'GET',
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        },
+        success: function(response) {
+            if (response.success && response.subclassIDs) {
+                subclassesWithTimetables = response.subclassIDs;
+                // Disable subclasses with timetables in all dropdowns
+                disableSubclassesWithTimetables();
+            }
+        },
+        error: function(xhr) {
+            console.error('Error loading subclasses with timetables:', xhr);
+        }
+    });
+}
+
+// Disable subclasses with timetables in all subclass dropdowns
+function disableSubclassesWithTimetables() {
+    $('.subclass-select').each(function() {
+        const select = $(this);
+        subclassesWithTimetables.forEach(function(subclassID) {
+            const option = select.find(`option[value="${subclassID}"]`);
+            if (option.length > 0) {
+                option.prop('disabled', true);
+                let currentText = option.text();
+                if (!currentText.includes('(Has Timetable)')) {
+                    option.text(currentText + ' (Has Timetable)');
+                }
+            }
+        });
+    });
+}
+
 $(document).ready(function() {
+    // Load subclasses with timetables on page load
+    loadSubclassesWithTimetables();
+    
     // Open create timetable modal
     $('#createTimetableBtn').on('click', function() {
         $('#createTimetableModal').modal('show');
+        // Reload subclasses with timetables when modal opens
+        loadSubclassesWithTimetables();
         // Ensure required attributes are set correctly based on selected category
         const category = $('input[name="timetable_category"]:checked').val();
         if (category === 'exam') {
@@ -890,11 +936,17 @@ $(document).ready(function() {
                 targetSessions[timeKey] = [];
             }
             
+            // Check if this is a free session
+            const isFreeSession = session.is_free === true || 
+                                 (session.session_type && session.session_type.toLowerCase() === 'free') ||
+                                 (session.subject_name && session.subject_name.toUpperCase() === 'FREE');
+            
             targetSessions[timeKey].push({
-                subject: session.subject_name || 'N/A',
-                teacher: session.teacher_name || 'N/A',
+                subject: isFreeSession ? 'FREE' : (session.subject_name || 'N/A'),
+                teacher: isFreeSession ? 'FREE' : (session.teacher_name || 'N/A'),
                 class: (session.class_name || '') + ' ' + (session.subclass_name || ''),
-                is_prepo: isPrepo
+                is_prepo: isPrepo,
+                is_free: isFreeSession
             });
         });
 
@@ -979,9 +1031,15 @@ $(document).ready(function() {
                                 });
                                 
                                 uniqueSessions.forEach(function(session) {
+                                    if (session.is_free) {
+                                        // Display FREE session with special styling
+                                        cellHtml += '<div class="mb-1"><strong class="text-primary" style="font-size: 1.1em;">FREE</strong><br>';
+                                        cellHtml += '<small class="text-muted">Free Session</small></div>';
+                                    } else {
                                     cellHtml += '<div class="mb-1"><strong>' + session.subject + '</strong><br>';
                                     cellHtml += '<small class="text-muted">' + session.teacher + '</small><br>';
                                     cellHtml += '<small class="text-info">' + session.class + '</small></div>';
+                                    }
                                 });
                                 tableHtml += '<td>' + cellHtml + '</td>';
                             } else {
@@ -1027,9 +1085,15 @@ $(document).ready(function() {
                             });
                             
                             uniqueSessions.forEach(function(session) {
+                                if (session.is_free) {
+                                    // Display FREE session with special styling
+                                    cellHtml += '<div class="mb-1"><span class="badge bg-success">Prepo</span> <strong class="text-primary" style="font-size: 1.1em;">FREE</strong><br>';
+                                    cellHtml += '<small class="text-muted">Free Session</small></div>';
+                                } else {
                                 cellHtml += '<div class="mb-1"><span class="badge bg-success">Prepo</span> <strong>' + session.subject + '</strong><br>';
                                 cellHtml += '<small class="text-muted">' + session.teacher + '</small><br>';
                                 cellHtml += '<small class="text-info">' + session.class + '</small></div>';
+                                }
                             });
                             tableHtml += '<td style="background-color: #f8f9fa;">' + cellHtml + '</td>';
                         } else {
@@ -2831,10 +2895,15 @@ $(document).ready(function() {
                     $('#session_end_time').val(def.session_end_time);
                     
                     // Load prepo
-                    if (def.has_prepo) {
+                    if (def.has_prepo == 1 || def.has_prepo === true || def.has_prepo == '1') {
                         $('#has_prepo').prop('checked', true).trigger('change');
                         $('#prepo_start_time').val(def.prepo_start_time);
                         $('#prepo_end_time').val(def.prepo_end_time);
+                    } else {
+                        // Ensure checkbox is unchecked if has_prepo is false
+                        $('#has_prepo').prop('checked', false).trigger('change');
+                        $('#prepo_start_time').val('');
+                        $('#prepo_end_time').val('');
                     }
                     
                     // Load break times
@@ -2983,6 +3052,11 @@ $(document).ready(function() {
         $('#classTimetableForms').append(classFormHtml);
         $('#saveAllTimetablesBtn').show();
         
+        // Disable subclasses with timetables in the new dropdown
+        setTimeout(function() {
+            disableSubclassesWithTimetables();
+        }, 100);
+        
         // Initialize days when subclass is selected
         $(`.subclass-select[data-class-index="${classTimetableCounter}"]`).on('change', function() {
             const subclassID = $(this).val();
@@ -3127,7 +3201,7 @@ $(document).ready(function() {
                     </div>
                     <div class="card-body">
                         <!-- Prepo Session (if enabled) - BEFORE regular sessions -->
-                        ${timetableDefinition && timetableDefinition.has_prepo ? `
+                        ${timetableDefinition && (timetableDefinition.has_prepo == 1 || timetableDefinition.has_prepo === true || timetableDefinition.has_prepo == '1') ? `
                         <div class="prepo-session mb-3" id="prepo-${classIndex}-${day}">
                             <h6 class="small mb-2"><i class="bi bi-clock-history"></i> Prepo Session</h6>
                             <!-- Prepo sessions will be added here -->
@@ -4433,12 +4507,14 @@ $(document).ready(function() {
         }
 
         // Prepare data for saving
+        // Explicitly set has_prepo to true or false (not just when checked)
+        const hasPrepoChecked = $('#has_prepo').is(':checked');
         const definitionData = {
             session_start_time: sessionStartTime,
             session_end_time: sessionEndTime,
-            has_prepo: $('#has_prepo').is(':checked'),
-            prepo_start_time: $('#has_prepo').is(':checked') ? $('#prepo_start_time').val() : null,
-            prepo_end_time: $('#has_prepo').is(':checked') ? $('#prepo_end_time').val() : null,
+            has_prepo: hasPrepoChecked ? '1' : '0', // Explicitly send as string '1' or '0'
+            prepo_start_time: hasPrepoChecked ? $('#prepo_start_time').val() : null,
+            prepo_end_time: hasPrepoChecked ? $('#prepo_end_time').val() : null,
             break_times: breakTimes,
             session_types: sessionTypes
         };

@@ -450,45 +450,45 @@
 
 
     <!-- Topbar Start -->
-    <div class="container-fluid bg-primary top-bar wow fadeIn" data-wow-delay="0.1s">
+    <div class="container-fluid top-bar wow fadeIn" data-wow-delay="0.1s" style="background: #ffffff !important; background-color: #ffffff !important; border-bottom: 2px solid; border-image: linear-gradient(90deg, #ed9999 0%, #940000 100%) 1; box-shadow: 0 1px 5px rgba(148, 0, 0, 0.1);">
         <div class="row align-items-center h-100">
             <div class="col-lg-4 text-center text-lg-start">
-                <a href="/">
-                    <h1 class="display-5 m-0" style="color: #ffffff !important;">ShuleLink</h1>
+                <a href="/" style="text-decoration: none;">
+                    <h1 class="display-5 m-0" style="color: #940000 !important;">ShuleLink</h1>
                 </a>
             </div>
             <div class="col-lg-8 d-none d-lg-block">
                 <div class="row">
                     <div class="col-lg-4">
                         <div class="d-flex justify-content-end">
-                            <div class="flex-shrink-0 btn-square bg-primary">
-                                <i class="fa fa-phone-alt text-dark"></i>
+                            <div class="flex-shrink-0 btn-square" style="background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important; width: 50px; height: 50px; border-radius: 5px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fa fa-phone-alt" style="color: #ffffff !important;"></i>
                             </div>
                             <div class="ms-2">
-                                <h6 style="color: #ffffff !important;" class="mb-0">Call Us</h6>
-                                <span style="color: #ffffff !important;">+255 754 000 000</span>
+                                <h6 style="color: #940000 !important;" class="mb-0">Call Us</h6>
+                                <span style="color: #940000 !important;">+255757166599</span>
                             </div>
                         </div>
                     </div>
                     <div class="col-lg-4">
                         <div class="d-flex justify-content-end">
-                            <div class="flex-shrink-0 btn-square bg-primary">
-                                <i class="fa fa-envelope-open text-dark"></i>
+                            <div class="flex-shrink-0 btn-square" style="background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important; width: 50px; height: 50px; border-radius: 5px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fa fa-envelope-open" style="color: #ffffff !important;"></i>
                             </div>
                             <div class="ms-2">
-                                <h6 style="color: #ffffff !important;" class="mb-0">Mail Us</h6>
-                                <span style="color: #ffffff !important;">emca@emca.tech</span>
+                                <h6 style="color: #940000 !important;" class="mb-0">Mail Us</h6>
+                                <span style="color: #940000 !important;">emca@emca.tech</span>
                             </div>
                         </div>
                     </div>
                     <div class="col-lg-4">
                         <div class="d-flex justify-content-end">
-                            <div class="flex-shrink-0 btn-square bg-primary">
-                                <i class="fa fa-map-marker-alt text-dark"></i>
+                            <div class="flex-shrink-0 btn-square" style="background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important; width: 50px; height: 50px; border-radius: 5px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fa fa-map-marker-alt" style="color: #ffffff !important;"></i>
                             </div>
                             <div class="ms-2">
-                                <h6 style="color: #ffffff !important;" class="mb-0">Address</h6>
-                                <span style="color: #ffffff !important;">Moshi Kilimanjaro</span>
+                                <h6 style="color: #940000 !important;" class="mb-0">Address</h6>
+                                <span style="color: #940000 !important;">Moshi Kilimanjaro</span>
                             </div>
                         </div>
                     </div>
@@ -500,34 +500,28 @@
 
 
     <!-- Navbar Start -->
-    <div class="container-fluid bg-secondary px-0 wow fadeIn" data-wow-delay="0.1s">
+    <div class="container-fluid px-0 wow fadeIn" data-wow-delay="0.1s" style="background: #ffffff !important;">
         <div class="nav-bar">
-            <nav class="navbar navbar-expand-lg bg-primary navbar-dark px-4 py-lg-0">
-                <h4 class="d-lg-none m-0">Menu</h4>
+            <nav class="navbar navbar-expand-lg px-4 py-lg-0" style="background: #ffffff !important; background-color: #ffffff !important; box-shadow: 0 2px 10px rgba(148, 0, 0, 0.15); border-bottom: 3px solid; border-image: linear-gradient(90deg, #ed9999 0%, #940000 100%) 1; padding: 15px 0 !important;">
+                <h4 class="d-lg-none m-0" style="color: #940000 !important;">Menu</h4>
                 <button type="button" class="navbar-toggler me-0" data-bs-toggle="collapse"
-                    data-bs-target="#navbarCollapse">
-                    <span class="navbar-toggler-icon"></span>
+                    data-bs-target="#navbarCollapse" style="border-color: #940000 !important;">
+                    <span class="navbar-toggler-icon" style="background-image: url(&quot;data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(148, 0, 0, 1)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e&quot;) !important;"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarCollapse">
                     <div class="navbar-nav me-auto">
-                        <a href="/" class="nav-item nav-link active">Home</a>
-                        <a href="/about" class="nav-item nav-link">About</a>
-                        <a href="/services" class="nav-item nav-link">Services</a>
-                        <a href="{{ route('login') }}" class="nav-item nav-link">Login</a>
-                        <div class="nav-item dropdown">
-                            <a href="#!" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Pricing</a>
-                            <div class="dropdown-menu bg-light m-0">
-                                <a href="/pricing" class="dropdown-item">Pricing</a>
-                                <a href="/team" class="dropdown-item">Our Team</a>
-                                <a href="/contact" class="dropdown-item">Contact</a>
-                            </div>
-                        </div>
-                        <a href="/contact" class="nav-item nav-link">Contact</a>
+                        <a href="/" class="nav-item nav-link active" style="color: #ffffff !important; background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important; border-radius: 5px; font-weight: 600; padding: 8px 15px !important; margin: 0 5px;">Home</a>
+                        <a href="/about" class="nav-item nav-link" style="color: #940000 !important; font-weight: 500; padding: 8px 15px !important; margin: 0 5px; border-radius: 5px; transition: all 0.3s ease;" onmouseover="this.style.color='#ffffff'; this.style.background='linear-gradient(135deg, #ed9999 0%, #940000 100%)';" onmouseout="this.style.color='#940000'; this.style.background='transparent';">About</a>
+                        <a href="/services" class="nav-item nav-link" style="color: #940000 !important; font-weight: 500; padding: 8px 15px !important; margin: 0 5px; border-radius: 5px; transition: all 0.3s ease;" onmouseover="this.style.color='#ffffff'; this.style.background='linear-gradient(135deg, #ed9999 0%, #940000 100%)';" onmouseout="this.style.color='#940000'; this.style.background='transparent';">Services</a>
+                        <a href="{{ route('login') }}" class="nav-item nav-link" style="color: #940000 !important; font-weight: 500; padding: 8px 15px !important; margin: 0 5px; border-radius: 5px; transition: all 0.3s ease;" onmouseover="this.style.color='#ffffff'; this.style.background='linear-gradient(135deg, #ed9999 0%, #940000 100%)';" onmouseout="this.style.color='#940000'; this.style.background='transparent';">Login</a>
+                        <a href="{{ route('pricing') }}" class="nav-item nav-link" style="color: #940000 !important; font-weight: 500; padding: 8px 15px !important; margin: 0 5px; border-radius: 5px; transition: all 0.3s ease;" onmouseover="this.style.color='#ffffff'; this.style.background='linear-gradient(135deg, #ed9999 0%, #940000 100%)';" onmouseout="this.style.color='#940000'; this.style.background='transparent';">Pricing</a>
+                        <a href="{{ route('online_application') }}" class="nav-item nav-link" style="color: #940000 !important; font-weight: 500; padding: 8px 15px !important; margin: 0 5px; border-radius: 5px; transition: all 0.3s ease;" onmouseover="this.style.color='#ffffff'; this.style.background='linear-gradient(135deg, #ed9999 0%, #940000 100%)';" onmouseout="this.style.color='#940000'; this.style.background='transparent';">Online Application</a>
+                        <a href="/contact" class="nav-item nav-link" style="color: #940000 !important; font-weight: 500; padding: 8px 15px !important; margin: 0 5px; border-radius: 5px; transition: all 0.3s ease;" onmouseover="this.style.color='#ffffff'; this.style.background='linear-gradient(135deg, #ed9999 0%, #940000 100%)';" onmouseout="this.style.color='#940000'; this.style.background='transparent';">Contact</a>
                     </div>
                     <div class="d-none d-lg-flex ms-auto">
-                        <a class="btn btn-square btn-dark ms-2" href="#!"><i class="fab fa-twitter"></i></a>
-                        <a class="btn btn-square btn-dark ms-2" href="#!"><i class="fab fa-facebook-f"></i></a>
-                        <a class="btn btn-square btn-dark ms-2" href="#!"><i class="fab fa-youtube"></i></a>
+                        <a class="btn btn-square ms-2" href="#!" style="background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important; border: none; width: 40px; height: 40px; border-radius: 5px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;" onmouseover="this.style.background='linear-gradient(135deg, #940000 0%, #ed9999 100%)'; this.style.transform='scale(1.1)';" onmouseout="this.style.background='linear-gradient(135deg, #ed9999 0%, #940000 100%)'; this.style.transform='scale(1)';"><i class="fab fa-twitter" style="color: #ffffff !important;"></i></a>
+                        <a class="btn btn-square ms-2" href="#!" style="background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important; border: none; width: 40px; height: 40px; border-radius: 5px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;" onmouseover="this.style.background='linear-gradient(135deg, #940000 0%, #ed9999 100%)'; this.style.transform='scale(1.1)';" onmouseout="this.style.background='linear-gradient(135deg, #ed9999 0%, #940000 100%)'; this.style.transform='scale(1)';"><i class="fab fa-facebook-f" style="color: #ffffff !important;"></i></a>
+                        <a class="btn btn-square ms-2" href="#!" style="background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important; border: none; width: 40px; height: 40px; border-radius: 5px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;" onmouseover="this.style.background='linear-gradient(135deg, #940000 0%, #ed9999 100%)'; this.style.transform='scale(1.1)';" onmouseout="this.style.background='linear-gradient(135deg, #ed9999 0%, #940000 100%)'; this.style.transform='scale(1)';"><i class="fab fa-youtube" style="color: #ffffff !important;"></i></a>
                     </div>
                 </div>
             </nav>

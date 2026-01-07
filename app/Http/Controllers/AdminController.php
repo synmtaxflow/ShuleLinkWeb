@@ -6,6 +6,9 @@ use App\Models\SessionTask;
 use App\Models\Teacher;
 use App\Models\ClassSessionTimetable;
 use App\Models\School;
+use App\Models\ClassSubject;
+use App\Models\SchemeOfWork;
+use App\Models\SchemeOfWorkItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\DB;
@@ -503,5 +506,83 @@ class AdminController extends Controller
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
+    }
+
+    public function adminSchemeOfWork()
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        if (!$schoolID) {
+            return redirect()->route('AdminDashboard')->with('error', 'School ID not found');
+        }
+
+        // Get all class subjects with scheme of work for this school
+        $currentYear = date('Y');
+        
+        $classSubjectsWithSchemes = ClassSubject::with([
+                'subject',
+                'class',
+                'subclass.class',
+                'teacher',
+                'schemeOfWork' => function($query) use ($currentYear) {
+                    $query->where('year', $currentYear)->orderBy('year', 'desc');
+                },
+                'schemeOfWork.items',
+                'schemeOfWork.createdBy'
+            ])
+            ->whereHas('class', function($query) use ($schoolID) {
+                $query->where('schoolID', $schoolID)->where('status', 'Active');
+            })
+            ->where('status', 'Active')
+            ->whereHas('schemeOfWork', function($query) use ($currentYear) {
+                $query->where('year', $currentYear);
+            })
+            ->get()
+            ->map(function($classSubject) use ($currentYear) {
+                // Get current year scheme
+                $currentScheme = $classSubject->schemeOfWork->where('year', $currentYear)->first();
+                
+                // Calculate progress (percentage of items marked as done)
+                $progress = 0;
+                $totalItems = 0;
+                $doneItems = 0;
+                
+                if ($currentScheme) {
+                    $totalItems = $currentScheme->items->count();
+                    $doneItems = $currentScheme->items->where('remarks', 'done')->count();
+                    if ($totalItems > 0) {
+                        $progress = round(($doneItems / $totalItems) * 100, 2);
+                    }
+                }
+                
+                return [
+                    'class_subjectID' => $classSubject->class_subjectID,
+                    'subject_name' => $classSubject->subject->subject_name ?? 'N/A',
+                    'class_name' => $classSubject->subclass && $classSubject->subclass->class 
+                        ? $classSubject->subclass->class->class_name . ' ' . $classSubject->subclass->subclass_name
+                        : ($classSubject->class ? $classSubject->class->class_name : 'N/A'),
+                    'teacher_name' => $classSubject->teacher 
+                        ? $classSubject->teacher->first_name . ' ' . $classSubject->teacher->last_name
+                        : 'Not Assigned',
+                    'teacherID' => $classSubject->teacherID,
+                    'scheme' => $currentScheme,
+                    'progress' => $progress,
+                    'totalItems' => $totalItems,
+                    'doneItems' => $doneItems,
+                    'year' => $currentYear
+                ];
+            })
+            ->filter(function($item) {
+                return $item['scheme'] !== null;
+            })
+            ->sortBy('subject_name')
+            ->values();
+
+        return view('Admin.scheme_of_work', compact('classSubjectsWithSchemes'));
     }
 }

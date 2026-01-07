@@ -1219,11 +1219,33 @@
                 }
             },
             error: function(xhr) {
-                const error = xhr.responseJSON?.error || 'An error occurred';
+                let errorMessage = 'An error occurred while saving the book.';
+                
+                if (xhr.responseJSON) {
+                    if (xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    } else if (xhr.responseJSON.error) {
+                        errorMessage = xhr.responseJSON.error;
+                    } else if (xhr.responseJSON.errors) {
+                        // Validation errors
+                        const errors = xhr.responseJSON.errors;
+                        const errorList = Object.values(errors).flat().join('<br>');
+                        errorMessage = errorList;
+                    }
+                } else if (xhr.responseText) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMessage = response.message || response.error || errorMessage;
+                    } catch (e) {
+                        errorMessage = xhr.responseText || errorMessage;
+                    }
+                }
+                
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: error
+                    html: errorMessage,
+                    confirmButtonColor: '#940000'
                 });
                 $saveBtn.prop('disabled', false);
                 $saveBtnText.text(originalText);
@@ -1444,14 +1466,38 @@
                 }
             },
             error: function(xhr) {
-                const error = xhr.responseJSON?.error || 'An error occurred';
+                let errorMessage = 'An error occurred while borrowing the book.';
+                
+                if (xhr.responseJSON) {
+                    if (xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    } else if (xhr.responseJSON.error) {
+                        errorMessage = xhr.responseJSON.error;
+                    } else if (xhr.responseJSON.errors) {
+                        // Validation errors
+                        const errors = xhr.responseJSON.errors;
+                        const errorList = Object.values(errors).flat().join('<br>');
+                        errorMessage = errorList;
+                    }
+                } else if (xhr.responseText) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMessage = response.message || response.error || errorMessage;
+                    } catch (e) {
+                        errorMessage = xhr.responseText || errorMessage;
+                    }
+                }
+                
+                console.error('Borrow error:', xhr.responseJSON || xhr.responseText);
+                
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: error
+                    html: errorMessage,
+                    confirmButtonColor: '#940000'
                 });
                 $saveBorrowBtn.prop('disabled', false);
-                $saveBorrowBtn.html(originalBorrowBtnText);
+                $saveBorrowBtnText.text(originalBorrowBtnText);
             }
         });
     }

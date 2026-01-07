@@ -31,7 +31,7 @@
                         </div>
                         <div class="card-body">
                             <h6 class="text-primary mb-3">{{ $assignment->exam_name ?? 'N/A' }}</h6>
-                            
+
                             <div class="mb-2">
                                 <small class="text-muted d-block">Class:</small>
                                 <strong>{{ $assignment->class_name ?? 'N/A' }}</strong>
@@ -81,7 +81,7 @@
                             </div>
 
                             <div class="d-grid gap-2">
-                                <button class="btn btn-sm btn-primary view-hall-students-btn" 
+                                <button class="btn btn-sm btn-primary view-hall-students-btn"
                                         data-hall-id="{{ $assignment->exam_hallID }}"
                                         data-subject-id="{{ $assignment->subjectID }}"
                                         data-timetable-id="{{ $assignment->exam_timetableID }}"
@@ -89,19 +89,12 @@
                                         data-hall-name="{{ $assignment->hall_name }}">
                                     <i class="bi bi-people"></i> View Students
                                 </button>
-                                
+
                                 @if($isActive && $assignment->exam_date)
                                 <button class="btn btn-sm btn-success"
-    onclick="takeAttendance(
-        {{ json_encode($assignment->exam_hallID) }},
-        {{ json_encode($assignment->subjectID) }},
-        {{ json_encode($assignment->exam_timetableID) }},
-        {{ json_encode($assignment->examID) }},
-        {{ json_encode($assignment->exam_date) }}
-    )">
-    <i class="bi bi-clipboard-check"></i> Take Attendance
-</button>
-
+                                    onclick="takeAttendance({{ json_encode($assignment->exam_hallID) }}, {{ json_encode($assignment->subjectID) }}, {{ json_encode($assignment->exam_timetableID) }}, {{ json_encode($assignment->examID) }}, {{ json_encode($assignment->exam_date) }})">
+                                    <i class="bi bi-clipboard-check"></i> Take Attendance
+                                </button>
                                 @endif
                             </div>
                         </div>
@@ -287,19 +280,19 @@ function loadAttendanceData(hallID, subjectID, timetableID, examID, examDate) {
                             '</tr>' +
                         '</thead>' +
                         '<tbody>';
-                
+
                 if (response.students.length === 0) {
                     html += '<tr><td colspan="5" class="text-center text-muted py-4">No students found in this hall.</td></tr>';
                 } else {
                     response.students.forEach(function(student, index) {
                         const currentStatus = student.is_present ? 'Present' : (student.status || 'Absent');
                         const statusValue = currentStatus === 'Present' ? 'Present' : (currentStatus === 'Excused' ? 'Excused' : 'Absent');
-                        
+
                         const selectedPresent = statusValue === 'Present' ? ' selected' : '';
                         const selectedAbsent = statusValue === 'Absent' ? ' selected' : '';
                         const selectedExcused = statusValue === 'Excused' ? ' selected' : '';
                         const subclassDisplay = student.subclass ? ' - ' + student.subclass : '';
-                        
+
                         html += '<tr>' +
                             '<td>' + (index + 1) + '</td>' +
                             '<td><strong>' + (student.name || 'N/A') + '</strong></td>' +
@@ -317,11 +310,11 @@ function loadAttendanceData(hallID, subjectID, timetableID, examID, examDate) {
                         '</tr>';
                     });
                 }
-                
+
                 html += '</tbody></table></div>';
-                
+
                 $('#attendanceContent').html(html);
-                
+
                 // Initialize DataTable with max 5 rows per page
                 $('#attendanceTable').DataTable({
                     pageLength: 5,
@@ -329,12 +322,12 @@ function loadAttendanceData(hallID, subjectID, timetableID, examID, examDate) {
                     responsive: true,
                     order: [[1, 'asc']]
                 });
-                
+
                 // Update statistics
                 if (typeof updateAttendanceStats === 'function') {
                     updateAttendanceStats();
                 }
-                
+
                 // Store hallID and examID for saving
                 $('#takeAttendanceModal').data('hall-id', hallID);
                 $('#takeAttendanceModal').data('exam-id', examID);
@@ -359,10 +352,10 @@ window.takeAttendance = function(hallID, subjectID, timetableID, examID, examDat
             setTimeout(executeWhenJQueryReady, 50);
             return;
         }
-        
+
         $('#takeAttendanceModal').modal('show');
         $('#attendanceContent').html('<div class="text-center py-5"><div class="spinner-border text-success" role="status"><span class="sr-only">Loading...</span></div></div>');
-        
+
         // Load attendance data
         loadAttendanceData(hallID, subjectID, timetableID, examID, examDate);
     }
@@ -377,21 +370,21 @@ window.takeAttendance = function(hallID, subjectID, timetableID, examID, examDat
             setTimeout(initSuperviseExams, 100);
             return;
         }
-        
+
         $(document).ready(function() {
             console.log('Supervise Exams script initialized');
-            
+
             // View Hall Students
             $(document).on('click', '.view-hall-students-btn', function(e) {
                 e.preventDefault();
                 console.log('View Students button clicked');
-                
+
                 const hallID = $(this).data('hall-id');
                 const subjectID = $(this).data('subject-id');
                 const timetableID = $(this).data('timetable-id');
                 const examName = $(this).data('exam-name');
                 const hallName = $(this).data('hall-name');
-                
+
                 console.log('Hall ID:', hallID, 'Subject ID:', subjectID);
 
                 $('#viewHallStudentsModalLabel').html(`<i class="bi bi-people"></i> ${hallName} - ${examName}`);
@@ -427,7 +420,7 @@ window.takeAttendance = function(hallID, subjectID, timetableID, examID, examDat
                                 </thead>
                                 <tbody>
                     `;
-                    
+
                     if (response.students.length === 0) {
                         html += '<tr><td colspan="6" class="text-center text-muted py-4">No students found in this hall.</td></tr>';
                     } else {
@@ -441,7 +434,7 @@ window.takeAttendance = function(hallID, subjectID, timetableID, examID, examDat
                             } else {
                                 statusBadge = '<span class="badge bg-danger">Absent</span>';
                             }
-                            
+
                             html += `<tr>
                                 <td>${index + 1}</td>
                                 <td><strong>${student.name || 'N/A'}</strong></td>
@@ -449,7 +442,7 @@ window.takeAttendance = function(hallID, subjectID, timetableID, examID, examDat
                                 <td>${student.gender || 'N/A'}</td>
                                 <td>${statusBadge}</td>
                                 <td>
-                                    <button class="btn btn-sm btn-primary swap-student-btn" 
+                                    <button class="btn btn-sm btn-primary swap-student-btn"
                                             data-student-id="${student.studentID}"
                                             data-student-exam-hall-id="${student.student_exam_hallID}"
                                             data-from-hall-id="${hallID}"
@@ -461,15 +454,15 @@ window.takeAttendance = function(hallID, subjectID, timetableID, examID, examDat
                             </tr>`;
                         });
                     }
-                    
+
                     html += `
                                 </tbody>
                             </table>
                         </div>
                     `;
-                    
+
                     $('#hallStudentsContent').html(html);
-                    
+
                             // Initialize DataTable with max 5 rows per page
                             $('#hallStudentsTable').DataTable({
                                 pageLength: 5,
@@ -495,36 +488,36 @@ window.takeAttendance = function(hallID, subjectID, timetableID, examID, examDat
             // Update statistics when status changes
             function updateAttendanceStats() {
                 let present = 0, absent = 0, excused = 0;
-                
+
                 $('.attendance-status-select').each(function() {
                     const status = $(this).val();
                     if (status === 'Present') present++;
                     else if (status === 'Absent') absent++;
                     else if (status === 'Excused') excused++;
                 });
-                
+
                 $('#statPresent').text(present);
                 $('#statAbsent').text(absent);
                 $('#statExcused').text(excused);
             }
-            
+
             // Update statistics on status change
             $(document).on('change', '.attendance-status-select', function() {
                 updateAttendanceStats();
             });
-            
+
             // Mark All Present
             $(document).on('click', '#markAllPresentBtn', function() {
                 $('.attendance-status-select').val('Present').trigger('change');
                 updateAttendanceStats();
             });
-            
+
             // Mark All Absent
             $(document).on('click', '#markAllAbsentBtn', function() {
                 $('.attendance-status-select').val('Absent').trigger('change');
                 updateAttendanceStats();
             });
-            
+
             // Mark All Excused
             $(document).on('click', '#markAllExcusedBtn', function() {
                 $('.attendance-status-select').val('Excused').trigger('change');
@@ -532,10 +525,10 @@ window.takeAttendance = function(hallID, subjectID, timetableID, examID, examDat
             });
 
             // Save Attendance
-            $('#saveAttendanceBtn').on('click', function() {
+            $(document).on('click', '#saveAttendanceBtn', function() {
                 const hallID = $('#takeAttendanceModal').data('hall-id');
                 const examID = $('#takeAttendanceModal').data('exam-id');
-                
+
                 if (!hallID || !examID) {
                     alert('Error: Missing hall or exam information.');
                     return;
@@ -589,7 +582,7 @@ window.takeAttendance = function(hallID, subjectID, timetableID, examID, examDat
             });
         });
     }
-    
+
     // Initialize when page loads
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initSuperviseExams);
@@ -605,7 +598,7 @@ window.takeAttendance = function(hallID, subjectID, timetableID, examID, examDat
             setTimeout(initSwapHandlers, 100);
             return;
         }
-        
+
         $(document).ready(function() {
             // Swap Student functionality
             $(document).on('click', '.swap-student-btn', function() {
@@ -613,12 +606,12 @@ window.takeAttendance = function(hallID, subjectID, timetableID, examID, examDat
                 const studentExamHallID = $(this).data('student-exam-hall-id');
                 const fromHallID = $(this).data('from-hall-id');
                 const examID = $(this).data('exam-id');
-                
+
                 $('#swap_student_id').val(studentID);
                 $('#swap_from_hall_id').val(fromHallID);
                 $('#swapStudentModal').data('student-exam-hall-id', studentExamHallID);
                 $('#swapStudentModal').data('exam-id', examID);
-                
+
                 // Load available halls for this exam
                 $.ajax({
                     url: `/admin/get-exam-halls/${examID}`,
@@ -644,16 +637,16 @@ window.takeAttendance = function(hallID, subjectID, timetableID, examID, examDat
                         });
                     }
                 });
-                
+
                 $('#swapStudentModal').modal('show');
             });
-            
+
             // Confirm Swap
             $('#confirmSwapBtn').on('click', function() {
                 const targetHallID = $('#swap_target_hall_id').val();
                 const studentExamHallID = $('#swapStudentModal').data('student-exam-hall-id');
                 const fromHallID = $('#swap_from_hall_id').val();
-                
+
                 if (!targetHallID) {
                     Swal.fire({
                         title: 'Error!',
@@ -663,7 +656,7 @@ window.takeAttendance = function(hallID, subjectID, timetableID, examID, examDat
                     });
                     return;
                 }
-                
+
                 $.ajax({
                     url: `/move_student_hall/${fromHallID}`,
                     method: 'POST',
@@ -701,7 +694,7 @@ window.takeAttendance = function(hallID, subjectID, timetableID, examID, examDat
             });
         });
     }
-    
+
     // Initialize swap handlers
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initSwapHandlers);

@@ -2910,12 +2910,18 @@ class TimeTableController extends Controller
             }
 
             // Normalize has_prepo to boolean
+            // Always check the value, even if it's false/0
             $hasPrepo = false;
-            if ($request->has('has_prepo')) {
-                $hasPrepoValue = $request->input('has_prepo');
+            $hasPrepoValue = $request->input('has_prepo', '0');
+            
+            // Check if it's explicitly set to true/1/on (case-insensitive)
+            $hasPrepoValue = is_string($hasPrepoValue) ? strtolower($hasPrepoValue) : $hasPrepoValue;
+            
                 if (in_array($hasPrepoValue, ['true', '1', 'on', true, 1])) {
                     $hasPrepo = true;
-                }
+            } else {
+                // Explicitly set to false if it's '0', 'false', 'off', or false
+                $hasPrepo = false;
             }
 
             DB::beginTransaction();
@@ -3104,6 +3110,40 @@ class TimeTableController extends Controller
             return response()->json(['success' => true, 'hasTimetable' => $hasTimetable]);
         } catch (\Exception $e) {
             \Log::error('Error checking subclass timetable: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    // Get all subclasses that have timetables
+    public function getAllSubclassesWithTimetables(Request $request)
+    {
+        try {
+            $schoolID = Session::get('schoolID');
+            
+            if (!$schoolID) {
+                return response()->json(['success' => false, 'error' => 'School ID required']);
+            }
+
+            // Get definition ID
+            $definition = DB::table('session_timetable_definitions')
+                ->where('schoolID', $schoolID)
+                ->first();
+
+            if (!$definition) {
+                return response()->json(['success' => true, 'subclassIDs' => []]);
+            }
+
+            // Get all subclass IDs that have timetable entries
+            $subclassIDs = DB::table('class_session_timetables')
+                ->where('definitionID', $definition->definitionID)
+                ->select('subclassID')
+                ->distinct()
+                ->pluck('subclassID')
+                ->toArray();
+
+            return response()->json(['success' => true, 'subclassIDs' => $subclassIDs]);
+        } catch (\Exception $e) {
+            \Log::error('Error getting subclasses with timetables: ' . $e->getMessage());
             return response()->json(['success' => false, 'error' => $e->getMessage()]);
         }
     }
@@ -3394,6 +3434,7 @@ class TimeTableController extends Controller
                 ->leftJoin('subclasses', 'class_session_timetables.subclassID', '=', 'subclasses.subclassID')
                 ->leftJoin('classes', 'subclasses.classID', '=', 'classes.classID')
                 ->leftJoin('teachers', 'class_session_timetables.teacherID', '=', 'teachers.id')
+                ->leftJoin('session_types', 'class_session_timetables.session_typeID', '=', 'session_types.session_typeID')
                 ->where('class_session_timetables.definitionID', $definition->definitionID)
                 ->where('class_session_timetables.subclassID', $subclassID)
                 ->select(
@@ -3409,12 +3450,41 @@ class TimeTableController extends Controller
                     'school_subjects.subject_name',
                     'classes.class_name',
                     'subclasses.subclass_name',
+                    'session_types.type as session_type',
+                    'session_types.name as session_type_name',
                     DB::raw("CONCAT(teachers.first_name, ' ', teachers.last_name) as teacher_name")
                 )
                 ->distinct()
                 ->orderBy('class_session_timetables.day')
                 ->orderBy('class_session_timetables.start_time')
-                ->get();
+                ->get()
+                ->map(function($session) {
+                    // Check if this is a free session
+                    $isFree = false;
+                    if (($session->session_type && strtolower($session->session_type) === 'free') || 
+                        ($session->session_type_name && stripos(strtolower($session->session_type_name), 'free') !== false) ||
+                        (!$session->class_subjectID && !$session->subjectID && !$session->teacherID)) {
+                        $isFree = true;
+                    }
+                    
+                    return [
+                        'session_timetableID' => $session->session_timetableID,
+                        'class_subjectID' => $session->class_subjectID,
+                        'subjectID' => $session->subjectID,
+                        'teacherID' => $session->teacherID,
+                        'session_typeID' => $session->session_typeID,
+                        'day' => $session->day,
+                        'start_time' => $session->start_time,
+                        'end_time' => $session->end_time,
+                        'is_prepo' => $session->is_prepo,
+                        'subject_name' => $isFree ? 'FREE' : ($session->subject_name ?? 'N/A'),
+                        'teacher_name' => $isFree ? 'FREE' : ($session->teacher_name ?? 'N/A'),
+                        'class_name' => $session->class_name,
+                        'subclass_name' => $session->subclass_name,
+                        'is_free' => $isFree,
+                        'session_type' => $session->session_type
+                    ];
+                });
 
             // Get subclass info
             $subclass = DB::table('subclasses')
