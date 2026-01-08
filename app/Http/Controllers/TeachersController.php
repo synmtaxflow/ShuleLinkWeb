@@ -6714,21 +6714,69 @@ class TeachersController extends Controller
             ]);
         }
 
-        // Get all sessions for this teacher
-        $sessions = ClassSessionTimetable::with(['subclass.class', 'subject', 'classSubject.subject'])
+        // Get unique subjects that this teacher teaches
+        $subjects = ClassSubject::with(['subject'])
             ->where('teacherID', $teacherID)
-            ->where('definitionID', $definition->definitionID)
-            ->orderByRaw("FIELD(day, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday')")
-            ->orderBy('start_time')
-            ->get();
+            ->where('status', 'Active')
+            ->whereHas('subject', function($query) {
+                $query->where('status', 'Active');
+            })
+            ->get()
+            ->groupBy('subjectID')
+            ->map(function($group) {
+                $first = $group->first();
+                return [
+                    'subjectID' => $first->subjectID,
+                    'subject_name' => $first->subject->subject_name ?? 'N/A',
+                ];
+            })
+            ->values()
+            ->sortBy('subject_name');
 
         return view('Teacher.lesson_plans', [
-            'sessions' => $sessions,
+            'subjects' => $subjects,
             'schoolType' => $isPrimary ? 'PRE AND PRIMARY SCHOOL' : 'SECONDARY SCHOOL',
             'currentYear' => Carbon::now()->year,
             'teacherID' => $teacherID,
             'schoolID' => $schoolID,
         ]);
+    }
+
+    /**
+     * Check if date is weekend or holiday
+     */
+    private function checkDateStatus($date, $schoolID)
+    {
+        $dateObj = Carbon::parse($date);
+        
+        // Check if weekend
+        if ($dateObj->isWeekend()) {
+            return ['status' => 'weekend', 'message' => 'This date is on weekend'];
+        }
+        
+        // Check if holiday
+        $holiday = Holiday::where('schoolID', $schoolID)
+            ->where(function($query) use ($date) {
+                $query->whereDate('start_date', '<=', $date)
+                      ->whereDate('end_date', '>=', $date);
+            })
+            ->first();
+        
+        if ($holiday) {
+            return ['status' => 'holiday', 'message' => 'This date is on holiday: ' . $holiday->holiday_name];
+        }
+        
+        // Check if event (non-working day)
+        $event = Event::where('schoolID', $schoolID)
+            ->whereDate('event_date', $date)
+            ->where('is_non_working_day', true)
+            ->first();
+        
+        if ($event) {
+            return ['status' => 'holiday', 'message' => 'This date is on holiday: ' . $event->event_name];
+        }
+        
+        return ['status' => 'valid', 'message' => ''];
     }
 
     /**
@@ -6744,6 +6792,16 @@ class TeachersController extends Controller
 
             if (!$teacherID || !$schoolID || !$sessionTimetableID || !$date) {
                 return response()->json(['success' => false, 'error' => 'Missing required parameters']);
+            }
+
+            // Check if date is weekend or holiday
+            $dateStatus = $this->checkDateStatus($date, $schoolID);
+            if ($dateStatus['status'] !== 'valid') {
+                return response()->json([
+                    'success' => false,
+                    'error' => $dateStatus['message'],
+                    'date_status' => $dateStatus['status']
+                ]);
             }
 
             // Get session details
@@ -6802,6 +6860,29 @@ class TeachersController extends Controller
                 $className = $session->subclass->class->class_name;
             }
 
+            // Get teacher name
+            $teacherName = 'N/A';
+            if ($session->teacher) {
+                $teacherName = trim(($session->teacher->first_name ?? '') . ' ' . ($session->teacher->last_name ?? ''));
+            } elseif ($session->teacherID) {
+                $teacher = \App\Models\Teacher::find($session->teacherID);
+                if ($teacher) {
+                    $teacherName = trim(($teacher->first_name ?? '') . ' ' . ($teacher->last_name ?? ''));
+                }
+            }
+
+            // Check if session exists for this day
+            $dateObj = Carbon::parse($date);
+            $dayName = $dateObj->format('l'); // Monday, Tuesday, etc.
+            
+            if ($session->day !== $dayName) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'No session available for this date. This session is scheduled for ' . $session->day . '.',
+                    'date_status' => 'no_session'
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -6813,6 +6894,7 @@ class TeachersController extends Controller
                     'present_total' => $presentTotal,
                     'subject' => $subjectName,
                     'class_name' => $className,
+                    'teacher_name' => $teacherName,
                     'start_time' => $session->start_time,
                     'end_time' => $session->end_time,
                 ]
@@ -6847,6 +6929,10 @@ class TeachersController extends Controller
                 'references' => 'nullable|string',
                 'lesson_stages' => 'nullable|array',
                 'remarks' => 'nullable|string',
+                'reflection' => 'nullable|string',
+                'evaluation' => 'nullable|string',
+                'teacher_signature' => 'nullable|string',
+                'supervisor_signature' => 'nullable|string',
             ]);
 
             if ($validator->fails()) {
@@ -6908,6 +6994,10 @@ class TeachersController extends Controller
                 'references' => $request->input('references'),
                 'lesson_stages' => $request->input('lesson_stages'),
                 'remarks' => $request->input('remarks'),
+                'reflection' => $request->input('reflection'),
+                'evaluation' => $request->input('evaluation'),
+                'teacher_signature' => $request->input('teacher_signature'),
+                'supervisor_signature' => $request->input('supervisor_signature'),
                 'status' => 'draft',
             ]);
 
@@ -6919,6 +7009,221 @@ class TeachersController extends Controller
         } catch (\Exception $e) {
             Log::error('Error storing lesson plan: ' . $e->getMessage());
             return response()->json(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Get sessions for a specific subject
+     */
+    public function getSessionsBySubject(Request $request)
+    {
+        try {
+            $teacherID = Session::get('teacherID');
+            $schoolID = Session::get('schoolID');
+            $subjectID = $request->input('subjectID');
+
+            if (!$teacherID || !$schoolID || !$subjectID) {
+                return response()->json(['success' => false, 'error' => 'Missing required parameters']);
+            }
+
+            // Get active session timetable definition
+            $definition = DB::table('session_timetable_definitions')
+                ->where('schoolID', $schoolID)
+                ->first();
+
+            if (!$definition) {
+                return response()->json(['success' => false, 'error' => 'No timetable definition found']);
+            }
+
+            // Get all sessions for this teacher and subject
+            $sessions = ClassSessionTimetable::with(['subclass.class', 'subject', 'classSubject.subject'])
+                ->where('teacherID', $teacherID)
+                ->where('definitionID', $definition->definitionID)
+                ->where(function($query) use ($subjectID) {
+                    $query->whereHas('classSubject', function($q) use ($subjectID) {
+                        $q->where('subjectID', $subjectID);
+                    })
+                    ->orWhere('subjectID', $subjectID);
+                })
+                ->orderByRaw("FIELD(day, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday')")
+                ->orderBy('start_time')
+                ->get();
+
+            if ($sessions->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'No session available for this subject',
+                    'sessions' => []
+                ]);
+            }
+
+            // Format sessions data
+            $formattedSessions = $sessions->map(function($session) {
+                $subjectName = 'N/A';
+                if($session->classSubject && $session->classSubject->subject) {
+                    $subjectName = $session->classSubject->subject->subject_name;
+                } elseif($session->subject) {
+                    $subjectName = $session->subject->subject_name;
+                }
+                if($session->is_prepo) {
+                    $subjectName .= ' (Prepo)';
+                }
+
+                return [
+                    'session_timetableID' => $session->session_timetableID,
+                    'day' => $session->day,
+                    'start_time' => $session->start_time,
+                    'end_time' => $session->end_time,
+                    'subject_name' => $subjectName,
+                    'class_name' => $session->subclass->class->class_name ?? '',
+                    'subclass_name' => $session->subclass->subclass_name ?? '',
+                    'is_prepo' => $session->is_prepo ?? false,
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'sessions' => $formattedSessions
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting sessions by subject: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Get all sessions for a teacher within a year (excluding weekends and holidays)
+     */
+    public function getAllSessionsForYear(Request $request)
+    {
+        try {
+            $teacherID = Session::get('teacherID');
+            $schoolID = Session::get('schoolID');
+            $year = $request->input('year', Carbon::now()->year);
+            $sessionTimetableID = $request->input('session_timetableID');
+
+            if (!$teacherID || !$schoolID) {
+                return response()->json(['success' => false, 'error' => 'Session expired']);
+            }
+
+            // Get session details
+            $session = ClassSessionTimetable::with(['subclass.class', 'subject', 'classSubject.subject'])
+                ->where('session_timetableID', $sessionTimetableID)
+                ->where('teacherID', $teacherID)
+                ->first();
+
+            if (!$session) {
+                return response()->json(['success' => false, 'error' => 'Session not found']);
+            }
+
+            // Get all holidays for the year
+            $holidays = Holiday::where('schoolID', $schoolID)
+                ->where(function($query) use ($year) {
+                    $query->whereYear('start_date', $year)
+                          ->orWhereYear('end_date', $year);
+                })
+                ->get();
+
+            // Get all non-working events for the year
+            $events = Event::where('schoolID', $schoolID)
+                ->whereYear('event_date', $year)
+                ->where('is_non_working_day', true)
+                ->get();
+
+            // Create holiday dates array
+            $holidayDates = [];
+            foreach ($holidays as $holiday) {
+                $start = Carbon::parse($holiday->start_date);
+                $end = Carbon::parse($holiday->end_date);
+                while ($start <= $end) {
+                    if ($start->year == $year) {
+                        $holidayDates[] = $start->format('Y-m-d');
+                    }
+                    $start->addDay();
+                }
+            }
+            foreach ($events as $event) {
+                $holidayDates[] = Carbon::parse($event->event_date)->format('Y-m-d');
+            }
+            $holidayDates = array_unique($holidayDates);
+
+            // Get all dates for the year that match the session day
+            $yearStart = Carbon::create($year, 1, 1);
+            $yearEnd = Carbon::create($year, 12, 31);
+            $sessionDates = [];
+            $currentDate = $yearStart->copy();
+
+            while ($currentDate <= $yearEnd) {
+                $dayName = $currentDate->format('l'); // Monday, Tuesday, etc.
+                $dateStr = $currentDate->format('Y-m-d');
+                
+                // Check if it matches the session day and is not weekend or holiday
+                if ($dayName === $session->day && !$currentDate->isWeekend() && !in_array($dateStr, $holidayDates)) {
+                    // Check if lesson plan exists for this date
+                    $lessonPlan = LessonPlan::where('session_timetableID', $sessionTimetableID)
+                        ->where('lesson_date', $dateStr)
+                        ->first();
+                    
+                    $sessionDates[] = [
+                        'date' => $dateStr,
+                        'formatted_date' => $currentDate->format('d/m/Y'),
+                        'day_name' => $dayName,
+                        'has_lesson_plan' => $lessonPlan ? true : false,
+                        'lesson_plan_id' => $lessonPlan ? $lessonPlan->lesson_planID : null,
+                    ];
+                }
+                
+                $currentDate->addDay();
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'session' => [
+                        'session_timetableID' => $session->session_timetableID,
+                        'day' => $session->day,
+                        'start_time' => $session->start_time,
+                        'end_time' => $session->end_time,
+                    ],
+                    'dates' => $sessionDates,
+                    'total_sessions' => count($sessionDates),
+                    'year' => $year,
+                    'period' => 'year'
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting all sessions for year: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Check if lesson plan exists for a session and date
+     */
+    public function checkLessonPlanExists(Request $request)
+    {
+        try {
+            $teacherID = Session::get('teacherID');
+            $sessionTimetableID = $request->input('session_timetableID');
+            $date = $request->input('date');
+
+            if (!$teacherID || !$sessionTimetableID || !$date) {
+                return response()->json(['success' => false, 'exists' => false]);
+            }
+
+            $lessonPlan = LessonPlan::where('session_timetableID', $sessionTimetableID)
+                ->where('lesson_date', $date)
+                ->where('teacherID', $teacherID)
+                ->first();
+
+            return response()->json([
+                'success' => true,
+                'exists' => $lessonPlan ? true : false,
+                'lesson_plan_id' => $lessonPlan ? $lessonPlan->lesson_planID : null
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error checking lesson plan exists: ' . $e->getMessage());
+            return response()->json(['success' => false, 'exists' => false]);
         }
     }
 
@@ -6941,13 +7246,93 @@ class TeachersController extends Controller
                 return response()->json(['success' => false, 'error' => 'Lesson plan not found']);
             }
 
+            // Get teacher name
+            $teacherName = 'N/A';
+            if ($lessonPlan->teacher) {
+                $teacherName = trim(($lessonPlan->teacher->first_name ?? '') . ' ' . ($lessonPlan->teacher->last_name ?? ''));
+            } elseif ($lessonPlan->teacherID) {
+                $teacher = \App\Models\Teacher::find($lessonPlan->teacherID);
+                if ($teacher) {
+                    $teacherName = trim(($teacher->first_name ?? '') . ' ' . ($teacher->last_name ?? ''));
+                }
+            }
+
+            $data = $lessonPlan->toArray();
+            $data['teacher_name'] = $teacherName;
+
             return response()->json([
                 'success' => true,
-                'data' => $lessonPlan
+                'data' => $data
             ]);
         } catch (\Exception $e) {
             Log::error('Error getting lesson plan: ' . $e->getMessage());
             return response()->json(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Download lesson plan as PDF
+     */
+    public function downloadLessonPlanPDF($lessonPlanID)
+    {
+        try {
+            $teacherID = Session::get('teacherID');
+            $schoolID = Session::get('schoolID');
+
+            if (!$teacherID || !$schoolID) {
+                return redirect()->back()->with('error', 'Session expired');
+            }
+
+            // Get lesson plan
+            $lessonPlan = LessonPlan::where('lesson_planID', $lessonPlanID)
+                ->where('teacherID', $teacherID)
+                ->first();
+
+            if (!$lessonPlan) {
+                return redirect()->back()->with('error', 'Lesson plan not found');
+            }
+
+            // Get school info
+            $school = School::find($schoolID);
+            $schoolType = $school && $school->school_type ? strtolower($school->school_type) : 'primary';
+            $isPrimary = strpos($schoolType, 'primary') !== false || strpos($schoolType, 'pre') !== false;
+            $schoolTypeDisplay = $isPrimary ? 'PRE AND PRIMARY SCHOOL' : 'SECONDARY SCHOOL';
+
+            // Get teacher name
+            $teacherName = 'N/A';
+            if ($lessonPlan->teacher) {
+                $teacherName = trim(($lessonPlan->teacher->first_name ?? '') . ' ' . ($lessonPlan->teacher->last_name ?? ''));
+            }
+
+            // Get school logo path
+            $schoolLogoPath = null;
+            if ($school && $school->school_logo) {
+                $schoolLogoPath = public_path($school->school_logo);
+                // Check if file exists
+                if (!file_exists($schoolLogoPath)) {
+                    $schoolLogoPath = null;
+                }
+            }
+
+            // Prepare data for PDF
+            $data = [
+                'lessonPlan' => $lessonPlan,
+                'school' => $school,
+                'schoolType' => $schoolTypeDisplay,
+                'teacherName' => $teacherName,
+                'schoolLogoPath' => $schoolLogoPath,
+            ];
+
+            // Generate PDF
+            $pdf = PDF::loadView('Teacher.pdf.lesson_plan', $data);
+            $pdf->setPaper('A4', 'portrait');
+
+            $filename = 'Lesson_Plan_' . str_replace(' ', '_', $lessonPlan->subject) . '_' . Carbon::parse($lessonPlan->lesson_date)->format('Y-m-d') . '.pdf';
+
+            return $pdf->download($filename);
+        } catch (\Exception $e) {
+            Log::error('Error downloading lesson plan PDF: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to generate PDF: ' . $e->getMessage());
         }
     }
 
@@ -6976,6 +7361,10 @@ class TeachersController extends Controller
                 'references' => 'nullable|string',
                 'lesson_stages' => 'nullable|array',
                 'remarks' => 'nullable|string',
+                'reflection' => 'nullable|string',
+                'evaluation' => 'nullable|string',
+                'teacher_signature' => 'nullable|string',
+                'supervisor_signature' => 'nullable|string',
             ]);
 
             if ($validator->fails()) {
@@ -7000,6 +7389,10 @@ class TeachersController extends Controller
                 'references' => $request->input('references', $lessonPlan->references),
                 'lesson_stages' => $request->input('lesson_stages', $lessonPlan->lesson_stages),
                 'remarks' => $request->input('remarks', $lessonPlan->remarks),
+                'reflection' => $request->input('reflection', $lessonPlan->reflection),
+                'evaluation' => $request->input('evaluation', $lessonPlan->evaluation),
+                'teacher_signature' => $request->input('teacher_signature', $lessonPlan->teacher_signature),
+                'supervisor_signature' => $request->input('supervisor_signature', $lessonPlan->supervisor_signature),
             ]);
 
             return response()->json([

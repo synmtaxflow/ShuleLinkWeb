@@ -1082,48 +1082,58 @@ class ManageStudentController extends Controller
 
     public function get_students(Request $request)
     {
-        // Check read permission - Allow read_only, create, update, delete permissions for viewing
-        $userType = Session::get('user_type');
-        $canView = false;
+        try {
+            // Check read permission - Allow read_only, create, update, delete permissions for viewing
+            $userType = Session::get('user_type');
+            $canView = false;
 
-        if ($userType === 'Admin') {
-            $canView = true;
-        } else {
-            // Check if user has any student permission (read_only, create, update, delete)
-            $canView = $this->hasPermission('student_read_only') ||
-                      $this->hasPermission('student_create') ||
-                      $this->hasPermission('student_update') ||
-                      $this->hasPermission('student_delete') ||
-                      $this->hasPermission('view_students'); // Legacy support
-        }
+            if ($userType === 'Admin') {
+                $canView = true;
+            } else {
+                // Check if user has any student permission (read_only, create, update, delete)
+                $canView = $this->hasPermission('student_read_only') ||
+                          $this->hasPermission('student_create') ||
+                          $this->hasPermission('student_update') ||
+                          $this->hasPermission('student_delete') ||
+                          $this->hasPermission('view_students'); // Legacy support
+            }
 
-        if (!$canView) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You do not have permission to view students.',
-            ], 403);
-        }
+            if (!$canView) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have permission to view students.',
+                ], 403);
+            }
 
-        $schoolID = Session::get('schoolID');
+            $schoolID = Session::get('schoolID');
 
-        if (!$schoolID) {
-            return response()->json([
-                'success' => false,
-                'message' => 'School ID not found'
-            ], 400);
-        }
+            if (!$schoolID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'School ID not found'
+                ], 400);
+            }
 
-        // Get filter parameters
-        $status = $request->input('status', ''); // Empty means all statuses
-        $classID = $request->input('classID', '');
-        $subclassID = $request->input('subclassID', '');
-        $health = $request->input('health', ''); // 'good' or 'bad'
+            // Get filter parameters
+            $status = $request->input('status', ''); // Empty means all statuses
+            $classID = $request->input('classID', '');
+            $subclassID = $request->input('subclassID', '');
+            $gender = $request->input('gender', ''); // 'Male' or 'Female'
+            $health = $request->input('health', ''); // 'good' or 'bad'
+            
+            \Log::info('get_students called with filters', [
+                'status' => $status,
+                'classID' => $classID,
+                'subclassID' => $subclassID,
+                'gender' => $gender,
+                'health' => $health
+            ]);
 
         $query = Student::with(['subclass.class', 'parent'])
             ->where('schoolID', $schoolID);
 
         // Filter by status (default to Active if not specified)
-        if (!empty($status) && in_array($status, ['Active', 'Inactive', 'Graduated'])) {
+        if (!empty($status) && in_array($status, ['Active', 'Applied', 'Inactive', 'Graduated', 'Transferred'])) {
             $query->where('status', $status);
         } else {
             // Default to Active if no status specified
@@ -1142,6 +1152,11 @@ class ManageStudentController extends Controller
             $query->where('subclassID', $subclassID);
         }
 
+        // Filter by gender
+        if (!empty($gender) && in_array($gender, ['Male', 'Female'])) {
+            $query->where('gender', $gender);
+        }
+
         // Filter by health condition
         if (!empty($health)) {
             if ($health === 'good') {
@@ -1155,13 +1170,34 @@ class ManageStudentController extends Controller
                       ->orWhere('general_health_condition', 'like', '%well%');
                 })
                 ->where(function($q) {
-                    $q->where('has_disability', false)
-                      ->where('has_chronic_illness', false);
+                    $q->where(function($q2) {
+                        $q2->where('is_disabled', false)
+                           ->orWhereNull('is_disabled');
+                    })
+                    ->where(function($q2) {
+                        $q2->where('has_epilepsy', false)
+                           ->orWhereNull('has_epilepsy');
+                    })
+                    ->where(function($q2) {
+                        $q2->where('has_allergies', false)
+                           ->orWhereNull('has_allergies');
+                    })
+                    ->where(function($q2) {
+                        $q2->where('has_disability', false)
+                           ->orWhereNull('has_disability');
+                    })
+                    ->where(function($q2) {
+                        $q2->where('has_chronic_illness', false)
+                           ->orWhereNull('has_chronic_illness');
+                    });
                 });
             } elseif ($health === 'bad') {
-                // Bad health: has disability, chronic illness, or negative health condition
+                // Bad health: has disability, chronic illness, epilepsy, allergies, or negative health condition
                 $query->where(function($q) {
-                    $q->where('has_disability', true)
+                    $q->where('is_disabled', true)
+                      ->orWhere('has_epilepsy', true)
+                      ->orWhere('has_allergies', true)
+                      ->orWhere('has_disability', true)
                       ->orWhere('has_chronic_illness', true)
                       ->orWhere('general_health_condition', 'like', '%poor%')
                       ->orWhere('general_health_condition', 'like', '%bad%')
@@ -1228,10 +1264,19 @@ class ManageStudentController extends Controller
             ];
         });
 
-        return response()->json([
-            'success' => true,
-            'students' => $students
-        ]);
+            return response()->json([
+                'success' => true,
+                'students' => $students
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in get_students: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error loading students: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function get_student_statistics(Request $request)
@@ -1249,13 +1294,14 @@ class ManageStudentController extends Controller
         $status = $request->input('status', '');
         $classID = $request->input('classID', '');
         $subclassID = $request->input('subclassID', '');
+        $gender = $request->input('gender', '');
         $health = $request->input('health', '');
 
         $query = Student::with(['subclass.class'])
             ->where('schoolID', $schoolID);
 
         // Apply same filters as get_students (default to Active)
-        if (!empty($status) && in_array($status, ['Active', 'Inactive', 'Graduated'])) {
+        if (!empty($status) && in_array($status, ['Active', 'Applied', 'Inactive', 'Graduated', 'Transferred'])) {
             $query->where('status', $status);
         } else {
             $query->where('status', 'Active');
@@ -1271,6 +1317,11 @@ class ManageStudentController extends Controller
             $query->where('subclassID', $subclassID);
         }
 
+        // Filter by gender
+        if (!empty($gender) && in_array($gender, ['Male', 'Female'])) {
+            $query->where('gender', $gender);
+        }
+
         if (!empty($health)) {
             if ($health === 'good') {
                 $query->where(function($q) {
@@ -1282,12 +1333,33 @@ class ManageStudentController extends Controller
                       ->orWhere('general_health_condition', 'like', '%well%');
                 })
                 ->where(function($q) {
-                    $q->where('has_disability', false)
-                      ->where('has_chronic_illness', false);
+                    $q->where(function($q2) {
+                        $q2->where('is_disabled', false)
+                           ->orWhereNull('is_disabled');
+                    })
+                    ->where(function($q2) {
+                        $q2->where('has_epilepsy', false)
+                           ->orWhereNull('has_epilepsy');
+                    })
+                    ->where(function($q2) {
+                        $q2->where('has_allergies', false)
+                           ->orWhereNull('has_allergies');
+                    })
+                    ->where(function($q2) {
+                        $q2->where('has_disability', false)
+                           ->orWhereNull('has_disability');
+                    })
+                    ->where(function($q2) {
+                        $q2->where('has_chronic_illness', false)
+                           ->orWhereNull('has_chronic_illness');
+                    });
                 });
             } elseif ($health === 'bad') {
                 $query->where(function($q) {
-                    $q->where('has_disability', true)
+                    $q->where('is_disabled', true)
+                      ->orWhere('has_epilepsy', true)
+                      ->orWhere('has_allergies', true)
+                      ->orWhere('has_disability', true)
                       ->orWhere('has_chronic_illness', true)
                       ->orWhere('general_health_condition', 'like', '%poor%')
                       ->orWhere('general_health_condition', 'like', '%bad%')
@@ -1366,16 +1438,17 @@ class ManageStudentController extends Controller
             $status = $request->input('status', '');
             $classID = $request->input('classID', '');
             $subclassID = $request->input('subclassID', '');
+            $gender = $request->input('gender', '');
             $health = $request->input('health', '');
 
             $query = Student::with(['subclass.class', 'parent'])
                 ->where('schoolID', $schoolID);
 
             // Apply same filters as get_students
-            if (!empty($status) && in_array($status, ['Active', 'Inactive', 'Graduated'])) {
+            if (!empty($status) && in_array($status, ['Active', 'Applied', 'Inactive', 'Graduated', 'Transferred'])) {
                 $query->where('status', $status);
             } else {
-                $query->whereIn('status', ['Active', 'Inactive', 'Graduated']);
+                $query->whereIn('status', ['Active', 'Applied', 'Inactive', 'Graduated', 'Transferred']);
             }
 
             if (!empty($classID)) {
@@ -1386,6 +1459,10 @@ class ManageStudentController extends Controller
 
             if (!empty($subclassID)) {
                 $query->where('subclassID', $subclassID);
+            }
+
+            if (!empty($gender) && in_array($gender, ['Male', 'Female'])) {
+                $query->where('gender', $gender);
             }
 
             if (!empty($health)) {
@@ -1487,16 +1564,17 @@ class ManageStudentController extends Controller
             $status = $request->input('status', '');
             $classID = $request->input('classID', '');
             $subclassID = $request->input('subclassID', '');
+            $gender = $request->input('gender', '');
             $health = $request->input('health', '');
 
             $query = Student::with(['subclass.class', 'parent'])
                 ->where('schoolID', $schoolID);
 
             // Apply same filters as get_students
-            if (!empty($status) && in_array($status, ['Active', 'Inactive', 'Graduated'])) {
+            if (!empty($status) && in_array($status, ['Active', 'Applied', 'Inactive', 'Graduated', 'Transferred'])) {
                 $query->where('status', $status);
             } else {
-                $query->whereIn('status', ['Active', 'Inactive', 'Graduated']);
+                $query->whereIn('status', ['Active', 'Applied', 'Inactive', 'Graduated', 'Transferred']);
             }
 
             if (!empty($classID)) {
@@ -1507,6 +1585,10 @@ class ManageStudentController extends Controller
 
             if (!empty($subclassID)) {
                 $query->where('subclassID', $subclassID);
+            }
+
+            if (!empty($gender) && in_array($gender, ['Male', 'Female'])) {
+                $query->where('gender', $gender);
             }
 
             if (!empty($health)) {
@@ -1520,12 +1602,33 @@ class ManageStudentController extends Controller
                           ->orWhere('general_health_condition', 'like', '%well%');
                     })
                     ->where(function($q) {
-                        $q->where('has_disability', false)
-                          ->where('has_chronic_illness', false);
+                        $q->where(function($q2) {
+                            $q2->where('is_disabled', false)
+                               ->orWhereNull('is_disabled');
+                        })
+                        ->where(function($q2) {
+                            $q2->where('has_epilepsy', false)
+                               ->orWhereNull('has_epilepsy');
+                        })
+                        ->where(function($q2) {
+                            $q2->where('has_allergies', false)
+                               ->orWhereNull('has_allergies');
+                        })
+                        ->where(function($q2) {
+                            $q2->where('has_disability', false)
+                               ->orWhereNull('has_disability');
+                        })
+                        ->where(function($q2) {
+                            $q2->where('has_chronic_illness', false)
+                               ->orWhereNull('has_chronic_illness');
+                        });
                     });
                 } elseif ($health === 'bad') {
                     $query->where(function($q) {
-                        $q->where('has_disability', true)
+                        $q->where('is_disabled', true)
+                          ->orWhere('has_epilepsy', true)
+                          ->orWhere('has_allergies', true)
+                          ->orWhere('has_disability', true)
                           ->orWhere('has_chronic_illness', true)
                           ->orWhere('general_health_condition', 'like', '%poor%')
                           ->orWhere('general_health_condition', 'like', '%bad%')

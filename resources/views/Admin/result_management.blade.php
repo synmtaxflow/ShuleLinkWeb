@@ -45,6 +45,12 @@
 <!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
+<!-- SweetAlert2 CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+
+<!-- SweetAlert2 JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <div class="container-fluid mt-4">
     <div class="row">
         <div class="col-12">
@@ -58,7 +64,7 @@
             @endif
 
             @if(session('error'))
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <div class="alert alert-danger alert-dismissible fade show" role="alert" id="sessionErrorAlert" style="display: none;">
                     <i class="bi bi-exclamation-triangle"></i> {{ session('error') }}
                     <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
@@ -67,7 +73,7 @@
             @endif
 
             @if(isset($error) && $error)
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <div class="alert alert-danger alert-dismissible fade show" role="alert" id="errorAlert" style="display: none;">
                     <i class="bi bi-exclamation-triangle"></i> {{ $error }}
                     <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
@@ -263,10 +269,10 @@
                             <span class="badge badge-info" id="resultCount">Showing <span id="resultCountNumber">0</span> results</span>
                         </div>
                         <div class="col-md-4 text-right">
-                            <button class="btn btn-danger btn-sm" id="exportAllPdf" title="Export All Students to PDF">
+                            <button type="button" class="btn btn-danger btn-sm" id="exportAllPdf" title="Export All Students to PDF">
                                 <i class="bi bi-file-pdf"></i> Export All PDF
                             </button>
-                            <button class="btn btn-success btn-sm" id="exportAllExcel" title="Export All Students to Excel">
+                            <button type="button" class="btn btn-success btn-sm" id="exportAllExcel" title="Export All Students to Excel">
                                 <i class="bi bi-file-excel"></i> Export All Excel
                             </button>
                         </div>
@@ -444,15 +450,76 @@
                                 </table>
                             </div>
                         @else
-                            <div class="alert alert-info text-center">
+                            <div class="alert alert-info text-center" id="noResultsAlert">
                                 <i class="bi bi-info-circle"></i> 
                                 @if(empty($filters['term']) || empty($filters['year']))
-                                    Please select both Term and Year to view results.
+                                    <strong>Please select both Term and Year to view results.</strong>
                                 @else
-                                    No results found for the selected filters. 
-                                    Make sure students have results with marks and status 'allowed' for the selected term.
+                                    <div>
+                                        <strong>No results found for the selected filters.</strong>
+                                        <p class="mt-2 mb-1">Possible reasons:</p>
+                                        <ul class="text-left" style="display: inline-block; text-align: left;">
+                                            <li>Students don't have results with <strong>status 'allowed'</strong> and <strong>marks entered</strong></li>
+                                            <li>Exam has not ended yet (except Weekly/Monthly tests)</li>
+                                            <li>Exam is not approved yet</li>
+                                            <li>Results have status <strong>'not_allowed'</strong> - they need to be changed to <strong>'allowed'</strong> first</li>
+                                        </ul>
+                                        @if(isset($debugInfo) && !empty($debugInfo))
+                                            <div class="mt-3 p-2 bg-light rounded" style="text-align: left; max-width: 600px; margin: 10px auto;">
+                                                <strong>Details:</strong>
+                                                <ul class="mb-0" style="padding-left: 20px;">
+                                                    @foreach($debugInfo as $info)
+                                                        <li>{{ $info }}</li>
+                                                    @endforeach
+                                                </ul>
+                                            </div>
+                                        @endif
+                                        <p class="mt-3 mb-0">
+                                            <small><strong>Solution:</strong> Go to <strong>Manage Examinations</strong> page, select the exam, and change results status from 'not_allowed' to 'allowed'.</small>
+                                        </p>
+                                    </div>
                                 @endif
                             </div>
+                            
+                            @if(!empty($filters['term']) && !empty($filters['year']) && isset($debugInfo) && !empty($debugInfo))
+                                <script>
+                                $(document).ready(function() {
+                                    // Check if any debug info mentions 'not_allowed'
+                                    var hasNotAllowed = false;
+                                    var debugMessages = @json($debugInfo);
+                                    
+                                    debugMessages.forEach(function(msg) {
+                                        if (msg.toLowerCase().includes('not_allowed')) {
+                                            hasNotAllowed = true;
+                                        }
+                                    });
+                                    
+                                    if (hasNotAllowed && typeof Swal !== 'undefined') {
+                                        Swal.fire({
+                                            icon: 'info',
+                                            title: 'Results Status Issue',
+                                            html: '<div style="text-align: left;">' +
+                                                  '<p><strong>Results found but cannot be viewed.</strong></p>' +
+                                                  '<p>The results have status <strong>"not_allowed"</strong> and need to be changed to <strong>"allowed"</strong> first.</p>' +
+                                                  '<hr>' +
+                                                  '<p><strong>To fix this:</strong></p>' +
+                                                  '<ol style="text-align: left;">' +
+                                                  '<li>Go to <strong>Manage Examinations</strong> page</li>' +
+                                                  '<li>Find and select the exam ({{ $filters["examID"] ? "Exam ID: " . $filters["examID"] : "for " . $filters["term"] . " term, " . $filters["year"] }})</li>' +
+                                                  '<li>Click on the results status dropdown</li>' +
+                                                  '<li>Select <strong>"Allow Results Entry"</strong> or <strong>"Allow"</strong></li>' +
+                                                  '</ol>' +
+                                                  '</div>',
+                                            confirmButtonText: 'OK, I understand',
+                                            confirmButtonColor: '#940000',
+                                            allowOutsideClick: true,
+                                            allowEscapeKey: true,
+                                            width: '600px'
+                                        });
+                                    }
+                                });
+                                </script>
+                            @endif
                         @endif
 
                     @elseif($filters['type'] == 'exam' && !$showDetailedView)
@@ -2414,6 +2481,21 @@
 
 <script>
 $(document).ready(function() {
+    console.log('Result Management page loaded');
+    
+    // Check if export buttons exist
+    const exportPdfBtn = $('#exportAllPdf');
+    const exportExcelBtn = $('#exportAllExcel');
+    console.log('Export PDF button found:', exportPdfBtn.length > 0);
+    console.log('Export Excel button found:', exportExcelBtn.length > 0);
+    
+    if (exportPdfBtn.length === 0) {
+        console.warn('Export PDF button not found in DOM at page load');
+    }
+    if (exportExcelBtn.length === 0) {
+        console.warn('Export Excel button not found in DOM at page load');
+    }
+    
     // Setup CSRF token for all AJAX requests
     $.ajaxSetup({
         headers: {
@@ -3489,10 +3571,20 @@ $(document).ready(function() {
                 $('#loadingIndicator').hide();
                 $('#filterSubmitBtn').prop('disabled', false).html('<i class="bi bi-search"></i> Filter Results');
 
-                // Show error message
+                // Extract error message and type
                 let errorMsg = 'An error occurred while filtering results.';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMsg = xhr.responseJSON.message;
+                let errorType = 'general';
+                
+                if (xhr.responseJSON) {
+                    if (xhr.responseJSON.message) {
+                        errorMsg = xhr.responseJSON.message;
+                    }
+                    if (xhr.responseJSON.error) {
+                        errorMsg = xhr.responseJSON.error;
+                    }
+                    if (xhr.responseJSON.error_type) {
+                        errorType = xhr.responseJSON.error_type;
+                    }
                 } else if (xhr.status === 0) {
                     errorMsg = 'Network error. Please check your connection.';
                 } else if (xhr.status === 500) {
@@ -3501,8 +3593,59 @@ $(document).ready(function() {
                     errorMsg = 'Page not found. Please refresh the page.';
                 }
                 
+                // Determine error type from message if not provided
+                if (errorType === 'general') {
+                    if (errorMsg.includes("still taken") || errorMsg.includes("still ongoing")) {
+                        errorType = 'exam_not_ended';
+                    } else if (errorMsg.includes("approval") && (errorMsg.includes("pending") || errorMsg.includes("Wait"))) {
+                        errorType = 'approval_pending';
+                    } else if (errorMsg.includes("rejected")) {
+                        errorType = 'approval_rejected';
+                    } else if (errorMsg.includes("Unauthorized") || errorMsg.includes("access")) {
+                        errorType = 'unauthorized_access';
+                    } else if (errorMsg.includes("select a class") || errorMsg.includes("subclass")) {
+                        errorType = 'no_subclass_selected';
+                    }
+                }
+                
                 $('#errorText').text(errorMsg);
                 $('#errorMessage').show();
+                
+                // Show SweetAlert info alert
+                var title = 'Validation Information';
+                var message = errorMsg;
+                
+                if (errorType === 'exam_not_ended') {
+                    title = 'Exam Still Ongoing';
+                    message = '<div style="text-align: left;"><p><strong>Reason:</strong> ' + errorMsg + '</p><p class="mt-2">You can view results only after the exam has ended.</p></div>';
+                } else if (errorType === 'approval_pending') {
+                    title = 'Results Pending Approval';
+                    message = '<div style="text-align: left;"><p><strong>Status:</strong> ' + errorMsg + '</p><p class="mt-2">Please wait for the approval process to complete.</p></div>';
+                } else if (errorType === 'approval_rejected') {
+                    title = 'Results Approval Rejected';
+                    message = '<div style="text-align: left;"><p><strong>Status:</strong> ' + errorMsg + '</p><p class="mt-2">The results approval was rejected. Please contact the administrator.</p></div>';
+                } else if (errorType === 'unauthorized_access') {
+                    title = 'Access Denied';
+                    message = '<div style="text-align: left;"><p><strong>Reason:</strong> ' + errorMsg + '</p><p class="mt-2">You do not have permission to view results for this class.</p></div>';
+                } else if (errorType === 'no_subclass_selected') {
+                    title = 'Class Selection Required';
+                    message = '<div style="text-align: left;"><p><strong>Action Required:</strong> ' + errorMsg + '</p><p class="mt-2">Please select a class to view results.</p></div>';
+                }
+                
+                // Use the showValidationAlert function
+                if (typeof showValidationAlert !== 'undefined') {
+                    showValidationAlert(title, message, errorType);
+                } else if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'info',
+                        title: title,
+                        html: message,
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#940000',
+                        allowOutsideClick: true,
+                        allowEscapeKey: true
+                    });
+                }
                 
                 console.error('Filter error:', error);
             }
@@ -4064,10 +4207,28 @@ $(document).ready(function() {
         XLSX.writeFile(wb, filename);
     }
 
-    // Export All Students based on filters
-    $('#exportAllPdf').on('click', function(e) {
+    // Export All Students based on filters - Use event delegation to handle dynamically loaded buttons
+    $(document).on('click', '#exportAllPdf', function(e) {
         e.preventDefault();
-        exportAllStudentsPDF();
+        e.stopPropagation();
+        console.log('Export All PDF button clicked');
+        console.log('Button element:', this);
+        console.log('jQuery object:', $(this));
+        
+        // Verify button exists
+        if ($(this).length === 0) {
+            console.error('Export PDF button not found in DOM');
+            alert('Export button not found. Please refresh the page.');
+            return;
+        }
+        
+        try {
+            exportAllStudentsPDF();
+        } catch (error) {
+            console.error('Error exporting PDF:', error);
+            console.error('Error stack:', error.stack);
+            alert('Error exporting PDF: ' + error.message);
+        }
     });
 
     // Function to export detailed view PDF
@@ -4563,7 +4724,7 @@ $(document).ready(function() {
                         },
                         tableWidth: availableWidth,
                         columnStyles: columnStyles,
-                        overflow: 'linebreak',
+                        styles: { overflow: 'linebreak' },
                         showHead: 'everyPage',
                         didDrawCell: function(data) {
                             // Apply bold Arial Black font to specific columns
@@ -4613,15 +4774,6 @@ $(document).ready(function() {
                 doc.setTextColor(148, 0, 0);
                 doc.setFont('helvetica', 'bold');
                 doc.text('shuleLink powered by emca technology', pageWidth / 2, footerY, { align: 'center' });
-                
-                // Headmaster's Sign (Blue ink)
-                doc.setDrawColor(0, 0, 255); // Blue color
-                doc.setLineWidth(0.5);
-                doc.line(pageWidth - 50, footerY - 5, pageWidth - 10, footerY - 5); // Signature line
-                doc.setFontSize(10);
-                doc.setTextColor(0, 0, 255); // Blue text
-                doc.setFont('helvetica', 'bold');
-                doc.text('Headmaster\'s Sign', pageWidth - 30, footerY - 10, { align: 'center' });
             }
             
             // Generate filename
@@ -4630,22 +4782,53 @@ $(document).ready(function() {
         }
     }
 
-    $('#exportAllExcel').on('click', function(e) {
+    // Export All Excel - Use event delegation to handle dynamically loaded buttons
+    $(document).on('click', '#exportAllExcel', function(e) {
         e.preventDefault();
-        exportAllStudentsExcel();
+        e.stopPropagation();
+        console.log('Export All Excel button clicked');
+        console.log('Button element:', this);
+        console.log('jQuery object:', $(this));
+        
+        // Verify button exists
+        if ($(this).length === 0) {
+            console.error('Export Excel button not found in DOM');
+            alert('Export button not found. Please refresh the page.');
+            return;
+        }
+        
+        try {
+            exportAllStudentsExcel();
+        } catch (error) {
+            console.error('Error exporting Excel:', error);
+            console.error('Error stack:', error.stack);
+            alert('Error exporting Excel: ' + error.message);
+        }
     });
 
     function exportAllStudentsPDF() {
+        console.log('exportAllStudentsPDF called');
         // Check if detailed view exists
         const $detailedView = $('.detailed-exam-results');
+        console.log('Detailed view found:', $detailedView.length);
         
         if ($detailedView.length > 0) {
             // Use new detailed view PDF format
+            console.log('Using detailed view PDF export');
             exportDetailedViewPDF();
             return;
         }
         
         // Original export function for non-detailed views
+        console.log('Using standard PDF export');
+        
+        // Check if jsPDF is available
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            alert('PDF library not loaded. Please refresh the page and try again.');
+            console.error('jsPDF not available');
+            return;
+        }
+        
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('l', 'mm', 'a4'); // Landscape for wide table
         
@@ -4661,6 +4844,7 @@ $(document).ready(function() {
             grade: $('#grade').val() || '',
             gender: $('#gender').val() || ''
         };
+        console.log('Filters:', filters);
 
         const schoolName = '{{ $school->school_name ?? "School" }}';
         const pageWidth = doc.internal.pageSize.getWidth();
@@ -4702,9 +4886,11 @@ $(document).ready(function() {
 
         // Get all visible students
         const studentRows = $('.student-row:visible');
+        console.log('Found student rows:', studentRows.length);
         
         if (studentRows.length === 0) {
-            alert('No students to export. Please check your filters.');
+            alert('No students to export. Please check your filters and make sure students are visible on the page.');
+            console.warn('No visible student rows found');
             return;
         }
 
@@ -4817,10 +5003,9 @@ $(document).ready(function() {
             body: tableData,
             theme: 'striped',
             headStyles: { fillColor: [148, 0, 0], textColor: 255, fontStyle: 'bold', fontSize: 7 },
-            styles: { fontSize: 6 },
+            styles: { fontSize: 6, overflow: 'linebreak' },
             margin: { left: 10, right: 10 },
-            tableWidth: 'auto',
-            overflow: 'linebreak'
+            tableWidth: 'auto'
         });
 
         // Footer
@@ -4854,6 +5039,15 @@ $(document).ready(function() {
     }
 
     function exportAllStudentsExcel() {
+        console.log('exportAllStudentsExcel called');
+        
+        // Check if XLSX is available
+        if (typeof XLSX === 'undefined') {
+            alert('Excel library not loaded. Please refresh the page and try again.');
+            console.error('XLSX not available');
+            return;
+        }
+        
         const wb = XLSX.utils.book_new();
         const schoolName = '{{ $school->school_name ?? "School" }}';
 
@@ -4863,6 +5057,7 @@ $(document).ready(function() {
             year: $('#year').val(),
             type: $('#type').val()
         };
+        console.log('Filters:', filters);
 
         // Build title from filtering description
         let title = $('#filteringText').text();
@@ -4892,9 +5087,11 @@ $(document).ready(function() {
 
         // Get all visible students
         const studentRows = $('.student-row:visible');
+        console.log('Found student rows:', studentRows.length);
         
         if (studentRows.length === 0) {
-            alert('No students to export. Please check your filters.');
+            alert('No students to export. Please check your filters and make sure students are visible on the page.');
+            console.warn('No visible student rows found');
             return;
         }
 
@@ -4976,13 +5173,14 @@ $(document).ready(function() {
                 rowData.push(marks);
             });
 
-            // Get total, division/grade, main class
+            // Get total, division/grade
+            const mainClass = row.data('main-class') || className || 'N/A';
             if ($('#resultsTable').length > 0) {
+                // Term Report
                 const totalMarks = row.find('td').eq(6).text().trim();
                 const division = row.find('td').eq(8).text().trim() || row.find('td').eq(7).text().trim();
                 rowData.push(totalMarks);
                 rowData.push(division);
-                rowData.push(mainClass);
             } else {
                 // Exam Results - get from first exam
                 const firstExamRow = row.find('table tbody tr').first();
@@ -4991,11 +5189,9 @@ $(document).ready(function() {
                     const division = firstExamRow.find('td').eq(5).text().trim() || firstExamRow.find('td').eq(4).text().trim();
                     rowData.push(totalMarks);
                     rowData.push(division);
-                    rowData.push(mainClass);
                 } else {
                     rowData.push('N/A');
                     rowData.push('N/A');
-                    rowData.push(mainClass);
                 }
             }
 
@@ -6109,6 +6305,162 @@ $(document).ready(function() {
     </div>
 </div>
 
+<!-- SweetAlert2 Library Check and Validation Error Handler -->
+<script>
+$(document).ready(function() {
+    // Check if SweetAlert2 is loaded
+    if (typeof Swal === 'undefined') {
+        console.warn('SweetAlert2 is not loaded. Loading from CDN...');
+        var script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+        document.head.appendChild(script);
+    }
 
+    // Function to show validation error as info alert
+    function showValidationAlert(title, message, errorType) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'info',
+                title: title || 'Information',
+                html: message,
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#940000',
+                allowOutsideClick: true,
+                allowEscapeKey: true,
+                customClass: {
+                    popup: 'swal2-popup-validation'
+                }
+            });
+        } else {
+            // Fallback to regular alert if SweetAlert2 is not loaded
+            alert(title + '\n\n' + message);
+        }
+    }
+
+    // Check for session error and display as SweetAlert
+    @if(session('error'))
+        var sessionError = @json(session('error'));
+        var errorType = @json(session('error_type')) || 'general';
+        
+        // Hide the regular alert
+        $('#sessionErrorAlert').hide();
+        
+        // Show SweetAlert based on error type
+        var title = 'Validation Information';
+        var message = sessionError;
+        
+        // Customize title and message based on error type
+        if (errorType === 'exam_not_ended') {
+            title = 'Exam Still Ongoing';
+            message = '<div style="text-align: left;"><p><strong>Reason:</strong> ' + sessionError + '</p><p class="mt-2">You can view results only after the exam has ended.</p></div>';
+        } else if (errorType === 'approval_pending') {
+            title = 'Results Pending Approval';
+            message = '<div style="text-align: left;"><p><strong>Status:</strong> ' + sessionError + '</p><p class="mt-2">Please wait for the approval process to complete.</p></div>';
+        } else if (errorType === 'approval_rejected') {
+            title = 'Results Approval Rejected';
+            message = '<div style="text-align: left;"><p><strong>Status:</strong> ' + sessionError + '</p><p class="mt-2">The results approval was rejected. Please contact the administrator.</p></div>';
+        } else if (errorType === 'unauthorized_access') {
+            title = 'Access Denied';
+            message = '<div style="text-align: left;"><p><strong>Reason:</strong> ' + sessionError + '</p><p class="mt-2">You do not have permission to view results for this class.</p></div>';
+        } else if (errorType === 'no_subclass_selected') {
+            title = 'Class Selection Required';
+            message = '<div style="text-align: left;"><p><strong>Action Required:</strong> ' + sessionError + '</p><p class="mt-2">Please select a class to view results.</p></div>';
+        } else if (errorType === 'invalid_class') {
+            title = 'Invalid Class Selection';
+            message = '<div style="text-align: left;"><p><strong>Error:</strong> ' + sessionError + '</p></div>';
+        }
+        
+        showValidationAlert(title, message, errorType);
+    @endif
+
+    // Check for blade error variable and display as SweetAlert
+    @if(isset($error) && $error)
+        var bladeError = @json($error);
+        var bladeErrorType = @json($error_type ?? 'general');
+        
+        // Hide the regular alert
+        $('#errorAlert').hide();
+        
+        // Show SweetAlert based on error type
+        var title = 'Validation Information';
+        var message = bladeError;
+        
+        // Customize title and message based on error type
+        if (bladeErrorType === 'exam_not_ended') {
+            title = 'Exam Still Ongoing';
+            message = '<div style="text-align: left;"><p><strong>Reason:</strong> ' + bladeError + '</p><p class="mt-2">You can view results only after the exam has ended.</p></div>';
+        } else if (bladeErrorType === 'approval_pending') {
+            title = 'Results Pending Approval';
+            message = '<div style="text-align: left;"><p><strong>Status:</strong> ' + bladeError + '</p><p class="mt-2">Please wait for the approval process to complete.</p></div>';
+        } else if (bladeErrorType === 'approval_rejected') {
+            title = 'Results Approval Rejected';
+            message = '<div style="text-align: left;"><p><strong>Status:</strong> ' + bladeError + '</p><p class="mt-2">The results approval was rejected. Please contact the administrator.</p></div>';
+        }
+        
+        showValidationAlert(title, message, bladeErrorType);
+    @endif
+
+    // Handle AJAX errors from subject details requests
+    $(document).on('click', '.view-subject-details-btn', function() {
+        var studentID = $(this).data('student-id');
+        var examID = $('#examID').val();
+        var term = $('#term').val();
+        var year = $('#year').val();
+        var type = $('#type').val();
+        
+        // Make AJAX request
+        $.ajax({
+            url: '{{ route("manageResults") }}',
+            type: 'GET',
+            data: {
+                getSubjectDetails: true,
+                studentID: studentID,
+                examID: examID,
+                term: term,
+                year: year,
+                type: type
+            },
+            dataType: 'json',
+            success: function(response) {
+                // Handle success (existing code)
+            },
+            error: function(xhr) {
+                var errorMessage = 'An error occurred while loading subject details.';
+                var errorType = 'general';
+                
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMessage = xhr.responseJSON.error;
+                    
+                    // Determine error type from message
+                    if (errorMessage.includes("still taken") || errorMessage.includes("still ongoing")) {
+                        errorType = 'exam_not_ended';
+                    } else if (errorMessage.includes("approval") || errorMessage.includes("pending")) {
+                        errorType = 'approval_pending';
+                    } else if (errorMessage.includes("rejected")) {
+                        errorType = 'approval_rejected';
+                    }
+                }
+                
+                // Show SweetAlert
+                var title = 'Validation Information';
+                var message = errorMessage;
+                
+                if (errorType === 'exam_not_ended') {
+                    title = 'Exam Still Ongoing';
+                    message = '<div style="text-align: left;"><p><strong>Reason:</strong> ' + errorMessage + '</p><p class="mt-2">You can view results only after the exam has ended.</p></div>';
+                } else if (errorType === 'approval_pending') {
+                    title = 'Results Pending Approval';
+                    message = '<div style="text-align: left;"><p><strong>Status:</strong> ' + errorMessage + '</p><p class="mt-2">Please wait for the approval process to complete.</p></div>';
+                } else if (errorType === 'approval_rejected') {
+                    title = 'Results Approval Rejected';
+                    message = '<div style="text-align: left;"><p><strong>Status:</strong> ' + errorMessage + '</p><p class="mt-2">The results approval was rejected. Please contact the administrator.</p></div>';
+                }
+                
+                showValidationAlert(title, message, errorType);
+            }
+        });
+    });
+});
+</script>
 
 

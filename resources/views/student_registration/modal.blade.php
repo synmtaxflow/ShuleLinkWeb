@@ -18,7 +18,7 @@
                 <!-- Progress Indicator -->
                 <div class="mb-4">
                     <div class="progress" style="height: 5px;">
-                        <div class="progress-bar" id="progressBar" role="progressbar" style="width: 20%; background-color: #f5f5f5;" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100"></div>
+                        <div class="progress-bar" id="progressBar" role="progressbar" style="width: 20%; background-color: #940000;" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
                     <div class="mt-2 text-center text-muted small">
                         <span id="stepIndicator">Step 1 of 5</span>
@@ -45,21 +45,21 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">First Name <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="first_name" required>
+                                <input type="text" class="form-control" name="first_name" id="reg_first_name" required>
                                 <small class="text-danger d-none error-first_name"></small>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Middle Name</label>
-                                <input type="text" class="form-control" name="middle_name">
+                                <input type="text" class="form-control" name="middle_name" id="reg_middle_name">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Last Name <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="last_name" required>
+                                <input type="text" class="form-control" name="last_name" id="reg_last_name" required>
                                 <small class="text-danger d-none error-last_name"></small>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Gender <span class="text-danger">*</span></label>
-                                <select class="form-select" name="gender" required>
+                                <select class="form-select" name="gender" id="reg_gender" required>
                                     <option value="">Select Gender</option>
                                     <option value="Male">Male</option>
                                     <option value="Female">Female</option>
@@ -109,7 +109,7 @@
                             </div>
                             <small class="text-muted d-block mt-1">Format: 7XXXXXXXX (9 digits after 255)</small>
                             <small class="text-danger d-none error-parent_phone"></small>
-                            <div id="phoneExistsError" class="alert d-none mt-2">
+                            <div id="phoneExistsError" class="d-none mt-2">
                                 <!-- Message will be populated dynamically -->
                             </div>
                         </div>
@@ -588,7 +588,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Update progress bar
         const progress = (step / totalSteps) * 100;
-        document.getElementById('progressBar').style.width = progress + '%';
+        const progressBar = document.getElementById('progressBar');
+        progressBar.style.width = progress + '%';
+        progressBar.style.backgroundColor = '#940000';
         document.getElementById('stepIndicator').textContent = `Step ${step} of ${totalSteps}`;
 
         // Update buttons
@@ -742,13 +744,13 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             const phoneExistsError = document.getElementById('phoneExistsError');
             if (data.success && data.parent && data.in_current_school) {
-                // Parent exists in current school - show info message
+                // Parent exists in current school - show danger alert as requested
                 phoneExistsInOtherSchool = false;
-                phoneExistsError.innerHTML = '<i class="bi bi-info-circle"></i> <strong>Info:</strong> This phone number already exists in this school. You can use this parent or enter a different number.';
-                phoneExistsError.className = 'alert alert-info d-none mt-2';
+                phoneExistsError.innerHTML = '<i class="bi bi-exclamation-triangle"></i> <strong>Parent Already Exists in This School!</strong><br>Click "Search" to use this parent, or use a different phone number.';
+                phoneExistsError.className = 'alert alert-danger mt-2';
                 phoneExistsError.classList.remove('d-none');
-                inputElement.classList.add('is-warning');
-                inputElement.classList.remove('is-invalid');
+                inputElement.classList.add('is-invalid');
+                inputElement.classList.remove('is-warning');
             } else if (data.in_other_school) {
                 // Phone exists in another school - show error and block form
                 phoneExistsInOtherSchool = true;
@@ -800,14 +802,55 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = text ? JSON.parse(text) : {};
                 if (!response.ok) {
                     console.error('Search parent HTTP error', response.status, text);
-                    alert(data.message || ('Server error: ' + response.status));
-                    return { success: false };
+                    
+                    // Show error in the phoneExistsError div instead of alert
+                    const phoneExistsError = document.getElementById('phoneExistsError');
+                    const phoneInput = document.getElementById('parentPhone');
+                    let errorMessage = data.message || ('Server error: ' + response.status);
+                    
+                    if (phoneExistsError) {
+                        phoneExistsError.innerHTML = '<i class="bi bi-exclamation-triangle"></i> <strong>Error:</strong> ' + errorMessage;
+                        phoneExistsError.className = 'alert alert-danger mt-2';
+                        phoneExistsError.classList.remove('d-none');
+                    }
+                    if (phoneInput) {
+                        phoneInput.classList.add('is-invalid');
+                    }
+                    
+                    return { success: false, message: errorMessage };
                 }
                 return data;
             } catch (err) {
                 console.error('Failed parsing JSON from search-parent:', err, text);
-                alert('Error searching for parent. Please try again.');
-                return { success: false };
+                
+                // Show error in the phoneExistsError div instead of alert
+                const phoneExistsError = document.getElementById('phoneExistsError');
+                const phoneInput = document.getElementById('parentPhone');
+                let errorMessage = 'Error searching for parent. Please try again.';
+                
+                // Try to extract error message from HTML response if JSON parsing failed
+                if (text && text.includes('message')) {
+                    try {
+                        // Try to find error message in HTML
+                        const match = text.match(/"message":"([^"]+)"/);
+                        if (match && match[1]) {
+                            errorMessage = match[1];
+                        }
+                    } catch (e) {
+                        // Ignore
+                    }
+                }
+                
+                if (phoneExistsError) {
+                    phoneExistsError.innerHTML = '<i class="bi bi-exclamation-triangle"></i> <strong>Error:</strong> ' + errorMessage;
+                    phoneExistsError.className = 'alert alert-danger mt-2';
+                    phoneExistsError.classList.remove('d-none');
+                }
+                if (phoneInput) {
+                    phoneInput.classList.add('is-invalid');
+                }
+                
+                return { success: false, message: errorMessage };
             }
         })
         .then(data => {
@@ -816,10 +859,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const phoneInput = document.getElementById('parentPhone');
             
             if (data.success && data.parent) {
-                // Parent found
+                // Parent found - load the parent data properly
                 selectedParentId = data.parent.parentID;
-                document.getElementById('foundParentName').textContent =
-                    (data.parent.first_name || '') + ' ' + (data.parent.last_name || '');
+                document.getElementById('parentIdField').value = selectedParentId;
+                
+                // Set parent name, phone, relationship, email
+                const fullName = (data.parent.first_name || '') + ' ' + (data.parent.middle_name || '') + ' ' + (data.parent.last_name || '');
+                document.getElementById('foundParentName').textContent = fullName.trim();
                 document.getElementById('foundParentPhone').textContent = data.parent.phone || fullPhone;
                 document.getElementById('foundParentRelationship').textContent = data.parent.relationship_to_student || 'Parent/Guardian';
                 document.getElementById('foundParentEmail').textContent = data.parent.email || '(not provided)';
@@ -846,12 +892,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     imgEl.src = placeholder;
                 }
                 
-                // Hide warnings and show found parent
+                // Hide warnings/errors and show found parent
                 phoneExistsError.classList.add('d-none');
+                phoneExistsError.innerHTML = ''; // Clear error message
                 parentNotFoundWarning.classList.add('d-none');
                 phoneInput.classList.remove('is-warning', 'is-invalid');
+                phoneInput.setCustomValidity('');
                 document.getElementById('foundParentDiv').classList.remove('d-none');
                 document.getElementById('newParentDiv').classList.add('d-none');
+                
+                // Reset phone validation flag
+                phoneExistsInOtherSchool = false;
             } else if (data.in_other_school) {
                 // Phone exists in another school - show error and block form
                 phoneExistsInOtherSchool = true;
@@ -877,7 +928,19 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(err => {
             console.error('Error searching parent:', err);
-            alert('Error searching for parent. Please try again.');
+            
+            // Show error in the phoneExistsError div instead of alert
+            const phoneExistsError = document.getElementById('phoneExistsError');
+            const phoneInput = document.getElementById('parentPhone');
+            
+            if (phoneExistsError) {
+                phoneExistsError.innerHTML = '<i class="bi bi-exclamation-triangle"></i> <strong>Error:</strong> Failed to search parent. Please check your connection and try again.';
+                phoneExistsError.className = 'alert alert-danger mt-2';
+                phoneExistsError.classList.remove('d-none');
+            }
+            if (phoneInput) {
+                phoneInput.classList.add('is-invalid');
+            }
         });
     });
 
@@ -1582,6 +1645,102 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Real-time validation for step 1 fields
+    function validateFieldRealtime(field) {
+        const fieldValue = field.value.trim();
+        const fieldName = field.name;
+        const errorElement = document.querySelector(`.error-${fieldName}`);
+        const isRequired = field.hasAttribute('required');
+        
+        // Clear previous error
+        field.classList.remove('is-invalid');
+        if (errorElement) {
+            errorElement.classList.add('d-none');
+            errorElement.textContent = '';
+        }
+        
+        // Validate if required and empty
+        if (isRequired && !fieldValue) {
+            field.classList.add('is-invalid');
+            if (errorElement) {
+                const fieldLabel = field.closest('.col-md-6, .col-md-4')?.querySelector('label')?.textContent?.replace('*', '').replace(':', '').trim() || fieldName.replace(/_/g, ' ');
+                errorElement.textContent = `${fieldLabel} is required.`;
+                errorElement.classList.remove('d-none');
+            }
+            return false;
+        }
+        
+        // Additional validations
+        if (fieldName === 'date_of_birth' && fieldValue) {
+            const dob = new Date(fieldValue);
+            const today = new Date();
+            if (dob > today) {
+                field.classList.add('is-invalid');
+                if (errorElement) {
+                    errorElement.textContent = 'Date of birth cannot be in the future.';
+                    errorElement.classList.remove('d-none');
+                }
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    // Add real-time validation listeners for step 1
+    setTimeout(function() {
+        const firstNameField = document.querySelector('input[name="first_name"]');
+        const lastNameField = document.querySelector('input[name="last_name"]');
+        const genderField = document.querySelector('select[name="gender"]');
+        const dobField = document.querySelector('input[name="date_of_birth"]');
+        
+        if (firstNameField) {
+            firstNameField.addEventListener('blur', function() {
+                validateFieldRealtime(this);
+            });
+            let firstNameTimeout;
+            firstNameField.addEventListener('input', function() {
+                clearTimeout(firstNameTimeout);
+                firstNameTimeout = setTimeout(() => {
+                    if (this.value.trim().length > 0) {
+                        validateFieldRealtime(this);
+                    } else if (this.hasAttribute('required')) {
+                        validateFieldRealtime(this);
+                    }
+                }, 500);
+            });
+        }
+        
+        if (lastNameField) {
+            lastNameField.addEventListener('blur', function() {
+                validateFieldRealtime(this);
+            });
+            let lastNameTimeout;
+            lastNameField.addEventListener('input', function() {
+                clearTimeout(lastNameTimeout);
+                lastNameTimeout = setTimeout(() => {
+                    if (this.value.trim().length > 0) {
+                        validateFieldRealtime(this);
+                    } else if (this.hasAttribute('required')) {
+                        validateFieldRealtime(this);
+                    }
+                }, 500);
+            });
+        }
+        
+        if (genderField) {
+            genderField.addEventListener('change', function() {
+                validateFieldRealtime(this);
+            });
+        }
+        
+        if (dobField) {
+            dobField.addEventListener('blur', function() {
+                validateFieldRealtime(this);
+            });
+        }
+    }, 100);
 
     // Initialize - show step 1
     showStep(1);

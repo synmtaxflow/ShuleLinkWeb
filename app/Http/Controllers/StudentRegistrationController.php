@@ -89,59 +89,85 @@ class StudentRegistrationController extends Controller
      */
     public function searchParentByPhone(Request $request)
     {
-        $request->validate([
-            'phone' => 'required|string|max:20'
-        ]);
+        try {
+            $request->validate([
+                'phone' => 'required|string|max:20'
+            ]);
 
-        $schoolID = Session::get('schoolID');
-        
-        // First check if parent exists in current school
-        $parent = ParentModel::where('schoolID', $schoolID)
-            ->where('phone', $request->phone)
-            ->first();
-
-        if ($parent) {
-            // Get image path - parent photos are stored in public/userImages/
-            $imagePath = null;
-            if ($parent->photo) {
-                $imagePath = asset('userImages/' . $parent->photo);
+            $schoolID = Session::get('schoolID');
+            
+            if (!$schoolID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'School ID not found. Please log in again.'
+                ], 400);
             }
             
-            return response()->json([
-                'success' => true,
-                'parent' => [
-                    'parentID' => $parent->parentID,
-                    'first_name' => $parent->first_name,
-                    'last_name' => $parent->last_name,
-                    'phone' => $parent->phone,
-                    'email' => $parent->email,
-                    'image' => $imagePath,
-                    'gender' => $parent->gender ?? null,
-                    'relationship_to_student' => $parent->relationship_to_student ?? 'Parent/Guardian'
-                ],
-                'message' => 'Parent found in this school. You can use this parent or enter a different number.',
-                'in_current_school' => true
-            ]);
-        }
+            // First check if parent exists in current school
+            $parent = ParentModel::where('schoolID', $schoolID)
+                ->where('phone', $request->phone)
+                ->first();
 
-        // Check if phone number exists in another school
-        $parentInOtherSchool = ParentModel::where('phone', $request->phone)
-            ->where('schoolID', '!=', $schoolID)
-            ->first();
+            if ($parent) {
+                // Get image path - parent photos are stored in public/userImages/
+                $imagePath = null;
+                if ($parent->photo) {
+                    $photoPath = public_path('userImages/' . $parent->photo);
+                    if (file_exists($photoPath)) {
+                        $imagePath = asset('userImages/' . $parent->photo);
+                    }
+                }
+                
+                return response()->json([
+                    'success' => true,
+                    'parent' => [
+                        'parentID' => $parent->parentID,
+                        'first_name' => $parent->first_name ?? '',
+                        'middle_name' => $parent->middle_name ?? '',
+                        'last_name' => $parent->last_name ?? '',
+                        'phone' => $parent->phone ?? '',
+                        'email' => $parent->email ?? '',
+                        'image' => $imagePath,
+                        'gender' => $parent->gender ?? null,
+                        'relationship_to_student' => $parent->relationship_to_student ?? 'Parent/Guardian'
+                    ],
+                    'message' => 'Parent found in this school. You can use this parent or enter a different number.',
+                    'in_current_school' => true
+                ]);
+            }
 
-        if ($parentInOtherSchool) {
+            // Check if phone number exists in another school
+            $parentInOtherSchool = ParentModel::where('phone', $request->phone)
+                ->where('schoolID', '!=', $schoolID)
+                ->first();
+
+            if ($parentInOtherSchool) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This phone number already exists in another school. Please try another number.',
+                    'in_other_school' => true
+                ]);
+            }
+
             return response()->json([
                 'success' => false,
-                'message' => 'This phone number already exists in another school. Please try another number.',
-                'in_other_school' => true
+                'message' => 'No parent found with this phone number. Please enter new parent details.',
+                'in_other_school' => false
             ]);
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error: ' . $e->getMessage(),
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Error searching parent by phone: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while searching for parent. Please try again.'
+            ], 500);
         }
-
-        return response()->json([
-            'success' => false,
-            'message' => 'No parent found with this phone number. Please enter new parent details.',
-            'in_other_school' => false
-        ]);
     }
 
     /**

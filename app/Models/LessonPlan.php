@@ -33,6 +33,10 @@ class LessonPlan extends Model
         'references',
         'lesson_stages',
         'remarks',
+        'reflection',
+        'evaluation',
+        'teacher_signature',
+        'supervisor_signature',
         'status',
     ];
 

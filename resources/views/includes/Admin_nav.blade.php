@@ -32,6 +32,7 @@
 #left-panel ul {
     background-color: #ffffff !important; /* nyeupe */
     color: #940000 !important;
+    font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif !important;
 }
 
 /* Badilisha rangi ya maandishi (links) */
@@ -93,6 +94,7 @@
 #left-panel .navbar-brand,
 #left-panel .navbar-brand:hover {
     color: #940000 !important;
+    font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif !important;
 }
 
 /* Rangi ya navbar brand */
@@ -119,12 +121,16 @@
 /* Ensure all text in sidebar is #940000 */
 #left-panel * {
     color: #940000 !important;
+    font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif !important;
 }
 
-/* Exception for icons - keep them #940000 */
+/* Exception for icons - keep FontAwesome font-family and #940000 color */
 #left-panel i,
-#left-panel .fa {
+#left-panel .fa,
+#left-panel [class*="fa-"],
+#left-panel [class^="fa-"] {
     color: #940000 !important;
+    font-family: 'FontAwesome' !important;
 }
 
 /* Overflow scroll kwa sidebar links container - scrollbar hidden */
@@ -175,12 +181,12 @@
                             : 'Shule Link';
                     @endphp
                     <img src="{{ $schoolLogo }}" alt="School Logo" class="rounded-circle" width="80" height="80" style="object-fit: cover; border: 3px solid #940000;">
-                    <p class="mt-2 mb-0 font-weight-bold" style="font-family: Arial, sans-serif; color: #940000;">{{ $schoolName }}</p>
-                    <p class="mb-0 small" style="font-family: Arial, sans-serif; color: #940000;">Admin</p>
+                    <p class="mt-2 mb-0 font-weight-bold" style="font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif; color: #940000;">{{ $schoolName }}</p>
+                    <p class="mb-0 small" style="font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif; color: #940000;">Admin</p>
                 </li>
                 <!-- Sidebar Links -->
                 <li class="sidebar-links-container">
-                    <ul style="list-style: none; padding: 0; margin: 0; font-family: Arial, sans-serif;">
+                    <ul style="list-style: none; padding: 0; margin: 0; font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif;">
                         <li><a href="{{ route('AdminDashboard') }}" class="nav-link"><i class="fa fa-building"></i> Dashboard</a></li>
                         <li><a href="{{ route('school') }}" class="nav-link"><i class="fa fa-building"></i> School Management</a></li>
                         <li><a href="{{ route('manageTeachers') }}" class="nav-link"><i class="fa fa-users"></i> Teachers Management</a></li>

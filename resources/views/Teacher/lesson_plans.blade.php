@@ -1,14 +1,16 @@
 @include('includes.teacher_nav')
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
 <style>
     .bg-primary-custom {
-        background-color: #940000 !important;
+        background-color: #f5f5f5 !important;
+        color: #212529 !important;
     }
     .text-primary-custom {
-        color: #940000 !important;
+        color: #212529 !important;
     }
     div, .card, .session-card, .alert, .btn {
         border-radius: 0 !important;
@@ -21,42 +23,57 @@
         background: white;
     }
     .session-card:hover {
-        box-shadow: 0 4px 12px rgba(148, 0, 0, 0.15);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         transform: translateY(-2px);
     }
     .time-badge {
-        background: #940000;
-        color: white;
+        background: #f5f5f5;
+        color: #212529;
         padding: 5px 12px;
         font-size: 0.85rem;
         font-weight: 600;
+        border: 1px solid #e9ecef;
     }
     .btn-session-action {
-        background: #940000 !important;
-        color: white !important;
-        border: none;
+        background: #f5f5f5 !important;
+        color: #212529 !important;
+        border: 1px solid #e9ecef !important;
         padding: 8px 20px;
         font-weight: 600;
     }
     .lesson-plan-table {
         width: 100%;
         border-collapse: collapse;
-        margin: 20px 0;
+        margin: 15px 0;
+        border: 2px solid #212529;
+        font-size: 0.9rem;
     }
     .lesson-plan-table td, .lesson-plan-table th {
-        border: 1px solid #ddd;
-        padding: 8px;
+        border: 1px solid #212529 !important;
+        padding: 3px 5px;
         text-align: left;
     }
     .lesson-plan-table th {
-        background-color: #940000;
-        color: white;
+        background-color: #f5f5f5;
+        color: #212529;
         font-weight: bold;
+        border: 1px solid #212529 !important;
+    }
+    .lesson-plan-table tbody tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+    .lesson-plan-table tbody tr:nth-child(odd) {
+        background-color: white;
+    }
+    .lesson-plan-table tbody tr {
+        border: 1px solid #212529;
     }
     .lesson-plan-table input, .lesson-plan-table textarea {
         width: 100%;
-        border: none;
-        padding: 5px;
+        border: 1px solid #212529;
+        padding: 2px 4px;
+        background-color: white;
+        font-size: 0.9rem;
     }
     .lesson-plan-header {
         text-align: center;
@@ -65,12 +82,49 @@
         margin: 20px 0;
     }
     #lessonPlanTabs .nav-link {
-        color: #940000;
+        color: #212529;
         border-radius: 0 !important;
     }
     #lessonPlanTabs .nav-link.active {
-        background-color: #940000 !important;
-        color: white !important;
+        background-color: #f5f5f5 !important;
+        color: #212529 !important;
+        border-bottom: 2px solid #212529;
+    }
+    .dotted-line {
+        border-bottom: 2px dotted #212529;
+        min-height: 30px;
+        padding: 5px 0;
+        margin: 5px 0;
+    }
+    .signature-container {
+        margin: 20px 0;
+    }
+    .signature-label {
+        font-weight: bold;
+        margin-bottom: 10px;
+        font-size: 0.9rem;
+    }
+    .signature-canvas {
+        border: 2px solid #212529;
+        border-radius: 4px;
+        cursor: crosshair;
+        background-color: white;
+        width: 100%;
+        max-width: 400px;
+    }
+    .signature-preview {
+        border: 2px solid #212529;
+        border-radius: 4px;
+        max-width: 100%;
+        height: auto;
+    }
+    .signature-actions {
+        margin-top: 10px;
+    }
+    .signature-actions button {
+        margin-right: 5px;
+        padding: 5px 15px;
+        font-size: 0.85rem;
     }
 </style>
 
@@ -79,7 +133,7 @@
         <div class="col-12">
             <!-- Welcome Header -->
             <div class="card border-0 shadow-sm mb-4">
-                <div class="card-body bg-primary-custom text-white">
+                <div class="card-body bg-primary-custom" style="border-bottom: 1px solid #e9ecef;">
                     <h4 class="mb-2">
                         <i class="bi bi-book"></i> Welcome to Lesson Plan Management
                     </h4>
@@ -92,27 +146,19 @@
                     <i class="bi bi-exclamation-triangle"></i> {{ $message }}
                 </div>
             @else
-                <!-- Search Section -->
+                <!-- Subject Selector -->
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-body">
-                        <h5 class="mb-3">Search Sessions</h5>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Search by Month</label>
-                                    <input type="month" class="form-control" id="searchMonth" onchange="filterByMonth()">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Search by Date</label>
-                                    <input type="date" class="form-control" id="searchDate" onchange="filterByDate()">
-                                </div>
-                            </div>
+                        <h5 class="mb-3">Select Subject</h5>
+                        <div class="form-group">
+                            <label>Subject</label>
+                            <select class="form-control" id="subjectSelector" onchange="loadSessionsBySubject()" style="width: 100%;">
+                                <option value="">-- Select Subject --</option>
+                                @foreach($subjects as $subject)
+                                    <option value="{{ $subject['subjectID'] }}">{{ $subject['subject_name'] }}</option>
+                                @endforeach
+                            </select>
                         </div>
-                        <button class="btn btn-secondary btn-sm" onclick="clearFilters()">
-                            <i class="bi bi-x-circle"></i> Clear Filters
-                        </button>
                     </div>
                 </div>
 
@@ -120,48 +166,12 @@
                 <div id="sessionsContainer">
                     <div class="card border-0 shadow-sm">
                         <div class="card-body">
-                            <h5 class="mb-3">All Sessions</h5>
-                            <div class="row" id="sessionsList">
-                                @foreach($sessions as $session)
-                                    @php
-                                        $subjectName = 'N/A';
-                                        if($session->classSubject && $session->classSubject->subject) {
-                                            $subjectName = $session->classSubject->subject->subject_name;
-                                        } elseif($session->subject) {
-                                            $subjectName = $session->subject->subject_name;
-                                        }
-                                        if($session->is_prepo) {
-                                            $subjectName .= ' (Prepo)';
-                                        }
-                                    @endphp
-                                    <div class="col-md-6 col-lg-4 mb-3">
-                                        <div class="session-card">
-                                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                                <span class="time-badge">
-                                                    <i class="bi bi-clock"></i> 
-                                                    {{ \Carbon\Carbon::parse($session->start_time)->format('h:i A') }} - 
-                                                    {{ \Carbon\Carbon::parse($session->end_time)->format('h:i A') }}
-                                                </span>
-                                            </div>
-                                            <h6 class="mb-2" style="font-weight: bold;">
-                                                <i class="bi bi-book text-primary-custom"></i> {{ $subjectName }}
-                                            </h6>
-                                            <p class="mb-2 text-muted">
-                                                <i class="bi bi-people"></i> 
-                                                {{ $session->subclass->class->class_name ?? '' }} - {{ $session->subclass->subclass_name ?? '' }}
-                                            </p>
-                                            <p class="mb-2 text-muted">
-                                                <i class="bi bi-calendar"></i> {{ $session->day }}
-                                            </p>
-                                            <button 
-                                                class="btn btn-session-action btn-sm btn-block" 
-                                                onclick="openLessonPlanModal({{ $session->session_timetableID }}, '{{ $session->day }}', '{{ $session->start_time }}', '{{ $session->end_time }}', '{{ $subjectName }}', '{{ $session->subclass->class->class_name ?? '' }}')"
-                                            >
-                                                <i class="bi bi-journal-text"></i> My Lesson Plan
-                                            </button>
-                                        </div>
-                                    </div>
-                                @endforeach
+                            <h5 class="mb-3">Sessions</h5>
+                            <div id="sessionsList">
+                                <div class="text-center text-muted py-5">
+                                    <i class="bi bi-info-circle" style="font-size: 3rem;"></i>
+                                    <p class="mt-3">Please select a subject to view sessions</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -175,11 +185,11 @@
 <div class="modal fade" id="lessonPlanModal" tabindex="-1" role="dialog" style="z-index: 1050;">
     <div class="modal-dialog modal-xl" role="document" style="max-width: 95%;">
         <div class="modal-content">
-            <div class="modal-header bg-primary-custom text-white">
+            <div class="modal-header bg-primary-custom" style="border-bottom: 1px solid #e9ecef;">
                 <h5 class="modal-title">
                     <i class="bi bi-journal-text"></i> Lesson Plan Management
                 </h5>
-                <button type="button" class="close text-white" data-dismiss="modal">
+                <button type="button" class="close" data-dismiss="modal" style="color: #212529;">
                     <span>&times;</span>
                 </button>
             </div>
@@ -209,10 +219,10 @@
                     <div class="tab-pane fade show active" id="create-lesson-plan" role="tabpanel">
                         <div id="createTabContent">
                             <div class="text-center mb-3">
-                                <button class="btn btn-primary-custom btn-lg mr-3" onclick="showCreateNewForm()">
+                                <button class="btn btn-lg mr-3" onclick="showCreateNewForm()" style="background-color: #f5f5f5; color: #212529; border: 1px solid #e9ecef;">
                                     <i class="bi bi-file-plus"></i> Create New Lesson Plan
                                 </button>
-                                <button class="btn btn-outline-primary-custom btn-lg" onclick="showUseExistingForm()">
+                                <button class="btn btn-lg" onclick="showUseExistingForm()" style="background-color: white; color: #212529; border: 1px solid #e9ecef;">
                                     <i class="bi bi-folder"></i> Use Existing Lesson Plan
                                 </button>
                             </div>
@@ -272,6 +282,156 @@ let currentSessionData = {
     className: null
 };
 
+// Load sessions by subject
+function loadSessionsBySubject() {
+    const subjectID = $('#subjectSelector').val();
+    
+    if (!subjectID) {
+        $('#sessionsList').html(`
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-info-circle" style="font-size: 3rem;"></i>
+                <p class="mt-3">Please select a subject to view sessions</p>
+            </div>
+        `);
+        return;
+    }
+    
+    // Show loading
+    $('#sessionsList').html(`
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3 text-muted">Loading sessions...</p>
+        </div>
+    `);
+    
+    $.ajax({
+        url: '{{ route("teacher.get_sessions_by_subject") }}',
+        method: 'GET',
+        data: {
+            subjectID: subjectID
+        },
+        success: function(response) {
+            if (response.success && response.sessions.length > 0) {
+                let html = '<div class="row">';
+                
+                response.sessions.forEach(function(session) {
+                    const startTime = formatTime(session.start_time);
+                    const endTime = formatTime(session.end_time);
+                    
+                    html += `
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="session-card">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <span class="time-badge">
+                                        <i class="bi bi-clock"></i> ${startTime} - ${endTime}
+                                    </span>
+                                </div>
+                                <h6 class="mb-2" style="font-weight: bold;">
+                                    <i class="bi bi-book text-primary-custom"></i> ${session.subject_name}
+                                </h6>
+                                <p class="mb-2 text-muted">
+                                    <i class="bi bi-people"></i> ${session.class_name} - ${session.subclass_name}
+                                </p>
+                                <p class="mb-2 text-muted">
+                                    <i class="bi bi-calendar"></i> ${session.day}
+                                </p>
+                                <p class="mb-2 text-muted small" id="sessionDates_${session.session_timetableID}">
+                                    <i class="bi bi-calendar3"></i> <span class="text-info">Loading dates...</span>
+                                </p>
+                                <button 
+                                    class="btn btn-session-action btn-sm btn-block" 
+                                    onclick="openLessonPlanModal(${session.session_timetableID}, '${session.day}', '${session.start_time}', '${session.end_time}', '${session.subject_name}', '${session.class_name}')"
+                                >
+                                    <i class="bi bi-journal-text"></i> My Lesson Plan
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                $('#sessionsList').html(html);
+                
+                // Load dates for each session
+                response.sessions.forEach(function(session) {
+                    loadSessionDates(session.session_timetableID);
+                });
+            } else {
+                $('#sessionsList').html(`
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-exclamation-circle" style="font-size: 3rem;"></i>
+                        <p class="mt-3">${response.error || 'No session available for this subject'}</p>
+                    </div>
+                `);
+            }
+        },
+        error: function(xhr) {
+            const error = xhr.responseJSON?.error || 'Failed to load sessions';
+            $('#sessionsList').html(`
+                <div class="text-center text-danger py-5">
+                    <i class="bi bi-x-circle" style="font-size: 3rem;"></i>
+                    <p class="mt-3">${error}</p>
+                </div>
+            `);
+        }
+    });
+}
+
+function formatTime(timeStr) {
+    if (!timeStr) return 'N/A';
+    const parts = timeStr.split(':');
+    const hours = parseInt(parts[0]);
+    const minutes = parts[1];
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return displayHours + ':' + minutes + ' ' + ampm;
+}
+
+function loadSessionDates(sessionTimetableID) {
+    const currentYear = {{ $currentYear }};
+    
+    $.ajax({
+        url: '{{ route("teacher.get_all_sessions_for_year") }}',
+        method: 'GET',
+        data: {
+            session_timetableID: sessionTimetableID,
+            year: currentYear
+        },
+        success: function(response) {
+            if (response.success && response.data.dates.length > 0) {
+                const dates = response.data.dates;
+                const totalSessions = dates.length;
+                const sessionsWithPlans = dates.filter(d => d.has_lesson_plan).length;
+                
+                // Show first few dates and total count
+                let datesText = '';
+                if (dates.length <= 5) {
+                    datesText = dates.map(d => d.formatted_date).join(', ');
+                } else {
+                    datesText = dates.slice(0, 3).map(d => d.formatted_date).join(', ') + ' ... (' + totalSessions + ' sessions)';
+                }
+                
+                $('#sessionDates_' + sessionTimetableID).html(
+                    '<i class="bi bi-calendar3"></i> <span class="text-info">' + totalSessions + ' sessions/year</span> | ' +
+                    '<span class="text-success">' + sessionsWithPlans + ' with plans</span><br>' +
+                    '<small class="text-muted">' + datesText + '</small>'
+                );
+            } else {
+                $('#sessionDates_' + sessionTimetableID).html(
+                    '<i class="bi bi-calendar3"></i> <span class="text-muted">No sessions available</span>'
+                );
+            }
+        },
+        error: function() {
+            $('#sessionDates_' + sessionTimetableID).html(
+                '<i class="bi bi-calendar3"></i> <span class="text-danger">Error loading dates</span>'
+            );
+        }
+    });
+}
+
 function openLessonPlanModal(sessionTimetableID, day, startTime, endTime, subjectName, className) {
     currentSessionData = {
         sessionTimetableID: sessionTimetableID,
@@ -297,6 +457,61 @@ function showCreateNewForm() {
 function showUseExistingForm() {
     $('#createNewForm').hide();
     $('#useExistingForm').show();
+    
+    // Show date picker to check if lesson plan exists
+    Swal.fire({
+        title: 'Select Date to View Lesson Plan',
+        html: '<input type="date" id="swal-existing-date" class="swal2-input" value="' + new Date().toISOString().split('T')[0] + '">',
+        showCancelButton: true,
+        confirmButtonColor: '#f5f5f5',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Continue',
+        cancelButtonText: 'Cancel',
+        preConfirm: () => {
+            return document.getElementById('swal-existing-date').value;
+        }
+    }).then((result) => {
+        if (result.isConfirmed && result.value) {
+            const sessionDate = result.value;
+            
+            // Check if lesson plan exists
+            $.ajax({
+                url: '{{ route("teacher.check_lesson_plan_exists") }}',
+                method: 'GET',
+                data: {
+                    session_timetableID: currentSessionData.sessionTimetableID,
+                    date: sessionDate
+                },
+                success: function(checkResponse) {
+                    if (checkResponse.success && checkResponse.exists) {
+                        // Load existing lesson plan
+                        loadExistingLessonPlanByDate(sessionDate);
+                    } else {
+                        Swal.fire({
+                            title: 'Not Found!',
+                            text: 'No lesson plan exists for this date. Please create a new one.',
+                            icon: 'info',
+                            confirmButtonColor: '#f5f5f5',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                },
+                error: function() {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Failed to check lesson plan',
+                        icon: 'error',
+                        confirmButtonColor: '#f5f5f5'
+                    });
+                }
+            });
+        }
+    });
+}
+
+function loadExistingLessonPlanByDate(date) {
+    $('#existingLessonDate').val(date);
+    loadExistingLessonPlan();
 }
 
 function loadCreateNewForm() {
@@ -305,7 +520,7 @@ function loadCreateNewForm() {
         title: 'Select Date for Lesson Plan',
         html: '<input type="date" id="swal-date" class="swal2-input" value="' + new Date().toISOString().split('T')[0] + '">',
         showCancelButton: true,
-        confirmButtonColor: '#940000',
+        confirmButtonColor: '#f5f5f5',
         cancelButtonColor: '#6c757d',
         confirmButtonText: 'Continue',
         cancelButtonText: 'Cancel',
@@ -316,32 +531,110 @@ function loadCreateNewForm() {
         if (result.isConfirmed && result.value) {
             const sessionDate = result.value;
             
-            // Get attendance stats
+            // First check if lesson plan already exists
             $.ajax({
-                url: '{{ route("teacher.get_session_attendance_stats") }}',
+                url: '{{ route("teacher.check_lesson_plan_exists") }}',
                 method: 'GET',
                 data: {
                     session_timetableID: currentSessionData.sessionTimetableID,
                     date: sessionDate
                 },
-                success: function(response) {
-                    if (response.success) {
-                        renderLessonPlanForm(response.data, sessionDate);
-                    } else {
+                success: function(checkResponse) {
+                    if (checkResponse.success && checkResponse.exists) {
                         Swal.fire({
-                            title: 'Error!',
-                            text: response.error || 'Failed to load attendance statistics',
-                            icon: 'error',
-                            confirmButtonColor: '#940000'
+                            title: 'Already Exists!',
+                            text: 'Lesson plan already exists for this date. Please use "Manage Lesson Plan" tab to edit or "Use Existing Lesson Plan" to view.',
+                            icon: 'warning',
+                            confirmButtonColor: '#f5f5f5',
+                            confirmButtonText: 'OK'
                         });
+                        return;
                     }
+                    
+                    // If doesn't exist, proceed to get attendance stats
+                    $.ajax({
+                        url: '{{ route("teacher.get_session_attendance_stats") }}',
+                        method: 'GET',
+                        data: {
+                            session_timetableID: currentSessionData.sessionTimetableID,
+                            date: sessionDate
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                renderLessonPlanForm(response.data, sessionDate);
+                            } else {
+                                let errorMessage = response.error || 'Failed to load attendance statistics';
+                                let icon = 'error';
+                                
+                                // Check date status
+                                if (response.date_status === 'weekend') {
+                                    icon = 'info';
+                                } else if (response.date_status === 'holiday') {
+                                    icon = 'warning';
+                                } else if (response.date_status === 'no_session') {
+                                    icon = 'info';
+                                }
+                                
+                                Swal.fire({
+                                    title: icon === 'error' ? 'Error!' : 'Notice',
+                                    text: errorMessage,
+                                    icon: icon,
+                                    confirmButtonColor: '#f5f5f5',
+                                    confirmButtonText: 'OK'
+                                });
+                            }
+                        },
+                        error: function() {
+                            Swal.fire({
+                                title: 'Error!',
+                                text: 'Failed to load attendance statistics',
+                                icon: 'error',
+                                confirmButtonColor: '#f5f5f5'
+                            });
+                        }
+                    });
                 },
                 error: function() {
-                    Swal.fire({
-                        title: 'Error!',
-                        text: 'Failed to load attendance statistics',
-                        icon: 'error',
-                        confirmButtonColor: '#940000'
+                    // If check fails, proceed anyway
+                    $.ajax({
+                        url: '{{ route("teacher.get_session_attendance_stats") }}',
+                        method: 'GET',
+                        data: {
+                            session_timetableID: currentSessionData.sessionTimetableID,
+                            date: sessionDate
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                renderLessonPlanForm(response.data, sessionDate);
+                            } else {
+                                let errorMessage = response.error || 'Failed to load attendance statistics';
+                                let icon = 'error';
+                                
+                                if (response.date_status === 'weekend') {
+                                    icon = 'info';
+                                } else if (response.date_status === 'holiday') {
+                                    icon = 'warning';
+                                } else if (response.date_status === 'no_session') {
+                                    icon = 'info';
+                                }
+                                
+                                Swal.fire({
+                                    title: icon === 'error' ? 'Error!' : 'Notice',
+                                    text: errorMessage,
+                                    icon: icon,
+                                    confirmButtonColor: '#f5f5f5',
+                                    confirmButtonText: 'OK'
+                                });
+                            }
+                        },
+                        error: function() {
+                            Swal.fire({
+                                title: 'Error!',
+                                text: 'Failed to load attendance statistics',
+                                icon: 'error',
+                                confirmButtonColor: '#f5f5f5'
+                            });
+                        }
                     });
                 }
             });
@@ -384,30 +677,31 @@ function renderLessonPlanForm(attendanceData, date) {
             </tr>
             <tr>
                 <th>TEACHER'S NAME</th>
-                <td colspan="5">
-                    <table style="width: 100%; border: none;">
+                <td colspan="2"><input type="text" id="lesson_teacher_name" value="${attendanceData.teacher_name || ''}" readonly style="background-color: #f5f5f5; border: 1px solid #212529; padding: 2px 4px; width: 100%;"></td>
+                <td colspan="3">
+                    <table style="width: 100%; border-collapse: collapse; border: 1px solid #212529;">
                         <tr>
-                            <th style="border: none; text-align: center;" colspan="3">NUMBER OF PUPILS</th>
+                            <th style="border: 1px solid #212529; text-align: center; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;" colspan="3">NUMBER OF PUPILS</th>
                         </tr>
                         <tr>
-                            <th style="border: none; text-align: center;" colspan="3">REGISTERED</th>
-                            <th style="border: none; text-align: center;" colspan="3">PRESENT</th>
+                            <th style="border: 1px solid #212529; text-align: center; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;" colspan="3">REGISTERED</th>
+                            <th style="border: 1px solid #212529; text-align: center; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;" colspan="3">PRESENT</th>
                         </tr>
                         <tr>
-                            <th style="border: 1px solid #ddd;">GIRLS</th>
-                            <th style="border: 1px solid #ddd;">BOYS</th>
-                            <th style="border: 1px solid #ddd;">TOTAL</th>
-                            <th style="border: 1px solid #ddd;">GIRLS</th>
-                            <th style="border: 1px solid #ddd;">BOYS</th>
-                            <th style="border: 1px solid #ddd;">TOTAL</th>
+                            <th style="border: 1px solid #212529; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;">GIRLS</th>
+                            <th style="border: 1px solid #212529; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;">BOYS</th>
+                            <th style="border: 1px solid #212529; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;">TOTAL</th>
+                            <th style="border: 1px solid #212529; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;">GIRLS</th>
+                            <th style="border: 1px solid #212529; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;">BOYS</th>
+                            <th style="border: 1px solid #212529; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;">TOTAL</th>
                         </tr>
                         <tr>
-                            <td style="border: 1px solid #ddd;"><input type="text" value="${attendanceData.registered_girls || 0}" readonly style="background-color: #f5f5f5; text-align: center;"></td>
-                            <td style="border: 1px solid #ddd;"><input type="text" value="${attendanceData.registered_boys || 0}" readonly style="background-color: #f5f5f5; text-align: center;"></td>
-                            <td style="border: 1px solid #ddd;"><input type="text" value="${attendanceData.registered_total || 0}" readonly style="background-color: #f5f5f5; text-align: center;"></td>
-                            <td style="border: 1px solid #ddd;"><input type="text" value="${attendanceData.present_girls || 0}" readonly style="background-color: #f5f5f5; text-align: center;"></td>
-                            <td style="border: 1px solid #ddd;"><input type="text" value="${attendanceData.present_boys || 0}" readonly style="background-color: #f5f5f5; text-align: center;"></td>
-                            <td style="border: 1px solid #ddd;"><input type="text" value="${attendanceData.present_total || 0}" readonly style="background-color: #f5f5f5; text-align: center;"></td>
+                            <td style="border: 1px solid #212529; padding: 3px 5px;"><input type="text" value="${attendanceData.registered_girls || 0}" readonly style="background-color: #f5f5f5; text-align: center; border: 1px solid #212529; padding: 2px 4px; width: 100%; font-size: 0.9rem;"></td>
+                            <td style="border: 1px solid #212529; padding: 3px 5px;"><input type="text" value="${attendanceData.registered_boys || 0}" readonly style="background-color: #f5f5f5; text-align: center; border: 1px solid #212529; padding: 2px 4px; width: 100%; font-size: 0.9rem;"></td>
+                            <td style="border: 1px solid #212529; padding: 3px 5px;"><input type="text" value="${attendanceData.registered_total || 0}" readonly style="background-color: #f5f5f5; text-align: center; border: 1px solid #212529; padding: 2px 4px; width: 100%; font-size: 0.9rem;"></td>
+                            <td style="border: 1px solid #212529; padding: 3px 5px;"><input type="text" value="${attendanceData.present_girls || 0}" readonly style="background-color: #f5f5f5; text-align: center; border: 1px solid #212529; padding: 2px 4px; width: 100%; font-size: 0.9rem;"></td>
+                            <td style="border: 1px solid #212529; padding: 3px 5px;"><input type="text" value="${attendanceData.present_boys || 0}" readonly style="background-color: #f5f5f5; text-align: center; border: 1px solid #212529; padding: 2px 4px; width: 100%; font-size: 0.9rem;"></td>
+                            <td style="border: 1px solid #212529; padding: 3px 5px;"><input type="text" value="${attendanceData.present_total || 0}" readonly style="background-color: #f5f5f5; text-align: center; border: 1px solid #212529; padding: 2px 4px; width: 100%; font-size: 0.9rem;"></td>
                         </tr>
                     </table>
                 </td>
@@ -491,18 +785,67 @@ function renderLessonPlanForm(attendanceData, date) {
         </table>
         
         <div class="form-group mt-3">
-            <label>Remarks:</label>
-            <textarea id="remarks" class="form-control" rows="2"></textarea>
+            <label><strong>Remarks:</strong></label>
+            <div class="dotted-line">
+                <textarea id="remarks" class="form-control" rows="2" style="border: none; background: transparent; resize: none; min-height: 30px;"></textarea>
+            </div>
+        </div>
+        
+        <div class="form-group mt-3">
+            <label><strong>Reflection:</strong></label>
+            <div class="dotted-line">
+                <textarea id="reflection" class="form-control" rows="2" style="border: none; background: transparent; resize: none; min-height: 30px;"></textarea>
+            </div>
+            <div class="dotted-line">
+                <textarea class="form-control" rows="2" style="border: none; background: transparent; resize: none; min-height: 30px;"></textarea>
+            </div>
+        </div>
+        
+        <div class="form-group mt-3">
+            <label><strong>Evaluation:</strong></label>
+            <div class="dotted-line">
+                <textarea id="evaluation" class="form-control" rows="2" style="border: none; background: transparent; resize: none; min-height: 30px;"></textarea>
+            </div>
+            <div class="dotted-line">
+                <textarea class="form-control" rows="2" style="border: none; background: transparent; resize: none; min-height: 30px;"></textarea>
+            </div>
+        </div>
+        
+        <div class="signature-container mt-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="signature-label">Subject Teacher's Signature:</div>
+                    <canvas id="teacherSignatureCanvas" class="signature-canvas" width="400" height="150"></canvas>
+                    <div class="signature-actions">
+                        <button type="button" class="btn btn-sm" onclick="clearTeacherSignature()" style="background-color: #f5f5f5; color: #212529; border: 1px solid #e9ecef;">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </button>
+                    </div>
+                    <input type="hidden" id="teacher_signature" name="teacher_signature">
+                </div>
+                <div class="col-md-6">
+                    <div class="signature-label">Academic/Supervisor's Signature:</div>
+                    <div style="border: 2px solid #212529; border-radius: 4px; min-height: 150px; padding: 10px; background-color: #f9f9f9; display: flex; align-items: center; justify-content: center;">
+                        <p class="text-muted mb-0">To be signed by supervisor</p>
+                    </div>
+                    <input type="hidden" id="supervisor_signature" name="supervisor_signature">
+                </div>
+            </div>
         </div>
         
         <input type="hidden" id="lesson_date_hidden" value="${date}">
         
-        <button class="btn btn-primary-custom btn-block mt-3" onclick="saveLessonPlan()">
+        <button class="btn btn-block mt-3" onclick="saveLessonPlan()" style="background-color: #f5f5f5; color: #212529; border: 1px solid #e9ecef;">
             <i class="bi bi-save"></i> Save Changes
         </button>
     `;
     
     $('#createNewForm').html(html);
+    
+    // Initialize signature pad after a short delay to ensure canvas is rendered
+    setTimeout(function() {
+        initializeSignaturePad();
+    }, 100);
 }
 
 function saveLessonPlan() {
@@ -537,6 +880,10 @@ function saveLessonPlan() {
         references: $('#references').val(),
         lesson_stages: stages,
         remarks: $('#remarks').val(),
+        reflection: $('#reflection').val(),
+        evaluation: $('#evaluation').val(),
+        teacher_signature: teacherSignaturePad && !teacherSignaturePad.isEmpty() ? teacherSignaturePad.toDataURL() : '',
+        supervisor_signature: $('#supervisor_signature').val() || '',
         _token: $('meta[name="csrf-token"]').attr('content')
     };
     
@@ -596,27 +943,6 @@ function loadExistingLessonPlan() {
     });
 }
 
-function filterByMonth() {
-    const month = $('#searchMonth').val();
-    if (!month) return;
-    
-    // Filter sessions by month - this would need backend support
-    // For now, just show all sessions
-    console.log('Filter by month:', month);
-}
-
-function filterByDate() {
-    const date = $('#searchDate').val();
-    if (!date) return;
-    
-    // Filter sessions by date - this would need backend support
-    console.log('Filter by date:', date);
-}
-
-function clearFilters() {
-    $('#searchMonth').val('');
-    $('#searchDate').val('');
-}
 
 function loadLessonPlanForManage() {
     // Similar to loadExistingLessonPlan but for manage tab
@@ -675,30 +1001,31 @@ function renderLessonPlanFormForEdit(data) {
             </tr>
             <tr>
                 <th>TEACHER'S NAME</th>
-                <td colspan="5">
-                    <table style="width: 100%; border: none;">
+                <td colspan="2"><input type="text" value="${data.teacher_name || ''}" readonly style="background-color: #f5f5f5; border: 1px solid #212529; padding: 2px 4px; width: 100%; font-size: 0.9rem;"></td>
+                <td colspan="3">
+                    <table style="width: 100%; border-collapse: collapse; border: 1px solid #212529;">
                         <tr>
-                            <th style="border: none; text-align: center;" colspan="3">NUMBER OF PUPILS</th>
+                            <th style="border: 1px solid #212529; text-align: center; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;" colspan="3">NUMBER OF PUPILS</th>
                         </tr>
                         <tr>
-                            <th style="border: none; text-align: center;" colspan="3">REGISTERED</th>
-                            <th style="border: none; text-align: center;" colspan="3">PRESENT</th>
+                            <th style="border: 1px solid #212529; text-align: center; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;" colspan="3">REGISTERED</th>
+                            <th style="border: 1px solid #212529; text-align: center; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;" colspan="3">PRESENT</th>
                         </tr>
                         <tr>
-                            <th style="border: 1px solid #ddd;">GIRLS</th>
-                            <th style="border: 1px solid #ddd;">BOYS</th>
-                            <th style="border: 1px solid #ddd;">TOTAL</th>
-                            <th style="border: 1px solid #ddd;">GIRLS</th>
-                            <th style="border: 1px solid #ddd;">BOYS</th>
-                            <th style="border: 1px solid #ddd;">TOTAL</th>
+                            <th style="border: 1px solid #212529; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;">GIRLS</th>
+                            <th style="border: 1px solid #212529; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;">BOYS</th>
+                            <th style="border: 1px solid #212529; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;">TOTAL</th>
+                            <th style="border: 1px solid #212529; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;">GIRLS</th>
+                            <th style="border: 1px solid #212529; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;">BOYS</th>
+                            <th style="border: 1px solid #212529; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;">TOTAL</th>
                         </tr>
                         <tr>
-                            <td style="border: 1px solid #ddd;"><input type="text" value="${data.registered_girls || 0}" readonly style="background-color: #f5f5f5; text-align: center;"></td>
-                            <td style="border: 1px solid #ddd;"><input type="text" value="${data.registered_boys || 0}" readonly style="background-color: #f5f5f5; text-align: center;"></td>
-                            <td style="border: 1px solid #ddd;"><input type="text" value="${data.registered_total || 0}" readonly style="background-color: #f5f5f5; text-align: center;"></td>
-                            <td style="border: 1px solid #ddd;"><input type="text" value="${data.present_girls || 0}" readonly style="background-color: #f5f5f5; text-align: center;"></td>
-                            <td style="border: 1px solid #ddd;"><input type="text" value="${data.present_boys || 0}" readonly style="background-color: #f5f5f5; text-align: center;"></td>
-                            <td style="border: 1px solid #ddd;"><input type="text" value="${data.present_total || 0}" readonly style="background-color: #f5f5f5; text-align: center;"></td>
+                            <td style="border: 1px solid #212529; padding: 3px 5px;"><input type="text" value="${data.registered_girls || 0}" readonly style="background-color: #f5f5f5; text-align: center; border: 1px solid #212529; padding: 2px 4px; width: 100%; font-size: 0.9rem;"></td>
+                            <td style="border: 1px solid #212529; padding: 3px 5px;"><input type="text" value="${data.registered_boys || 0}" readonly style="background-color: #f5f5f5; text-align: center; border: 1px solid #212529; padding: 2px 4px; width: 100%; font-size: 0.9rem;"></td>
+                            <td style="border: 1px solid #212529; padding: 3px 5px;"><input type="text" value="${data.registered_total || 0}" readonly style="background-color: #f5f5f5; text-align: center; border: 1px solid #212529; padding: 2px 4px; width: 100%; font-size: 0.9rem;"></td>
+                            <td style="border: 1px solid #212529; padding: 3px 5px;"><input type="text" value="${data.present_girls || 0}" readonly style="background-color: #f5f5f5; text-align: center; border: 1px solid #212529; padding: 2px 4px; width: 100%; font-size: 0.9rem;"></td>
+                            <td style="border: 1px solid #212529; padding: 3px 5px;"><input type="text" value="${data.present_boys || 0}" readonly style="background-color: #f5f5f5; text-align: center; border: 1px solid #212529; padding: 2px 4px; width: 100%; font-size: 0.9rem;"></td>
+                            <td style="border: 1px solid #212529; padding: 3px 5px;"><input type="text" value="${data.present_total || 0}" readonly style="background-color: #f5f5f5; text-align: center; border: 1px solid #212529; padding: 2px 4px; width: 100%; font-size: 0.9rem;"></td>
                         </tr>
                     </table>
                 </td>
@@ -773,18 +1100,167 @@ function renderLessonPlanFormForEdit(data) {
         </table>
         
         <div class="form-group mt-3">
-            <label>Remarks:</label>
-            <textarea id="edit_remarks" class="form-control" rows="2">${data.remarks || ''}</textarea>
+            <label><strong>Remarks:</strong></label>
+            <div class="dotted-line">
+                <textarea id="edit_remarks" class="form-control" rows="2" style="border: none; background: transparent; resize: none; min-height: 30px;">${data.remarks || ''}</textarea>
+            </div>
+        </div>
+        
+        <div class="form-group mt-3">
+            <label><strong>Reflection:</strong></label>
+            <div class="dotted-line">
+                <textarea id="edit_reflection" class="form-control" rows="2" style="border: none; background: transparent; resize: none; min-height: 30px;">${data.reflection || ''}</textarea>
+            </div>
+            <div class="dotted-line">
+                <textarea class="form-control" rows="2" style="border: none; background: transparent; resize: none; min-height: 30px;"></textarea>
+            </div>
+        </div>
+        
+        <div class="form-group mt-3">
+            <label><strong>Evaluation:</strong></label>
+            <div class="dotted-line">
+                <textarea id="edit_evaluation" class="form-control" rows="2" style="border: none; background: transparent; resize: none; min-height: 30px;">${data.evaluation || ''}</textarea>
+            </div>
+            <div class="dotted-line">
+                <textarea class="form-control" rows="2" style="border: none; background: transparent; resize: none; min-height: 30px;"></textarea>
+            </div>
+        </div>
+        
+        <div class="signature-container mt-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="signature-label">Subject Teacher's Signature:</div>
+                    <canvas id="editTeacherSignatureCanvas" class="signature-canvas" width="400" height="150"></canvas>
+                    <div class="signature-actions">
+                        <button type="button" class="btn btn-sm" onclick="clearEditTeacherSignature()" style="background-color: #f5f5f5; color: #212529; border: 1px solid #e9ecef;">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </button>
+                    </div>
+                    <input type="hidden" id="edit_teacher_signature" name="edit_teacher_signature" value="${data.teacher_signature || ''}">
+                    ${data.teacher_signature ? `<img src="${data.teacher_signature}" class="signature-preview mt-2" style="max-width: 400px;">` : ''}
+                </div>
+                <div class="col-md-6">
+                    <div class="signature-label">Academic/Supervisor's Signature:</div>
+                    ${data.supervisor_signature ? 
+                        `<img src="${data.supervisor_signature}" class="signature-preview mt-2" style="max-width: 400px;">` :
+                        `<div style="border: 2px solid #212529; border-radius: 4px; min-height: 150px; padding: 10px; background-color: #f9f9f9; display: flex; align-items: center; justify-content: center;">
+                            <p class="text-muted mb-0">To be signed by supervisor</p>
+                        </div>`
+                    }
+                    <input type="hidden" id="edit_supervisor_signature" name="edit_supervisor_signature" value="${data.supervisor_signature || ''}">
+                </div>
+            </div>
         </div>
         
         <input type="hidden" id="edit_lesson_planID" value="${data.lesson_planID}">
         
-        <button class="btn btn-primary-custom btn-block mt-3" onclick="updateLessonPlan()">
+        <button class="btn btn-block mt-3" onclick="updateLessonPlan()" style="background-color: #f5f5f5; color: #212529; border: 1px solid #e9ecef;">
             <i class="bi bi-save"></i> Update Changes
         </button>
     `;
     
     $('#manageLessonPlanContent').html(html);
+    
+    // Initialize signature pad for edit form
+    setTimeout(function() {
+        initializeEditSignaturePad(data.teacher_signature);
+    }, 100);
+}
+
+let teacherSignaturePad = null;
+
+function initializeSignaturePad() {
+    const canvas = document.getElementById('teacherSignatureCanvas');
+    if (canvas) {
+        teacherSignaturePad = new SignaturePad(canvas, {
+            backgroundColor: 'rgb(255, 255, 255)',
+            penColor: 'rgb(0, 0, 0)',
+            minWidth: 1,
+            maxWidth: 3,
+        });
+        
+        // Handle resize
+        function resizeCanvas() {
+            const ratio = Math.max(window.devicePixelRatio || 1, 1);
+            const width = canvas.offsetWidth;
+            const height = canvas.offsetHeight;
+            canvas.width = width * ratio;
+            canvas.height = height * ratio;
+            canvas.getContext('2d').scale(ratio, ratio);
+            if (teacherSignaturePad) {
+                teacherSignaturePad.clear();
+            }
+        }
+        
+        // Initial resize
+        resizeCanvas();
+        
+        // Handle window resize
+        window.addEventListener('resize', resizeCanvas);
+    }
+}
+
+function clearTeacherSignature() {
+    if (teacherSignaturePad) {
+        teacherSignaturePad.clear();
+        $('#teacher_signature').val('');
+    }
+}
+
+let editTeacherSignaturePad = null;
+
+function initializeEditSignaturePad(existingSignature) {
+    const canvas = document.getElementById('editTeacherSignatureCanvas');
+    if (canvas) {
+        editTeacherSignaturePad = new SignaturePad(canvas, {
+            backgroundColor: 'rgb(255, 255, 255)',
+            penColor: 'rgb(0, 0, 0)',
+            minWidth: 1,
+            maxWidth: 3,
+        });
+        
+        // Load existing signature if available
+        if (existingSignature) {
+            const img = new Image();
+            img.onload = function() {
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                editTeacherSignaturePad.fromDataURL(existingSignature);
+            };
+            img.src = existingSignature;
+        }
+        
+        // Handle resize
+        function resizeCanvas() {
+            const ratio = Math.max(window.devicePixelRatio || 1, 1);
+            const width = canvas.offsetWidth;
+            const height = canvas.offsetHeight;
+            canvas.width = width * ratio;
+            canvas.height = height * ratio;
+            canvas.getContext('2d').scale(ratio, ratio);
+            if (editTeacherSignaturePad && existingSignature) {
+                const img = new Image();
+                img.onload = function() {
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                };
+                img.src = existingSignature;
+            }
+        }
+        
+        // Initial resize
+        resizeCanvas();
+        
+        // Handle window resize
+        window.addEventListener('resize', resizeCanvas);
+    }
+}
+
+function clearEditTeacherSignature() {
+    if (editTeacherSignaturePad) {
+        editTeacherSignaturePad.clear();
+        $('#edit_teacher_signature').val('');
+    }
 }
 
 function updateLessonPlan() {
@@ -818,6 +1294,10 @@ function updateLessonPlan() {
         references: $('#edit_references').val(),
         lesson_stages: stages,
         remarks: $('#edit_remarks').val(),
+        reflection: $('#edit_reflection').val(),
+        evaluation: $('#edit_evaluation').val(),
+        teacher_signature: editTeacherSignaturePad && !editTeacherSignaturePad.isEmpty() ? editTeacherSignaturePad.toDataURL() : $('#edit_teacher_signature').val(),
+        supervisor_signature: $('#edit_supervisor_signature').val() || '',
         _token: $('meta[name="csrf-token"]').attr('content')
     };
     
@@ -912,30 +1392,31 @@ function renderLessonPlanView(data) {
             </tr>
             <tr>
                 <th>TEACHER'S NAME</th>
-                <td colspan="5">
-                    <table style="width: 100%; border: none;">
+                <td colspan="2">${data.teacher_name || 'N/A'}</td>
+                <td colspan="3">
+                    <table style="width: 100%; border-collapse: collapse; border: 1px solid #212529;">
                         <tr>
-                            <th style="border: none; text-align: center;" colspan="3">NUMBER OF PUPILS</th>
+                            <th style="border: 1px solid #212529; text-align: center; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;" colspan="3">NUMBER OF PUPILS</th>
                         </tr>
                         <tr>
-                            <th style="border: none; text-align: center;" colspan="3">REGISTERED</th>
-                            <th style="border: none; text-align: center;" colspan="3">PRESENT</th>
+                            <th style="border: 1px solid #212529; text-align: center; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;" colspan="3">REGISTERED</th>
+                            <th style="border: 1px solid #212529; text-align: center; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;" colspan="3">PRESENT</th>
                         </tr>
                         <tr>
-                            <th style="border: 1px solid #ddd;">GIRLS</th>
-                            <th style="border: 1px solid #ddd;">BOYS</th>
-                            <th style="border: 1px solid #ddd;">TOTAL</th>
-                            <th style="border: 1px solid #ddd;">GIRLS</th>
-                            <th style="border: 1px solid #ddd;">BOYS</th>
-                            <th style="border: 1px solid #ddd;">TOTAL</th>
+                            <th style="border: 1px solid #212529; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;">GIRLS</th>
+                            <th style="border: 1px solid #212529; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;">BOYS</th>
+                            <th style="border: 1px solid #212529; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;">TOTAL</th>
+                            <th style="border: 1px solid #212529; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;">GIRLS</th>
+                            <th style="border: 1px solid #212529; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;">BOYS</th>
+                            <th style="border: 1px solid #212529; padding: 3px 5px; background-color: #f5f5f5; font-size: 0.9rem;">TOTAL</th>
                         </tr>
                         <tr>
-                            <td style="border: 1px solid #ddd; text-align: center;">${data.registered_girls || 0}</td>
-                            <td style="border: 1px solid #ddd; text-align: center;">${data.registered_boys || 0}</td>
-                            <td style="border: 1px solid #ddd; text-align: center;">${data.registered_total || 0}</td>
-                            <td style="border: 1px solid #ddd; text-align: center;">${data.present_girls || 0}</td>
-                            <td style="border: 1px solid #ddd; text-align: center;">${data.present_boys || 0}</td>
-                            <td style="border: 1px solid #ddd; text-align: center;">${data.present_total || 0}</td>
+                            <td style="border: 1px solid #212529; text-align: center; padding: 3px 5px; font-size: 0.9rem;">${data.registered_girls || 0}</td>
+                            <td style="border: 1px solid #212529; text-align: center; padding: 3px 5px; font-size: 0.9rem;">${data.registered_boys || 0}</td>
+                            <td style="border: 1px solid #212529; text-align: center; padding: 3px 5px; font-size: 0.9rem;">${data.registered_total || 0}</td>
+                            <td style="border: 1px solid #212529; text-align: center; padding: 3px 5px; font-size: 0.9rem;">${data.present_girls || 0}</td>
+                            <td style="border: 1px solid #212529; text-align: center; padding: 3px 5px; font-size: 0.9rem;">${data.present_boys || 0}</td>
+                            <td style="border: 1px solid #212529; text-align: center; padding: 3px 5px; font-size: 0.9rem;">${data.present_total || 0}</td>
                         </tr>
                     </table>
                 </td>
@@ -1011,11 +1492,78 @@ function renderLessonPlanView(data) {
         
         <div class="form-group mt-3">
             <label><strong>Remarks:</strong></label>
-            <p>${data.remarks || ''}</p>
+            <div class="dotted-line">
+                <p style="margin: 0; padding: 5px 0;">${data.remarks || ''}</p>
+            </div>
+        </div>
+        
+        <div class="form-group mt-3">
+            <label><strong>Reflection:</strong></label>
+            <div class="dotted-line">
+                <p style="margin: 0; padding: 5px 0;">${data.reflection || ''}</p>
+            </div>
+            <div class="dotted-line">
+                <p style="margin: 0; padding: 5px 0;"></p>
+            </div>
+        </div>
+        
+        <div class="form-group mt-3">
+            <label><strong>Evaluation:</strong></label>
+            <div class="dotted-line">
+                <p style="margin: 0; padding: 5px 0;">${data.evaluation || ''}</p>
+            </div>
+            <div class="dotted-line">
+                <p style="margin: 0; padding: 5px 0;"></p>
+            </div>
+        </div>
+        
+        <div class="signature-container mt-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="signature-label">Subject Teacher's Signature:</div>
+                    ${data.teacher_signature ? 
+                        `<img src="${data.teacher_signature}" class="signature-preview" style="max-width: 100%; border: 2px solid #212529; border-radius: 4px;">` :
+                        `<div style="border: 2px solid #212529; border-radius: 4px; min-height: 150px; padding: 10px; background-color: #f9f9f9; display: flex; align-items: center; justify-content: center;">
+                            <p class="text-muted mb-0">No signature</p>
+                        </div>`
+                    }
+                </div>
+                <div class="col-md-6">
+                    <div class="signature-label">Academic/Supervisor's Signature:</div>
+                    ${data.supervisor_signature ? 
+                        `<img src="${data.supervisor_signature}" class="signature-preview" style="max-width: 100%; border: 2px solid #212529; border-radius: 4px;">` :
+                        `<div style="border: 2px solid #212529; border-radius: 4px; min-height: 150px; padding: 10px; background-color: #f9f9f9; display: flex; align-items: center; justify-content: center;">
+                            <p class="text-muted mb-0">To be signed by supervisor</p>
+                        </div>`
+                    }
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-4 mb-3">
+            <button class="btn btn-lg" onclick="downloadLessonPlanPDF('${data.lesson_planID || ''}', '${data.lesson_date || ''}')" style="background-color: #f5f5f5; color: #212529; border: 1px solid #e9ecef;">
+                <i class="bi bi-download"></i> Download PDF
+            </button>
         </div>
     `;
     
     $('#viewLessonPlanContent').html(html);
+}
+
+function downloadLessonPlanPDF(lessonPlanID, date) {
+    if (!lessonPlanID || !date) {
+        Swal.fire({
+            title: 'Error!',
+            text: 'Lesson plan ID or date is missing',
+            icon: 'error',
+            confirmButtonColor: '#f5f5f5'
+        });
+        return;
+    }
+    
+    // Create download link
+    const url = '{{ route("teacher.download_lesson_plan_pdf", ":id") }}'.replace(':id', lessonPlanID);
+    window.open(url, '_blank');
 }
 </script>
 

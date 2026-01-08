@@ -2953,7 +2953,9 @@ class ManageClassessController extends Controller
                     $query->where('schoolID', $schoolID);
                 })
                 ->get()
-                ->groupBy('classID');
+                ->groupBy(function($subclass) {
+                    return $subclass->classID;
+                });
             
             // Format subclasses with display names
             $subclasses = collect();
@@ -2976,6 +2978,7 @@ class ManageClassessController extends Controller
                             'display_name' => $displayName,
                             'stream_code' => $subclass->stream_code,
                             'class_name' => $subclass->class->class_name,
+                            'classID' => $subclass->classID,
                             'combie_name' => $subclass->combie ? $subclass->combie->combie_name : null,
                             'combie_code' => $subclass->combie ? $subclass->combie->combie_code : null,
                         ]);
@@ -2994,6 +2997,7 @@ class ManageClassessController extends Controller
                             'display_name' => $displayName,
                             'stream_code' => $subclass->stream_code,
                             'class_name' => $subclass->class->class_name,
+                            'classID' => $subclass->classID,
                             'combie_name' => $subclass->combie ? $subclass->combie->combie_name : null,
                             'combie_code' => $subclass->combie ? $subclass->combie->combie_code : null,
                         ]);
@@ -3017,6 +3021,7 @@ class ManageClassessController extends Controller
                             'display_name' => $displayName,
                             'stream_code' => $subclass->stream_code,
                             'class_name' => $subclass->class->class_name,
+                            'classID' => $subclass->classID,
                             'combie_name' => $subclass->combie ? $subclass->combie->combie_name : null,
                             'combie_code' => $subclass->combie ? $subclass->combie->combie_code : null,
                         ]);
@@ -3034,6 +3039,7 @@ class ManageClassessController extends Controller
                     'display_name' => $subclass->display_name,
                     'stream_code' => $subclass->stream_code,
                     'class_name' => $subclass->class_name,
+                    'classID' => $subclass->classID ?? null,
                     'combie_name' => $subclass->combie_name,
                     'combie_code' => $subclass->combie_code,
                 ];

@@ -121,7 +121,7 @@
                                 </td>
                                 <td>
                                     @if($item['scheme'])
-                                        <a href="{{ route('teacher.viewSchemeOfWork', $item['scheme']->scheme_of_workID) }}" 
+                                        <a href="{{ route('admin.viewSchemeOfWork', $item['scheme']->scheme_of_workID) }}" 
                                            target="_blank" 
                                            class="btn btn-primary-custom btn-sm no-border-radius">
                                             <i class="fa fa-eye"></i> View

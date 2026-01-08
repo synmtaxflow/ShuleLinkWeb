@@ -61,6 +61,7 @@ Route::get('logout', [Auth::class, 'logout'])->name('logout');
 // Admin Routes
 Route::get('AdminDashboard', [AdminController::class, 'AdminDashboard'])->name('AdminDashboard');
 Route::get('admin/scheme-of-work', [AdminController::class, 'adminSchemeOfWork'])->name('admin.schemeOfWork');
+Route::get('admin/scheme-of-work/view/{schemeOfWorkID}', [AdminController::class, 'adminViewSchemeOfWork'])->name('admin.viewSchemeOfWork');
 Route::get('task-management', [AdminController::class, 'taskManagement'])->name('taskManagement');
 Route::get('admin/get-teacher-tasks', [AdminController::class, 'getTeacherTasks'])->name('admin.get_teacher_tasks');
 Route::post('approve-task/{taskID}', [AdminController::class, 'approveTask'])->name('approve_task');
@@ -174,8 +175,12 @@ Route::get('teacher/scheme-of-work/export-pdf/{schemeOfWorkID}', [TeachersContro
 Route::get('teacher/scheme-of-work/export-excel/{schemeOfWorkID}', [TeachersController::class, 'exportSchemeOfWorkExcel'])->name('teacher.exportSchemeOfWorkExcel');
 Route::get('teacher/lesson-plans', [TeachersController::class, 'lessonPlans'])->name('teacher.lessonPlans');
 Route::get('teacher/get-session-attendance-stats', [TeachersController::class, 'getSessionAttendanceStats'])->name('teacher.get_session_attendance_stats');
+Route::get('teacher/get-all-sessions-for-year', [TeachersController::class, 'getAllSessionsForYear'])->name('teacher.get_all_sessions_for_year');
+Route::get('teacher/get-sessions-by-subject', [TeachersController::class, 'getSessionsBySubject'])->name('teacher.get_sessions_by_subject');
 Route::post('teacher/lesson-plan/store', [TeachersController::class, 'storeLessonPlan'])->name('teacher.store_lesson_plan');
 Route::get('teacher/lesson-plan/get', [TeachersController::class, 'getLessonPlan'])->name('teacher.get_lesson_plan');
+Route::get('teacher/lesson-plan/check-exists', [TeachersController::class, 'checkLessonPlanExists'])->name('teacher.check_lesson_plan_exists');
+Route::get('teacher/lesson-plan/download-pdf/{lessonPlanID}', [TeachersController::class, 'downloadLessonPlanPDF'])->name('teacher.download_lesson_plan_pdf');
 Route::post('teacher/lesson-plan/update/{lessonPlanID}', [TeachersController::class, 'updateLessonPlan'])->name('teacher.update_lesson_plan');
 Route::get('teacher/exam-attendance/{classSubjectID}', [TeachersController::class, 'examAttendance'])->name('teacher.exam_attendance');
 Route::get('teacher/get-terms-for-year', [TeachersController::class, 'getTermsForYear'])->name('teacher.get_terms_for_year');

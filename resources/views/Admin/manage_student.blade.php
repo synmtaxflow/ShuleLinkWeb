@@ -561,68 +561,104 @@
         </div>
     </div>
 
-    <!-- Search and Filter Section -->
+    <!-- Filters Section -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label fw-bold mb-2">Search by Admission Number or Name</label>
-                    <div class="search-input-wrapper">
-                        <i class="bi bi-search"></i>
-                        <input type="text" class="form-control" id="searchInput" placeholder="Search by admission number or student name...">
+            <!-- Filters Section -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold mb-2">Class</label>
+                    <select class="form-select" id="classFilter">
+                        <option value="">-- All Classes --</option>
+                        <!-- Will be loaded via AJAX -->
+                    </select>
                     </div>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-bold mb-2">Filter by Status</label>
-                    <select class="form-select" id="statusFilter">
-                        <option value="">-- All Statuses --</option>
-                        <option value="Active">Active Students</option>
-                        <option value="Applied">Applied Students</option>
-                        <option value="Graduated">Graduated Students</option>
-                        <option value="Inactive">Inactive Students</option>
-                        <option value="Transferred">Transferred Students</option>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold mb-2">Subclass</label>
+                    <select class="form-select" id="subclassFilter">
+                        <option value="">-- All Subclasses --</option>
+                        <!-- Will be loaded via AJAX -->
                     </select>
                 </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold mb-2">Gender</label>
+                    <select class="form-select" id="genderFilter">
+                        <option value="">-- All Genders --</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold mb-2">Health Condition</label>
+                    <select class="form-select" id="healthFilter">
+                        <option value="">-- All --</option>
+                        <option value="good">Good Health</option>
+                        <option value="bad">Bad Health</option>
+                    </select>
             </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold mb-2">Status</label>
+                    <select class="form-select" id="statusFilter">
+                        <option value="Active">Active</option>
+                        <option value="Applied">Applied</option>
+                        <option value="Graduated">Graduated</option>
+                        <option value="Inactive">Inactive</option>
+                        <option value="Transferred">Transferred</option>
+                    </select>
         </div>
     </div>
 
-            <!-- Tabs Section -->
+            <!-- Statistics Display -->
+            <div class="row g-3" id="statisticsSection">
+                <div class="col-md-2">
+                    <div class="text-center p-3 bg-primary text-white rounded">
+                        <h4 class="mb-0" id="statTotalStudents">0</h4>
+                        <small>Total Students</small>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-center p-3 bg-info text-white rounded">
+                        <h4 class="mb-0" id="statMaleCount">0</h4>
+                        <small>Male</small>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-center p-3 bg-danger text-white rounded">
+                        <h4 class="mb-0" id="statFemaleCount">0</h4>
+                        <small>Female</small>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-center p-3 bg-success text-white rounded">
+                        <h4 class="mb-0" id="statGoodHealth">0</h4>
+                        <small>Good Health</small>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-center p-3 bg-warning text-dark rounded">
+                        <h4 class="mb-0" id="statBadHealth">0</h4>
+                        <small>Bad Health</small>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="d-flex gap-2 h-100 align-items-end">
+                        <button class="btn btn-outline-danger btn-sm w-100" id="exportPdfBtn" title="Export to PDF">
+                            <i class="bi bi-file-pdf"></i> PDF
+                        </button>
+                        <button class="btn btn-outline-success btn-sm w-100" id="exportExcelBtn" title="Export to Excel">
+                            <i class="bi bi-file-excel"></i> Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+                    </div>
+                </div>
+
+    <!-- Students Table Section -->
     <div class="card border-0 shadow-sm">
         <div class="card-body">
-            <ul class="nav nav-tabs mb-3" id="studentTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active" type="button" role="tab" aria-controls="active" aria-selected="true" data-status="Active">
-                        <i class="bi bi-check-circle"></i> Active Students
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="applied-tab" data-bs-toggle="tab" data-bs-target="#applied" type="button" role="tab" aria-controls="applied" aria-selected="false" data-status="Applied">
-                        <i class="bi bi-file-earmark-person"></i> Applied Students
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="graduated-tab" data-bs-toggle="tab" data-bs-target="#graduated" type="button" role="tab" aria-controls="graduated" aria-selected="false" data-status="Graduated">
-                        <i class="bi bi-mortarboard"></i> Graduated Students
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="inactive-tab" data-bs-toggle="tab" data-bs-target="#inactive" type="button" role="tab" aria-controls="inactive" aria-selected="false" data-status="Inactive">
-                        <i class="bi bi-x-circle"></i> Inactive Students
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="transferred-tab" data-bs-toggle="tab" data-bs-target="#transferred" type="button" role="tab" aria-controls="transferred" aria-selected="false" data-status="Transferred">
-                        <i class="bi bi-arrow-right-circle"></i> Transferred Students
-                    </button>
-                </li>
-            </ul>
-
-            <div class="tab-content" id="studentTabsContent">
-                <!-- Active Students Tab -->
-                <div class="tab-pane fade show active" id="active" role="tabpanel" aria-labelledby="active-tab">
                     <div class="table-responsive">
-                        <table id="activeStudentsTable" class="table table-hover table-striped align-middle mb-0" style="width:100%">
+                <table id="studentsTable" class="table table-hover table-striped align-middle mb-0" style="width:100%">
                             <thead class="table-light">
                                 <tr>
                                     <th>Image</th>
@@ -631,7 +667,7 @@
                                     <th>Class</th>
                                     <th>Gender</th>
                                     <th>Parent</th>
-                                    <th>Fingerprint ID</th>
+                            <th>Fingerprint ID</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -639,96 +675,6 @@
                                 <!-- Data will be loaded via AJAX -->
                             </tbody>
                         </table>
-                    </div>
-                </div>
-
-                <!-- Applied Students Tab -->
-                <div class="tab-pane fade" id="applied" role="tabpanel" aria-labelledby="applied-tab">
-                    <div class="table-responsive">
-                        <table id="appliedStudentsTable" class="table table-hover table-striped align-middle mb-0" style="width:100%">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Image</th>
-                                    <th>Admission Number</th>
-                                    <th>Full Name</th>
-                                    <th>Class</th>
-                                    <th>Gender</th>
-                                    <th>Parent</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Data will be loaded via AJAX -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Graduated Students Tab -->
-                <div class="tab-pane fade" id="graduated" role="tabpanel" aria-labelledby="graduated-tab">
-                    <div class="table-responsive">
-                        <table id="graduatedStudentsTable" class="table table-hover table-striped align-middle mb-0" style="width:100%">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Image</th>
-                                    <th>Admission Number</th>
-                                    <th>Full Name</th>
-                                    <th>Class</th>
-                                    <th>Gender</th>
-                                    <th>Parent</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Data will be loaded via AJAX -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Inactive Students Tab -->
-                <div class="tab-pane fade" id="inactive" role="tabpanel" aria-labelledby="inactive-tab">
-                    <div class="table-responsive">
-                        <table id="inactiveStudentsTable" class="table table-hover table-striped align-middle mb-0" style="width:100%">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Image</th>
-                                    <th>Admission Number</th>
-                                    <th>Full Name</th>
-                                    <th>Class</th>
-                                    <th>Gender</th>
-                                    <th>Parent</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Data will be loaded via AJAX -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Transferred Students Tab -->
-                <div class="tab-pane fade" id="transferred" role="tabpanel" aria-labelledby="transferred-tab">
-                    <div class="table-responsive">
-                        <table id="transferredStudentsTable" class="table table-hover table-striped align-middle mb-0" style="width:100%">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Image</th>
-                                    <th>Admission Number</th>
-                                    <th>Full Name</th>
-                                    <th>Class</th>
-                                    <th>Gender</th>
-                                    <th>Parent</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Data will be loaded via AJAX -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -1073,6 +1019,10 @@
 {{-- html2canvas Library for ID Card Download --}}
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
+{{-- jsPDF and AutoTable for PDF Export --}}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
 {{-- SweetAlert --}}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
@@ -1085,7 +1035,7 @@
     const canDelete = {{ ($canDelete ?? false) ? 'true' : 'false' }};
 
     $(document).ready(function() {
-        let activeTable, appliedTable, graduatedTable, inactiveTable, transferredTable;
+        let studentsTable;
         let currentStatus = 'Active';
 
         // Handle Register New Student Button Click
@@ -1216,12 +1166,22 @@
             });
         }
 
-        // Load students for a specific status
-        function loadStudents(status, tableId) {
-            console.log('Loading students with status:', status, 'for table:', tableId);
+        // Load students with filters
+        function loadStudents() {
+            console.log('Loading students with filters');
+
+            // Get filter values
+            let status = $('#statusFilter').val() || 'Active';
+            let classID = $('#classFilter').val() || '';
+            let subclassID = $('#subclassFilter').val() || '';
+            let gender = $('#genderFilter').val() || '';
+            let health = $('#healthFilter').val() || '';
+
+            // Update currentStatus
+            currentStatus = status;
 
             // Show loading state
-            let tableContainer = $('#' + tableId).closest('.table-responsive');
+            let tableContainer = $('#studentsTable').closest('.table-responsive');
             let existingNoData = tableContainer.find('.no-data-message');
             if (existingNoData.length) {
                 existingNoData.remove();
@@ -1232,16 +1192,19 @@
                 type: 'GET',
                 data: {
                     status: status,
-                    search: $('#searchInput').val()
+                    classID: classID,
+                    subclassID: subclassID,
+                    gender: gender,
+                    health: health
                 },
                 dataType: 'json',
                 success: function(response) {
                     console.log('Response received:', response);
 
                     if (response.success) {
-                        let table = $('#' + tableId).DataTable();
+                        let table = $('#studentsTable').DataTable();
                         if (!table) {
-                            console.error('Table not found:', tableId);
+                            console.error('Table not found: studentsTable');
                             return;
                         }
 
@@ -1260,22 +1223,21 @@
                                     fingerprintIdHtml = '<span class="badge bg-secondary"><i class="bi bi-dash"></i> No ID</span>';
                                 }
 
-                                // Actions buttons - only show for Active students
-                                let actionsHtml = '';
-                                if (status === 'Active') {
-                                    actionsHtml = '<div class="btn-group" role="group" style="gap: 5px;">' +
+                                // Actions buttons - show edit/delete for Active students
+                                let actionsHtml = '<div class="btn-group" role="group" style="gap: 5px;">' +
                                         '<button class="btn btn-sm btn-info view-student-btn" data-student-id="' + student.studentID + '" title="View More Details" style="padding: 5px 10px;">' +
                                         '<i class="bi bi-eye"></i>' +
                                         '</button>';
 
-                                    // Edit button - only if user has update permission
-                                    if (canUpdate) {
+                                // Edit button - only if user has update permission and student is Active
+                                if (canUpdate && status === 'Active') {
                                         actionsHtml += '<button class="btn btn-sm btn-warning edit-student-btn" data-student-id="' + student.studentID + '" title="Edit Student" style="padding: 5px 10px;">' +
                                             '<i class="bi bi-pencil-square"></i>' +
                                             '</button>';
                                     }
 
-                                    // Only show fingerprint button if student doesn't have fingerprint_id
+                                // Only show fingerprint button if student doesn't have fingerprint_id and is Active
+                                if (status === 'Active') {
                                     if (!student.fingerprint_id) {
                                         actionsHtml += '<a href="#" class="btn btn-sm btn-success text-white send-student-to-fingerprint-btn" data-student-id="' + student.studentID + '" data-student-name="' + (student.first_name || student.full_name || '') + '" data-fingerprint-id="' + (student.fingerprint_id || '') + '" title="Send to Fingerprint Device" style="padding: 5px 10px;">' +
                                             '<i class="bi bi-fingerprint"></i>' +
@@ -1286,33 +1248,35 @@
                                             '<i class="bi bi-device-hdd"></i>' +
                                             '</button>';
                                     }
+                                    }
 
                                     actionsHtml += '<button class="btn btn-sm btn-primary generate-id-btn" data-student-id="' + student.studentID + '" title="Generate Student ID Card" style="padding: 5px 10px;">' +
                                         '<i class="bi bi-card-text"></i>' +
                                         '</button>';
 
-                                    // Delete button - only if user has delete permission
-                                    if (canDelete) {
+                                // Delete button - only if user has delete permission and student is Active
+                                if (canDelete && status === 'Active') {
                                         actionsHtml += '<button class="btn btn-sm btn-danger delete-student-btn" data-student-id="' + student.studentID + '" data-student-name="' + student.full_name + '" title="Delete Student" style="padding: 5px 10px;">' +
                                             '<i class="bi bi-trash"></i>' +
                                             '</button>';
                                     }
 
                                     actionsHtml += '</div>';
-                                } else {
-                                    // For other statuses, only show view button
-                                    actionsHtml = '<div class="btn-group" role="group">' +
-                                        '<button class="btn btn-sm btn-info view-student-btn" data-student-id="' + student.studentID + '" title="View More Details" style="padding: 5px 10px;">' +
-                                        '<i class="bi bi-eye"></i>' +
-                                        '</button>' +
-                                        '</div>';
-                                }
 
-                                // Add red alarm icon if student has health conditions
+                                // Add red alarm icon if student has health conditions - support both boolean and integer values
                                 let healthAlarmIcon = '';
-                                if ((student.is_disabled && student.is_disabled == 1) ||
-                                    (student.has_epilepsy && student.has_epilepsy == 1) ||
-                                    (student.has_allergies && student.has_allergies == 1)) {
+                                let hasHealthCondition = false;
+                                
+                                // Check all health condition fields
+                                if ((student.is_disabled === true || student.is_disabled == 1 || student.is_disabled === "1") ||
+                                    (student.has_epilepsy === true || student.has_epilepsy == 1 || student.has_epilepsy === "1") ||
+                                    (student.has_allergies === true || student.has_allergies == 1 || student.has_allergies === "1") ||
+                                    (student.has_disability === true || student.has_disability == 1 || student.has_disability === "1") ||
+                                    (student.has_chronic_illness === true || student.has_chronic_illness == 1 || student.has_chronic_illness === "1")) {
+                                    hasHealthCondition = true;
+                                }
+                                
+                                if (hasHealthCondition) {
                                     healthAlarmIcon = ' <i class="bi bi-exclamation-triangle-fill text-danger" title="Health Condition Alert"></i>';
                                 }
 
@@ -1334,21 +1298,10 @@
                             console.log('No students found for status:', status);
 
                             // Show "No data available" message
-                            let statusText = status === 'Applied' ? 'Applied Students' :
-                                           status === 'Graduated' ? 'Graduated Students' :
-                                           status === 'Transferred' ? 'Transferred Students' :
-                                           status === 'Inactive' ? 'Inactive Students' :
-                                           'Students';
-
                             let noDataHtml = '<div class="no-data-message text-center py-5">' +
                                 '<i class="bi bi-inbox" style="font-size: 3rem; color: #6c757d;"></i>' +
                                 '<h5 class="mt-3 text-muted">No Data Available</h5>' +
-                                '<p class="text-muted">No ' + statusText.toLowerCase() + ' found' +
-                                (status === 'Graduated' ? ' where status = Graduated' : '') +
-                                (status === 'Inactive' ? ' where status = Inactive' : '') +
-                                (status === 'Transferred' ? ' where status = Transferred' : '') +
-                                (status === 'Applied' ? ' where status = Applied' : '') +
-                                '.</p>' +
+                                '<p class="text-muted">No students found matching the selected filters.</p>' +
                                 '</div>';
 
                             tableContainer.find('.no-data-message').remove();
@@ -1356,15 +1309,18 @@
                         }
 
                         table.draw();
+                        
+                        // Load statistics after loading students
+                        loadStatistics();
                     } else {
-                        let table = $('#' + tableId).DataTable();
+                        let table = $('#studentsTable').DataTable();
                         if (table) {
                             table.clear();
                             table.draw();
                         }
 
                         // Show no data message
-                        let tableContainer = $('#' + tableId).closest('.table-responsive');
+                        let tableContainer = $('#studentsTable').closest('.table-responsive');
                         let noDataHtml = '<div class="no-data-message text-center py-5">' +
                             '<i class="bi bi-inbox" style="font-size: 3rem; color: #6c757d;"></i>' +
                             '<h5 class="mt-3 text-muted">No Data Available</h5>' +
@@ -1372,6 +1328,9 @@
                             '</div>';
                         tableContainer.find('.no-data-message').remove();
                         tableContainer.append(noDataHtml);
+                        
+                        // Load statistics even when no data
+                        loadStatistics();
                     }
                 },
                 error: function(xhr, status, error) {
@@ -1383,11 +1342,23 @@
                     let errorMessage = 'Failed to load students';
                     if (xhr.responseJSON && xhr.responseJSON.message) {
                         errorMessage = xhr.responseJSON.message;
+                    } else if (xhr.responseText) {
+                        try {
+                            let errorData = JSON.parse(xhr.responseText);
+                            if (errorData.message) {
+                                errorMessage = errorData.message;
+                            }
+                        } catch (e) {
+                            // If not JSON, use response text
+                            if (xhr.responseText.length < 200) {
+                                errorMessage = xhr.responseText;
+                            }
+                        }
                     }
 
                     // Clear table on error
-                    let table = $('#' + tableId).DataTable();
-                    let tableContainer = $('#' + tableId).closest('.table-responsive');
+                    let table = $('#studentsTable').DataTable();
+                    let tableContainer = $('#studentsTable').closest('.table-responsive');
 
                     if (table) {
                         table.clear();
@@ -1399,16 +1370,20 @@
                         '<i class="bi bi-exclamation-triangle" style="font-size: 3rem; color: #dc3545;"></i>' +
                         '<h5 class="mt-3 text-danger">Error Loading Data</h5>' +
                         '<p class="text-muted">' + errorMessage + '</p>' +
+                        '<button class="btn btn-sm btn-primary mt-2" onclick="location.reload()">Refresh Page</button>' +
                         '</div>';
                     tableContainer.find('.no-data-message').remove();
                     tableContainer.append(noDataHtml);
+                    
+                    // Load statistics even on error
+                    loadStatistics();
                 }
             });
         }
 
-        // Initialize DataTables
+        // Initialize DataTable
         function initializeTables() {
-            activeTable = $('#activeStudentsTable').DataTable({
+            studentsTable = $('#studentsTable').DataTable({
                 "order": [[2, "asc"]],
                 "pageLength": 25,
                 "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
@@ -1423,199 +1398,106 @@
                     "zeroRecords": "No matching records found"
                 },
                 "columnDefs": [
-                    { "orderable": false, "targets": [0, 6] }
-                ]
-            });
-
-            appliedTable = $('#appliedStudentsTable').DataTable({
-                "order": [[2, "asc"]],
-                "pageLength": 25,
-                "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-                "autoWidth": false,
-                "responsive": false,
-                "language": {
-                    "search": "Search:",
-                    "lengthMenu": "Show _MENU_ records per page",
-                    "info": "Showing _START_ to _END_ of _TOTAL_ records",
-                    "infoEmpty": "No records available",
-                    "infoFiltered": "(filtered from _MAX_ total records)",
-                    "zeroRecords": "No matching records found"
-                },
-                "columnDefs": [
-                    { "orderable": false, "targets": [0, 6] }
-                ]
-            });
-
-            graduatedTable = $('#graduatedStudentsTable').DataTable({
-                "order": [[2, "asc"]],
-                "pageLength": 25,
-                "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-                "autoWidth": false,
-                "responsive": false,
-                "language": {
-                    "search": "Search:",
-                    "lengthMenu": "Show _MENU_ records per page",
-                    "info": "Showing _START_ to _END_ of _TOTAL_ records",
-                    "infoEmpty": "No records available",
-                    "infoFiltered": "(filtered from _MAX_ total records)",
-                    "zeroRecords": "No matching records found"
-                },
-                "columnDefs": [
-                    { "orderable": false, "targets": [0, 6] }
-                ]
-            });
-
-            inactiveTable = $('#inactiveStudentsTable').DataTable({
-                "order": [[2, "asc"]],
-                "pageLength": 25,
-                "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-                "autoWidth": false,
-                "responsive": false,
-                "language": {
-                    "search": "Search:",
-                    "lengthMenu": "Show _MENU_ records per page",
-                    "info": "Showing _START_ to _END_ of _TOTAL_ records",
-                    "infoEmpty": "No records available",
-                    "infoFiltered": "(filtered from _MAX_ total records)",
-                    "zeroRecords": "No matching records found"
-                },
-                "columnDefs": [
-                    { "orderable": false, "targets": [0, 6] }
-                ]
-            });
-
-            transferredTable = $('#transferredStudentsTable').DataTable({
-                "order": [[2, "asc"]],
-                "pageLength": 25,
-                "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-                "autoWidth": false,
-                "responsive": false,
-                "language": {
-                    "search": "Search:",
-                    "lengthMenu": "Show _MENU_ records per page",
-                    "info": "Showing _START_ to _END_ of _TOTAL_ records",
-                    "infoEmpty": "No records available",
-                    "infoFiltered": "(filtered from _MAX_ total records)",
-                    "zeroRecords": "No matching records found"
-                },
-                "columnDefs": [
-                    { "orderable": false, "targets": [0, 6] }
+                    { "orderable": false, "targets": [0, 6, 7] }
                 ]
             });
         }
 
-        // Manual tab switching function (works without Bootstrap JS)
-        function switchTab(tabButtonId, tabPaneId, status, tableId) {
-            // Remove active class from all tabs
-            $('#studentTabs .nav-link').removeClass('active').attr('aria-selected', 'false');
-            $('#studentTabsContent .tab-pane').removeClass('show active');
 
-            // Add active class to clicked tab
-            $('#' + tabButtonId).addClass('active').attr('aria-selected', 'true');
-            $('#' + tabPaneId).addClass('show active');
+        // Function to load statistics
+        function loadStatistics() {
+            // Get status from filter
+            let status = $('#statusFilter').val() || 'Active';
+            
+            let classID = $('#classFilter').val() || '';
+            let subclassID = $('#subclassFilter').val() || '';
+            let gender = $('#genderFilter').val() || '';
+            let health = $('#healthFilter').val() || '';
 
-            // Load data
-            console.log('Switching to tab:', tabPaneId, 'Status:', status);
-            loadStudents(status, tableId);
-        }
+            // Show loading state on statistics
+            $('#statTotalStudents, #statMaleCount, #statFemaleCount, #statGoodHealth, #statBadHealth')
+                .html('<i class="bi bi-hourglass-split"></i>');
 
-        // Click handlers for each tab - manual switching without Bootstrap JS
-        $('#active-tab').off('click').on('click', function(e) {
-            e.preventDefault();
-            switchTab('active-tab', 'active', 'Active', 'activeStudentsTable');
-        });
-
-        $('#applied-tab').off('click').on('click', function(e) {
-            e.preventDefault();
-            switchTab('applied-tab', 'applied', 'Applied', 'appliedStudentsTable');
-        });
-
-        $('#graduated-tab').off('click').on('click', function(e) {
-            e.preventDefault();
-            switchTab('graduated-tab', 'graduated', 'Graduated', 'graduatedStudentsTable');
-        });
-
-        $('#inactive-tab').off('click').on('click', function(e) {
-            e.preventDefault();
-            switchTab('inactive-tab', 'inactive', 'Inactive', 'inactiveStudentsTable');
-        });
-
-        $('#transferred-tab').off('click').on('click', function(e) {
-            e.preventDefault();
-            switchTab('transferred-tab', 'transferred', 'Transferred', 'transferredStudentsTable');
-        });
-
-        // Search functionality - by admission number or student name
-        let searchTimeout;
-        $('#searchInput').on('keyup', function() {
-            clearTimeout(searchTimeout);
-            let searchValue = $(this).val().trim();
-
-            searchTimeout = setTimeout(function() {
-                let activeTabButton = $('#studentTabs button.nav-link.active');
-                let status = activeTabButton.data('status') || 'Active';
-                let activeTab = activeTabButton.data('bs-target').replace('#', '');
-
-                console.log('Search triggered. Status:', status, 'Tab:', activeTab, 'Search:', searchValue);
-
-                let tableMap = {
-                    'active': 'activeStudentsTable',
-                    'applied': 'appliedStudentsTable',
-                    'graduated': 'graduatedStudentsTable',
-                    'inactive': 'inactiveStudentsTable',
-                    'transferred': 'transferredStudentsTable'
-                };
-
-                if (tableMap[activeTab]) {
-                    loadStudents(status, tableMap[activeTab]);
+            $.ajax({
+                url: '{{ route("get_student_statistics") }}',
+                type: 'GET',
+                data: {
+                    status: status,
+                    classID: classID,
+                    subclassID: subclassID,
+                    gender: gender,
+                    health: health
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success && response.statistics) {
+                        $('#statTotalStudents').text(response.statistics.total_students || 0);
+                        $('#statMaleCount').text(response.statistics.male_count || 0);
+                        $('#statFemaleCount').text(response.statistics.female_count || 0);
+                        $('#statGoodHealth').text(response.statistics.good_health_count || 0);
+                        $('#statBadHealth').text(response.statistics.bad_health_count || 0);
+                    } else {
+                        // Reset to 0 if error
+                        $('#statTotalStudents').text('0');
+                        $('#statMaleCount').text('0');
+                        $('#statFemaleCount').text('0');
+                        $('#statGoodHealth').text('0');
+                        $('#statBadHealth').text('0');
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Failed to load statistics:', xhr);
+                    // Reset to 0 on error
+                    $('#statTotalStudents').text('0');
+                    $('#statMaleCount').text('0');
+                    $('#statFemaleCount').text('0');
+                    $('#statGoodHealth').text('0');
+                    $('#statBadHealth').text('0');
                 }
-            }, 500); // Debounce search by 500ms
-        });
+            });
+        }
 
-        // Status filter - AJAX search (works with Select2)
+        // Function to reload data and statistics
+        function reloadData() {
+            loadStudents();
+            loadStatistics();
+        }
+
+        // Filter change handlers
+        let filterTimeout;
+        function handleFilterChange() {
+            clearTimeout(filterTimeout);
+            filterTimeout = setTimeout(function() {
+                reloadData();
+            }, 300);
+        }
+
+        // Status filter
         $('#statusFilter').on('change', function() {
-            let status = $(this).val();
-
-            if (!status) {
-                // If "All Statuses" is selected, show Active tab
-                status = 'Active';
-            }
-
-            // Switch to the appropriate tab
-            let tabMap = {
-                'Active': 'active-tab',
-                'Applied': 'applied-tab',
-                'Graduated': 'graduated-tab',
-                'Inactive': 'inactive-tab',
-                'Transferred': 'transferred-tab'
-            };
-
-            if (tabMap[status]) {
-                // Manually switch tab
-                $('#studentTabs button.nav-link').removeClass('active');
-                $('.tab-pane').removeClass('active show');
-
-                $('#' + tabMap[status]).addClass('active');
-                $('#' + tabMap[status].replace('-tab', '')).addClass('active show');
-
-                // Load students for the selected status
-                let tableMap = {
-                    'Active': 'activeStudentsTable',
-                    'Applied': 'appliedStudentsTable',
-                    'Graduated': 'graduatedStudentsTable',
-                    'Inactive': 'inactiveStudentsTable',
-                    'Transferred': 'transferredStudentsTable'
-                };
-
-                if (tableMap[status]) {
-                    loadStudents(status, tableMap[status]);
-                }
-            }
+            let status = $(this).val() || 'Active';
+            currentStatus = status;
+            reloadData();
         });
 
-        // Also handle Select2 change event
-        $('#statusFilter').on('select2:select', function() {
-            $(this).trigger('change');
+        // Class filter
+        $('#classFilter').on('change', function() {
+            let classID = $(this).val();
+            
+            // Reload subclasses based on selected class
+            if (classID) {
+                loadSubclassesForFilter(classID);
+            } else {
+                // Reset subclass filter and load all subclasses
+                $('#subclassFilter').html('<option value="">-- All Subclasses --</option>');
+                loadAllSubclassesForFilter();
+            }
+            
+            handleFilterChange();
+        });
+
+        // Subclass, Gender, Health filters
+        $('#subclassFilter, #genderFilter, #healthFilter').on('change', function() {
+            handleFilterChange();
         });
 
         // View Student Details
@@ -1636,7 +1518,48 @@
                         html += '<img src="' + student.photo + '" alt="' + student.full_name + '">';
                         html += '</div>';
                         html += '<div>';
-                        html += '<h3 class="school-title">' + student.full_name + '</h3>';
+                        // Check for bad health conditions - support both boolean and integer values
+                        let hasBadHealth = false;
+                        let healthConditions = [];
+                        
+                        // Check is_disabled (can be true, 1, or "1")
+                        if (student.is_disabled === true || student.is_disabled == 1 || student.is_disabled === "1") {
+                            hasBadHealth = true;
+                            healthConditions.push('Disabled');
+                        }
+                        
+                        // Check has_epilepsy (can be true, 1, or "1")
+                        if (student.has_epilepsy === true || student.has_epilepsy == 1 || student.has_epilepsy === "1") {
+                            hasBadHealth = true;
+                            healthConditions.push('Epilepsy/Seizure Disorder');
+                        }
+                        
+                        // Check has_allergies (can be true, 1, or "1")
+                        if (student.has_allergies === true || student.has_allergies == 1 || student.has_allergies === "1") {
+                            hasBadHealth = true;
+                            healthConditions.push('Allergies');
+                        }
+                        
+                        // Check has_disability (can be true, 1, or "1")
+                        if (student.has_disability === true || student.has_disability == 1 || student.has_disability === "1") {
+                            hasBadHealth = true;
+                            if (!healthConditions.includes('Disabled')) {
+                                healthConditions.push('Disability');
+                            }
+                        }
+                        
+                        // Check has_chronic_illness (can be true, 1, or "1")
+                        if (student.has_chronic_illness === true || student.has_chronic_illness == 1 || student.has_chronic_illness === "1") {
+                            hasBadHealth = true;
+                            healthConditions.push('Chronic Illness');
+                        }
+                        
+                        let healthAlertIcon = '';
+                        if (hasBadHealth) {
+                            healthAlertIcon = ' <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 1.2rem;" title="Health Condition Alert - This student has health conditions: ' + healthConditions.join(', ') + '"></i>';
+                        }
+                        
+                        html += '<h3 class="school-title">' + student.full_name + healthAlertIcon + '</h3>';
                         html += '<small class="text-muted">Admission: ' + student.admission_number + '</small>';
                         html += '</div>';
                         html += '</div>';
@@ -1649,6 +1572,73 @@
                         html += '<div class="info-item"><i class="bi bi-calendar-check"></i><div class="info-item-content"><div class="info-item-label">Admission Date</div><div class="info-item-value">' + student.admission_date + '</div></div></div>';
                         html += '<div class="info-item"><i class="bi bi-book"></i><div class="info-item-content"><div class="info-item-label">Class</div><div class="info-item-value">' + student.class + '</div></div></div>';
                         html += '<div class="info-item"><i class="bi bi-geo-alt"></i><div class="info-item-content"><div class="info-item-label">Address</div><div class="info-item-value">' + student.address + '</div></div></div>';
+
+                        // Health Information Section - Rebuild health conditions array
+                        let healthConditionsList = [];
+                        
+                        // Check is_disabled (can be true, 1, or "1")
+                        if (student.is_disabled === true || student.is_disabled == 1 || student.is_disabled === "1") {
+                            let disabledText = '<span class="badge bg-danger"><i class="bi bi-exclamation-triangle-fill"></i> Disabled</span>';
+                            if (student.disability_details) {
+                                disabledText += '<br><small class="text-danger mt-1 d-block">Details: ' + student.disability_details + '</small>';
+                            }
+                            healthConditionsList.push(disabledText);
+                        }
+                        
+                        // Check has_disability (can be true, 1, or "1")
+                        if (student.has_disability === true || student.has_disability == 1 || student.has_disability === "1") {
+                            let disabilityText = '<span class="badge bg-danger"><i class="bi bi-exclamation-triangle-fill"></i> Disability</span>';
+                            if (student.disability_details) {
+                                disabilityText += '<br><small class="text-danger mt-1 d-block">Details: ' + student.disability_details + '</small>';
+                            }
+                            healthConditionsList.push(disabilityText);
+                        }
+                        
+                        // Check has_epilepsy (can be true, 1, or "1")
+                        if (student.has_epilepsy === true || student.has_epilepsy == 1 || student.has_epilepsy === "1") {
+                            healthConditionsList.push('<span class="badge bg-danger"><i class="bi bi-exclamation-triangle-fill"></i> Epilepsy/Seizure Disorder</span>');
+                        }
+                        
+                        // Check has_allergies (can be true, 1, or "1")
+                        if (student.has_allergies === true || student.has_allergies == 1 || student.has_allergies === "1") {
+                            let allergiesText = '<span class="badge bg-danger"><i class="bi bi-exclamation-triangle-fill"></i> Allergies</span>';
+                            if (student.allergies_details) {
+                                allergiesText += '<br><small class="text-danger mt-1 d-block">Details: ' + student.allergies_details + '</small>';
+                            }
+                            healthConditionsList.push(allergiesText);
+                        }
+                        
+                        // Check has_chronic_illness (can be true, 1, or "1")
+                        if (student.has_chronic_illness === true || student.has_chronic_illness == 1 || student.has_chronic_illness === "1") {
+                            let chronicText = '<span class="badge bg-danger"><i class="bi bi-exclamation-triangle-fill"></i> Chronic Illness</span>';
+                            if (student.chronic_illness_details) {
+                                chronicText += '<br><small class="text-danger mt-1 d-block">Details: ' + student.chronic_illness_details + '</small>';
+                            }
+                            healthConditionsList.push(chronicText);
+                        }
+                        
+                        // Check general_health_condition
+                        if (student.general_health_condition && student.general_health_condition !== 'N/A' && student.general_health_condition.trim() !== '') {
+                            healthConditionsList.push('<span class="badge bg-warning text-dark"><i class="bi bi-info-circle-fill"></i> General Health: ' + student.general_health_condition + '</span>');
+                        }
+                        
+                        if (healthConditionsList.length > 0) {
+                            html += '<div class="info-item" style="grid-column: 1 / -1; background-color: #fff5f5; border: 2px solid #dc3545; border-radius: 8px; padding: 15px;">';
+                            html += '<i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 1.5rem;"></i>';
+                            html += '<div class="info-item-content">';
+                            html += '<div class="info-item-label" style="color: #dc3545; font-weight: 700; font-size: 0.9rem;">HEALTH CONDITIONS ALERT</div>';
+                            html += '<div class="info-item-value mt-2">' + healthConditionsList.join('<br>') + '</div>';
+                            html += '</div>';
+                            html += '</div>';
+                        } else {
+                            html += '<div class="info-item" style="grid-column: 1 / -1;">';
+                            html += '<i class="bi bi-heart-pulse-fill text-success"></i>';
+                            html += '<div class="info-item-content">';
+                            html += '<div class="info-item-label">Health Status</div>';
+                            html += '<div class="info-item-value"><span class="badge bg-success">Good Health</span></div>';
+                            html += '</div>';
+                            html += '</div>';
+                        }
 
                         if (student.parent) {
                             html += '<div class="info-item"><i class="bi bi-person-heart"></i><div class="info-item-content"><div class="info-item-label">Parent Name</div><div class="info-item-value">' + student.parent.full_name + '</div></div></div>';
@@ -2104,7 +2094,7 @@ Would you like to try direct registration anyway, or use the manual method?`;
                                             confirmButtonColor: '#28a745'
                                         }).then(() => {
                                             // Reload students table
-                                            loadStudents('Active', 'activeStudentsTable');
+                                            loadStudents();
                                         });
                                     } else {
                                         let errorMsg = '✗ ' + (response.message || 'Registration Failed');
@@ -2646,22 +2636,355 @@ Would you like to try direct registration anyway, or use the manual method?`;
             });
         });
 
-        // Initialize Select2 for Status Filter
-        $('#statusFilter').select2({
+        // Load classes and subclasses for filters
+        function loadClassesForFilter() {
+            $.ajax({
+                url: '{{ route("get_subclasses_for_school") }}',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        let classSelect = $('#classFilter');
+                        classSelect.html('<option value="">-- All Classes --</option>');
+                        
+                        // Extract unique classes from subclasses
+                        let classes = {};
+                        if (response.subclasses && Array.isArray(response.subclasses)) {
+                            response.subclasses.forEach(function(subclass) {
+                                // Make sure classID exists and is valid
+                                let classID = subclass.classID;
+                                if (classID && subclass.class_name && !classes[classID]) {
+                                    classes[classID] = subclass.class_name;
+                                    classSelect.append('<option value="' + classID + '">' + subclass.class_name + '</option>');
+                                }
+                            });
+                        } else {
+                            console.warn('No subclasses in response or invalid format:', response);
+                        }
+                        
+                        // Initialize Select2
+                        if (!classSelect.hasClass('select2-hidden-accessible')) {
+                            classSelect.select2({
             theme: 'bootstrap-5',
-            placeholder: 'Search and select status...',
+                                placeholder: 'Select class...',
+                                allowClear: true,
+                                width: '100%'
+                            });
+                        }
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Failed to load classes:', error);
+                    console.error('Response:', xhr.responseText);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to load classes. Please refresh the page.',
+                        confirmButtonColor: '#940000'
+                    });
+                }
+            });
+        }
+
+        function loadAllSubclassesForFilter() {
+            $.ajax({
+                url: '{{ route("get_subclasses_for_school") }}',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        let subclassSelect = $('#subclassFilter');
+                        subclassSelect.html('<option value="">-- All Subclasses --</option>');
+                        
+                        if (response.subclasses && Array.isArray(response.subclasses)) {
+                            response.subclasses.forEach(function(subclass) {
+                                const displayName = subclass.display_name || (subclass.class_name + ' ' + subclass.subclass_name) || subclass.subclass_name;
+                                subclassSelect.append('<option value="' + subclass.subclassID + '" data-class-id="' + (subclass.classID || '') + '">' + displayName + '</option>');
+                            });
+                        }
+                        
+                        // Initialize Select2
+                        if (!subclassSelect.hasClass('select2-hidden-accessible')) {
+                            subclassSelect.select2({
+                                theme: 'bootstrap-5',
+                                placeholder: 'Select subclass...',
+                                allowClear: true,
+                                width: '100%'
+                            });
+                        }
+                    }
+                }
+            });
+        }
+
+        function loadSubclassesForFilter(classID) {
+            $.ajax({
+                url: '{{ route("get_subclasses_for_school") }}',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        let subclassSelect = $('#subclassFilter');
+                        subclassSelect.html('<option value="">-- All Subclasses --</option>');
+                        
+                        if (response.subclasses && Array.isArray(response.subclasses)) {
+                            response.subclasses.forEach(function(subclass) {
+                                if (subclass.classID == classID) {
+                                    const displayName = subclass.display_name || (subclass.class_name + ' ' + subclass.subclass_name) || subclass.subclass_name;
+                                    subclassSelect.append('<option value="' + subclass.subclassID + '" data-class-id="' + (subclass.classID || '') + '">' + displayName + '</option>');
+                                }
+                            });
+                        }
+                        
+                        // Update Select2
+                        if (subclassSelect.hasClass('select2-hidden-accessible')) {
+                            subclassSelect.trigger('change');
+                        }
+                    }
+                }
+            });
+        }
+
+        // Export PDF using JavaScript
+        $('#exportPdfBtn').on('click', function() {
+            // Check if jsPDF is loaded
+            if (typeof window.jspdf === 'undefined') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'PDF library not loaded. Please refresh the page.',
+                    confirmButtonColor: '#940000'
+                });
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            let status = $('#statusFilter').val() || 'Active';
+            let classID = $('#classFilter').val() || '';
+            let subclassID = $('#subclassFilter').val() || '';
+            let gender = $('#genderFilter').val() || '';
+            let health = $('#healthFilter').val() || '';
+
+            // Get current table data from DataTable
+            let table = $('#studentsTable').DataTable();
+            
+            // Check if table is initialized
+            if (!table) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'No Data',
+                    text: 'No students data to export. Please load students first.',
+                    confirmButtonColor: '#940000'
+                });
+                return;
+            }
+
+            // Get all rows data
+            let tableData = [];
+            table.rows({ search: 'applied' }).every(function() {
+                let rowData = this.data();
+                tableData.push(rowData);
+            });
+
+            if (tableData.length === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'No Data',
+                    text: 'No students data to export. Please load students first.',
+                    confirmButtonColor: '#940000'
+                });
+                return;
+            }
+
+            // Show loading
+            Swal.fire({
+                title: 'Generating PDF...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            try {
+                // Create new PDF document
+                const doc = new jsPDF('l', 'mm', 'a4'); // landscape orientation
+
+                // Add title
+                doc.setFontSize(16);
+                doc.setTextColor(148, 0, 0); // #940000
+                doc.text('Students Report', 14, 15);
+
+                // Add filter info
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 0);
+                let yPos = 22;
+                let filterText = 'Filters: ';
+                let filters = [];
+                if (status) filters.push('Status: ' + status);
+                if (classID) {
+                    let classOption = $('#classFilter option:selected').text();
+                    if (classOption !== '-- All Classes --') filters.push('Class: ' + classOption);
+                }
+                if (subclassID) {
+                    let subclassOption = $('#subclassFilter option:selected').text();
+                    if (subclassOption !== '-- All Subclasses --') filters.push('Subclass: ' + subclassOption);
+                }
+                if (gender) filters.push('Gender: ' + gender);
+                if (health) filters.push('Health: ' + (health === 'good' ? 'Good Health' : 'Bad Health'));
+                
+                if (filters.length > 0) {
+                    doc.text(filterText + filters.join(', '), 14, yPos);
+                    yPos += 5;
+                }
+
+                // Add date
+                let currentDate = new Date().toLocaleDateString();
+                doc.text('Generated on: ' + currentDate, 14, yPos);
+                yPos += 8;
+
+                // Prepare table data
+                let tableRows = [];
+                
+                // Helper function to extract text from HTML
+                function extractText(html) {
+                    if (!html) return '';
+                    if (typeof html === 'string') {
+                        let $temp = $('<div>').html(html);
+                        return $temp.text().trim().replace(/⚠️/g, '').replace(/\s+/g, ' ');
+                    }
+                    return String(html).trim();
+                }
+
+                tableData.forEach(function(row, index) {
+                    // Row is an array of HTML strings
+                    let rowHtml = Array.isArray(row) ? row : [];
+
+                    let admissionNumber = extractText(rowHtml[1] || '');
+                    let fullName = extractText(rowHtml[2] || '');
+                    let className = extractText(rowHtml[3] || '');
+                    let genderVal = extractText(rowHtml[4] || '');
+                    let parentName = extractText(rowHtml[5] || '');
+                    let fingerprintId = extractText(rowHtml[6] || '');
+
+                    tableRows.push([
+                        index + 1,
+                        admissionNumber || 'N/A',
+                        fullName || 'N/A',
+                        className || 'N/A',
+                        genderVal || 'N/A',
+                        parentName || 'N/A',
+                        fingerprintId || 'N/A'
+                    ]);
+                });
+
+                // Add table using autoTable
+                doc.autoTable({
+                    head: [['#', 'Admission No', 'Full Name', 'Class', 'Gender', 'Parent', 'Fingerprint ID']],
+                    body: tableRows,
+                    startY: yPos,
+                    theme: 'grid',
+                    headStyles: {
+                        fillColor: [148, 0, 0], // #940000
+                        textColor: [255, 255, 255],
+                        fontStyle: 'bold'
+                    },
+                    styles: {
+                        fontSize: 8,
+                        cellPadding: 2
+                    },
+                    columnStyles: {
+                        0: { cellWidth: 15 },
+                        1: { cellWidth: 40 },
+                        2: { cellWidth: 60 },
+                        3: { cellWidth: 40 },
+                        4: { cellWidth: 25 },
+                        5: { cellWidth: 50 },
+                        6: { cellWidth: 35 }
+                    },
+                    margin: { top: yPos }
+                });
+
+                // Add statistics at the end
+                let finalY = doc.lastAutoTable.finalY + 10;
+                doc.setFontSize(10);
+                doc.setTextColor(148, 0, 0);
+                doc.text('Statistics:', 14, finalY);
+                finalY += 5;
+
+                doc.setFontSize(9);
+                doc.setTextColor(0, 0, 0);
+                doc.text('Total Students: ' + $('#statTotalStudents').text(), 14, finalY);
+                finalY += 5;
+                doc.text('Male: ' + $('#statMaleCount').text() + ' | Female: ' + $('#statFemaleCount').text(), 14, finalY);
+                finalY += 5;
+                doc.text('Good Health: ' + $('#statGoodHealth').text() + ' | Bad Health: ' + $('#statBadHealth').text(), 14, finalY);
+
+                // Generate filename
+                let filename = 'Students_Report_' + status + '_' + new Date().toISOString().split('T')[0] + '.pdf';
+
+                // Save PDF
+                doc.save(filename);
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success!',
+                    text: 'PDF exported successfully',
+                    confirmButtonColor: '#940000',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+
+            } catch (error) {
+                console.error('Error generating PDF:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to generate PDF: ' + error.message,
+                    confirmButtonColor: '#940000'
+                });
+            }
+        });
+
+        // Export Excel
+        $('#exportExcelBtn').on('click', function() {
+            let status = $('#statusFilter').val() || currentStatus;
+            let classID = $('#classFilter').val() || '';
+            let subclassID = $('#subclassFilter').val() || '';
+            let gender = $('#genderFilter').val() || '';
+            let health = $('#healthFilter').val() || '';
+
+            let url = '{{ route("export_students_excel") }}' + '?status=' + encodeURIComponent(status) +
+                '&classID=' + encodeURIComponent(classID) +
+                '&subclassID=' + encodeURIComponent(subclassID) +
+                '&gender=' + encodeURIComponent(gender) +
+                '&health=' + encodeURIComponent(health);
+
+            window.open(url, '_blank');
+        });
+
+        // Initialize Select2 for filters
+        $('#classFilter, #subclassFilter, #genderFilter, #healthFilter, #statusFilter').each(function() {
+            if (!$(this).hasClass('select2-hidden-accessible')) {
+                $(this).select2({
+                    theme: 'bootstrap-5',
+                    placeholder: 'Select...',
             allowClear: true,
             width: '100%',
-            minimumResultsForSearch: 0 // Always show search box
+                    minimumResultsForSearch: 0
+                });
+            }
         });
 
         // Initialize on page load
         loadFormData();
         initializeTables();
+        loadClassesForFilter();
+        loadAllSubclassesForFilter();
 
-        // Load initial data for active tab
+        // Load initial data
         setTimeout(function() {
-            loadStudents('Active', 'activeStudentsTable');
+            loadStudents();
+            loadStatistics();
         }, 500);
     });
 
@@ -2753,3 +3076,4 @@ Would you like to try direct registration anyway, or use the manual method?`;
 
 <!-- Include Registration Modal -->
 @include('student_registration.modal')
+

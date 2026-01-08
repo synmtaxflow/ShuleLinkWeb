@@ -539,9 +539,6 @@ class AdminController extends Controller
                 $query->where('schoolID', $schoolID)->where('status', 'Active');
             })
             ->where('status', 'Active')
-            ->whereHas('schemeOfWork', function($query) use ($currentYear) {
-                $query->where('year', $currentYear);
-            })
             ->get()
             ->map(function($classSubject) use ($currentYear) {
                 // Get current year scheme
@@ -577,12 +574,58 @@ class AdminController extends Controller
                     'year' => $currentYear
                 ];
             })
-            ->filter(function($item) {
-                return $item['scheme'] !== null;
-            })
             ->sortBy('subject_name')
             ->values();
 
         return view('Admin.scheme_of_work', compact('classSubjectsWithSchemes'));
+    }
+
+    public function adminViewSchemeOfWork($schemeOfWorkID)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        if (!$schoolID) {
+            return redirect()->route('AdminDashboard')->with('error', 'School ID not found');
+        }
+
+        // Get scheme of work with relationships
+        $scheme = SchemeOfWork::with(['classSubject.subject', 'classSubject.class', 'classSubject.subclass.class', 
+                                      'items' => function($query) {
+                                          $query->orderBy('month')->orderBy('row_order');
+                                      }, 
+                                      'learningObjectives' => function($query) {
+                                          $query->orderBy('order');
+                                      },
+                                      'createdBy'])
+            ->where('scheme_of_workID', $schemeOfWorkID)
+            ->first();
+
+        if (!$scheme) {
+            return redirect()->route('admin.schemeOfWork')->with('error', 'Scheme of work not found');
+        }
+
+        // Verify scheme belongs to admin's school
+        $classSubject = $scheme->classSubject;
+        $schemeSchoolID = null;
+        
+        if ($classSubject->subclass && $classSubject->subclass->class) {
+            $schemeSchoolID = $classSubject->subclass->class->schoolID;
+        } elseif ($classSubject->class) {
+            $schemeSchoolID = $classSubject->class->schoolID;
+        }
+
+        if ($schemeSchoolID != $schoolID) {
+            return redirect()->route('admin.schemeOfWork')->with('error', 'You do not have access to this scheme of work');
+        }
+
+        // Get school info
+        $school = School::where('schoolID', $schoolID)->first();
+
+        return view('Teacher.view_scheme_of_work', compact('scheme', 'school'));
     }
 }

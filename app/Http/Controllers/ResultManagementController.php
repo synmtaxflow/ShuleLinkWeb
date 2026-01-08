@@ -67,7 +67,9 @@ class ResultManagementController extends Controller
             } else {
                 // Coordinator doesn't have access to this class
                 if ($userType === 'Teacher') {
-                    return redirect()->route('AdmitedClasses', ['coordinator' => 'true'])->with('error', 'Unauthorized access to this class');
+                    return redirect()->route('AdmitedClasses', ['coordinator' => 'true'])
+                        ->with('error', 'Unauthorized access to this class')
+                        ->with('error_type', 'unauthorized_access');
                 }
             }
         }
@@ -85,7 +87,9 @@ class ResultManagementController extends Controller
             } else {
                 // Teacher doesn't have access to this subclass
                 if ($userType === 'Teacher') {
-                    return redirect()->route('AdmitedClasses')->with('error', 'Unauthorized access to this class');
+                    return redirect()->route('AdmitedClasses')
+                        ->with('error', 'Unauthorized access to this class')
+                        ->with('error_type', 'unauthorized_access');
                 }
             }
         }
@@ -107,12 +111,16 @@ class ResultManagementController extends Controller
             if (!empty($subclassFilter) && !$isTeacherView) {
                 $subclass = Subclass::with('class')->find($subclassFilter);
                 if (!$subclass) {
-                    return redirect()->route('AdmitedClasses')->with('error', 'Invalid class ID');
+                    return redirect()->route('AdmitedClasses')
+                        ->with('error', 'Invalid class ID')
+                        ->with('error_type', 'invalid_class');
                 }
 
                 // Verify teacher is the class teacher of this subclass
                 if ($subclass->teacherID != $teacherID) {
-                    return redirect()->route('AdmitedClasses')->with('error', 'You do not have access to view results for this class');
+                    return redirect()->route('AdmitedClasses')
+                        ->with('error', 'You do not have access to view results for this class')
+                        ->with('error_type', 'unauthorized_access');
                 }
 
                 // Force teacher view mode and lock filters
@@ -122,7 +130,9 @@ class ResultManagementController extends Controller
 
             // If isTeacherView is true, subclassFilter MUST be set
             if ($isTeacherView && empty($subclassFilter)) {
-                return redirect()->route('AdmitedClasses')->with('error', 'Please select a class to view results');
+                return redirect()->route('AdmitedClasses')
+                    ->with('error', 'Please select a class to view results')
+                    ->with('error_type', 'no_subclass_selected');
             }
         }
 
@@ -297,7 +307,8 @@ class ResultManagementController extends Controller
                     // If exam hasn't ended, don't allow viewing results
                     if (!$examHasEnded) {
                         return response()->json([
-                            'error' => "Can't view result for this exam because it's still taken."
+                            'error' => "Can't view result for this exam because it's still taken.",
+                            'error_type' => 'exam_not_ended'
                         ], 422);
                     }
                 }
@@ -810,6 +821,7 @@ class ResultManagementController extends Controller
                 if (!$examHasEnded) {
                     return view('Admin.result_management', [
                         'error' => "Can't view result for this exam because it's still taken.",
+                        'error_type' => 'exam_not_ended',
                         'availableYears' => $availableYears,
                         'classes' => $classes,
                         'subclasses' => $subclasses,
@@ -861,6 +873,7 @@ class ResultManagementController extends Controller
 
                             return view('Admin.result_management', [
                                 'error' => "Result unavailable. Wait approval of {$roleName}.",
+                                'error_type' => 'approval_pending',
                                 'availableYears' => $availableYears,
                                 'classes' => $classes,
                                 'subclasses' => $subclasses,
@@ -896,6 +909,7 @@ class ResultManagementController extends Controller
 
                                 return view('Admin.result_management', [
                                     'error' => "Result unavailable. Approval was rejected by {$roleName}.",
+                                    'error_type' => 'approval_rejected',
                                     'availableYears' => $availableYears,
                                     'classes' => $classes,
                                     'subclasses' => $subclasses,
@@ -942,13 +956,17 @@ class ResultManagementController extends Controller
             if ($isTeacherView) {
                 if (empty($subclassFilter)) {
                     // If isTeacherView is true but no subclassFilter, redirect back
-                    return redirect()->route('AdmitedClasses')->with('error', 'Please select a class to view results');
+                    return redirect()->route('AdmitedClasses')
+                        ->with('error', 'Please select a class to view results')
+                        ->with('error_type', 'no_subclass_selected');
                 }
 
                 // Verify teacher has access to this subclass
                 $subclass = Subclass::find($subclassFilter);
                 if (!$subclass || $subclass->teacherID != $teacherID) {
-                    return redirect()->route('AdmitedClasses')->with('error', 'You do not have access to view results for this class');
+                    return redirect()->route('AdmitedClasses')
+                        ->with('error', 'You do not have access to view results for this class')
+                        ->with('error_type', 'unauthorized_access');
                 }
 
                 // ALWAYS filter by the specific subclass - no exceptions
@@ -957,7 +975,9 @@ class ResultManagementController extends Controller
                 // If subclassFilter is set but not teacher view, verify access
                 $subclass = Subclass::find($subclassFilter);
                 if (!$subclass || $subclass->teacherID != $teacherID) {
-                    return redirect()->route('AdmitedClasses')->with('error', 'You do not have access to view results for this class');
+                    return redirect()->route('AdmitedClasses')
+                        ->with('error', 'You do not have access to view results for this class')
+                        ->with('error_type', 'unauthorized_access');
                 }
                 $studentQuery->where('subclassID', $subclassFilter);
             } else {
@@ -986,15 +1006,145 @@ class ResultManagementController extends Controller
 
         // Get results data
         $resultsData = [];
+        $debugInfo = [];
 
         // Only process if we have term and year (required for results)
         if ($termFilter && $yearFilter) {
             if ($typeFilter === 'exam') {
                 // Get exam results
                 $resultsData = $this->getExamResults($students, $termFilter, $yearFilter, $schoolType, $examFilter);
+                
+                // Debug: Check why results might be empty
+                if (empty($resultsData) && $students->count() > 0) {
+                    // Check if exam exists and is approved
+                    if ($examFilter) {
+                        $exam = Examination::where('examID', $examFilter)
+                            ->where('schoolID', $schoolID)
+                            ->first();
+                        if (!$exam) {
+                            $debugInfo[] = "Exam with ID {$examFilter} not found.";
+                        } elseif ($exam->approval_status !== 'Approved') {
+                            $debugInfo[] = "Exam '{$exam->exam_name}' is not approved yet.";
+                        } else {
+                            // Check if exam has ended
+                            $isWeeklyTest = ($exam->exam_name === 'Weekly Test' || $exam->start_date === 'every_week' || $exam->end_date === 'every_week');
+                            $isMonthlyTest = ($exam->exam_name === 'Monthly Test' || $exam->start_date === 'every_month' || $exam->end_date === 'every_month');
+                            if (!$isWeeklyTest && !$isMonthlyTest) {
+                                try {
+                                    $today = now()->startOfDay();
+                                    $endDate = \Carbon\Carbon::parse($exam->end_date)->startOfDay();
+                                    if ($endDate >= $today) {
+                                        $debugInfo[] = "Exam '{$exam->exam_name}' has not ended yet (ends on {$exam->end_date}).";
+                                    }
+                                } catch (\Exception $e) {
+                                    // Date parsing failed
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Check if students have results but with wrong status or no marks
+                    $studentIDs = $students->pluck('studentID')->toArray();
+                    $totalResults = \App\Models\Result::whereIn('studentID', $studentIDs);
+                    if ($examFilter) {
+                        $totalResults->where('examID', $examFilter);
+                    } else {
+                        $examsQuery = Examination::where('schoolID', $schoolID)
+                            ->where('year', $yearFilter)
+                            ->where('term', $termFilter);
+                        $examIDs = $examsQuery->pluck('examID')->toArray();
+                        $totalResults->whereIn('examID', $examIDs);
+                    }
+                    
+                    $totalCount = $totalResults->count();
+                    $allowedCount = (clone $totalResults)->where('status', 'allowed')->count();
+                    $withMarksCount = (clone $totalResults)->whereNotNull('marks')->count();
+                    $allowedWithMarksCount = (clone $totalResults)->where('status', 'allowed')->whereNotNull('marks')->count();
+                    
+                    if ($totalCount > 0) {
+                        $notAllowedCount = $totalCount - $allowedCount;
+                        if ($allowedCount < $totalCount) {
+                            if ($notAllowedCount > 0) {
+                                $debugInfo[] = "Found {$totalCount} results total. {$notAllowedCount} results have status 'not_allowed' and need to be allowed first. Only results with status 'allowed' can be viewed.";
+                            } else {
+                                $debugInfo[] = "Found {$totalCount} results, but only {$allowedCount} have status 'allowed'. Results need to be allowed first.";
+                            }
+                        }
+                        if ($withMarksCount < $totalCount) {
+                            $debugInfo[] = "Found {$totalCount} results, but only {$withMarksCount} have marks entered.";
+                        }
+                        if ($allowedWithMarksCount < $totalCount) {
+                            $debugInfo[] = "Found {$totalCount} results, but only {$allowedWithMarksCount} have both status 'allowed' and marks entered. To view results, you need to change the status from 'not_allowed' to 'allowed'.";
+                        }
+                    } else {
+                        $debugInfo[] = "No results found in database for selected students and exam.";
+                    }
+                }
             } else {
                 // Get report (term average)
                 $resultsData = $this->getTermReport($students, $termFilter, $yearFilter, $schoolType);
+                
+                // Debug: Check why term report might be empty
+                if (empty($resultsData) && $students->count() > 0) {
+                    $examsQuery = Examination::where('schoolID', $schoolID)
+                        ->where('year', $yearFilter)
+                        ->where('term', $termFilter)
+                        ->where('approval_status', 'Approved');
+                    $exams = $examsQuery->get();
+                    
+                    if ($exams->isEmpty()) {
+                        $debugInfo[] = "No approved exams found for {$termFilter} term, {$yearFilter}.";
+                    } else {
+                        $endedExams = $exams->filter(function($exam) {
+                            $isWeeklyTest = ($exam->exam_name === 'Weekly Test' || $exam->start_date === 'every_week' || $exam->end_date === 'every_week');
+                            $isMonthlyTest = ($exam->exam_name === 'Monthly Test' || $exam->start_date === 'every_month' || $exam->end_date === 'every_month');
+                            if ($isWeeklyTest || $isMonthlyTest) {
+                                return true;
+                            }
+                            try {
+                                $today = now()->startOfDay();
+                                $endDate = \Carbon\Carbon::parse($exam->end_date)->startOfDay();
+                                return $endDate < $today;
+                            } catch (\Exception $e) {
+                                return true;
+                            }
+                        });
+                        
+                        if ($endedExams->isEmpty()) {
+                            $debugInfo[] = "All exams for {$termFilter} term, {$yearFilter} have not ended yet.";
+                        } else {
+                            $examIDs = $endedExams->pluck('examID')->toArray();
+                            $studentIDs = $students->pluck('studentID')->toArray();
+                            $totalResults = \App\Models\Result::whereIn('studentID', $studentIDs)
+                                ->whereIn('examID', $examIDs)
+                                ->count();
+                            
+                            if ($totalResults == 0) {
+                                $debugInfo[] = "No results found in database for selected students in {$termFilter} term, {$yearFilter}.";
+                            } else {
+                                $allowedCount = \App\Models\Result::whereIn('studentID', $studentIDs)
+                                    ->whereIn('examID', $examIDs)
+                                    ->where('status', 'allowed')
+                                    ->count();
+                                $notAllowedCount = $totalResults - $allowedCount;
+                                
+                                $allowedWithMarksCount = \App\Models\Result::whereIn('studentID', $studentIDs)
+                                    ->whereIn('examID', $examIDs)
+                                    ->where('status', 'allowed')
+                                    ->whereNotNull('marks')
+                                    ->count();
+                                
+                                if ($allowedWithMarksCount < $totalResults) {
+                                    if ($notAllowedCount > 0) {
+                                        $debugInfo[] = "Found {$totalResults} results total. {$notAllowedCount} results have status 'not_allowed' and need to be changed to 'allowed' first. Go to Manage Examinations to update results status.";
+                                    } else {
+                                        $debugInfo[] = "Found {$totalResults} results, but only {$allowedWithMarksCount} have status 'allowed' and marks entered.";
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
 
@@ -1060,6 +1210,8 @@ class ResultManagementController extends Controller
                 ->orderBy('subject_name')
                 ->get(),
             'isTeacherView' => $isTeacherView, // Pass teacher view flag
+            'isCoordinatorResultsView' => $isCoordinatorResultsView ?? false,
+            'debugInfo' => $debugInfo ?? [],
             'isCoordinatorResultsView' => $isCoordinatorResultsView, // Pass coordinator results view flag
             'user_type' => $userType, // Pass user type for navigation
             'error' => null, // No error if we reach here
