@@ -90,9 +90,9 @@
 
     <div class="container">
         <div class="content-wrapper">
-            @if($existingSchemes->count() > 0)
+            @if($allSchemes->count() > 0)
                 <div class="row">
-                    @foreach($existingSchemes as $scheme)
+                    @foreach($allSchemes as $scheme)
                         <div class="col-md-6">
                             <div class="card scheme-card no-border-radius">
                                 <div class="card-header">
@@ -217,4 +217,5 @@
     </script>
 </body>
 </html>
+
 

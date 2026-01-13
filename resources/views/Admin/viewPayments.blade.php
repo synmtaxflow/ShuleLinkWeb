@@ -74,31 +74,36 @@
     }
     #paymentsTable th:nth-child(3),
     #paymentsTable td:nth-child(3) {
-        width: 20%;
+        width: 18%;
         white-space: normal;
     }
     #paymentsTable th:nth-child(4),
     #paymentsTable td:nth-child(4) {
-        width: 15%;
-        text-align: right;
+        width: 10%;
+        text-align: center;
     }
     #paymentsTable th:nth-child(5),
     #paymentsTable td:nth-child(5) {
-        width: 15%;
+        width: 13%;
         text-align: right;
     }
     #paymentsTable th:nth-child(6),
     #paymentsTable td:nth-child(6) {
-        width: 15%;
+        width: 13%;
         text-align: right;
     }
     #paymentsTable th:nth-child(7),
     #paymentsTable td:nth-child(7) {
-        width: 12%;
+        width: 13%;
+        text-align: right;
     }
     #paymentsTable th:nth-child(8),
     #paymentsTable td:nth-child(8) {
-        width: 12%;
+        width: 10%;
+    }
+    #paymentsTable th:nth-child(9),
+    #paymentsTable td:nth-child(9) {
+        width: 10%;
     }
     #paymentsTable .btn-group-sm .btn {
         padding: 0.2rem 0.4rem;
@@ -235,30 +240,56 @@
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-body">
                     <div class="row g-3">
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold mb-2">
-                                <i class="bi bi-search"></i> Search Student
-                            </label>
-                            <input type="text" class="form-control" id="searchStudentInput" placeholder="Search by student name or admission number...">
-                        </div>
                         <div class="col-md-2">
                             <label class="form-label fw-bold mb-2">
-                                <i class="bi bi-calendar"></i> Year
+                                <i class="bi bi-calendar"></i> Academic Year
                             </label>
                             <select class="form-select" id="filterYear">
                                 @php
-                                    $currentYear = $currentYear ?? date('Y');
+                                    $defaultYear = $defaultYear ?? date('Y');
                                     $availableYears = $availableYears ?? [];
                                 @endphp
                                 @if(count($availableYears) > 0)
-                                    @foreach($availableYears as $availableYear)
-                                        <option value="{{ $availableYear }}" {{ $availableYear == $currentYear ? 'selected' : '' }}>
-                                            {{ $availableYear }}
+                                    @foreach($availableYears as $academicYear)
+                                        @php
+                                            $yearValue = is_array($academicYear) ? $academicYear['year'] : $academicYear;
+                                            $yearName = is_array($academicYear) ? ($academicYear['year_name'] ?? $academicYear['year']) : $yearValue;
+                                            $status = is_array($academicYear) ? ($academicYear['status'] ?? '') : '';
+                                            $isSelected = $yearValue == $defaultYear;
+                                        @endphp
+                                        <option value="{{ $yearValue }}" {{ $isSelected ? 'selected' : '' }}>
+                                            {{ $yearName }} @if($status) ({{ $status }}) @endif
                                         </option>
                                     @endforeach
                                 @else
-                                    <option value="{{ $currentYear }}" selected>{{ $currentYear }}</option>
+                                    <option value="{{ $defaultYear }}" selected>{{ $defaultYear }}</option>
                                 @endif
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold mb-2">
+                                <i class="bi bi-book"></i> Class
+                            </label>
+                            <select class="form-select" id="filterClass">
+                                <option value="">All Classes</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold mb-2">
+                                <i class="bi bi-layers"></i> Subclass
+                            </label>
+                            <select class="form-select" id="filterSubclass">
+                                <option value="">All Subclasses</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold mb-2">
+                                <i class="bi bi-person-check"></i> Status
+                            </label>
+                            <select class="form-select" id="filterStatus">
+                                <option value="">All Statuses</option>
+                                <option value="Active">Active</option>
+                                <option value="Graduated">Graduated</option>
                             </select>
                         </div>
                         <div class="col-md-2">
@@ -267,8 +298,8 @@
                             </label>
                             <select class="form-select" id="filterFeeType">
                                 <option value="">All Types</option>
-                                <option value="Tuition Fees">Tuition Fees</option>
-                                <option value="Other Fees">Other Fees</option>
+                                <option value="Tuition Fees">School Fee</option>
+                                <option value="Other Fees">Other Contribution</option>
                             </select>
                         </div>
                         <div class="col-md-2">
@@ -284,23 +315,24 @@
                                 <option value="Overpaid">Overpaid</option>
                             </select>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md-3">
                             <label class="form-label fw-bold mb-2">
-                                <i class="bi bi-send"></i> SMS Status
+                                <i class="bi bi-search"></i> Search Student Name
                             </label>
-                            <select class="form-select" id="filterSmsStatus">
-                                <option value="">All</option>
-                                <option value="Yes">Sent</option>
-                                <option value="No">Not Sent</option>
-                            </select>
+                            <input type="text" class="form-control" id="searchStudentName" placeholder="Enter student name...">
                         </div>
                         <div class="col-md-1">
                             <label class="form-label fw-bold mb-2">
                                 <i class="bi bi-arrow-clockwise"></i> Actions
                             </label>
-                            <button type="button" class="btn btn-outline-secondary w-100" id="clearFiltersBtn" title="Clear Filters">
-                                <i class="bi bi-x-circle"></i>
-                            </button>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-outline-secondary flex-fill" id="clearFiltersBtn" title="Clear Filters">
+                                    <i class="bi bi-x-circle"></i> Clear
+                                </button>
+                                <button type="button" class="btn btn-primary-custom flex-fill" id="exportFilteredPdfBtn" title="Export Filtered PDF">
+                                    <i class="bi bi-file-earmark-pdf"></i> Export
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -321,6 +353,7 @@
                                     <th>#</th>
                                     <th>Photo</th>
                                     <th>Student Name</th>
+                                    <th>Academic Year</th>
                                     <th>Total Fee Required (TZS)</th>
                                     <th>Paid Amount (TZS)</th>
                                     <th>Bill Balance (TZS)</th>
@@ -328,6 +361,25 @@
                                     <th>Actions</th>
                                 </tr>
                             </thead>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <th></th>
+                                    <th></th>
+                                    <th><input type="text" class="form-control form-control-sm column-filter" placeholder="Filter Name" data-column="2"></th>
+                                    <th><input type="text" class="form-control form-control-sm column-filter" placeholder="Filter Year" data-column="3"></th>
+                                    <th><input type="text" class="form-control form-control-sm column-filter" placeholder="Filter Required" data-column="4"></th>
+                                    <th><input type="text" class="form-control form-control-sm column-filter" placeholder="Filter Paid" data-column="5"></th>
+                                    <th><input type="text" class="form-control form-control-sm column-filter" placeholder="Filter Balance" data-column="6"></th>
+                                    <th><select class="form-control form-control-sm column-filter" data-column="7">
+                                        <option value="">All Status</option>
+                                        <option value="Pending">Pending</option>
+                                        <option value="Incomplete">Incomplete</option>
+                                        <option value="Paid">Paid</option>
+                                        <option value="Overpaid">Overpaid</option>
+                                    </select></th>
+                                    <th></th>
+                                </tr>
+                            </tfoot>
                             <tbody id="paymentsTableBody">
                                 <!-- Data will be loaded via AJAX -->
                             </tbody>
@@ -487,26 +539,32 @@
                         <input type="text" class="form-control" id="record_balance" readonly>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Paid Amount (TZS) <span class="text-danger">*</span></label>
-                        <input type="number" name="paid_amount" id="record_paid_amount" class="form-control" placeholder="0.00" step="0.01" min="0.01" required>
-                        <small class="text-muted">Enter the amount being paid</small>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Reference Number <span class="text-danger">*</span></label>
-                        <input type="text" name="reference_number" id="record_reference_number" class="form-control" placeholder="e.g., BANK123456" required>
-                        <small class="text-muted">Unique reference number (from bank or cash payment)</small>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Payment Date <span class="text-danger">*</span></label>
-                        <input type="date" name="payment_date" id="record_payment_date" class="form-control" required>
-                        <small class="text-muted">Date when payment was made</small>
-                    </div>
-                    <div class="mb-3">
                         <label class="form-label fw-bold">Payment Method <span class="text-danger">*</span></label>
                         <select name="payment_source" id="record_payment_source" class="form-select" required>
                             <option value="Cash">Cash</option>
                             <option value="Bank">Bank</option>
                         </select>
+                        <small class="text-muted">Select payment method</small>
+                    </div>
+                    <div class="mb-3" id="record_bank_name_container" style="display: none;">
+                        <label class="form-label fw-bold">Bank Name <span class="text-danger">*</span></label>
+                        <input type="text" name="bank_name" id="record_bank_name" class="form-control" placeholder="e.g., CRDB Bank, NMB Bank">
+                        <small class="text-muted">Enter bank name</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Paid Amount (TZS) <span class="text-danger">*</span></label>
+                        <input type="number" name="paid_amount" id="record_paid_amount" class="form-control" placeholder="0.00" step="0.01" min="0.01" required>
+                        <small class="text-muted">Enter the amount being paid</small>
+                    </div>
+                    <div class="mb-3" id="record_reference_number_container">
+                        <label class="form-label fw-bold">Reference Number <span class="text-danger" id="record_reference_required">*</span></label>
+                        <input type="text" name="reference_number" id="record_reference_number" class="form-control" placeholder="e.g., BANK123456">
+                        <small class="text-muted">Unique reference number (required for bank payments)</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Payment Date <span class="text-danger">*</span></label>
+                        <input type="date" name="payment_date" id="record_payment_date" class="form-control" required>
+                        <small class="text-muted">Date when payment was made</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">Notes</label>
@@ -606,30 +664,65 @@
             return colors[Math.abs(hash) % colors.length];
         }
 
+        // Load classes and subclasses on page load
+        var classesData = @json($classes ?? []);
+        var subclassesData = @json($subclasses ?? []);
+        
+        // Populate classes dropdown
+        if (classesData && classesData.length > 0) {
+            classesData.forEach(function(cls) {
+                $('#filterClass').append('<option value="' + cls.classID + '">' + cls.class_name + '</option>');
+            });
+        }
+        
+        // Update subclasses when class changes
+        $('#filterClass').on('change', function() {
+            var selectedClassID = $(this).val();
+            $('#filterSubclass').html('<option value="">All Subclasses</option>');
+            
+            if (selectedClassID && subclassesData && subclassesData.length > 0) {
+                var filteredSubclasses = subclassesData.filter(function(sub) {
+                    return sub.classID == selectedClassID;
+                });
+                
+                filteredSubclasses.forEach(function(sub) {
+                    $('#filterSubclass').append('<option value="' + sub.subclassID + '">' + sub.subclass_name + '</option>');
+                });
+            }
+            
+            // Trigger data reload
+            loadPaymentsData();
+        });
+
         // Function to load payments data via AJAX
         function loadPaymentsData() {
-            var search = $('#searchStudentInput').val();
             var year = $('#filterYear').val();
+            var classID = $('#filterClass').val();
+            var subclassID = $('#filterSubclass').val();
+            var studentStatus = $('#filterStatus').val();
             var feeType = $('#filterFeeType').val();
             var paymentStatus = $('#filterPaymentStatus').val();
-            var smsStatus = $('#filterSmsStatus').val();
+            var searchStudentName = $('#searchStudentName').val();
 
             // Show loading
-            $('#paymentsTableBody').html('<tr><td colspan="8" class="text-center py-4"><div class="spinner-border text-primary-custom" role="status"></div><p class="mt-2">Loading payments...</p></td></tr>');
+            $('#paymentsTableBody').html('<tr><td colspan="9" class="text-center py-4"><div class="spinner-border text-primary-custom" role="status"></div><p class="mt-2">Loading payments...</p></td></tr>');
 
             $.ajax({
                 url: '{{ route("get_payments_ajax") }}',
                 type: 'GET',
                 data: {
-                    search: search,
                     year: year,
+                    class_id: classID,
+                    subclass_id: subclassID,
+                    student_status: studentStatus,
                     fee_type: feeType,
                     payment_status: paymentStatus,
-                    sms_status: smsStatus
+                    search_student_name: searchStudentName
                 },
                 dataType: 'json',
                 success: function(response) {
                     if (response.success && response.data) {
+                        var isClosedYear = response.is_closed_year || false;
                         var html = '';
                         if (response.data.length > 0) {
                             response.data.forEach(function(item) {
@@ -664,7 +757,19 @@
                                 var parentName = (student.parent && student.parent.first_name) ? 
                                     student.parent.first_name + ' ' + (student.parent.last_name || '') : 'N/A';
                                 var parentPhone = (student.parent && student.parent.phone) ? student.parent.phone : 'N/A';
-                                var studentClass = (student.subclass && student.subclass.subclass_name) ? student.subclass.subclass_name : 'N/A';
+                                // Format class name: Main Class + Subclass (e.g., "FORM ONE A")
+                                var studentClass = 'N/A';
+                                if (student.subclass) {
+                                    var mainClass = student.subclass.class_name || '';
+                                    var subclass = student.subclass.subclass_name || '';
+                                    if (mainClass && subclass) {
+                                        studentClass = mainClass + ' ' + subclass;
+                                    } else if (subclass) {
+                                        studentClass = subclass;
+                                    } else if (mainClass) {
+                                        studentClass = mainClass;
+                                    }
+                                }
 
                                 // Total Fee Required
                                 var totalFeeRequiredHtml = '<div style="font-size: 0.9rem;">';
@@ -714,10 +819,22 @@
                                 console.log('Payments JSON for student:', student.studentID, paymentsJson);
                                 console.log('Payments array for student:', student.studentID, payments);
 
-                                html += '<tr>' +
+                                // Check if student is graduated
+                                var isGraduated = item.is_graduated || false;
+                                var graduatedBadge = isGraduated ? '<span class="badge bg-secondary ms-1">Graduated</span>' : '';
+                                var graduatedDebts = item.graduated_debts || {school_fee_balance: 0, other_contribution_balance: 0};
+                                var debtNote = '';
+                                if (isGraduated && (graduatedDebts.school_fee_balance > 0 || graduatedDebts.other_contribution_balance > 0)) {
+                                    var totalDebt = (graduatedDebts.school_fee_balance || 0) + (graduatedDebts.other_contribution_balance || 0);
+                                    debtNote = '<br><small class="text-danger"><i class="bi bi-exclamation-triangle"></i> Outstanding debt from past years: ' + 
+                                        parseFloat(totalDebt).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + ' TZS</small>';
+                                }
+
+                                html += '<tr' + (isGraduated ? ' style="background-color: #f8f9fa;"' : '') + '>' +
                                     '<td>' + index + '</td>' +
                                     '<td>' + photoHtml + '</td>' +
-                                    '<td><strong>' + studentFullName.trim() + '</strong><br><small class="text-muted">' + (student.admission_number || 'N/A') + '</small></td>' +
+                                    '<td><strong>' + studentFullName.trim() + '</strong>' + graduatedBadge + debtNote + '<br><small class="text-muted">' + (student.admission_number || 'N/A') + '</small></td>' +
+                                    '<td class="text-center"><span class="badge bg-info">' + (item.academic_year || new Date().getFullYear()) + '</span></td>' +
                                     '<td class="text-end">' + totalFeeRequiredHtml + '</td>' +
                                     '<td class="text-end">' + paidAmountHtml + '</td>' +
                                     '<td class="text-end">' + billBalanceHtml + '</td>' +
@@ -734,13 +851,14 @@
                                     'data-student-placeholder-color="' + placeholderColor + '" ' +
                                     'data-parent-name="' + parentName + '" ' +
                                     'data-parent-phone="' + parentPhone + '" ' +
+                                    'data-is-closed-year="' + (isClosedYear ? 'true' : 'false') + '" ' +
                                     'data-payments=\'' + paymentsJson.replace(/'/g, "&#39;") + '\' ' +
                                     'data-totals=\'' + JSON.stringify(totals).replace(/'/g, "&#39;") + '\' ' +
                                     'title="View More Details"><i class="bi bi-eye"></i></button>' +
                                     '</div></td></tr>';
                             });
                         } else {
-                            html = '<tr><td colspan="8" class="text-center py-4 text-muted"><i class="bi bi-inbox" style="font-size: 2rem;"></i><p class="mt-2">No payments found</p></td></tr>';
+                            html = '<tr><td colspan="9" class="text-center py-4 text-muted"><i class="bi bi-inbox" style="font-size: 2rem;"></i><p class="mt-2">No payments found</p></td></tr>';
                         }
                         $('#paymentsTableBody').html(html);
                         
@@ -750,79 +868,302 @@
                             $('#statPendingPayments').text(stats.pending_payments || 0);
                             $('#statIncompletePayments').text(stats.incomplete_payments || 0);
                             $('#statPaidPayments').text(stats.paid_payments || 0);
-                            $('#statTotalBalance').text('TZS ' + parseFloat(stats.total_balance || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
-                            $('#statTotalRequired').text('TZS ' + parseFloat(stats.total_required || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
-                            $('#statTotalPaid').text('TZS ' + parseFloat(stats.total_paid || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
-                            $('#statOutstandingBalance').text('TZS ' + parseFloat(stats.total_balance || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+                            $('#statTotalBalance').text('TZS ' + parseFloat(stats.total_balance || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}));
+                            $('#statTotalRequired').text('TZS ' + parseFloat(stats.total_required || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}));
+                            $('#statTotalPaid').text('TZS ' + parseFloat(stats.total_paid || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}));
+                            $('#statOutstandingBalance').text('TZS ' + parseFloat(stats.total_balance || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}));
+                            
+                            // Log additional statistics for debugging
+                            if (stats.total_students !== undefined) {
+                                console.log('Filter Statistics:', {
+                                    total_students: stats.total_students,
+                                    active_students: stats.active_students,
+                                    graduated_students: stats.graduated_students,
+                                    students_with_debt: stats.students_with_debt,
+                                    students_paid: stats.students_paid
+                                });
+                            }
                         }
                         
-                        // Reinitialize DataTable
+                        // Reinitialize DataTable with enhanced filtering
                         if ($.fn.DataTable.isDataTable('#paymentsTable')) {
                             $('#paymentsTable').DataTable().destroy();
                         }
-                        $('#paymentsTable').DataTable({
-                            dom: 'Bfrtip',
-                            buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],
-                            pageLength: 25,
-                            order: [[0, 'asc']],
-                            scrollX: false,
-                            autoWidth: false,
-                            fixedColumns: false,
-                            responsive: false,
-                            columnDefs: [
-                                { width: "5%", targets: 0 },
-                                { width: "6%", targets: 1 },
-                                { width: "20%", targets: 2 },
-                                { width: "15%", targets: 3 },
-                                { width: "15%", targets: 4 },
-                                { width: "15%", targets: 5 },
-                                { width: "12%", targets: 6 },
-                                { width: "12%", targets: 7 }
-                            ],
-                            language: {
-                                search: "Search:",
-                                lengthMenu: "Show _MENU_ entries",
-                                info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                                infoEmpty: "No entries to show",
-                                infoFiltered: "(filtered from _MAX_ total entries)"
-                            }
-                        });
+                        
+                        // Wait a bit for DOM to be ready
+                        setTimeout(function() {
+                            // Initialize DataTable with column filters
+                            var table = $('#paymentsTable').DataTable({
+                                dom: 'Bfrtip',
+                                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],
+                                pageLength: 5,
+                                lengthMenu: [[5, 10, 25, 50, 100, -1], [5, 10, 25, 50, 100, "All"]],
+                                order: [[0, 'asc']],
+                                scrollX: true,
+                                autoWidth: false,
+                                fixedColumns: false,
+                                responsive: true,
+                                paging: true,
+                                pagingType: 'full_numbers',
+                                processing: true,
+                                columnDefs: [
+                                    { width: "5%", targets: 0, orderable: true, searchable: false },
+                                    { width: "6%", targets: 1, orderable: false, searchable: false },
+                                    { width: "18%", targets: 2, orderable: true, searchable: true },
+                                    { width: "10%", targets: 3, orderable: true, searchable: true },
+                                    { width: "13%", targets: 4, orderable: true, searchable: true },
+                                    { width: "13%", targets: 5, orderable: true, searchable: true },
+                                    { width: "13%", targets: 6, orderable: true, searchable: true },
+                                    { width: "10%", targets: 7, orderable: true, searchable: true },
+                                    { width: "10%", targets: 8, orderable: false, searchable: false }
+                                ],
+                                language: {
+                                    search: "Search All:",
+                                    lengthMenu: "Show _MENU_ entries",
+                                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                                    infoEmpty: "No entries to show",
+                                    infoFiltered: "(filtered from _MAX_ total entries)",
+                                    zeroRecords: "No matching records found",
+                                    processing: "Processing..."
+                                },
+                                drawCallback: function() {
+                                    // Re-attach column filter handlers after each draw
+                                    $('.column-filter').off('keyup change').on('keyup change', function() {
+                                        var columnIndex = $(this).data('column');
+                                        var value = $(this).val();
+                                        table.column(columnIndex).search(value).draw();
+                                    });
+                                }
+                            });
+                            
+                            // Add column filter functionality (minimum 5 columns)
+                            $('.column-filter').on('keyup change', function() {
+                                var columnIndex = $(this).data('column');
+                                var value = $(this).val();
+                                
+                                // Apply filter to the column
+                                table.column(columnIndex).search(value).draw();
+                            });
+                            
+                            // Clear all column filters
+                            $('#clearFiltersBtn').off('click').on('click', function() {
+                                $('.column-filter').val('').trigger('change');
+                                table.search('').columns().search('').draw();
+                            });
+                        }, 100);
                     } else {
-                        $('#paymentsTableBody').html('<tr><td colspan="8" class="text-center py-4 text-danger">Error loading payments</td></tr>');
+                        $('#paymentsTableBody').html('<tr><td colspan="9" class="text-center py-4 text-danger">Error loading payments</td></tr>');
                     }
                 },
                 error: function(xhr) {
                     console.error('Error loading payments:', xhr);
-                    $('#paymentsTableBody').html('<tr><td colspan="8" class="text-center py-4 text-danger">Error loading payments. Please try again.</td></tr>');
+                    $('#paymentsTableBody').html('<tr><td colspan="9" class="text-center py-4 text-danger">Error loading payments. Please try again.</td></tr>');
                 }
             });
         }
 
-        // Real-time filtering with debounce
-        var searchTimeout;
-        $('#searchStudentInput').on('keyup', function() {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(function() {
-                loadPaymentsData();
-            }, 500);
+        // Real-time filtering
+        $('#filterYear, #filterClass, #filterSubclass, #filterStatus, #filterFeeType, #filterPaymentStatus').on('change', function() {
+            loadPaymentsData();
         });
 
-        $('#filterYear, #filterFeeType, #filterPaymentStatus, #filterSmsStatus').on('change', function() {
-            loadPaymentsData();
+        // Search student name with debounce
+        var searchTimeout;
+        $('#searchStudentName').on('keyup', function() {
+            clearTimeout(searchTimeout);
+            var searchValue = $(this).val();
+            searchTimeout = setTimeout(function() {
+                loadPaymentsData();
+            }, 500); // Wait 500ms after user stops typing
         });
 
         // Clear all filters
         $('#clearFiltersBtn').on('click', function() {
-            $('#searchStudentInput').val('');
-            $('#filterYear').val('{{ isset($currentYear) ? $currentYear : date("Y") }}');
+            $('#filterYear').val('{{ isset($defaultYear) ? $defaultYear : date("Y") }}');
+            $('#filterClass').val('');
+            $('#filterSubclass').html('<option value="">All Subclasses</option>');
+            $('#filterStatus').val('');
             $('#filterFeeType').val('');
             $('#filterPaymentStatus').val('');
-            $('#filterSmsStatus').val('');
+            $('#searchStudentName').val('');
             loadPaymentsData();
+        });
+        
+        // Export filtered PDF
+        $('#exportFilteredPdfBtn').on('click', function() {
+            // Get current filter values
+            var year = $('#filterYear').val();
+            var classID = $('#filterClass').val();
+            var subclassID = $('#filterSubclass').val();
+            var studentStatus = $('#filterStatus').val();
+            var feeType = $('#filterFeeType').val();
+            var paymentStatus = $('#filterPaymentStatus').val();
+            var searchStudentName = $('#searchStudentName').val();
+            
+            // Build filter description
+            var filterDesc = [];
+            if (classID) {
+                var className = $('#filterClass option:selected').text();
+                filterDesc.push('Class: ' + className);
+            }
+            if (subclassID) {
+                var subclassName = $('#filterSubclass option:selected').text();
+                filterDesc.push('Subclass: ' + subclassName);
+            }
+            if (studentStatus) {
+                filterDesc.push('Status: ' + studentStatus);
+            }
+            if (feeType) {
+                filterDesc.push('Fee Type: ' + feeType);
+            }
+            if (paymentStatus) {
+                filterDesc.push('Payment Status: ' + paymentStatus);
+            }
+            if (searchStudentName) {
+                filterDesc.push('Student Name: ' + searchStudentName);
+            }
+            
+            Swal.fire({
+                title: 'Export Filtered Payments?',
+                html: 'Export PDF for all filtered students?<br><small>' + (filterDesc.length > 0 ? filterDesc.join(', ') : 'All students') + '</small>',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#940000',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, Export',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Trigger export - this will be handled by generating PDF for all filtered students
+                    // For now, show message that this feature will export all filtered students
+                    Swal.fire({
+                        title: 'Exporting...',
+                        text: 'Preparing PDF for filtered students...',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                    
+                    // Export filtered PDF via AJAX
+                    $.ajax({
+                        url: '{{ route("export_filtered_payments_pdf") }}',
+                        type: 'POST',
+                        data: {
+                            _token: '{{ csrf_token() }}',
+                            year: year,
+                            class_id: classID,
+                            subclass_id: subclassID,
+                            student_status: studentStatus,
+                            fee_type: feeType,
+                            payment_status: paymentStatus,
+                            search_student_name: searchStudentName
+                        },
+                        xhrFields: {
+                            responseType: 'blob'
+                        },
+                        success: function(blob) {
+                            Swal.close();
+                            // Create download link
+                            var url = window.URL.createObjectURL(blob);
+                            var a = document.createElement('a');
+                            a.href = url;
+                            var filename = 'Filtered_Payments_' + new Date().getTime() + '.pdf';
+                            a.download = filename;
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            document.body.removeChild(a);
+                            
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Export Successful!',
+                                text: 'PDF exported successfully',
+                                confirmButtonColor: '#940000'
+                            });
+                        },
+                        error: function(xhr) {
+                            Swal.close();
+                            var errorMessage = 'Failed to export PDF';
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                errorMessage = xhr.responseJSON.message;
+                            }
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Export Failed',
+                                text: errorMessage,
+                                confirmButtonColor: '#940000'
+                            });
+                        }
+                    });
+                }
+            });
         });
 
         // Load initial data
         loadPaymentsData();
+        
+        // Initialize DataTable on page load if table exists
+        $(document).ready(function() {
+            // Wait for table to be populated
+            setTimeout(function() {
+                if ($('#paymentsTable tbody tr').length > 0) {
+                    // Check if DataTable is already initialized
+                    if (!$.fn.DataTable.isDataTable('#paymentsTable')) {
+                        // Initialize DataTable
+                        var table = $('#paymentsTable').DataTable({
+                            dom: 'Bfrtip',
+                            buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],
+                            pageLength: 5,
+                            lengthMenu: [[5, 10, 25, 50, 100, -1], [5, 10, 25, 50, 100, "All"]],
+                            order: [[0, 'asc']],
+                            scrollX: true,
+                            autoWidth: false,
+                            fixedColumns: false,
+                            responsive: true,
+                            paging: true,
+                            pagingType: 'full_numbers',
+                            processing: true,
+                            columnDefs: [
+                                { width: "5%", targets: 0, orderable: true, searchable: false },
+                                { width: "6%", targets: 1, orderable: false, searchable: false },
+                                { width: "18%", targets: 2, orderable: true, searchable: true },
+                                { width: "10%", targets: 3, orderable: true, searchable: true },
+                                { width: "13%", targets: 4, orderable: true, searchable: true },
+                                { width: "13%", targets: 5, orderable: true, searchable: true },
+                                { width: "13%", targets: 6, orderable: true, searchable: true },
+                                { width: "10%", targets: 7, orderable: true, searchable: true },
+                                { width: "10%", targets: 8, orderable: false, searchable: false }
+                            ],
+                            language: {
+                                search: "Search All:",
+                                lengthMenu: "Show _MENU_ entries",
+                                info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                                infoEmpty: "No entries to show",
+                                infoFiltered: "(filtered from _MAX_ total entries)",
+                                zeroRecords: "No matching records found",
+                                processing: "Processing..."
+                            },
+                            drawCallback: function() {
+                                // Re-attach column filter handlers after each draw
+                                $('.column-filter').off('keyup change').on('keyup change', function() {
+                                    var columnIndex = $(this).data('column');
+                                    var value = $(this).val();
+                                    table.column(columnIndex).search(value).draw();
+                                });
+                            }
+                        });
+                        
+                        // Add column filter functionality
+                        $('.column-filter').on('keyup change', function() {
+                            var columnIndex = $(this).data('column');
+                            var value = $(this).val();
+                            table.column(columnIndex).search(value).draw();
+                        });
+                    }
+                }
+            }, 500);
+        });
 
         // Function to generate PDF Invoice using jsPDF
         function generatePaymentInvoicePDF(data) {
@@ -848,6 +1189,7 @@
                 var pageWidth = doc.internal.pageSize.getWidth();
                 var pageHeight = doc.internal.pageSize.getHeight();
                 var margin = 15;
+                var tableWidth = pageWidth - (margin * 2); // Total table width
                 var yPos = margin;
                 var lineHeight = 7;
                 var currentYear = new Date().getFullYear();
@@ -952,9 +1294,15 @@
                         var tuitionPayments = data.payments.filter(function(p) { return p.fee_type === 'Tuition Fees'; });
                             var otherPayments = data.payments.filter(function(p) { return p.fee_type === 'Other Fees'; });
                             
-                            // Calculate totals from payments array - always calculate to ensure accuracy
-                            var tuitionRequired = tuitionPayments.reduce(function(sum, p) { 
+                            // Calculate totals from payments array - always calculate to ensure accuracy (including debt)
+                            var tuitionBaseRequired = tuitionPayments.reduce(function(sum, p) { 
                                 return sum + parseFloat(p.amount_required || p.amountRequired || 0); 
+                            }, 0);
+                            var tuitionDebt = tuitionPayments.reduce(function(sum, p) { 
+                                return sum + parseFloat(p.debt || 0); 
+                            }, 0);
+                            var tuitionRequired = tuitionPayments.reduce(function(sum, p) { 
+                                return sum + parseFloat(p.total_required || (p.amount_required || p.amountRequired || 0) + (p.debt || 0)); 
                             }, 0);
                             
                             var tuitionPaid = tuitionPayments.reduce(function(sum, p) { 
@@ -983,8 +1331,14 @@
                                 return sum + bal;
                             }, 0);
                             
-                            var otherRequired = otherPayments.reduce(function(sum, p) { 
+                            var otherBaseRequired = otherPayments.reduce(function(sum, p) { 
                                 return sum + parseFloat(p.amount_required || p.amountRequired || 0); 
+                            }, 0);
+                            var otherDebt = otherPayments.reduce(function(sum, p) { 
+                                return sum + parseFloat(p.debt || 0); 
+                            }, 0);
+                            var otherRequired = otherPayments.reduce(function(sum, p) { 
+                                return sum + parseFloat(p.total_required || (p.amount_required || p.amountRequired || 0) + (p.debt || 0)); 
                             }, 0);
                             
                             var otherPaid = otherPayments.reduce(function(sum, p) { 
@@ -1020,16 +1374,32 @@
                             if (data.otherPaid !== undefined && data.otherPaid !== null && parseFloat(data.otherPaid) > 0) {
                                 otherPaid = parseFloat(data.otherPaid);
                             }
+                            if (data.tuitionBaseRequired !== undefined && data.tuitionBaseRequired !== null && parseFloat(data.tuitionBaseRequired) > 0) {
+                                tuitionBaseRequired = parseFloat(data.tuitionBaseRequired);
+                            }
+                            if (data.tuitionDebt !== undefined && data.tuitionDebt !== null) {
+                                tuitionDebt = parseFloat(data.tuitionDebt);
+                            }
                             if (data.tuitionRequired !== undefined && data.tuitionRequired !== null && parseFloat(data.tuitionRequired) > 0) {
                                 tuitionRequired = parseFloat(data.tuitionRequired);
+                            }
+                            if (data.otherBaseRequired !== undefined && data.otherBaseRequired !== null && parseFloat(data.otherBaseRequired) > 0) {
+                                otherBaseRequired = parseFloat(data.otherBaseRequired);
+                            }
+                            if (data.otherDebt !== undefined && data.otherDebt !== null) {
+                                otherDebt = parseFloat(data.otherDebt);
                             }
                             if (data.otherRequired !== undefined && data.otherRequired !== null && parseFloat(data.otherRequired) > 0) {
                                 otherRequired = parseFloat(data.otherRequired);
                             }
                             
-                            // Recalculate balances
+                            // Recalculate balances (using total_required which includes debt)
                             tuitionBalance = tuitionRequired - tuitionPaid;
                             otherBalance = otherRequired - otherPaid;
+                            
+                            // Calculate total debt and total base required
+                            var totalBaseRequired = tuitionBaseRequired + otherBaseRequired;
+                            var totalDebt = tuitionDebt + otherDebt;
                             
                             // Payment Summary - Use totals from data if available, otherwise use calculated
                             // Prioritize data from data object (passed from modal) over calculated values
@@ -1077,32 +1447,39 @@
                     yPos += 7;
                     
                             doc.autoTable({
-                                head: [['Required Amount (TZS)', 'Paid Amount (TZS)', 'Bill Balance (TZS)', 'Status']],
+                                head: [['Required Amount (TZS)', 'Debt (TZS)', 'Total Required (TZS)', 'Paid Amount (TZS)', 'Bill Balance (TZS)', 'Status']],
                                 body: [[
+                                    parseFloat(totalBaseRequired).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
+                                    parseFloat(totalDebt).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
                                     parseFloat(overallRequired).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
                                     parseFloat(overallPaid).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
                                     parseFloat(overallBalance).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
                                     overallStatus
                                 ]],
                                 startY: yPos,
+                                tableWidth: tableWidth,
                                 styles: { 
-                                    fontSize: 9,
-                                    cellPadding: 3,
+                                    fontSize: 8,
+                                    cellPadding: 2,
                                     lineColor: [0, 0, 0],
-                                    lineWidth: 0.1
+                                    lineWidth: 0.1,
+                                    overflow: 'linebreak',
+                                    cellWidth: 'wrap'
                                 },
                                 headStyles: {
                                     fillColor: [148, 0, 0],
                                     textColor: 255,
                                     fontStyle: 'bold',
-                                    fontSize: 9,
+                                    fontSize: 8,
                                     halign: 'center'
                                 },
                                 columnStyles: {
-                                    0: { halign: 'right', cellWidth: 45, fontStyle: 'bold' },
-                                    1: { halign: 'right', cellWidth: 45, textColor: [40, 167, 69], fontStyle: 'bold' },
-                                    2: { halign: 'right', cellWidth: 45, textColor: [220, 53, 69], fontStyle: 'bold' },
-                                    3: { cellWidth: 50, halign: 'center', fontStyle: 'bold' }
+                                    0: { halign: 'right', cellWidth: tableWidth * 0.18, fontStyle: 'bold' },
+                                    1: { halign: 'right', cellWidth: tableWidth * 0.15, textColor: [255, 193, 7], fontStyle: 'bold' },
+                                    2: { halign: 'right', cellWidth: tableWidth * 0.18, fontStyle: 'bold' },
+                                    3: { halign: 'right', cellWidth: tableWidth * 0.18, textColor: [40, 167, 69], fontStyle: 'bold' },
+                                    4: { halign: 'right', cellWidth: tableWidth * 0.18, textColor: [220, 53, 69], fontStyle: 'bold' },
+                                    5: { cellWidth: tableWidth * 0.13, halign: 'center', fontStyle: 'bold', fontSize: 7 }
                                 },
                                 margin: { left: margin, right: margin },
                                 theme: 'grid'
@@ -1137,19 +1514,23 @@
                                         amountPaid = payment.payment_records.reduce(function(sum, pr) { return sum + parseFloat(pr.paid_amount || 0); }, 0);
                                     }
                                     
-                                    var amountRequired = parseFloat(payment.amount_required || payment.amountRequired || 0);
+                                    var baseAmount = parseFloat(payment.amount_required || payment.amountRequired || 0);
+                                    var debt = parseFloat(payment.debt || 0);
+                                    var totalRequired = parseFloat(payment.total_required || baseAmount + debt);
                                     var balance = parseFloat(payment.balance || 0);
                                     
                                     // Recalculate balance if needed
-                                    if (balance === 0 && amountRequired > 0) {
-                                        balance = amountRequired - amountPaid;
+                                    if (balance === 0 && totalRequired > 0) {
+                                        balance = totalRequired - amountPaid;
                                     }
                                     
-                                    console.log('Tuition Payment - amountRequired:', amountRequired, 'amountPaid:', amountPaid, 'balance:', balance);
+                                    console.log('Tuition Payment - baseAmount:', baseAmount, 'debt:', debt, 'totalRequired:', totalRequired, 'amountPaid:', amountPaid, 'balance:', balance);
                                     
                                     tuitionTableData.push([
                                         payment.control_number || 'N/A',
-                                        amountRequired.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
+                                        baseAmount.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
+                                        debt.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
+                                        totalRequired.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
                                         amountPaid.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
                                         balance.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/='
                                     ]);
@@ -1159,31 +1540,36 @@
                                 doc.setTextColor(148, 0, 0);
                                 doc.setFontSize(12);
                                 doc.setFont('helvetica', 'bold');
-                                doc.text('Tuition Fees', pageWidth / 2, yPos, { align: 'center' });
+                                doc.text('School Fee', pageWidth / 2, yPos, { align: 'center' });
                     yPos += 7;
                     
                                 doc.autoTable({
-                                    head: [['Control Number', 'Required Amount (TZS)', 'Paid Amount (TZS)', 'Bill Balance (TZS)']],
+                                    head: [['Control Number', 'Required Amount (TZS)', 'Debt (TZS)', 'Total Required (TZS)', 'Paid Amount (TZS)', 'Bill Balance (TZS)']],
                                     body: tuitionTableData,
                                     startY: yPos,
+                                    tableWidth: tableWidth,
                                     styles: { 
-                                        fontSize: 9,
-                                        cellPadding: 3,
+                                        fontSize: 8,
+                                        cellPadding: 2,
                                         lineColor: [0, 0, 0],
-                                        lineWidth: 0.1
+                                        lineWidth: 0.1,
+                                        overflow: 'linebreak',
+                                        cellWidth: 'wrap'
                                     },
                                     headStyles: {
                                         fillColor: [148, 0, 0],
                                         textColor: 255,
                                         fontStyle: 'bold',
-                                        fontSize: 9,
+                                        fontSize: 8,
                                         halign: 'center'
                                     },
                                     columnStyles: {
-                                        0: { cellWidth: 50, halign: 'center' },
-                                        1: { halign: 'right', cellWidth: 45 },
-                                        2: { halign: 'right', cellWidth: 45, textColor: [40, 167, 69] },
-                                        3: { halign: 'right', cellWidth: 45, textColor: [220, 53, 69] }
+                                        0: { cellWidth: tableWidth * 0.18, halign: 'center', fontSize: 7 },
+                                        1: { halign: 'right', cellWidth: tableWidth * 0.16, fontSize: 7 },
+                                        2: { halign: 'right', cellWidth: tableWidth * 0.14, textColor: [255, 193, 7], fontSize: 7 },
+                                        3: { halign: 'right', cellWidth: tableWidth * 0.16, fontStyle: 'bold', fontSize: 7 },
+                                        4: { halign: 'right', cellWidth: tableWidth * 0.16, textColor: [40, 167, 69], fontSize: 7 },
+                                        5: { halign: 'right', cellWidth: tableWidth * 0.16, textColor: [220, 53, 69], fontSize: 7 }
                                     },
                                     margin: { left: margin, right: margin },
                                     theme: 'grid'
@@ -1219,19 +1605,23 @@
                                         amountPaid = payment.payment_records.reduce(function(sum, pr) { return sum + parseFloat(pr.paid_amount || 0); }, 0);
                                     }
                                     
-                                    var amountRequired = parseFloat(payment.amount_required || payment.amountRequired || 0);
+                                    var baseAmount = parseFloat(payment.amount_required || payment.amountRequired || 0);
+                                    var debt = parseFloat(payment.debt || 0);
+                                    var totalRequired = parseFloat(payment.total_required || baseAmount + debt);
                                     var balance = parseFloat(payment.balance || 0);
                                     
                                     // Recalculate balance if needed
-                                    if (balance === 0 && amountRequired > 0) {
-                                        balance = amountRequired - amountPaid;
+                                    if (balance === 0 && totalRequired > 0) {
+                                        balance = totalRequired - amountPaid;
                                     }
                                     
-                                    console.log('Other Payment - amountRequired:', amountRequired, 'amountPaid:', amountPaid, 'balance:', balance);
+                                    console.log('Other Payment - baseAmount:', baseAmount, 'debt:', debt, 'totalRequired:', totalRequired, 'amountPaid:', amountPaid, 'balance:', balance);
                                     
                                     otherTableData.push([
                                         payment.control_number || 'N/A',
-                                        amountRequired.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
+                                        baseAmount.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
+                                        debt.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
+                                        totalRequired.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
                                         amountPaid.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
                                         balance.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/='
                                     ]);
@@ -1241,31 +1631,36 @@
                             doc.setTextColor(148, 0, 0);
                                 doc.setFontSize(12);
                                 doc.setFont('helvetica', 'bold');
-                                doc.text('Other Fees', pageWidth / 2, yPos, { align: 'center' });
+                                doc.text('Other Contribution', pageWidth / 2, yPos, { align: 'center' });
                                 yPos += 7;
                                 
                                 doc.autoTable({
-                                    head: [['Control Number', 'Required Amount (TZS)', 'Paid Amount (TZS)', 'Bill Balance (TZS)']],
+                                    head: [['Control Number', 'Required Amount (TZS)', 'Debt (TZS)', 'Total Required (TZS)', 'Paid Amount (TZS)', 'Bill Balance (TZS)']],
                                     body: otherTableData,
                                     startY: yPos,
+                                    tableWidth: tableWidth,
                                     styles: { 
-                                        fontSize: 9,
-                                        cellPadding: 3,
+                                        fontSize: 8,
+                                        cellPadding: 2,
                                         lineColor: [0, 0, 0],
-                                        lineWidth: 0.1
+                                        lineWidth: 0.1,
+                                        overflow: 'linebreak',
+                                        cellWidth: 'wrap'
                                     },
                                     headStyles: {
                                         fillColor: [148, 0, 0],
                                         textColor: 255,
                                         fontStyle: 'bold',
-                                        fontSize: 9,
+                                        fontSize: 8,
                                         halign: 'center'
                                     },
                                     columnStyles: {
-                                        0: { cellWidth: 50, halign: 'center' },
-                                        1: { halign: 'right', cellWidth: 45 },
-                                        2: { halign: 'right', cellWidth: 45, textColor: [40, 167, 69] },
-                                        3: { halign: 'right', cellWidth: 45, textColor: [220, 53, 69] }
+                                        0: { cellWidth: tableWidth * 0.18, halign: 'center', fontSize: 7 },
+                                        1: { halign: 'right', cellWidth: tableWidth * 0.16, fontSize: 7 },
+                                        2: { halign: 'right', cellWidth: tableWidth * 0.14, textColor: [255, 193, 7], fontSize: 7 },
+                                        3: { halign: 'right', cellWidth: tableWidth * 0.16, fontStyle: 'bold', fontSize: 7 },
+                                        4: { halign: 'right', cellWidth: tableWidth * 0.16, textColor: [40, 167, 69], fontSize: 7 },
+                                        5: { halign: 'right', cellWidth: tableWidth * 0.16, textColor: [220, 53, 69], fontSize: 7 }
                                     },
                                     margin: { left: margin, right: margin },
                                     theme: 'grid'
@@ -1412,57 +1807,80 @@
                 if (tuitionTable.length > 0 || otherFeesTable.length > 0) {
                     payments = [];
                     
-                    // Extract from tuition fees table
+                    // Extract from tuition fees table (with Debt and Total Required columns)
                     tuitionTable.each(function() {
                         const row = $(this);
-                        const controlNumber = row.find('.control-number').text() || row.find('td').eq(0).text();
+                        const controlNumber = row.find('.control-number').text() || row.find('td').eq(0).text().trim();
+                        // Column order: Control Number (0), Required Amount (1), Debt (2), Total Required (3), Paid Amount (4), Bill Balance (5)
                         const requiredText = row.find('td').eq(1).text().replace(/[^\d.]/g, '');
-                        const paidText = row.find('td').eq(2).text().replace(/[^\d.]/g, '');
-                        const balanceText = row.find('td').eq(3).text().replace(/[^\d.]/g, '');
+                        const debtText = row.find('td').eq(2).text().replace(/[^\d.]/g, '');
+                        const totalRequiredText = row.find('td').eq(3).text().replace(/[^\d.]/g, '');
+                        const paidText = row.find('td').eq(4).text().replace(/[^\d.]/g, '');
+                        const balanceText = row.find('td').eq(5).text().replace(/[^\d.]/g, '');
                         
-                        if (controlNumber && controlNumber !== 'N/A') {
+                        if (controlNumber && controlNumber !== 'N/A' && controlNumber !== '') {
                             payments.push({
                                 fee_type: 'Tuition Fees',
                                 control_number: controlNumber,
                                 amount_required: parseFloat(requiredText) || 0,
+                                debt: parseFloat(debtText) || 0,
+                                total_required: parseFloat(totalRequiredText) || (parseFloat(requiredText) || 0) + (parseFloat(debtText) || 0),
                                 amount_paid: parseFloat(paidText) || 0,
                                 balance: parseFloat(balanceText) || 0
                             });
                         }
                     });
                     
-                    // Extract from other fees table
+                    // Extract from other fees table (with Debt and Total Required columns)
                     otherFeesTable.each(function() {
                         const row = $(this);
-                        const controlNumber = row.find('.control-number').text() || row.find('td').eq(0).text();
+                        const controlNumber = row.find('.control-number').text() || row.find('td').eq(0).text().trim();
+                        // Column order: Control Number (0), Required Amount (1), Debt (2), Total Required (3), Paid Amount (4), Bill Balance (5)
                         const requiredText = row.find('td').eq(1).text().replace(/[^\d.]/g, '');
-                        const paidText = row.find('td').eq(2).text().replace(/[^\d.]/g, '');
-                        const balanceText = row.find('td').eq(3).text().replace(/[^\d.]/g, '');
+                        const debtText = row.find('td').eq(2).text().replace(/[^\d.]/g, '');
+                        const totalRequiredText = row.find('td').eq(3).text().replace(/[^\d.]/g, '');
+                        const paidText = row.find('td').eq(4).text().replace(/[^\d.]/g, '');
+                        const balanceText = row.find('td').eq(5).text().replace(/[^\d.]/g, '');
                         
-                        if (controlNumber && controlNumber !== 'N/A') {
+                        if (controlNumber && controlNumber !== 'N/A' && controlNumber !== '') {
                             payments.push({
                                 fee_type: 'Other Fees',
                                 control_number: controlNumber,
                                 amount_required: parseFloat(requiredText) || 0,
+                                debt: parseFloat(debtText) || 0,
+                                total_required: parseFloat(totalRequiredText) || (parseFloat(requiredText) || 0) + (parseFloat(debtText) || 0),
                                 amount_paid: parseFloat(paidText) || 0,
                                 balance: parseFloat(balanceText) || 0
                             });
                         }
                     });
                     
-                    // Recalculate totals from extracted payments
+                    // Recalculate totals from extracted payments (including debt and total_required)
                     const tuitionPayments = payments.filter(p => p.fee_type === 'Tuition Fees');
                     const otherFeePayments = payments.filter(p => p.fee_type === 'Other Fees');
                     
+                    const tuitionBaseRequired = tuitionPayments.reduce((sum, p) => sum + (p.amount_required || 0), 0);
+                    const tuitionDebt = tuitionPayments.reduce((sum, p) => sum + (p.debt || 0), 0);
+                    const tuitionTotalRequired = tuitionPayments.reduce((sum, p) => sum + (p.total_required || (p.amount_required || 0) + (p.debt || 0)), 0);
+                    
+                    const otherBaseRequired = otherFeePayments.reduce((sum, p) => sum + (p.amount_required || 0), 0);
+                    const otherDebt = otherFeePayments.reduce((sum, p) => sum + (p.debt || 0), 0);
+                    const otherTotalRequired = otherFeePayments.reduce((sum, p) => sum + (p.total_required || (p.amount_required || 0) + (p.debt || 0)), 0);
+                    
                     totals = {
-                        tuition_required: tuitionPayments.reduce((sum, p) => sum + (p.amount_required || 0), 0),
+                        tuition_base_required: tuitionBaseRequired,
+                        tuition_debt: tuitionDebt,
+                        tuition_required: tuitionTotalRequired,
                         tuition_paid: tuitionPayments.reduce((sum, p) => sum + (p.amount_paid || 0), 0),
                         tuition_balance: tuitionPayments.reduce((sum, p) => sum + (p.balance || 0), 0),
-                        other_required: otherFeePayments.reduce((sum, p) => sum + (p.amount_required || 0), 0),
+                        other_base_required: otherBaseRequired,
+                        other_debt: otherDebt,
+                        other_required: otherTotalRequired,
                         other_paid: otherFeePayments.reduce((sum, p) => sum + (p.amount_paid || 0), 0),
                         other_balance: otherFeePayments.reduce((sum, p) => sum + (p.balance || 0), 0),
-                        total_required: (tuitionPayments.reduce((sum, p) => sum + (p.amount_required || 0), 0) + 
-                                        otherFeePayments.reduce((sum, p) => sum + (p.amount_required || 0), 0)),
+                        total_base_required: tuitionBaseRequired + otherBaseRequired,
+                        total_debt: tuitionDebt + otherDebt,
+                        total_required: tuitionTotalRequired + otherTotalRequired,
                         total_paid: (tuitionPayments.reduce((sum, p) => sum + (p.amount_paid || 0), 0) + 
                                     otherFeePayments.reduce((sum, p) => sum + (p.amount_paid || 0), 0)),
                         total_balance: (tuitionPayments.reduce((sum, p) => sum + (p.balance || 0), 0) + 
@@ -1501,12 +1919,18 @@
                         studentPhotoFirstLetter: studentPhotoFirstLetter,
                         studentPhotoPlaceholderColor: studentPhotoPlaceholderColor,
                         payments: payments,
+                        tuitionBaseRequired: totals.tuition_base_required || 0,
+                        tuitionDebt: totals.tuition_debt || 0,
                         tuitionRequired: totals.tuition_required || 0,
                         tuitionPaid: totals.tuition_paid || 0,
                         tuitionBalance: totals.tuition_balance || 0,
+                        otherBaseRequired: totals.other_base_required || 0,
+                        otherDebt: totals.other_debt || 0,
                         otherRequired: totals.other_required || 0,
                         otherPaid: totals.other_paid || 0,
                         otherBalance: totals.other_balance || 0,
+                        totalBaseRequired: totals.total_base_required || 0,
+                        totalDebt: totals.total_debt || 0,
                         totalRequired: totals.total_required || 0,
                         totalPaid: totals.total_paid || 0,
                         totalBalance: totals.total_balance || 0,
@@ -1528,12 +1952,18 @@
                         studentPhotoFirstLetter: studentPhotoFirstLetter,
                         studentPhotoPlaceholderColor: studentPhotoPlaceholderColor,
                         payments: payments,
+                        tuitionBaseRequired: totals.tuition_base_required || 0,
+                        tuitionDebt: totals.tuition_debt || 0,
                         tuitionRequired: totals.tuition_required || 0,
                         tuitionPaid: totals.tuition_paid || 0,
                         tuitionBalance: totals.tuition_balance || 0,
+                        otherBaseRequired: totals.other_base_required || 0,
+                        otherDebt: totals.other_debt || 0,
                         otherRequired: totals.other_required || 0,
                         otherPaid: totals.other_paid || 0,
                         otherBalance: totals.other_balance || 0,
+                        totalBaseRequired: totals.total_base_required || 0,
+                        totalDebt: totals.total_debt || 0,
                         totalRequired: totals.total_required || 0,
                         totalPaid: totals.total_paid || 0,
                         totalBalance: totals.total_balance || 0,
@@ -1617,7 +2047,7 @@
             
             Swal.fire({
                 title: 'Send Control Numbers via SMS',
-                text: 'This will send control numbers (Tuition Fees and Other Fees) to all parents who have not received SMS yet.',
+                text: 'This will send control numbers (School Fee and Other Contribution) to all parents who have not received SMS yet.',
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonColor: '#940000',
@@ -1697,6 +2127,9 @@
             // Store button reference in modal for PDF export
             $('#viewMoreModal').data('view-more-btn', btn);
             
+            // Get isClosedYear from button data or from global response
+            const isClosedYear = btn.data('is-closed-year') || false;
+            
             // Student Photo
             const studentPhoto = btn.data('student-photo') || '';
             const firstLetter = btn.data('student-first-letter') || 'N';
@@ -1751,8 +2184,9 @@
             const tuitionPayments = payments.filter(p => p.fee_type === 'Tuition Fees');
             const otherFeePayments = payments.filter(p => p.fee_type === 'Other Fees');
             
-            const totalRequired = (tuitionPayments.reduce((sum, p) => sum + parseFloat(p.amount_required || 0), 0) + 
-                                  otherFeePayments.reduce((sum, p) => sum + parseFloat(p.amount_required || 0), 0));
+            // Use total_required (base + debt) instead of amount_required (base only)
+            const totalRequired = (tuitionPayments.reduce((sum, p) => sum + parseFloat(p.total_required || p.amount_required || 0), 0) + 
+                                  otherFeePayments.reduce((sum, p) => sum + parseFloat(p.total_required || p.amount_required || 0), 0));
             const totalPaid = (tuitionPayments.reduce((sum, p) => sum + parseFloat(p.amount_paid || 0), 0) + 
                               otherFeePayments.reduce((sum, p) => sum + parseFloat(p.amount_paid || 0), 0));
             const totalBalance = (tuitionPayments.reduce((sum, p) => sum + parseFloat(p.balance || 0), 0) + 
@@ -1811,12 +2245,14 @@
                         tuitionHtml += '<div class="table-responsive">';
                 tuitionHtml += '<table class="table table-bordered table-hover" style="margin-bottom: 20px;">';
                 tuitionHtml += '<caption style="caption-side: top; font-size: 1.2rem; font-weight: bold; color: #940000; padding: 12px 0; text-align: center; margin-bottom: 10px;">';
-                tuitionHtml += '<i class="bi bi-book"></i> Tuition Fees';
+                tuitionHtml += '<i class="bi bi-book"></i> School Fee';
                 tuitionHtml += '</caption>';
                 tuitionHtml += '<thead style="background-color: #940000; color: white;">';
                 tuitionHtml += '<tr>';
                 tuitionHtml += '<th>Control Number</th>';
                 tuitionHtml += '<th class="text-end">Required Amount (TZS)</th>';
+                tuitionHtml += '<th class="text-end">Debt (TZS)</th>';
+                tuitionHtml += '<th class="text-end">Total Required (TZS)</th>';
                 tuitionHtml += '<th class="text-end">Paid Amount (TZS)</th>';
                 tuitionHtml += '<th class="text-end">Bill Balance (TZS)</th>';
                 tuitionHtml += '<th class="text-center">Actions</th>';
@@ -1825,23 +2261,35 @@
                         tuitionHtml += '<tbody>';
                         
                 tuitionPayments.forEach(function(payment) {
+                            var debt = parseFloat(payment.debt || 0);
+                            var baseAmount = parseFloat(payment.amount_required || 0);
+                            var totalRequired = parseFloat(payment.total_required || payment.amount_required || 0);
+                            
                             tuitionHtml += '<tr>';
                     tuitionHtml += '<td><span class="control-number">' + (payment.control_number || 'N/A') + '</span></td>';
-                    tuitionHtml += '<td class="text-end">' + parseFloat(payment.amount_required || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</td>';
+                    tuitionHtml += '<td class="text-end">' + baseAmount.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</td>';
+                    tuitionHtml += '<td class="text-end text-warning">' + debt.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</td>';
+                    tuitionHtml += '<td class="text-end"><strong>' + totalRequired.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</strong></td>';
                     tuitionHtml += '<td class="text-end text-success">' + parseFloat(payment.amount_paid || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</td>';
                     tuitionHtml += '<td class="text-end text-danger">' + parseFloat(payment.balance || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</td>';
                     tuitionHtml += '<td class="text-center">';
                     tuitionHtml += '<div class="btn-group btn-group-sm" role="group">';
-                    tuitionHtml += '<button class="btn btn-sm btn-success record-payment-btn" ';
-                    tuitionHtml += 'data-payment-id="' + payment.paymentID + '" ';
-                    tuitionHtml += 'data-control-number="' + (payment.control_number || '') + '" ';
-                    tuitionHtml += 'data-amount-required="' + (payment.amount_required || 0) + '" ';
-                    tuitionHtml += 'data-amount-paid="' + (payment.amount_paid || 0) + '" ';
-                    tuitionHtml += 'data-balance="' + (payment.balance || 0) + '" ';
-                    tuitionHtml += 'data-fee-type="Tuition Fees" ';
-                    tuitionHtml += 'title="Record Payment">';
-                    tuitionHtml += '<i class="bi bi-cash-coin"></i>';
-                    tuitionHtml += '</button>';
+                    if (isClosedYear) {
+                        tuitionHtml += '<button class="btn btn-sm btn-secondary" disabled title="Cannot record payment for closed academic year">';
+                        tuitionHtml += '<i class="bi bi-lock"></i>';
+                        tuitionHtml += '</button>';
+                    } else {
+                        tuitionHtml += '<button class="btn btn-sm btn-success record-payment-btn" ';
+                        tuitionHtml += 'data-payment-id="' + payment.paymentID + '" ';
+                        tuitionHtml += 'data-control-number="' + (payment.control_number || '') + '" ';
+                        tuitionHtml += 'data-amount-required="' + (payment.amount_required || 0) + '" ';
+                        tuitionHtml += 'data-amount-paid="' + (payment.amount_paid || 0) + '" ';
+                        tuitionHtml += 'data-balance="' + (payment.balance || 0) + '" ';
+                        tuitionHtml += 'data-fee-type="Tuition Fees" ';
+                        tuitionHtml += 'title="Record Payment">';
+                        tuitionHtml += '<i class="bi bi-cash-coin"></i>';
+                        tuitionHtml += '</button>';
+                    }
                     tuitionHtml += '<button class="btn btn-sm btn-info view-payment-records-btn" ';
                     tuitionHtml += 'data-payment-id="' + payment.paymentID + '" ';
                     tuitionHtml += 'data-control-number="' + (payment.control_number || '') + '" ';
@@ -1892,12 +2340,14 @@
                         otherFeesHtml += '<div class="table-responsive">';
                 otherFeesHtml += '<table class="table table-bordered table-hover" style="margin-bottom: 20px;">';
                 otherFeesHtml += '<caption style="caption-side: top; font-size: 1.2rem; font-weight: bold; color: #940000; padding: 12px 0; text-align: center; margin-bottom: 10px;">';
-                otherFeesHtml += '<i class="bi bi-list-check"></i> Other Fees';
+                otherFeesHtml += '<i class="bi bi-list-check"></i> Other Contribution';
                 otherFeesHtml += '</caption>';
                 otherFeesHtml += '<thead style="background-color: #940000; color: white;">';
                 otherFeesHtml += '<tr>';
                 otherFeesHtml += '<th>Control Number</th>';
                 otherFeesHtml += '<th class="text-end">Required Amount (TZS)</th>';
+                otherFeesHtml += '<th class="text-end">Debt (TZS)</th>';
+                otherFeesHtml += '<th class="text-end">Total Required (TZS)</th>';
                 otherFeesHtml += '<th class="text-end">Paid Amount (TZS)</th>';
                 otherFeesHtml += '<th class="text-end">Bill Balance (TZS)</th>';
                 otherFeesHtml += '<th class="text-center">Actions</th>';
@@ -1906,23 +2356,35 @@
                         otherFeesHtml += '<tbody>';
                         
                 otherFeePayments.forEach(function(payment) {
+                            var debt = parseFloat(payment.debt || 0);
+                            var baseAmount = parseFloat(payment.amount_required || 0);
+                            var totalRequired = parseFloat(payment.total_required || payment.amount_required || 0);
+                            
                             otherFeesHtml += '<tr>';
                     otherFeesHtml += '<td><span class="control-number">' + (payment.control_number || 'N/A') + '</span></td>';
-                    otherFeesHtml += '<td class="text-end">' + parseFloat(payment.amount_required || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</td>';
+                    otherFeesHtml += '<td class="text-end">' + baseAmount.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</td>';
+                    otherFeesHtml += '<td class="text-end text-warning">' + debt.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</td>';
+                    otherFeesHtml += '<td class="text-end"><strong>' + totalRequired.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</strong></td>';
                     otherFeesHtml += '<td class="text-end text-success">' + parseFloat(payment.amount_paid || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</td>';
                     otherFeesHtml += '<td class="text-end text-danger">' + parseFloat(payment.balance || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</td>';
                     otherFeesHtml += '<td class="text-center">';
                     otherFeesHtml += '<div class="btn-group btn-group-sm" role="group">';
-                    otherFeesHtml += '<button class="btn btn-sm btn-success record-payment-btn" ';
-                    otherFeesHtml += 'data-payment-id="' + payment.paymentID + '" ';
-                    otherFeesHtml += 'data-control-number="' + (payment.control_number || '') + '" ';
-                    otherFeesHtml += 'data-amount-required="' + (payment.amount_required || 0) + '" ';
-                    otherFeesHtml += 'data-amount-paid="' + (payment.amount_paid || 0) + '" ';
-                    otherFeesHtml += 'data-balance="' + (payment.balance || 0) + '" ';
-                    otherFeesHtml += 'data-fee-type="Other Fees" ';
-                    otherFeesHtml += 'title="Record Payment">';
-                    otherFeesHtml += '<i class="bi bi-cash-coin"></i>';
-                    otherFeesHtml += '</button>';
+                    if (isClosedYear) {
+                        otherFeesHtml += '<button class="btn btn-sm btn-secondary" disabled title="Cannot record payment for closed academic year">';
+                        otherFeesHtml += '<i class="bi bi-lock"></i>';
+                        otherFeesHtml += '</button>';
+                    } else {
+                        otherFeesHtml += '<button class="btn btn-sm btn-success record-payment-btn" ';
+                        otherFeesHtml += 'data-payment-id="' + payment.paymentID + '" ';
+                        otherFeesHtml += 'data-control-number="' + (payment.control_number || '') + '" ';
+                        otherFeesHtml += 'data-amount-required="' + (payment.amount_required || 0) + '" ';
+                        otherFeesHtml += 'data-amount-paid="' + (payment.amount_paid || 0) + '" ';
+                        otherFeesHtml += 'data-balance="' + (payment.balance || 0) + '" ';
+                        otherFeesHtml += 'data-fee-type="Other Fees" ';
+                        otherFeesHtml += 'title="Record Payment">';
+                        otherFeesHtml += '<i class="bi bi-cash-coin"></i>';
+                        otherFeesHtml += '</button>';
+                    }
                     otherFeesHtml += '<button class="btn btn-sm btn-info view-payment-records-btn" ';
                     otherFeesHtml += 'data-payment-id="' + payment.paymentID + '" ';
                     otherFeesHtml += 'data-control-number="' + (payment.control_number || '') + '" ';
@@ -1979,9 +2441,46 @@
             $('#record_reference_number').val('');
             $('#record_payment_date').val(new Date().toISOString().split('T')[0]);
             $('#record_payment_source').val('Cash');
+            $('#record_bank_name').val('');
             $('#record_notes').val('');
             
+            // Reset form state
+            togglePaymentMethodFields('Cash');
+            
             $('#recordPaymentModal').modal('show');
+        });
+
+        // Toggle payment method fields
+        function togglePaymentMethodFields(paymentMethod) {
+            const referenceField = $('#record_reference_number');
+            const referenceContainer = $('#record_reference_number_container');
+            const referenceRequired = $('#record_reference_required');
+            const bankNameContainer = $('#record_bank_name_container');
+            const bankNameField = $('#record_bank_name');
+            
+            if (paymentMethod === 'Bank') {
+                // Bank: Reference number required, show bank name
+                referenceContainer.show();
+                referenceField.prop('required', true);
+                referenceRequired.show();
+                bankNameContainer.show();
+                bankNameField.prop('required', true);
+            } else {
+                // Cash: Reference number hidden completely, hide bank name
+                referenceContainer.hide();
+                referenceField.prop('required', false);
+                referenceField.val(''); // Clear value
+                referenceRequired.hide();
+                bankNameContainer.hide();
+                bankNameField.prop('required', false);
+                bankNameField.val('');
+            }
+        }
+        
+        // Payment method change handler
+        $(document).on('change', '#record_payment_source', function() {
+            const paymentMethod = $(this).val();
+            togglePaymentMethodFields(paymentMethod);
         });
 
         // Record Payment Form Submission
@@ -2055,8 +2554,17 @@
             // Show loading
             $('#paymentRecordsContent').html('<div class="text-center py-4"><div class="spinner-border text-primary-custom" role="status"></div><p class="mt-2">Loading payment records...</p></div>');
             
-            // Open modal
-            $('#viewPaymentRecordsModal').modal('show');
+            // Close viewMoreModal first if it's open, then open payment records modal
+            if ($('#viewMoreModal').hasClass('show')) {
+                $('#viewMoreModal').modal('hide');
+                // Wait for viewMoreModal to close, then open payment records modal
+                $('#viewMoreModal').one('hidden.bs.modal', function() {
+                    $('#viewPaymentRecordsModal').modal('show');
+                });
+            } else {
+                // If viewMoreModal is not open, open payment records modal immediately
+                $('#viewPaymentRecordsModal').modal('show');
+            }
             
             // Load payment records
             $.ajax({
@@ -2080,6 +2588,7 @@
                             html += '<th>Payment Method</th>';
                             html += '<th>Reference Number</th>';
                             html += '<th>Notes</th>';
+                            html += '<th class="text-center">Actions</th>';
                             html += '</tr>';
                             html += '</thead>';
                             html += '<tbody>';
@@ -2094,6 +2603,29 @@
                                 html += '<td><span class="badge ' + (record.payment_source === 'Bank' ? 'bg-primary' : 'bg-success') + '">' + (record.payment_source || 'N/A') + '</span></td>';
                                 html += '<td>' + (record.reference_number || 'N/A') + '</td>';
                                 html += '<td>' + (record.notes || '-') + '</td>';
+                                html += '<td class="text-center">';
+                                html += '<div class="btn-group btn-group-sm" role="group">';
+                                html += '<button class="btn btn-sm btn-warning edit-payment-record-btn" ';
+                                html += 'data-record-id="' + record.recordID + '" ';
+                                html += 'data-payment-id="' + paymentID + '" ';
+                                html += 'data-paid-amount="' + record.paid_amount + '" ';
+                                html += 'data-payment-date="' + (record.payment_date || '') + '" ';
+                                html += 'data-payment-source="' + (record.payment_source || '') + '" ';
+                                html += 'data-reference-number="' + (record.reference_number || '') + '" ';
+                                html += 'data-bank-name="' + (record.bank_name || '') + '" ';
+                                html += 'data-notes="' + (record.notes || '') + '" ';
+                                html += 'title="Edit Payment Record">';
+                                html += '<i class="bi bi-pencil"></i>';
+                                html += '</button>';
+                                html += '<button class="btn btn-sm btn-danger delete-payment-record-btn" ';
+                                html += 'data-record-id="' + record.recordID + '" ';
+                                html += 'data-payment-id="' + paymentID + '" ';
+                                html += 'data-paid-amount="' + record.paid_amount + '" ';
+                                html += 'title="Delete Payment Record">';
+                                html += '<i class="bi bi-trash"></i>';
+                                html += '</button>';
+                                html += '</div>';
+                                html += '</td>';
                                 html += '</tr>';
                             });
                             
@@ -2102,7 +2634,7 @@
                             html += '<tr>';
                             html += '<th colspan="2" class="text-end">Total Paid:</th>';
                             html += '<th class="text-end text-success fw-bold">' + totalPaid.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</th>';
-                            html += '<th colspan="3"></th>';
+                            html += '<th colspan="4"></th>';
                             html += '</tr>';
                             html += '</tfoot>';
                             html += '</table>';
@@ -2124,6 +2656,193 @@
                         errorMessage = xhr.responseJSON.message;
                     }
                     $('#paymentRecordsContent').html('<div class="alert alert-danger text-center"><i class="bi bi-x-circle"></i> ' + errorMessage + '</div>');
+                }
+            });
+        });
+
+        // Edit Payment Record Button Click Handler
+        $(document).on('click', '.edit-payment-record-btn', function(e) {
+            e.preventDefault();
+            const btn = $(this);
+            
+            // Get record data
+            const recordID = btn.data('record-id');
+            const paymentID = btn.data('payment-id');
+            const paidAmount = btn.data('paid-amount');
+            const paymentDate = btn.data('payment-date');
+            const paymentSource = btn.data('payment-source');
+            const referenceNumber = btn.data('reference-number');
+            const bankName = btn.data('bank-name');
+            const notes = btn.data('notes');
+            
+            // Set modal fields
+            $('#edit_record_id').val(recordID);
+            $('#edit_payment_id').val(paymentID);
+            $('#edit_paid_amount').val(paidAmount);
+            $('#edit_payment_date').val(paymentDate);
+            $('#edit_payment_source').val(paymentSource);
+            $('#edit_reference_number').val(referenceNumber || '');
+            $('#edit_bank_name').val(bankName || '');
+            $('#edit_notes').val(notes || '');
+            
+            // Show/hide reference number and bank name based on payment source
+            if (paymentSource === 'Bank') {
+                $('#edit_reference_number_group').show();
+                $('#edit_bank_name_group').show();
+                $('#edit_reference_number').prop('required', true);
+                $('#edit_bank_name').prop('required', true);
+            } else {
+                $('#edit_reference_number_group').hide();
+                $('#edit_bank_name_group').hide();
+                $('#edit_reference_number').prop('required', false);
+                $('#edit_bank_name').prop('required', false);
+            }
+            
+            // Open modal
+            $('#editPaymentRecordModal').modal('show');
+        });
+        
+        // Payment Source Change Handler for Edit Modal
+        $('#edit_payment_source').on('change', function() {
+            const paymentSource = $(this).val();
+            if (paymentSource === 'Bank') {
+                $('#edit_reference_number_group').show();
+                $('#edit_bank_name_group').show();
+                $('#edit_reference_number').prop('required', true);
+                $('#edit_bank_name').prop('required', true);
+            } else {
+                $('#edit_reference_number_group').hide();
+                $('#edit_bank_name_group').hide();
+                $('#edit_reference_number').prop('required', false);
+                $('#edit_bank_name').prop('required', false);
+                $('#edit_reference_number').val('');
+                $('#edit_bank_name').val('');
+            }
+        });
+        
+        // Edit Payment Record Form Submission
+        $(document).on('submit', '#editPaymentRecordForm', function(e) {
+            e.preventDefault();
+            
+            const formData = $(this).serialize();
+            const submitBtn = $(this).find('button[type="submit"]');
+            const originalText = submitBtn.html();
+            
+            submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Updating...');
+            
+            $.ajax({
+                url: '/update_payment_record',
+                method: 'POST',
+                data: formData,
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success!',
+                            text: response.message,
+                            confirmButtonColor: '#940000'
+                        }).then(() => {
+                            $('#editPaymentRecordModal').modal('hide');
+                            // Reload payment records
+                            const paymentID = $('#edit_payment_id').val();
+                            $('.view-payment-records-btn[data-payment-id="' + paymentID + '"]').first().click();
+                            loadPaymentsData(); // Reload payments table
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error!',
+                            text: response.message || 'Failed to update payment record'
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    let errorMessage = 'Failed to update payment record';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+                        const errors = xhr.responseJSON.errors;
+                        errorMessage = Object.values(errors).flat().join('<br>');
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        html: errorMessage
+                    });
+                },
+                complete: function() {
+                    submitBtn.prop('disabled', false).html(originalText);
+                }
+            });
+        });
+        
+        // Delete Payment Record Button Click Handler
+        $(document).on('click', '.delete-payment-record-btn', function(e) {
+            e.preventDefault();
+            const btn = $(this);
+            const recordID = btn.data('record-id');
+            const paymentID = btn.data('payment-id');
+            const paidAmount = btn.data('paid-amount');
+            
+            Swal.fire({
+                title: 'Delete Payment Record?',
+                html: `Are you sure you want to delete this payment record?<br><strong>Amount: TZS ${parseFloat(paidAmount || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}/=</strong><br><br>This action cannot be undone!`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, Delete',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const originalHtml = btn.html();
+                    btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+                    
+                    $.ajax({
+                        url: '/delete_payment_record',
+                        method: 'POST',
+                        data: {
+                            _token: '{{ csrf_token() }}',
+                            recordID: recordID,
+                            paymentID: paymentID
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Success!',
+                                    text: response.message,
+                                    confirmButtonColor: '#940000'
+                                }).then(() => {
+                                    // Reload payment records
+                                    $('.view-payment-records-btn[data-payment-id="' + paymentID + '"]').first().click();
+                                    loadPaymentsData(); // Reload payments table
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error!',
+                                    text: response.message || 'Failed to delete payment record',
+                                    confirmButtonColor: '#940000'
+                                });
+                            }
+                        },
+                        error: function(xhr) {
+                            let errorMessage = 'Failed to delete payment record';
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                errorMessage = xhr.responseJSON.message;
+                            }
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error!',
+                                text: errorMessage,
+                                confirmButtonColor: '#940000'
+                            });
+                        },
+                        complete: function() {
+                            btn.prop('disabled', false).html(originalHtml);
+                        }
+                    });
                 }
             });
         });
@@ -2321,6 +3040,13 @@
         });
     } else {
         setTimeout(initPaymentsManagement, 200);
+    }
+    
+    // Initialize on page load
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initPaymentsManagement);
+    } else {
+        initPaymentsManagement();
     }
 })();
 </script>

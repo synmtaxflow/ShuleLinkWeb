@@ -20,6 +20,7 @@ use App\Http\Controllers\AccomodationController;
 use App\Http\Controllers\TimeTableController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ManageAttendanceController;
+use App\Http\Controllers\AcademicYearsController;
 use App\Http\Controllers\ParentsContoller;
 use App\Http\Controllers\ZKTecoPushController;
 use App\Http\Controllers\ZKTecoController;
@@ -61,6 +62,12 @@ Route::get('logout', [Auth::class, 'logout'])->name('logout');
 // Admin Routes
 Route::get('AdminDashboard', [AdminController::class, 'AdminDashboard'])->name('AdminDashboard');
 Route::get('admin/scheme-of-work', [AdminController::class, 'adminSchemeOfWork'])->name('admin.schemeOfWork');
+Route::get('admin/academic-years', [AcademicYearsController::class, 'index'])->name('admin.academicYears');
+Route::post('admin/academic-years/close', [AcademicYearsController::class, 'closeYear'])->name('admin.academicYears.close');
+Route::post('admin/academic-years/open', [AcademicYearsController::class, 'openNewYear'])->name('admin.academicYears.open');
+Route::get('admin/academic-years/terms', [AcademicYearsController::class, 'viewTerms'])->name('admin.academicYears.viewTerms');
+Route::post('admin/academic-years/terms/close', [AcademicYearsController::class, 'closeTerm'])->name('admin.academicYears.closeTerm');
+Route::get('admin/academic-years/{academicYearID}', [AcademicYearsController::class, 'viewYear'])->name('admin.academicYears.view');
 Route::get('admin/scheme-of-work/view/{schemeOfWorkID}', [AdminController::class, 'adminViewSchemeOfWork'])->name('admin.viewSchemeOfWork');
 Route::get('task-management', [AdminController::class, 'taskManagement'])->name('taskManagement');
 Route::get('admin/get-teacher-tasks', [AdminController::class, 'getTeacherTasks'])->name('admin.get_teacher_tasks');
@@ -269,6 +276,23 @@ Route::post('update_student', [ManageStudentController::class, 'update_student']
 Route::post('transfer_student', [ManageStudentController::class, 'transfer_student'])->name('transfer_student');
 Route::delete('delete_student/{studentID}', [ManageStudentController::class, 'delete_student'])->name('delete_student');
 Route::post('activate_student/{studentID}', [ManageStudentController::class, 'activate_student'])->name('activate_student');
+
+// Student Academic Details Routes
+Route::get('get_student_academic_years/{studentID}', [ManageStudentController::class, 'get_student_academic_years'])->name('get_student_academic_years');
+Route::get('get_student_classes_for_year', [ManageStudentController::class, 'get_student_classes_for_year'])->name('get_student_classes_for_year');
+Route::get('get_student_subclasses_for_class', [ManageStudentController::class, 'get_student_subclasses_for_class'])->name('get_student_subclasses_for_class');
+Route::get('get_student_terms_for_year', [ManageStudentController::class, 'get_student_terms_for_year'])->name('get_student_terms_for_year');
+Route::get('get_exams_for_term', [ManageStudentController::class, 'get_exams_for_term'])->name('get_exams_for_term');
+Route::get('get_student_exam_results', [ManageStudentController::class, 'get_student_exam_results'])->name('get_student_exam_results');
+Route::get('get_student_term_report', [ManageStudentController::class, 'get_student_term_report'])->name('get_student_term_report');
+Route::get('get_student_attendance', [ManageStudentController::class, 'get_student_attendance'])->name('get_student_attendance');
+Route::get('get_student_payments_for_year', [ManageStudentController::class, 'get_student_payments_for_year'])->name('get_student_payments_for_year');
+Route::get('get_student_debts_for_year', [ManageStudentController::class, 'get_student_debts_for_year'])->name('get_student_debts_for_year');
+Route::get('get_student_library_for_year', [ManageStudentController::class, 'get_student_library_for_year'])->name('get_student_library_for_year');
+Route::get('get_student_fees_for_year', [ManageStudentController::class, 'get_student_fees_for_year'])->name('get_student_fees_for_year');
+Route::get('export_student_results_pdf', [ManageStudentController::class, 'export_student_results_pdf'])->name('export_student_results_pdf');
+Route::get('export_student_attendance_pdf', [ManageStudentController::class, 'export_student_attendance_pdf'])->name('export_student_attendance_pdf');
+Route::get('export_student_attendance_excel', [ManageStudentController::class, 'export_student_attendance_excel'])->name('export_student_attendance_excel');
 Route::post('revert_transfer/{studentID}', [ManageStudentController::class, 'revert_transfer'])->name('revert_transfer');
 Route::get('download_students_pdf/{subclassID}', [ManageStudentController::class, 'download_students_pdf'])->name('download_students_pdf');
 Route::get('get_subclasses_for_school', [ManageClassessController::class, 'get_subclasses_for_school'])->name('get_subclasses_for_school');
@@ -418,8 +442,11 @@ Route::post('send_control_numbers_sms', [FeesController::class, 'send_control_nu
 Route::post('resend_control_number/{paymentID}', [FeesController::class, 'resend_control_number'])->name('resend_control_number');
 Route::post('update_payment_status/{paymentID}', [FeesController::class, 'update_payment_status'])->name('update_payment_status');
 Route::get('export_payment_invoice_pdf/{studentID}', [FeesController::class, 'exportPaymentInvoicePDF'])->name('export_payment_invoice_pdf');
+Route::post('export_filtered_payments_pdf', [FeesController::class, 'exportFilteredPaymentsPDF'])->name('export_filtered_payments_pdf');
 Route::post('record_payment', [FeesController::class, 'record_payment'])->name('record_payment');
 Route::get('get_payment_records', [FeesController::class, 'get_payment_records'])->name('get_payment_records');
+Route::post('update_payment_record', [FeesController::class, 'update_payment_record'])->name('update_payment_record');
+Route::post('delete_payment_record', [FeesController::class, 'delete_payment_record'])->name('delete_payment_record');
 
 //sms notification
 // SMS Notification Routes

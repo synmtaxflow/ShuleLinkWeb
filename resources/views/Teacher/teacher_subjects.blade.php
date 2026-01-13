@@ -896,7 +896,9 @@ function editResults(classSubjectID) {
                                     if (exam.enter_result === true || exam.enter_result === 1) {
                                         const statusText = exam.status === 'awaiting_results' ? ' (Awaiting Results)' :
                                                           exam.status === 'ongoing' ? ' (Ongoing)' : ' (Results Available)';
-                                        html += `<option value="${exam.examID}" data-status="${exam.status}">${exam.exam_name} (${exam.year})${statusText}</option>`;
+                                        const termClosedText = exam.is_term_closed ? ' (Term Closed - Not Editable)' : '';
+                                        const disabledAttr = exam.is_term_closed ? 'disabled style="background-color: #f0f0f0; color: #999;"' : '';
+                                        html += `<option value="${exam.examID}" data-status="${exam.status}" data-term-closed="${exam.is_term_closed}" ${disabledAttr}>${exam.exam_name} (${exam.year})${statusText}${termClosedText}</option>`;
                                     }
                                 });
                             }
@@ -1104,7 +1106,9 @@ function addResults(classSubjectID, isEdit = false) {
                             if (exam.enter_result === true || exam.enter_result === 1) {
                                 const statusText = exam.status === 'awaiting_results' ? ' (Awaiting Results)' :
                                                   exam.status === 'ongoing' ? ' (Ongoing)' : ' (Results Available)';
-                                html += `<option value="${exam.examID}" data-status="${exam.status}">${exam.exam_name} (${exam.year})${statusText}</option>`;
+                                const termClosedText = exam.is_term_closed ? ' (Term Closed - Not Editable)' : '';
+                                const disabledAttr = exam.is_term_closed ? 'disabled style="background-color: #f0f0f0; color: #999;"' : '';
+                                html += `<option value="${exam.examID}" data-status="${exam.status}" data-term-closed="${exam.is_term_closed}" ${disabledAttr}>${exam.exam_name} (${exam.year})${statusText}${termClosedText}</option>`;
                             }
                         });
                     }
@@ -1222,6 +1226,19 @@ $(document).on('submit', '#resultsForm', function(e) {
 
     const classSubjectID = $('#class_subject_id').val();
     const examID = $('#exam_id').val();
+
+    // Check if selected exam is in a closed term
+    const selectedExam = $('#exam_id option:selected');
+    const isTermClosed = selectedExam.data('term-closed');
+    if (isTermClosed) {
+        Swal.fire({
+            title: 'Access Denied!',
+            text: 'You cannot edit results for this examination. The term has been closed.',
+            icon: 'error',
+            confirmButtonColor: '#940000'
+        });
+        return false;
+    }
 
     // Check only if form is disabled (which happens if enter_result is false)
     const formDisabled = $('#resultsForm button[type="submit"]').prop('disabled');

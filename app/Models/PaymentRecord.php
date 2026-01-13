@@ -18,6 +18,7 @@ class PaymentRecord extends Model
         'reference_number',
         'payment_date',
         'payment_source',
+        'bank_name',
         'notes',
     ];
 

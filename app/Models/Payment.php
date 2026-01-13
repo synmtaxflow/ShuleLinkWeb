@@ -14,6 +14,7 @@ class Payment extends Model
 
     protected $fillable = [
         'schoolID',
+        'academic_yearID',
         'studentID',
         'feeID',
         'fee_type',
@@ -56,5 +57,10 @@ class Payment extends Model
     public function paymentRecords()
     {
         return $this->hasMany(PaymentRecord::class, 'paymentID', 'paymentID');
+    }
+
+    public function academicYear()
+    {
+        return $this->belongsTo(AcademicYear::class, 'academic_yearID', 'academic_yearID');
     }
 }

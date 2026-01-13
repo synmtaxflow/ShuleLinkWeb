@@ -206,6 +206,7 @@
                         <li><a href="{{ route('timeTable') }}" class="nav-link"><i class="fa fa-clock-o"></i> Time Tables Management</a></li>
                         <li><a href="{{ route('admin.calendar') }}" class="nav-link"><i class="fa fa-calendar"></i> Calendar Management</a></li>
                         <li><a href="{{ route('admin.schemeOfWork') }}" class="nav-link"><i class="fa fa-book"></i> Scheme of Work</a></li>
+                        <li><a href="{{ route('admin.academicYears') }}" class="nav-link"><i class="fa fa-calendar-check-o"></i> Academic Years</a></li>
                         <li><a href="#" class="nav-link"><i class="fa fa-lightbulb-o"></i> Suggestions Management</a></li>
                         <li><a href="#" class="nav-link"><i class="fa fa-exclamation-triangle"></i> Incidence Management</a></li>
                         <li><a href="#" class="nav-link"><i class="fa fa-line-chart"></i> Performance Management</a></li>

@@ -531,15 +531,16 @@
                                         <option value="FORM FIVE" {{ in_array('FORM FIVE', $existingClassNames ?? []) ? 'disabled style="background-color: #e9ecef; color: #6c757d;"' : '' }}>FORM FIVE @if(in_array('FORM FIVE', $existingClassNames ?? [])) (Already Exists) @endif</option>
                                         <option value="FORM SIX" {{ in_array('FORM SIX', $existingClassNames ?? []) ? 'disabled style="background-color: #e9ecef; color: #6c757d;"' : '' }}>FORM SIX @if(in_array('FORM SIX', $existingClassNames ?? [])) (Already Exists) @endif</option>
                                     @elseif(isset($school_details) && $school_details->school_type == 'Primary')
-                                        <option value="Nursery" {{ in_array('Nursery', $existingClassNames ?? []) ? 'disabled style="background-color: #e9ecef; color: #6c757d;"' : '' }}>Nursery @if(in_array('Nursery', $existingClassNames ?? [])) (Already Exists) @endif</option>
-                                        <option value="Baby_Class" {{ in_array('Baby_Class', $existingClassNames ?? []) ? 'disabled style="background-color: #e9ecef; color: #6c757d;"' : '' }}>Baby Class @if(in_array('Baby_Class', $existingClassNames ?? [])) (Already Exists) @endif</option>
-                                        <option value="Standard1" {{ in_array('Standard1', $existingClassNames ?? []) ? 'disabled style="background-color: #e9ecef; color: #6c757d;"' : '' }}>Standard 1 @if(in_array('Standard1', $existingClassNames ?? [])) (Already Exists) @endif</option>
-                                        <option value="Standard2" {{ in_array('Standard2', $existingClassNames ?? []) ? 'disabled style="background-color: #e9ecef; color: #6c757d;"' : '' }}>Standard 2 @if(in_array('Standard2', $existingClassNames ?? [])) (Already Exists) @endif</option>
-                                        <option value="Standard3" {{ in_array('Standard3', $existingClassNames ?? []) ? 'disabled style="background-color: #e9ecef; color: #6c757d;"' : '' }}>Standard 3 @if(in_array('Standard3', $existingClassNames ?? [])) (Already Exists) @endif</option>
-                                        <option value="Standard4" {{ in_array('Standard4', $existingClassNames ?? []) ? 'disabled style="background-color: #e9ecef; color: #6c757d;"' : '' }}>Standard 4 @if(in_array('Standard4', $existingClassNames ?? [])) (Already Exists) @endif</option>
-                                        <option value="Standard5" {{ in_array('Standard5', $existingClassNames ?? []) ? 'disabled style="background-color: #e9ecef; color: #6c757d;"' : '' }}>Standard 5 @if(in_array('Standard5', $existingClassNames ?? [])) (Already Exists) @endif</option>
-                                        <option value="Standard6" {{ in_array('Standard6', $existingClassNames ?? []) ? 'disabled style="background-color: #e9ecef; color: #6c757d;"' : '' }}>Standard 6 @if(in_array('Standard6', $existingClassNames ?? [])) (Already Exists) @endif</option>
-                                        <option value="Standard7" {{ in_array('Standard7', $existingClassNames ?? []) ? 'disabled style="background-color: #e9ecef; color: #6c757d;"' : '' }}>Standard 7 @if(in_array('Standard7', $existingClassNames ?? [])) (Already Exists) @endif</option>
+                                        <option value="baby_class" {{ in_array('baby_class', $existingClassNames ?? []) ? 'disabled style="background-color: #e9ecef; color: #6c757d;"' : '' }}>baby_class @if(in_array('baby_class', $existingClassNames ?? [])) (Already Exists) @endif</option>
+                                        <option value="NURSERY1" {{ in_array('NURSERY1', $existingClassNames ?? []) ? 'disabled style="background-color: #e9ecef; color: #6c757d;"' : '' }}>NURSERY1 @if(in_array('NURSERY1', $existingClassNames ?? [])) (Already Exists) @endif</option>
+                                        <option value="NURSERY2" {{ in_array('NURSERY2', $existingClassNames ?? []) ? 'disabled style="background-color: #e9ecef; color: #6c757d;"' : '' }}>NURSERY2 @if(in_array('NURSERY2', $existingClassNames ?? [])) (Already Exists) @endif</option>
+                                        <option value="STANDARD1" {{ in_array('STANDARD1', $existingClassNames ?? []) ? 'disabled style="background-color: #e9ecef; color: #6c757d;"' : '' }}>STANDARD1 @if(in_array('STANDARD1', $existingClassNames ?? [])) (Already Exists) @endif</option>
+                                        <option value="STANDARD2" {{ in_array('STANDARD2', $existingClassNames ?? []) ? 'disabled style="background-color: #e9ecef; color: #6c757d;"' : '' }}>STANDARD2 @if(in_array('STANDARD2', $existingClassNames ?? [])) (Already Exists) @endif</option>
+                                        <option value="STANDARD3" {{ in_array('STANDARD3', $existingClassNames ?? []) ? 'disabled style="background-color: #e9ecef; color: #6c757d;"' : '' }}>STANDARD3 @if(in_array('STANDARD3', $existingClassNames ?? [])) (Already Exists) @endif</option>
+                                        <option value="STANDARD4" {{ in_array('STANDARD4', $existingClassNames ?? []) ? 'disabled style="background-color: #e9ecef; color: #6c757d;"' : '' }}>STANDARD4 @if(in_array('STANDARD4', $existingClassNames ?? [])) (Already Exists) @endif</option>
+                                        <option value="STANDARD5" {{ in_array('STANDARD5', $existingClassNames ?? []) ? 'disabled style="background-color: #e9ecef; color: #6c757d;"' : '' }}>STANDARD5 @if(in_array('STANDARD5', $existingClassNames ?? [])) (Already Exists) @endif</option>
+                                        <option value="STANDARD6" {{ in_array('STANDARD6', $existingClassNames ?? []) ? 'disabled style="background-color: #e9ecef; color: #6c757d;"' : '' }}>STANDARD6 @if(in_array('STANDARD6', $existingClassNames ?? [])) (Already Exists) @endif</option>
+                                        <option value="STANDARD7" {{ in_array('STANDARD7', $existingClassNames ?? []) ? 'disabled style="background-color: #e9ecef; color: #6c757d;"' : '' }}>STANDARD7 @if(in_array('STANDARD7', $existingClassNames ?? [])) (Already Exists) @endif</option>
                                     @endif
                                 </select>
                                 <small class="text-muted">Select the class name. Classes that already exist are disabled (grayed out).</small>
@@ -1332,15 +1333,16 @@
                                 <option value="FORM FIVE" data-original-value="FORM FIVE">FORM FIVE</option>
                                 <option value="FORM SIX" data-original-value="FORM SIX">FORM SIX</option>
                             @elseif(isset($school_details) && $school_details->school_type == 'Primary')
-                                <option value="Nursery" data-original-value="Nursery">Nursery</option>
-                                <option value="Baby_Class" data-original-value="Baby_Class">Baby Class</option>
-                                <option value="Standard1" data-original-value="Standard1">Standard 1</option>
-                                <option value="Standard2" data-original-value="Standard2">Standard 2</option>
-                                <option value="Standard3" data-original-value="Standard3">Standard 3</option>
-                                <option value="Standard4" data-original-value="Standard4">Standard 4</option>
-                                <option value="Standard5" data-original-value="Standard5">Standard 5</option>
-                                <option value="Standard6" data-original-value="Standard6">Standard 6</option>
-                                <option value="Standard7" data-original-value="Standard7">Standard 7</option>
+                                <option value="baby_class" data-original-value="baby_class">baby_class</option>
+                                <option value="NURSERY1" data-original-value="NURSERY1">NURSERY1</option>
+                                <option value="NURSERY2" data-original-value="NURSERY2">NURSERY2</option>
+                                <option value="STANDARD1" data-original-value="STANDARD1">STANDARD1</option>
+                                <option value="STANDARD2" data-original-value="STANDARD2">STANDARD2</option>
+                                <option value="STANDARD3" data-original-value="STANDARD3">STANDARD3</option>
+                                <option value="STANDARD4" data-original-value="STANDARD4">STANDARD4</option>
+                                <option value="STANDARD5" data-original-value="STANDARD5">STANDARD5</option>
+                                <option value="STANDARD6" data-original-value="STANDARD6">STANDARD6</option>
+                                <option value="STANDARD7" data-original-value="STANDARD7">STANDARD7</option>
                             @endif
                         </select>
                         <small class="text-muted">You can only change to a class name that doesn't already exist.</small>

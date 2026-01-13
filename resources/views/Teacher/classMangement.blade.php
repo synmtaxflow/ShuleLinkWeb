@@ -62,6 +62,15 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+<!-- jQuery - Load first -->
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<!-- Bootstrap 5 JS bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <div class="container-fluid mt-3">
     <!-- Page Header -->
@@ -915,28 +924,8 @@
     </div>
 </div>
 
-<!-- View Student Details Modal -->
-<div class="modal fade" id="viewStudentDetailsModal" tabindex="-1" role="dialog" aria-labelledby="viewStudentDetailsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-primary-custom text-white">
-                <h5 class="modal-title" id="viewStudentDetailsModalLabel">
-                    <i class="bi bi-person-circle"></i> Student Details
-                </h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body" id="studentDetailsContent">
-                <!-- Student details will be loaded here -->
-            </div>
-            <div class="modal-footer">
-                <div class="action-buttons"></div>
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- View Student Details Modal - Included from partial blade -->
+@include('student_registration.view-student-modal')
 
 <!-- Edit Student Modal -->
 <div class="modal fade" id="editStudentModal" tabindex="-1" role="dialog" aria-labelledby="editStudentModalLabel" aria-hidden="true">
@@ -1532,6 +1521,9 @@
 
 @include('includes.footer')
 
+<!-- Include Student Registration Modal (Steps) -->
+@include('student_registration.modal')
+
 <script>
 (function($) {
     'use strict';
@@ -1565,21 +1557,307 @@
         });
 
         // Register Student Button
+        // Register Student Button - Open registration modal (steps) with pre-selected subclass
         $('#registerStudentBtn').on('click', function() {
-            $('#registerStudentModal').modal('show');
-            loadParentsDropdown();
-            // Load subclasses for coordinator view
-            if (isCoordinatorView && classID) {
-                loadSubclassesForCoordinator(classID);
+            if (subclassID) {
+                // Get subclass name for display
+                let subclassName = '{{ isset($subclassDisplayName) ? $subclassDisplayName : "" }}';
+                if (!subclassName) {
+                    subclassName = 'Class'; // Fallback
+                }
+                
+                // Set subclassID and name in the registration modal
+                const selectedSubclassIDInput = document.getElementById('selectedSubclassID');
+                const selectedSubclassNameDisplay = document.getElementById('selectedSubclassName');
+                
+                if (selectedSubclassIDInput) {
+                    selectedSubclassIDInput.value = subclassID;
+                }
+                if (selectedSubclassNameDisplay) {
+                    selectedSubclassNameDisplay.textContent = subclassName.toUpperCase();
+                }
+                
+                // Open registration modal
+                setTimeout(function() {
+                    const modal = document.getElementById('registrationModal');
+                    if (modal) {
+                        if (window.bootstrap && typeof bootstrap.Modal === 'function') {
+                            const bsModal = new bootstrap.Modal(modal, {
+                                backdrop: 'static',
+                                keyboard: false
+                            });
+                            bsModal.show();
+                        } else if (window.jQuery && typeof jQuery.fn.modal === 'function') {
+                            jQuery(modal).modal('show');
+                        } else {
+                            // Manual fallback
+                            modal.style.display = 'block';
+                            modal.classList.add('show');
+                            document.body.classList.add('modal-open');
+                            const backdrop = document.createElement('div');
+                            backdrop.className = 'modal-backdrop fade show';
+                            document.body.appendChild(backdrop);
+                        }
+                        
+                        // Focus first input after modal is shown
+                        setTimeout(() => {
+                            const firstInput = modal.querySelector('input[name="first_name"]');
+                            if (firstInput) firstInput.focus();
+                        }, 300);
+                    }
+                }, 100);
+            } else {
+                Swal.fire('Error', 'Class ID not found', 'error');
             }
-            // Clear admission number field (will be auto-generated)
-            $('#admission_number').val('');
-            // Reset health checkboxes
-            $('#tc_is_disabled').prop('checked', false);
-            $('#tc_has_epilepsy').prop('checked', false);
-            $('#tc_has_allergies').prop('checked', false);
-            $('#tc_allergies_details').val('');
-            $('#tcAllergiesDetailsContainer').hide();
+        });
+        
+        // Function to load registration form data with pre-selected subclass
+        function loadRegistrationFormData(preSelectSubclassID) {
+            // Load subclasses
+            $.ajax({
+                url: '{{ route("get_subclasses_for_school") }}',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        let subclassSelect = $('#addStudentModal #subclassID');
+                        
+                        // Destroy existing Select2 if it exists
+                        if (subclassSelect.hasClass('select2-hidden-accessible')) {
+                            subclassSelect.select2('destroy');
+                        }
+                        
+                        subclassSelect.html('<option value="">Choose a class...</option>');
+                        
+                        // Filter subclasses if preSelectSubclassID is provided
+                        let filteredSubclasses = response.subclasses;
+                        if (preSelectSubclassID) {
+                            filteredSubclasses = response.subclasses.filter(function(subclass) {
+                                return subclass.subclassID == preSelectSubclassID;
+                            });
+                        }
+                        
+                        filteredSubclasses.forEach(function(subclass) {
+                            const displayName = subclass.display_name || (subclass.class_name + ' ' + subclass.subclass_name) || subclass.subclass_name;
+                            subclassSelect.append('<option value="' + subclass.subclassID + '">' + displayName + '</option>');
+                        });
+                        
+                        // Initialize Select2
+                        subclassSelect.select2({
+                            theme: 'bootstrap-5',
+                            placeholder: preSelectSubclassID ? 'Class (Pre-selected)' : 'Search and select a class...',
+                            allowClear: !preSelectSubclassID,
+                            width: '100%',
+                            dropdownParent: $('#addStudentModal')
+                        });
+                        
+                        // Pre-select subclass if provided
+                        if (preSelectSubclassID) {
+                            subclassSelect.val(preSelectSubclassID).trigger('change');
+                            subclassSelect.prop('disabled', true); // Disable selection for teacher
+                        }
+                    }
+                }
+            });
+            
+            // Load parents
+            $.ajax({
+                url: '{{ route("get_parents") }}',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        let parentSelect = $('#addStudentModal #parentID');
+                        parentSelect.html('<option value="">Choose a parent...</option>');
+                        response.parents.forEach(function(parent) {
+                            let fullName = (parent.first_name || '') + ' ' + (parent.middle_name || '') + ' ' + (parent.last_name || '');
+                            fullName = fullName.trim().replace(/\s+/g, ' ');
+                            let displayText = fullName + (parent.phone ? ' (' + parent.phone + ')' : '');
+                            parentSelect.append('<option value="' + parent.parentID + '">' + displayText + '</option>');
+                        });
+                        
+                        if (parentSelect.length) {
+                            if (parentSelect.hasClass('select2-hidden-accessible')) {
+                                parentSelect.select2('destroy');
+                            }
+                            
+                            parentSelect.select2({
+                                theme: 'bootstrap-5',
+                                placeholder: 'Search and select a parent...',
+                                allowClear: true,
+                                width: '100%',
+                                dropdownParent: $('#addStudentModal')
+                            });
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Show/hide allergies details based on checkbox (for addStudentModal)
+        $(document).on('change', '#addStudentModal #has_allergies', function() {
+            if ($(this).is(':checked')) {
+                $('#addStudentModal #allergiesDetailsContainer').slideDown();
+            } else {
+                $('#addStudentModal #allergiesDetailsContainer').slideUp();
+                $('#addStudentModal #allergies_details').val('');
+            }
+        });
+        
+        // Register Student Form Submission Handler (for addStudentModal)
+        $(document).on('submit', '#addStudentForm', function(e) {
+            e.preventDefault();
+
+            // Client-side validation
+            let first_name = $('#addStudentModal #first_name').val().trim();
+            let last_name = $('#addStudentModal #last_name').val().trim();
+            let gender = $('#addStudentModal #gender').val();
+            let subclassID = $('#addStudentModal #subclassID').val();
+            let admission_number = $('#addStudentModal #admission_number').val().trim();
+
+            // Clear previous error messages
+            $('#addStudentModal .text-danger.validation-error').remove();
+            $('#addStudentModal .form-control, #addStudentModal .form-select').removeClass('is-invalid');
+
+            let hasErrors = false;
+
+            // Validate required fields
+            if (!first_name) {
+                $('#addStudentModal #first_name').addClass('is-invalid').after('<div class="text-danger validation-error small">First name is required</div>');
+                hasErrors = true;
+            }
+
+            if (!last_name) {
+                $('#addStudentModal #last_name').addClass('is-invalid').after('<div class="text-danger validation-error small">Last name is required</div>');
+                hasErrors = true;
+            }
+
+            if (!gender) {
+                $('#addStudentModal #gender').addClass('is-invalid').after('<div class="text-danger validation-error small">Gender is required</div>');
+                hasErrors = true;
+            }
+
+            if (!subclassID) {
+                $('#addStudentModal #subclassID').addClass('is-invalid').after('<div class="text-danger validation-error small">Class is required</div>');
+                hasErrors = true;
+            }
+
+            if (hasErrors) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Validation Error',
+                    text: 'Please fill in all required fields',
+                    confirmButtonColor: '#940000'
+                });
+                return;
+            }
+
+            let formData = new FormData(this);
+            let submitBtn = $(this).find('button[type="submit"]');
+            let originalBtnText = submitBtn.html();
+
+            // Show loading state
+            submitBtn.prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> Registering...');
+
+            $.ajax({
+                url: '{{ route("save_student") }}',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                dataType: 'json',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                beforeSend: function() {
+                    // Show loading overlay
+                    $('body').append('<div id="formLoadingOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center;"><div style="background: white; padding: 30px; border-radius: 10px; text-align: center;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-3">Registering student...</p></div></div>');
+                },
+                success: function(response) {
+                    $('#formLoadingOverlay').remove();
+                    submitBtn.prop('disabled', false).html(originalBtnText);
+
+                    if (response.success) {
+                        // Close the registration modal first
+                        if ($('#addStudentModal #parentID').hasClass('select2-hidden-accessible')) {
+                            $('#addStudentModal #parentID').select2('destroy');
+                        }
+                        if ($('#addStudentModal #subclassID').hasClass('select2-hidden-accessible')) {
+                            $('#addStudentModal #subclassID').select2('destroy');
+                        }
+                        
+                        // Close modal using Bootstrap
+                        const modalElement = document.getElementById('addStudentModal');
+                        if (modalElement) {
+                            if (window.bootstrap && typeof bootstrap.Modal !== 'undefined') {
+                                const bsModal = bootstrap.Modal.getInstance(modalElement);
+                                if (bsModal) {
+                                    bsModal.hide();
+                                }
+                            } else if (window.jQuery && typeof jQuery.fn.modal !== 'undefined') {
+                                jQuery(modalElement).modal('hide');
+                            }
+                        }
+                        
+                        $('#addStudentForm')[0].reset();
+                        $('#addStudentModal .is-invalid').removeClass('is-invalid');
+                        $('#addStudentModal .validation-error').remove();
+
+                        // Show success message with fingerprintID
+                        var fingerprintId = response.fingerprint_id || '';
+                        Swal.fire({
+                            title: 'Student Registered Successfully!',
+                            html: '<div class="text-center">' +
+                                  '<p class="mb-3">Student registered successfully</p>' +
+                                  '<p class="mb-0">Please continue register user in fingerprint device ID <strong style="font-size: 1.2rem; color: #940000;">' + fingerprintId + '</strong></p>' +
+                                  '</div>',
+                            icon: 'success',
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#940000',
+                            width: '500px'
+                        }).then(() => {
+                            // Reload page or refresh students list
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error!',
+                            text: response.message || 'Failed to register student',
+                            confirmButtonColor: '#940000'
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    $('#formLoadingOverlay').remove();
+                    submitBtn.prop('disabled', false).html(originalBtnText);
+
+                    let errors = xhr.responseJSON?.errors || {};
+                    let errorMessage = xhr.responseJSON?.message || 'Failed to register student';
+
+                    // Handle admission number duplicate error
+                    if (xhr.responseJSON?.errors?.admission_number) {
+                        $('#addStudentModal #admission_number').addClass('is-invalid').after('<div class="text-danger validation-error small">' + xhr.responseJSON.errors.admission_number[0] + '</div>');
+                    }
+
+                    if (Object.keys(errors).length > 0) {
+                        let errorList = Object.entries(errors).map(([field, msg]) => {
+                            if (Array.isArray(msg)) {
+                                return msg[0];
+                            }
+                            return msg;
+                        }).join('<br>');
+                        errorMessage = errorList;
+                    }
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Validation Error!',
+                        html: errorMessage,
+                        confirmButtonColor: '#940000'
+                    });
+                }
+            });
         });
 
         // Register Parent Button
@@ -3837,99 +4115,360 @@
             });
         }
 
-        // View Student Details
+        // View Student Details - Using same handler as manage_student.blade.php
         $(document).on('click', '.view-student-btn', function() {
-            var studentID = $(this).data('student-id');
+            let studentID = $(this).data('student-id');
+            let currentStudentID = studentID; // Store for use in other functions
+
             $.ajax({
-                url: '{{ url("get_student") }}/' + studentID,
+                url: '{{ route("get_student_details", ":id") }}'.replace(':id', studentID),
                 type: 'GET',
                 dataType: 'json',
                 success: function(response) {
-                    if (response.success && response.student) {
-                        var student = response.student;
-                        var photoHtml = '';
-                        if (student.photo) {
-                            photoHtml = '<div class="col-md-12 text-center mb-3">' +
-                                '<img src="' + student.photo + '" alt="Student Photo" class="img-fluid rounded" style="max-width: 200px; max-height: 200px;">' +
-                                '</div>';
+                    if (response.success) {
+                        let student = response.student;
+                        
+                        // Create tab structure
+                        let html = '<ul class="nav nav-tabs mb-3" id="studentDetailsTabs" role="tablist" style="border-radius: 0;">';
+                        html += '<li class="nav-item" role="presentation">';
+                        html += '<button class="nav-link active" id="particulars-tab" data-bs-toggle="tab" data-bs-target="#particulars-pane" type="button" role="tab" aria-controls="particulars-pane" aria-selected="true">';
+                        html += '<i class="bi bi-person-vcard"></i> Student Particulars';
+                        html += '</button>';
+                        html += '</li>';
+                        html += '<li class="nav-item" role="presentation">';
+                        html += '<button class="nav-link" id="academic-tab" data-bs-toggle="tab" data-bs-target="#academic-pane" type="button" role="tab" aria-controls="academic-pane" aria-selected="false">';
+                        html += '<i class="bi bi-book"></i> Academic Details';
+                        html += '</button>';
+                        html += '</li>';
+                        html += '</ul>';
+                        
+                        html += '<div class="tab-content" id="studentDetailsTabContent">';
+                        
+                        // Tab 1: Student Particulars
+                        html += '<div class="tab-pane fade show active" id="particulars-pane" role="tabpanel" aria-labelledby="particulars-tab">';
+                        html += '<div class="school-details-card" style="border-radius: 0;">';
+                        html += '<div class="school-header">';
+                        html += '<div class="d-flex align-items-center">';
+                        html += '<div class="school-logo-preview me-3">';
+                        html += '<img src="' + student.photo + '" alt="' + student.full_name + '">';
+                        html += '</div>';
+                        html += '<div>';
+                        // Check for bad health conditions - support both boolean and integer values
+                        let hasBadHealth = false;
+                        let healthConditions = [];
+                        
+                        // Check is_disabled (can be true, 1, or "1")
+                        if (student.is_disabled === true || student.is_disabled == 1 || student.is_disabled === "1") {
+                            hasBadHealth = true;
+                            healthConditions.push('Disabled');
                         }
-                        var statusBadge = '';
-                        if (student.status === 'Active') {
-                            statusBadge = '<span class="badge badge-success">Active</span>';
-                        } else if (student.status === 'Transferred') {
-                            statusBadge = '<span class="badge badge-warning">Transferred</span>';
-                        } else {
-                            statusBadge = '<span class="badge badge-secondary">' + (student.status || 'Active') + '</span>';
+                        
+                        // Check has_epilepsy (can be true, 1, or "1")
+                        if (student.has_epilepsy === true || student.has_epilepsy == 1 || student.has_epilepsy === "1") {
+                            hasBadHealth = true;
+                            healthConditions.push('Epilepsy/Seizure Disorder');
                         }
-
-                        var html = photoHtml + '<div class="row">' +
-                            '<div class="col-md-6"><strong>Admission Number:</strong></div><div class="col-md-6">' + (student.admission_number || 'N/A') + '</div>' +
-                            '<div class="col-md-6"><strong>Full Name:</strong></div><div class="col-md-6">' +
-                                (student.first_name || '') + ' ' + (student.middle_name || '') + ' ' + (student.last_name || '') + '</div>' +
-                            '<div class="col-md-6"><strong>Gender:</strong></div><div class="col-md-6">' + (student.gender || 'N/A') + '</div>' +
-                            '<div class="col-md-6"><strong>Date of Birth:</strong></div><div class="col-md-6">' + (student.date_of_birth || 'N/A') + '</div>' +
-                            '<div class="col-md-6"><strong>Admission Date:</strong></div><div class="col-md-6">' + (student.admission_date || 'N/A') + '</div>' +
-                            '<div class="col-md-6"><strong>Parent:</strong></div><div class="col-md-6">' + (student.parent_name || 'Not Assigned') + '</div>' +
-                            '<div class="col-md-6"><strong>Address:</strong></div><div class="col-md-6">' + (student.address || 'N/A') + '</div>' +
-                            '<div class="col-md-6"><strong>Status:</strong></div><div class="col-md-6">' + statusBadge + '</div>' +
-                        '</div>';
-                        $('#studentDetailsContent').html(html);
-
-                        // Show/hide action buttons based on student status
-                        var actionButtons = $('#viewStudentDetailsModal .modal-footer .action-buttons');
-                        if (actionButtons.length === 0) {
-                            // Create action buttons container if it doesn't exist
-                            actionButtons = $('<div class="action-buttons"></div>');
-                            $('#viewStudentDetailsModal .modal-footer').prepend(actionButtons);
+                        
+                        // Check has_allergies (can be true, 1, or "1")
+                        if (student.has_allergies === true || student.has_allergies == 1 || student.has_allergies === "1") {
+                            hasBadHealth = true;
+                            healthConditions.push('Allergies');
                         }
-                        actionButtons.empty();
-
-                        // Store student ID for action buttons
-                        $('#viewStudentDetailsModal').data('student-id', student.studentID);
-                        $('#viewStudentDetailsModal').data('student-status', student.status);
-                        $('#viewStudentDetailsModal').data('old-subclass-id', student.old_subclassID);
-
-                        // Show activate/revert buttons for transferred students
-                        if (student.status === 'Transferred') {
-                            actionButtons.html(
-                                '<button type="button" class="btn btn-success activate-student-modal-btn" data-student-id="' + student.studentID + '">' +
-                                '<i class="bi bi-check-circle"></i> Activate Student</button> '
-                            );
-                            if (student.old_subclassID) {
-                                actionButtons.append(
-                                    '<button type="button" class="btn btn-secondary revert-transfer-modal-btn" data-student-id="' + student.studentID + '">' +
-                                    '<i class="bi bi-arrow-left-circle"></i> Revert to Previous Class</button>'
-                                );
+                        
+                        // Check has_disability (can be true, 1, or "1")
+                        if (student.has_disability === true || student.has_disability == 1 || student.has_disability === "1") {
+                            hasBadHealth = true;
+                            if (!healthConditions.includes('Disabled')) {
+                                healthConditions.push('Disability');
                             }
                         }
                         
-                        // Add Export buttons (PDF and Excel)
-                        actionButtons.append(
-                            '<button type="button" class="btn btn-danger export-student-pdf-btn ml-2" data-student-id="' + student.studentID + '" title="Export to PDF">' +
-                            '<i class="bi bi-file-pdf"></i> Export PDF</button> ' +
-                            '<button type="button" class="btn btn-success export-student-excel-btn ml-2" data-student-id="' + student.studentID + '" title="Export to Excel">' +
-                            '<i class="bi bi-file-excel"></i> Export Excel</button>'
-                        );
+                        // Check has_chronic_illness (can be true, 1, or "1")
+                        if (student.has_chronic_illness === true || student.has_chronic_illness == 1 || student.has_chronic_illness === "1") {
+                            hasBadHealth = true;
+                            healthConditions.push('Chronic Illness');
+                        }
                         
-                        // Store student data globally for export
-                        window.currentStudentDetailsData = {
-                            studentID: student.studentID,
-                            admission_number: student.admission_number || 'N/A',
-                            full_name: (student.first_name || '') + ' ' + (student.middle_name || '') + ' ' + (student.last_name || ''),
-                            first_name: student.first_name || '',
-                            middle_name: student.middle_name || '',
-                            last_name: student.last_name || '',
-                            gender: student.gender || 'N/A',
-                            date_of_birth: student.date_of_birth || 'N/A',
-                            admission_date: student.admission_date || 'N/A',
-                            parent_name: student.parent_name || 'Not Assigned',
-                            address: student.address || 'N/A',
-                            status: student.status || 'Active',
-                            photo: student.photo || null
-                        };
+                        let healthAlertIcon = '';
+                        if (hasBadHealth) {
+                            healthAlertIcon = ' <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 1.2rem;" title="Health Condition Alert - This student has health conditions: ' + healthConditions.join(', ') + '"></i>';
+                        }
+                        
+                        html += '<h3 class="school-title">' + student.full_name + healthAlertIcon + '</h3>';
+                        html += '<small class="text-muted">Admission: ' + student.admission_number + '</small>';
+                        html += '</div>';
+                        html += '</div>';
+                        html += '<span class="badge bg-' + (student.status === 'Active' ? 'success' : 'secondary') + '">' + student.status + '</span>';
+                        html += '</div>';
 
-                        $('#viewStudentDetailsModal').modal('show');
+                        html += '<div class="school-info-grid">';
+                        html += '<div class="info-item"><i class="bi bi-gender-ambiguous"></i><div class="info-item-content"><div class="info-item-label">Gender</div><div class="info-item-value">' + student.gender + '</div></div></div>';
+                        html += '<div class="info-item"><i class="bi bi-calendar-event"></i><div class="info-item-content"><div class="info-item-label">Date of Birth</div><div class="info-item-value">' + student.date_of_birth + '</div></div></div>';
+                        html += '<div class="info-item"><i class="bi bi-calendar-check"></i><div class="info-item-content"><div class="info-item-label">Admission Date</div><div class="info-item-value">' + student.admission_date + '</div></div></div>';
+                        html += '<div class="info-item"><i class="bi bi-book"></i><div class="info-item-content"><div class="info-item-label">Class</div><div class="info-item-value">' + student.class + '</div></div></div>';
+                        html += '<div class="info-item"><i class="bi bi-geo-alt"></i><div class="info-item-content"><div class="info-item-label">Address</div><div class="info-item-value">' + student.address + '</div></div></div>';
+
+                        // Health Information Section - Rebuild health conditions array
+                        let healthConditionsList = [];
+                        
+                        // Check is_disabled (can be true, 1, or "1")
+                        if (student.is_disabled === true || student.is_disabled == 1 || student.is_disabled === "1") {
+                            let disabledText = '<span class="badge bg-danger"><i class="bi bi-exclamation-triangle-fill"></i> Disabled</span>';
+                            if (student.disability_details) {
+                                disabledText += '<br><small class="text-danger mt-1 d-block">Details: ' + student.disability_details + '</small>';
+                            }
+                            healthConditionsList.push(disabledText);
+                        }
+                        
+                        // Check has_disability (can be true, 1, or "1")
+                        if (student.has_disability === true || student.has_disability == 1 || student.has_disability === "1") {
+                            let disabilityText = '<span class="badge bg-danger"><i class="bi bi-exclamation-triangle-fill"></i> Disability</span>';
+                            if (student.disability_details) {
+                                disabilityText += '<br><small class="text-danger mt-1 d-block">Details: ' + student.disability_details + '</small>';
+                            }
+                            healthConditionsList.push(disabilityText);
+                        }
+                        
+                        // Check has_epilepsy (can be true, 1, or "1")
+                        if (student.has_epilepsy === true || student.has_epilepsy == 1 || student.has_epilepsy === "1") {
+                            healthConditionsList.push('<span class="badge bg-danger"><i class="bi bi-exclamation-triangle-fill"></i> Epilepsy/Seizure Disorder</span>');
+                        }
+                        
+                        // Check has_allergies (can be true, 1, or "1")
+                        if (student.has_allergies === true || student.has_allergies == 1 || student.has_allergies === "1") {
+                            let allergiesText = '<span class="badge bg-danger"><i class="bi bi-exclamation-triangle-fill"></i> Allergies</span>';
+                            if (student.allergies_details) {
+                                allergiesText += '<br><small class="text-danger mt-1 d-block">Details: ' + student.allergies_details + '</small>';
+                            }
+                            healthConditionsList.push(allergiesText);
+                        }
+                        
+                        // Check has_chronic_illness (can be true, 1, or "1")
+                        if (student.has_chronic_illness === true || student.has_chronic_illness == 1 || student.has_chronic_illness === "1") {
+                            let chronicText = '<span class="badge bg-danger"><i class="bi bi-exclamation-triangle-fill"></i> Chronic Illness</span>';
+                            if (student.chronic_illness_details) {
+                                chronicText += '<br><small class="text-danger mt-1 d-block">Details: ' + student.chronic_illness_details + '</small>';
+                            }
+                            healthConditionsList.push(chronicText);
+                        }
+                        
+                        // Check general_health_condition - separate good health from bad health
+                        let generalHealthCondition = '';
+                        let isGoodHealth = false;
+                        if (student.general_health_condition && student.general_health_condition !== 'N/A' && student.general_health_condition.trim() !== '') {
+                            let healthConditionLower = student.general_health_condition.toLowerCase().trim();
+                            // Check if it's a positive/good health condition
+                            if (healthConditionLower === 'good' || healthConditionLower === 'excellent' || healthConditionLower === 'fine' || healthConditionLower === 'healthy') {
+                                isGoodHealth = true;
+                                generalHealthCondition = student.general_health_condition;
+                        } else {
+                                // Bad health condition - add to alert list
+                            healthConditionsList.push('<span class="badge bg-warning text-dark"><i class="bi bi-info-circle-fill"></i> General Health: ' + student.general_health_condition + '</span>');
+                            }
+                        }
+                        
+                        // Display health conditions alert if there are bad conditions
+                        if (healthConditionsList.length > 0) {
+                            html += '<div class="info-item" style="grid-column: 1 / -1; background-color: #fff5f5; border: 2px solid #dc3545; border-radius: 0; padding: 15px;">';
+                            html += '<i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 1.5rem;"></i>';
+                            html += '<div class="info-item-content">';
+                            html += '<div class="info-item-label" style="color: #dc3545; font-weight: 700; font-size: 0.9rem;">HEALTH CONDITIONS ALERT</div>';
+                            html += '<div class="info-item-value mt-2">' + healthConditionsList.join('<br>') + '</div>';
+                            html += '</div>';
+                            html += '</div>';
+                        } else {
+                            // Display good health status (green) ONLY if there are NO bad health conditions
+                            html += '<div class="info-item" style="grid-column: 1 / -1; background-color: #f0f9f0; border: 2px solid #28a745; border-radius: 0; padding: 15px;">';
+                            html += '<i class="bi bi-heart-pulse-fill text-success" style="font-size: 1.5rem;"></i>';
+                            html += '<div class="info-item-content">';
+                            html += '<div class="info-item-label" style="color: #28a745; font-weight: 700; font-size: 0.9rem;">HEALTH STATUS</div>';
+                            if (isGoodHealth && generalHealthCondition) {
+                                html += '<div class="info-item-value mt-2"><span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> ' + generalHealthCondition + '</span></div>';
+                            } else {
+                                html += '<div class="info-item-value mt-2"><span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> Good Health</span></div>';
+                            }
+                            html += '</div>';
+                            html += '</div>';
+                        }
+
+                        // Parent Information
+                        if (student.parent) {
+                            html += '<div class="info-item" style="grid-column: 1 / -1; background-color: #f8f9fa; padding: 15px; border: 1px solid #dee2e6;">';
+                            html += '<i class="bi bi-person-heart text-primary-custom" style="font-size: 1.5rem;"></i>';
+                            html += '<div class="info-item-content">';
+                            html += '<div class="info-item-label" style="font-weight: 700; font-size: 0.9rem; color: #940000;">PARENT INFORMATION</div>';
+                            html += '<div class="row mt-2">';
+                            html += '<div class="col-md-6"><div class="info-item-label">Name</div><div class="info-item-value">' + student.parent.full_name + '</div></div>';
+                            html += '<div class="col-md-6"><div class="info-item-label">Phone</div><div class="info-item-value">' + student.parent.phone + '</div></div>';
+                            html += '<div class="col-md-6"><div class="info-item-label">Email</div><div class="info-item-value">' + student.parent.email + '</div></div>';
+                            html += '<div class="col-md-6"><div class="info-item-label">Occupation</div><div class="info-item-value">' + student.parent.occupation + '</div></div>';
+                            if (student.parent.relationship) {
+                                html += '<div class="col-md-6"><div class="info-item-label">Relationship</div><div class="info-item-value">' + student.parent.relationship + '</div></div>';
+                            }
+                            html += '</div>';
+                            html += '</div>';
+                            html += '</div>';
+                        }
+                        
+                        // Emergency Contact (Next of Kin)
+                        if (student.emergency_contact_name && student.emergency_contact_name !== 'N/A') {
+                            html += '<div class="info-item" style="grid-column: 1 / -1; background-color: #f8f9fa; padding: 15px; border: 1px solid #dee2e6;">';
+                            html += '<i class="bi bi-telephone-forward text-warning" style="font-size: 1.5rem;"></i>';
+                            html += '<div class="info-item-content">';
+                            html += '<div class="info-item-label" style="font-weight: 700; font-size: 0.9rem; color: #940000;">EMERGENCY CONTACT (NEXT OF KIN)</div>';
+                            html += '<div class="row mt-2">';
+                            html += '<div class="col-md-4"><div class="info-item-label">Name</div><div class="info-item-value">' + (student.emergency_contact_name || 'N/A') + '</div></div>';
+                            html += '<div class="col-md-4"><div class="info-item-label">Relationship</div><div class="info-item-value">' + (student.emergency_contact_relationship || 'N/A') + '</div></div>';
+                            html += '<div class="col-md-4"><div class="info-item-label">Phone</div><div class="info-item-value">' + (student.emergency_contact_phone || 'N/A') + '</div></div>';
+                            html += '</div>';
+                            html += '</div>';
+                            html += '</div>';
+                        }
+                        
+                        // Registration Information
+                        if (student.registering_officer_name && student.registering_officer_name !== 'N/A') {
+                            html += '<div class="info-item" style="grid-column: 1 / -1; background-color: #f8f9fa; padding: 15px; border: 1px solid #dee2e6;">';
+                            html += '<i class="bi bi-person-check text-info" style="font-size: 1.5rem;"></i>';
+                            html += '<div class="info-item-content">';
+                            html += '<div class="info-item-label" style="font-weight: 700; font-size: 0.9rem; color: #940000;">REGISTRATION INFORMATION</div>';
+                            html += '<div class="row mt-2">';
+                            html += '<div class="col-md-6"><div class="info-item-label">Registered By</div><div class="info-item-value">' + (student.registering_officer_name || 'N/A') + '</div></div>';
+                            html += '<div class="col-md-6"><div class="info-item-label">Registration Date</div><div class="info-item-value">' + (student.declaration_date || 'N/A') + '</div></div>';
+                            html += '</div>';
+                            html += '</div>';
+                            html += '</div>';
+                        }
+                        
+                        // Additional Student Details
+                        html += '<div class="info-item"><i class="bi bi-card-text"></i><div class="info-item-content"><div class="info-item-label">Birth Certificate Number</div><div class="info-item-value">' + (student.birth_certificate_number || 'N/A') + '</div></div></div>';
+                        html += '<div class="info-item"><i class="bi bi-heart"></i><div class="info-item-content"><div class="info-item-label">Religion</div><div class="info-item-value">' + (student.religion || 'N/A') + '</div></div></div>';
+                        html += '<div class="info-item"><i class="bi bi-globe"></i><div class="info-item-content"><div class="info-item-label">Nationality</div><div class="info-item-value">' + (student.nationality || 'N/A') + '</div></div></div>';
+                        if (student.immunization_details && student.immunization_details !== 'N/A') {
+                            html += '<div class="info-item" style="grid-column: 1 / -1;"><i class="bi bi-shield-check"></i><div class="info-item-content"><div class="info-item-label">Immunization Details</div><div class="info-item-value">' + student.immunization_details + '</div></div></div>';
+                        }
+
+                        html += '</div></div>'; // Close school-details-card
+                        html += '</div>'; // Close particulars-pane
+                        
+                        // Tab 2: Academic Details
+                        html += '<div class="tab-pane fade" id="academic-pane" role="tabpanel" aria-labelledby="academic-tab">';
+                        html += '<div class="p-4" style="border-radius: 0;">';
+                        html += '<div class="mb-4">';
+                        html += '<label class="form-label fw-bold mb-2"><i class="bi bi-calendar"></i> Academic Year</label>';
+                        html += '<select class="form-select" id="academicYearSelector" data-student-id="' + studentID + '" style="border-radius: 0;">';
+                        html += '<option value="">Loading...</option>';
+                        html += '</select>';
+                        html += '</div>';
+                        
+                        // Class Widget (Expandable)
+                        html += '<div class="card mb-3 academic-widget" id="classWidget" style="border-radius: 0; cursor: pointer; border: 2px solid #dee2e6;" data-expanded="false">';
+                        html += '<div class="card-header bg-primary-custom text-white d-flex justify-content-between align-items-center" style="border-radius: 0;">';
+                        html += '<div><i class="bi bi-book"></i> <strong>Class</strong></div>';
+                        html += '<i class="bi bi-chevron-down widget-toggle-icon"></i>';
+                        html += '</div>';
+                        html += '<div class="card-body widget-content" style="display: none;">';
+                        html += '<div id="classWidgetContent">';
+                        html += '<p class="text-muted text-center py-3">Select Academic Year first</p>';
+                        html += '</div>';
+                        html += '</div>';
+                        html += '</div>';
+                        
+                        // Results Widget (Expandable)
+                        html += '<div class="card mb-3 academic-widget" id="resultsWidget" style="border-radius: 0; cursor: pointer; border: 2px solid #dee2e6;" data-expanded="false">';
+                        html += '<div class="card-header bg-info text-white d-flex justify-content-between align-items-center" style="border-radius: 0;">';
+                        html += '<div><i class="bi bi-file-earmark-text"></i> <strong>Results</strong></div>';
+                        html += '<i class="bi bi-chevron-down widget-toggle-icon"></i>';
+                        html += '</div>';
+                        html += '<div class="card-body widget-content" style="display: none;">';
+                        html += '<div id="resultsWidgetContent">';
+                        html += '<p class="text-muted text-center py-3">Select Academic Year first</p>';
+                        html += '</div>';
+                        html += '</div>';
+                        html += '</div>';
+                        
+                        // Attendance Widget (Expandable)
+                        html += '<div class="card mb-3 academic-widget" id="attendanceWidget" style="border-radius: 0; cursor: pointer; border: 2px solid #dee2e6;" data-expanded="false">';
+                        html += '<div class="card-header bg-success text-white d-flex justify-content-between align-items-center" style="border-radius: 0;">';
+                        html += '<div><i class="bi bi-calendar-check"></i> <strong>Attendance</strong></div>';
+                        html += '<i class="bi bi-chevron-down widget-toggle-icon"></i>';
+                        html += '</div>';
+                        html += '<div class="card-body widget-content" style="display: none;">';
+                        html += '<div id="attendanceWidgetContent">';
+                        html += '<p class="text-muted text-center py-3">Select Academic Year first</p>';
+                        html += '</div>';
+                        html += '</div>';
+                        html += '</div>';
+                        
+                        // Payments Widget (Expandable)
+                        html += '<div class="card mb-3 academic-widget" id="paymentsWidget" style="border-radius: 0; cursor: pointer; border: 2px solid #dee2e6;" data-expanded="false">';
+                        html += '<div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center" style="border-radius: 0;">';
+                        html += '<div><i class="bi bi-cash-coin"></i> <strong>Payments</strong></div>';
+                        html += '<i class="bi bi-chevron-down widget-toggle-icon"></i>';
+                        html += '</div>';
+                        html += '<div class="card-body widget-content" style="display: none;">';
+                        html += '<div id="paymentsWidgetContent">';
+                        html += '<p class="text-muted text-center py-3">Select Academic Year first</p>';
+                        html += '</div>';
+                        html += '</div>';
+                        html += '</div>';
+                        
+                        // Debits (Madeni) Widget (Expandable)
+                        html += '<div class="card mb-3 academic-widget" id="debitsWidget" style="border-radius: 0; cursor: pointer; border: 2px solid #dee2e6;" data-expanded="false">';
+                        html += '<div class="card-header bg-danger text-white d-flex justify-content-between align-items-center" style="border-radius: 0;">';
+                        html += '<div><i class="bi bi-exclamation-triangle"></i> <strong>Debts (Madeni)</strong></div>';
+                        html += '<i class="bi bi-chevron-down widget-toggle-icon"></i>';
+                        html += '</div>';
+                        html += '<div class="card-body widget-content" style="display: none;">';
+                        html += '<div id="debitsWidgetContent">';
+                        html += '<p class="text-muted text-center py-3">Select Academic Year first</p>';
+                        html += '</div>';
+                        html += '</div>';
+                        html += '</div>';
+                        
+                        html += '</div>'; // Close p-4
+                        html += '</div>'; // Close academic-pane
+                        
+                        html += '</div>'; // Close tab-content
+
+                        $('#studentDetailsContent').html(html);
+                        showModal('viewStudentModal');
+                        
+                        // Load academic years for this student (non-blocking)
+                        try {
+                            setTimeout(function() {
+                                loadAcademicYearsForStudent(studentID);
+                            }, 100);
+                        } catch (e) {
+                            console.error('Error loading academic years:', e);
+                        }
                     }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error loading student details:', error);
+                    console.error('Response:', xhr.responseText);
+                    console.error('Status:', status);
+                    let errorMessage = 'Failed to load student details';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    } else if (xhr.responseText) {
+                        try {
+                            let errorData = JSON.parse(xhr.responseText);
+                            if (errorData.message) {
+                                errorMessage = errorData.message;
+                            }
+                        } catch (e) {
+                            // Not JSON, use response text if short
+                            if (xhr.responseText.length < 200) {
+                                errorMessage = xhr.responseText;
+                            }
+                        }
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: errorMessage,
+                        footer: 'Status: ' + xhr.status + ' | Error: ' + error
+                    });
                 }
             });
         });

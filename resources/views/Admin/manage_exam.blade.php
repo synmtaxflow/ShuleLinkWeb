@@ -439,11 +439,15 @@
                         <label for="term">Term (Muhula) <span class="text-danger">*</span></label>
                         <select class="form-control" id="term" name="term">
                             <option value="">Select Term</option>
-                            <option value="first_term">First Term</option>
-                            <option value="second_term">Second Term</option>
+                            <option value="first_term" {{ in_array(1, $closedTerms ?? []) ? 'disabled style="background-color: #f0f0f0; color: #999;"' : '' }}>
+                                First Term @if(in_array(1, $closedTerms ?? [])) (Closed) @endif
+                            </option>
+                            <option value="second_term" {{ in_array(2, $closedTerms ?? []) ? 'disabled style="background-color: #f0f0f0; color: #999;"' : '' }}>
+                                Second Term @if(in_array(2, $closedTerms ?? [])) (Closed) @endif
+                            </option>
                         </select>
                         <small class="form-text text-muted">
-                            <i class="bi bi-info-circle"></i> Select which term this examination is for.
+                            <i class="bi bi-info-circle"></i> Select which term this examination is for. Closed terms are disabled.
                         </small>
                     </div>
 
@@ -744,11 +748,15 @@
                         <label for="edit_term">Term (Muhula) <span class="text-danger">*</span></label>
                         <select class="form-control" id="edit_term" name="term">
                             <option value="">Select Term</option>
-                            <option value="first_term">First Term</option>
-                            <option value="second_term">Second Term</option>
+                            <option value="first_term" {{ in_array(1, $closedTerms ?? []) ? 'disabled style="background-color: #f0f0f0; color: #999;"' : '' }}>
+                                First Term @if(in_array(1, $closedTerms ?? [])) (Closed) @endif
+                            </option>
+                            <option value="second_term" {{ in_array(2, $closedTerms ?? []) ? 'disabled style="background-color: #f0f0f0; color: #999;"' : '' }}>
+                                Second Term @if(in_array(2, $closedTerms ?? [])) (Closed) @endif
+                            </option>
                         </select>
                         <small class="form-text text-muted">
-                            <i class="bi bi-info-circle"></i> Select which term this examination is for.
+                            <i class="bi bi-info-circle"></i> Select which term this examination is for. Closed terms are disabled.
                         </small>
                     </div>
 

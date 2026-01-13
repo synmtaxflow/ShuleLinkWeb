@@ -382,7 +382,15 @@ class ManageExaminationController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('Admin.manage_exam', compact('examinations', 'examinationsGrouped', 'subclasses', 'classSubjects', 'classes', 'currentYear', 'availableYears', 'totalExams', 'search', 'yearFilter', 'statusFilter', 'termFilter', 'examCategoryFilter', 'teacherPermissions', 'roles'));
+        // Get closed terms for current year
+        $closedTerms = DB::table('terms')
+            ->where('schoolID', $schoolID)
+            ->where('year', $currentYear)
+            ->where('status', 'Closed')
+            ->pluck('term_number')
+            ->toArray();
+
+        return view('Admin.manage_exam', compact('examinations', 'examinationsGrouped', 'subclasses', 'classSubjects', 'classes', 'currentYear', 'availableYears', 'totalExams', 'search', 'yearFilter', 'statusFilter', 'termFilter', 'examCategoryFilter', 'teacherPermissions', 'roles', 'closedTerms'));
     }
 
     public function searchExaminations(Request $request)

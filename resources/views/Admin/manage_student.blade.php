@@ -41,6 +41,37 @@
         box-shadow: 0 0 0 0.2rem rgba(148, 0, 0, 0.25);
     }
 
+    /* Academic Widget Styles */
+    .academic-widget {
+        transition: all 0.3s ease;
+    }
+    
+    .academic-widget.disabled {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+    
+    .academic-widget .card-header {
+        user-select: none;
+        cursor: pointer;
+    }
+    
+    .academic-widget .card-header:hover {
+        opacity: 0.9;
+    }
+    
+    .academic-widget .widget-content {
+        display: none;
+    }
+    
+    .academic-widget[data-expanded="true"] .widget-content {
+        display: block !important;
+    }
+    
+    .widget-toggle-icon {
+        transition: transform 0.3s ease;
+    }
+
     /* School Details Card Styles (like manage_school) */
     .school-details-card {
         background: white;
@@ -812,18 +843,18 @@
 
 <!-- View Student Details Modal -->
 <div class="modal fade" id="viewStudentModal" tabindex="-1" aria-labelledby="viewStudentModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header bg-primary-custom text-white">
+    <div class="modal-dialog modal-fullscreen-lg-down" style="max-width: 95%; width: 95%;">
+        <div class="modal-content" style="border-radius: 0;">
+            <div class="modal-header bg-primary-custom text-white" style="border-radius: 0;">
                 <h5 class="modal-title" id="viewStudentModalLabel">
                     <i class="bi bi-person-badge"></i> Student Details
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body" id="studentDetailsContent">
-                <!-- Content will be loaded dynamically -->
+            <div class="modal-body p-0" id="studentDetailsContent" style="min-height: 70vh;">
+                <!-- Content will be loaded dynamically with tabs -->
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" style="border-radius: 0;">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="bi bi-x-circle"></i> Close
                 </button>
@@ -918,6 +949,25 @@
                         <label for="edit_address" class="form-label">Address</label>
                         <textarea class="form-control" id="edit_address" name="address" rows="2"></textarea>
                     </div>
+                    
+                    <!-- Additional Particulars Section -->
+                    <hr class="my-4">
+                    <h6 class="mb-3 text-primary-custom"><i class="bi bi-person-vcard"></i> Additional Particulars</h6>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="edit_birth_certificate_number" class="form-label">Birth Certificate Number</label>
+                            <input type="text" class="form-control" id="edit_birth_certificate_number" name="birth_certificate_number">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="edit_religion" class="form-label">Religion</label>
+                            <input type="text" class="form-control" id="edit_religion" name="religion">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="edit_nationality" class="form-label">Nationality</label>
+                            <input type="text" class="form-control" id="edit_nationality" name="nationality">
+                        </div>
+                    </div>
+                    
                     <div class="mb-3">
                         <label for="edit_photo" class="form-label">Photo</label>
                         <input type="file" class="form-control" id="edit_photo" name="photo" accept="image/*">
@@ -927,7 +977,27 @@
                     <!-- Health Information Section -->
                     <hr class="my-4">
                     <h6 class="mb-3 text-primary-custom"><i class="bi bi-heart-pulse"></i> Health Information</h6>
+                    <div class="mb-3">
+                        <label for="edit_general_health_condition" class="form-label">General Health Condition</label>
+                        <textarea class="form-control" id="edit_general_health_condition" name="general_health_condition" rows="2" placeholder="Describe general health condition"></textarea>
+                    </div>
                     <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="edit_has_disability" name="has_disability" value="1">
+                                <label class="form-check-label" for="edit_has_disability">
+                                    Has Disability
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="edit_has_chronic_illness" name="has_chronic_illness" value="1">
+                                <label class="form-check-label" for="edit_has_chronic_illness">
+                                    Has Chronic Illness
+                                </label>
+                            </div>
+                        </div>
                         <div class="col-md-4 mb-3">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="edit_is_disabled" name="is_disabled" value="1">
@@ -936,6 +1006,8 @@
                                 </label>
                             </div>
                         </div>
+                    </div>
+                    <div class="row">
                         <div class="col-md-4 mb-3">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="edit_has_epilepsy" name="has_epilepsy" value="1">
@@ -953,9 +1025,39 @@
                             </div>
                         </div>
                     </div>
+                    <div class="mb-3" id="editDisabilityDetailsContainer" style="display: none;">
+                        <label for="edit_disability_details" class="form-label">Disability Details</label>
+                        <textarea class="form-control" id="edit_disability_details" name="disability_details" rows="2" placeholder="Please specify the disability"></textarea>
+                    </div>
+                    <div class="mb-3" id="editChronicIllnessDetailsContainer" style="display: none;">
+                        <label for="edit_chronic_illness_details" class="form-label">Chronic Illness Details</label>
+                        <textarea class="form-control" id="edit_chronic_illness_details" name="chronic_illness_details" rows="2" placeholder="Please specify the chronic illness"></textarea>
+                    </div>
                     <div class="mb-3" id="editAllergiesDetailsContainer" style="display: none;">
                         <label for="edit_allergies_details" class="form-label">Allergies Details</label>
                         <textarea class="form-control" id="edit_allergies_details" name="allergies_details" rows="2" placeholder="Please specify the allergies"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_immunization_details" class="form-label">Immunization Details</label>
+                        <textarea class="form-control" id="edit_immunization_details" name="immunization_details" rows="2" placeholder="Enter immunization/vaccination details"></textarea>
+                    </div>
+                    
+                    <!-- Emergency Contact Section -->
+                    <hr class="my-4">
+                    <h6 class="mb-3 text-primary-custom"><i class="bi bi-telephone"></i> Emergency Contact</h6>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="edit_emergency_contact_name" class="form-label">Contact Name</label>
+                            <input type="text" class="form-control" id="edit_emergency_contact_name" name="emergency_contact_name">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="edit_emergency_contact_relationship" class="form-label">Relationship</label>
+                            <input type="text" class="form-control" id="edit_emergency_contact_relationship" name="emergency_contact_relationship" placeholder="e.g., Father, Mother, Guardian">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="edit_emergency_contact_phone" class="form-label">Phone Number</label>
+                            <input type="text" class="form-control" id="edit_emergency_contact_phone" name="emergency_contact_phone">
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -1084,7 +1186,25 @@
             }
         });
 
-        // Show/hide allergies details for edit form
+        // Show/hide health details for edit form
+        $('#edit_has_disability').on('change', function() {
+            if ($(this).is(':checked')) {
+                $('#editDisabilityDetailsContainer').slideDown();
+            } else {
+                $('#editDisabilityDetailsContainer').slideUp();
+                $('#edit_disability_details').val('');
+            }
+        });
+        
+        $('#edit_has_chronic_illness').on('change', function() {
+            if ($(this).is(':checked')) {
+                $('#editChronicIllnessDetailsContainer').slideDown();
+            } else {
+                $('#editChronicIllnessDetailsContainer').slideUp();
+                $('#edit_chronic_illness_details').val('');
+            }
+        });
+        
         $('#edit_has_allergies').on('change', function() {
             if ($(this).is(':checked')) {
                 $('#editAllergiesDetailsContainer').slideDown();
@@ -1095,7 +1215,7 @@
         });
 
         // Load subclasses and parents for registration form
-        function loadFormData() {
+        function loadFormData(preSelectSubclassID = null) {
             // Load subclasses
             $.ajax({
                 url: '{{ route("get_subclasses_for_school") }}',
@@ -1111,7 +1231,16 @@
                         }
 
                         subclassSelect.html('<option value="">Choose a class...</option>');
-                        response.subclasses.forEach(function(subclass) {
+                        
+                        // Filter subclasses if preSelectSubclassID is provided (for teacher view)
+                        let filteredSubclasses = response.subclasses;
+                        if (preSelectSubclassID) {
+                            filteredSubclasses = response.subclasses.filter(function(subclass) {
+                                return subclass.subclassID == preSelectSubclassID;
+                            });
+                        }
+                        
+                        filteredSubclasses.forEach(function(subclass) {
                             // Display display_name (class_name + subclass_name) e.g., "Form Four A"
                             const displayName = subclass.display_name || (subclass.class_name + ' ' + subclass.subclass_name) || subclass.subclass_name;
                             subclassSelect.append('<option value="' + subclass.subclassID + '">' + displayName + '</option>');
@@ -1120,11 +1249,20 @@
                         // Initialize Select2 for class select with search
                         subclassSelect.select2({
                             theme: 'bootstrap-5',
-                            placeholder: 'Search and select a class...',
-                            allowClear: true,
+                            placeholder: preSelectSubclassID ? 'Class (Pre-selected)' : 'Search and select a class...',
+                            allowClear: !preSelectSubclassID, // Disable clear if pre-selected
                             width: '100%',
                             dropdownParent: $('#addStudentModal')
                         });
+                        
+                        // Pre-select subclass if provided
+                        if (preSelectSubclassID) {
+                            subclassSelect.val(preSelectSubclassID).trigger('change');
+                            subclassSelect.prop('disabled', true); // Disable selection for teacher
+                            
+                            // Trigger event to notify that form is ready
+                            $(document).trigger('subclassPreSelected', [preSelectSubclassID]);
+                        }
                     }
                 }
             });
@@ -1503,6 +1641,7 @@
         // View Student Details
         $(document).on('click', '.view-student-btn', function() {
             let studentID = $(this).data('student-id');
+            let currentStudentID = studentID; // Store for use in other functions
 
             $.ajax({
                 url: '{{ route("get_student_details", ":id") }}'.replace(':id', studentID),
@@ -1511,7 +1650,26 @@
                 success: function(response) {
                     if (response.success) {
                         let student = response.student;
-                        let html = '<div class="school-details-card">';
+                        
+                        // Create tab structure
+                        let html = '<ul class="nav nav-tabs mb-3" id="studentDetailsTabs" role="tablist" style="border-radius: 0;">';
+                        html += '<li class="nav-item" role="presentation">';
+                        html += '<button class="nav-link active" id="particulars-tab" data-bs-toggle="tab" data-bs-target="#particulars-pane" type="button" role="tab" aria-controls="particulars-pane" aria-selected="true">';
+                        html += '<i class="bi bi-person-vcard"></i> Student Particulars';
+                        html += '</button>';
+                        html += '</li>';
+                        html += '<li class="nav-item" role="presentation">';
+                        html += '<button class="nav-link" id="academic-tab" data-bs-toggle="tab" data-bs-target="#academic-pane" type="button" role="tab" aria-controls="academic-pane" aria-selected="false">';
+                        html += '<i class="bi bi-book"></i> Academic Details';
+                        html += '</button>';
+                        html += '</li>';
+                        html += '</ul>';
+                        
+                        html += '<div class="tab-content" id="studentDetailsTabContent">';
+                        
+                        // Tab 1: Student Particulars
+                        html += '<div class="tab-pane fade show active" id="particulars-pane" role="tabpanel" aria-labelledby="particulars-tab">';
+                        html += '<div class="school-details-card" style="border-radius: 0;">';
                         html += '<div class="school-header">';
                         html += '<div class="d-flex align-items-center">';
                         html += '<div class="school-logo-preview me-3">';
@@ -1617,13 +1775,24 @@
                             healthConditionsList.push(chronicText);
                         }
                         
-                        // Check general_health_condition
+                        // Check general_health_condition - separate good health from bad health
+                        let generalHealthCondition = '';
+                        let isGoodHealth = false;
                         if (student.general_health_condition && student.general_health_condition !== 'N/A' && student.general_health_condition.trim() !== '') {
+                            let healthConditionLower = student.general_health_condition.toLowerCase().trim();
+                            // Check if it's a positive/good health condition
+                            if (healthConditionLower === 'good' || healthConditionLower === 'excellent' || healthConditionLower === 'fine' || healthConditionLower === 'healthy') {
+                                isGoodHealth = true;
+                                generalHealthCondition = student.general_health_condition;
+                            } else {
+                                // Bad health condition - add to alert list
                             healthConditionsList.push('<span class="badge bg-warning text-dark"><i class="bi bi-info-circle-fill"></i> General Health: ' + student.general_health_condition + '</span>');
+                            }
                         }
                         
+                        // Display health conditions alert if there are bad conditions
                         if (healthConditionsList.length > 0) {
-                            html += '<div class="info-item" style="grid-column: 1 / -1; background-color: #fff5f5; border: 2px solid #dc3545; border-radius: 8px; padding: 15px;">';
+                            html += '<div class="info-item" style="grid-column: 1 / -1; background-color: #fff5f5; border: 2px solid #dc3545; border-radius: 0; padding: 15px;">';
                             html += '<i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 1.5rem;"></i>';
                             html += '<div class="info-item-content">';
                             html += '<div class="info-item-label" style="color: #dc3545; font-weight: 700; font-size: 0.9rem;">HEALTH CONDITIONS ALERT</div>';
@@ -1631,33 +1800,197 @@
                             html += '</div>';
                             html += '</div>';
                         } else {
-                            html += '<div class="info-item" style="grid-column: 1 / -1;">';
-                            html += '<i class="bi bi-heart-pulse-fill text-success"></i>';
+                            // Display good health status (green) ONLY if there are NO bad health conditions
+                            html += '<div class="info-item" style="grid-column: 1 / -1; background-color: #f0f9f0; border: 2px solid #28a745; border-radius: 0; padding: 15px;">';
+                            html += '<i class="bi bi-heart-pulse-fill text-success" style="font-size: 1.5rem;"></i>';
                             html += '<div class="info-item-content">';
-                            html += '<div class="info-item-label">Health Status</div>';
-                            html += '<div class="info-item-value"><span class="badge bg-success">Good Health</span></div>';
+                            html += '<div class="info-item-label" style="color: #28a745; font-weight: 700; font-size: 0.9rem;">HEALTH STATUS</div>';
+                            if (isGoodHealth && generalHealthCondition) {
+                                html += '<div class="info-item-value mt-2"><span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> ' + generalHealthCondition + '</span></div>';
+                            } else {
+                                html += '<div class="info-item-value mt-2"><span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> Good Health</span></div>';
+                            }
                             html += '</div>';
                             html += '</div>';
                         }
 
+                        // Parent Information
                         if (student.parent) {
-                            html += '<div class="info-item"><i class="bi bi-person-heart"></i><div class="info-item-content"><div class="info-item-label">Parent Name</div><div class="info-item-value">' + student.parent.full_name + '</div></div></div>';
-                            html += '<div class="info-item"><i class="bi bi-telephone"></i><div class="info-item-content"><div class="info-item-label">Parent Phone</div><div class="info-item-value">' + student.parent.phone + '</div></div></div>';
-                            html += '<div class="info-item"><i class="bi bi-envelope"></i><div class="info-item-content"><div class="info-item-label">Parent Email</div><div class="info-item-value">' + student.parent.email + '</div></div></div>';
-                            html += '<div class="info-item"><i class="bi bi-briefcase"></i><div class="info-item-content"><div class="info-item-label">Parent Occupation</div><div class="info-item-value">' + student.parent.occupation + '</div></div></div>';
+                            html += '<div class="info-item" style="grid-column: 1 / -1; background-color: #f8f9fa; padding: 15px; border: 1px solid #dee2e6;">';
+                            html += '<i class="bi bi-person-heart text-primary-custom" style="font-size: 1.5rem;"></i>';
+                            html += '<div class="info-item-content">';
+                            html += '<div class="info-item-label" style="font-weight: 700; font-size: 0.9rem; color: #940000;">PARENT INFORMATION</div>';
+                            html += '<div class="row mt-2">';
+                            html += '<div class="col-md-6"><div class="info-item-label">Name</div><div class="info-item-value">' + student.parent.full_name + '</div></div>';
+                            html += '<div class="col-md-6"><div class="info-item-label">Phone</div><div class="info-item-value">' + student.parent.phone + '</div></div>';
+                            html += '<div class="col-md-6"><div class="info-item-label">Email</div><div class="info-item-value">' + student.parent.email + '</div></div>';
+                            html += '<div class="col-md-6"><div class="info-item-label">Occupation</div><div class="info-item-value">' + student.parent.occupation + '</div></div>';
+                            if (student.parent.relationship) {
+                                html += '<div class="col-md-6"><div class="info-item-label">Relationship</div><div class="info-item-value">' + student.parent.relationship + '</div></div>';
+                            }
+                            html += '</div>';
+                            html += '</div>';
+                            html += '</div>';
+                        }
+                        
+                        // Emergency Contact (Next of Kin)
+                        if (student.emergency_contact_name && student.emergency_contact_name !== 'N/A') {
+                            html += '<div class="info-item" style="grid-column: 1 / -1; background-color: #f8f9fa; padding: 15px; border: 1px solid #dee2e6;">';
+                            html += '<i class="bi bi-telephone-forward text-warning" style="font-size: 1.5rem;"></i>';
+                            html += '<div class="info-item-content">';
+                            html += '<div class="info-item-label" style="font-weight: 700; font-size: 0.9rem; color: #940000;">EMERGENCY CONTACT (NEXT OF KIN)</div>';
+                            html += '<div class="row mt-2">';
+                            html += '<div class="col-md-4"><div class="info-item-label">Name</div><div class="info-item-value">' + (student.emergency_contact_name || 'N/A') + '</div></div>';
+                            html += '<div class="col-md-4"><div class="info-item-label">Relationship</div><div class="info-item-value">' + (student.emergency_contact_relationship || 'N/A') + '</div></div>';
+                            html += '<div class="col-md-4"><div class="info-item-label">Phone</div><div class="info-item-value">' + (student.emergency_contact_phone || 'N/A') + '</div></div>';
+                            html += '</div>';
+                            html += '</div>';
+                            html += '</div>';
+                        }
+                        
+                        // Registration Information
+                        if (student.registering_officer_name && student.registering_officer_name !== 'N/A') {
+                            html += '<div class="info-item" style="grid-column: 1 / -1; background-color: #f8f9fa; padding: 15px; border: 1px solid #dee2e6;">';
+                            html += '<i class="bi bi-person-check text-info" style="font-size: 1.5rem;"></i>';
+                            html += '<div class="info-item-content">';
+                            html += '<div class="info-item-label" style="font-weight: 700; font-size: 0.9rem; color: #940000;">REGISTRATION INFORMATION</div>';
+                            html += '<div class="row mt-2">';
+                            html += '<div class="col-md-6"><div class="info-item-label">Registered By</div><div class="info-item-value">' + (student.registering_officer_name || 'N/A') + '</div></div>';
+                            html += '<div class="col-md-6"><div class="info-item-label">Registration Date</div><div class="info-item-value">' + (student.declaration_date || 'N/A') + '</div></div>';
+                            html += '</div>';
+                            html += '</div>';
+                            html += '</div>';
+                        }
+                        
+                        // Additional Student Details
+                        html += '<div class="info-item"><i class="bi bi-card-text"></i><div class="info-item-content"><div class="info-item-label">Birth Certificate Number</div><div class="info-item-value">' + (student.birth_certificate_number || 'N/A') + '</div></div></div>';
+                        html += '<div class="info-item"><i class="bi bi-heart"></i><div class="info-item-content"><div class="info-item-label">Religion</div><div class="info-item-value">' + (student.religion || 'N/A') + '</div></div></div>';
+                        html += '<div class="info-item"><i class="bi bi-globe"></i><div class="info-item-content"><div class="info-item-label">Nationality</div><div class="info-item-value">' + (student.nationality || 'N/A') + '</div></div></div>';
+                        if (student.immunization_details && student.immunization_details !== 'N/A') {
+                            html += '<div class="info-item" style="grid-column: 1 / -1;"><i class="bi bi-shield-check"></i><div class="info-item-content"><div class="info-item-label">Immunization Details</div><div class="info-item-value">' + student.immunization_details + '</div></div></div>';
                         }
 
-                        html += '</div></div>';
+                        html += '</div></div>'; // Close school-details-card
+                        html += '</div>'; // Close particulars-pane
+                        
+                        // Tab 2: Academic Details
+                        html += '<div class="tab-pane fade" id="academic-pane" role="tabpanel" aria-labelledby="academic-tab">';
+                        html += '<div class="p-4" style="border-radius: 0;">';
+                        html += '<div class="mb-4">';
+                        html += '<label class="form-label fw-bold mb-2"><i class="bi bi-calendar"></i> Academic Year</label>';
+                        html += '<select class="form-select" id="academicYearSelector" data-student-id="' + studentID + '" style="border-radius: 0;">';
+                        html += '<option value="">Loading...</option>';
+                        html += '</select>';
+                        html += '</div>';
+                        
+                        // Class Widget (Expandable)
+                        html += '<div class="card mb-3 academic-widget" id="classWidget" style="border-radius: 0; cursor: pointer; border: 2px solid #dee2e6;" data-expanded="false">';
+                        html += '<div class="card-header bg-primary-custom text-white d-flex justify-content-between align-items-center" style="border-radius: 0;">';
+                        html += '<div><i class="bi bi-book"></i> <strong>Class</strong></div>';
+                        html += '<i class="bi bi-chevron-down widget-toggle-icon"></i>';
+                        html += '</div>';
+                        html += '<div class="card-body widget-content" style="display: none;">';
+                        html += '<div id="classWidgetContent">';
+                        html += '<p class="text-muted text-center py-3">Select Academic Year first</p>';
+                        html += '</div>';
+                        html += '</div>';
+                        html += '</div>';
+                        
+                        // Results Widget (Expandable)
+                        html += '<div class="card mb-3 academic-widget" id="resultsWidget" style="border-radius: 0; cursor: pointer; border: 2px solid #dee2e6;" data-expanded="false">';
+                        html += '<div class="card-header bg-info text-white d-flex justify-content-between align-items-center" style="border-radius: 0;">';
+                        html += '<div><i class="bi bi-file-earmark-text"></i> <strong>Results</strong></div>';
+                        html += '<i class="bi bi-chevron-down widget-toggle-icon"></i>';
+                        html += '</div>';
+                        html += '<div class="card-body widget-content" style="display: none;">';
+                        html += '<div id="resultsWidgetContent">';
+                        html += '<p class="text-muted text-center py-3">Select Academic Year first</p>';
+                        html += '</div>';
+                        html += '</div>';
+                        html += '</div>';
+                        
+                        // Attendance Widget (Expandable)
+                        html += '<div class="card mb-3 academic-widget" id="attendanceWidget" style="border-radius: 0; cursor: pointer; border: 2px solid #dee2e6;" data-expanded="false">';
+                        html += '<div class="card-header bg-success text-white d-flex justify-content-between align-items-center" style="border-radius: 0;">';
+                        html += '<div><i class="bi bi-calendar-check"></i> <strong>Attendance</strong></div>';
+                        html += '<i class="bi bi-chevron-down widget-toggle-icon"></i>';
+                        html += '</div>';
+                        html += '<div class="card-body widget-content" style="display: none;">';
+                        html += '<div id="attendanceWidgetContent">';
+                        html += '<p class="text-muted text-center py-3">Select Academic Year first</p>';
+                        html += '</div>';
+                        html += '</div>';
+                        html += '</div>';
+                        
+                        // Payments Widget (Expandable)
+                        html += '<div class="card mb-3 academic-widget" id="paymentsWidget" style="border-radius: 0; cursor: pointer; border: 2px solid #dee2e6;" data-expanded="false">';
+                        html += '<div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center" style="border-radius: 0;">';
+                        html += '<div><i class="bi bi-cash-coin"></i> <strong>Payments</strong></div>';
+                        html += '<i class="bi bi-chevron-down widget-toggle-icon"></i>';
+                        html += '</div>';
+                        html += '<div class="card-body widget-content" style="display: none;">';
+                        html += '<div id="paymentsWidgetContent">';
+                        html += '<p class="text-muted text-center py-3">Select Academic Year first</p>';
+                        html += '</div>';
+                        html += '</div>';
+                        html += '</div>';
+                        
+                        // Debits (Madeni) Widget (Expandable)
+                        html += '<div class="card mb-3 academic-widget" id="debitsWidget" style="border-radius: 0; cursor: pointer; border: 2px solid #dee2e6;" data-expanded="false">';
+                        html += '<div class="card-header bg-danger text-white d-flex justify-content-between align-items-center" style="border-radius: 0;">';
+                        html += '<div><i class="bi bi-exclamation-triangle"></i> <strong>Debts (Madeni)</strong></div>';
+                        html += '<i class="bi bi-chevron-down widget-toggle-icon"></i>';
+                        html += '</div>';
+                        html += '<div class="card-body widget-content" style="display: none;">';
+                        html += '<div id="debitsWidgetContent">';
+                        html += '<p class="text-muted text-center py-3">Select Academic Year first</p>';
+                        html += '</div>';
+                        html += '</div>';
+                        html += '</div>';
+                        
+                        html += '</div>'; // Close p-4
+                        html += '</div>'; // Close academic-pane
+                        
+                        html += '</div>'; // Close tab-content
 
                         $('#studentDetailsContent').html(html);
                         showModal('viewStudentModal');
+                        
+                        // Load academic years for this student (non-blocking)
+                        try {
+                            setTimeout(function() {
+                                loadAcademicYearsForStudent(studentID);
+                            }, 100);
+                        } catch (e) {
+                            console.error('Error loading academic years:', e);
+                        }
                     }
                 },
-                error: function() {
+                error: function(xhr, status, error) {
+                    console.error('Error loading student details:', error);
+                    console.error('Response:', xhr.responseText);
+                    console.error('Status:', status);
+                    let errorMessage = 'Failed to load student details';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    } else if (xhr.responseText) {
+                        try {
+                            let errorData = JSON.parse(xhr.responseText);
+                            if (errorData.message) {
+                                errorMessage = errorData.message;
+                            }
+                        } catch (e) {
+                            // Not JSON, use response text if short
+                            if (xhr.responseText.length < 200) {
+                                errorMessage = xhr.responseText;
+                            }
+                        }
+                    }
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',
-                        text: 'Failed to load student details'
+                        text: errorMessage,
+                        footer: 'Status: ' + xhr.status + ' | Error: ' + error
                     });
                 }
             });
@@ -1690,13 +2023,41 @@
                         $('#edit_parentID').val(student.parentID || '');
                         $('#edit_subclassID').val(student.subclassID || '');
 
+                        // Set additional particulars
+                        $('#edit_birth_certificate_number').val(student.birth_certificate_number || '');
+                        $('#edit_religion').val(student.religion || '');
+                        $('#edit_nationality').val(student.nationality || '');
+                        
                         // Set health information fields
+                        $('#edit_general_health_condition').val(student.general_health_condition || '');
+                        $('#edit_has_disability').prop('checked', student.has_disability == 1 || student.has_disability === true);
+                        $('#edit_disability_details').val(student.disability_details || '');
+                        $('#edit_has_chronic_illness').prop('checked', student.has_chronic_illness == 1 || student.has_chronic_illness === true);
+                        $('#edit_chronic_illness_details').val(student.chronic_illness_details || '');
+                        $('#edit_immunization_details').val(student.immunization_details || '');
                         $('#edit_is_disabled').prop('checked', student.is_disabled == 1 || student.is_disabled === true);
                         $('#edit_has_epilepsy').prop('checked', student.has_epilepsy == 1 || student.has_epilepsy === true);
                         $('#edit_has_allergies').prop('checked', student.has_allergies == 1 || student.has_allergies === true);
                         $('#edit_allergies_details').val(student.allergies_details || '');
+                        
+                        // Set emergency contact fields
+                        $('#edit_emergency_contact_name').val(student.emergency_contact_name || '');
+                        $('#edit_emergency_contact_relationship').val(student.emergency_contact_relationship || '');
+                        $('#edit_emergency_contact_phone').val(student.emergency_contact_phone || '');
 
-                        // Show/hide allergies details container based on checkbox
+                        // Show/hide details containers based on checkboxes
+                        if (student.has_disability == 1 || student.has_disability === true) {
+                            $('#editDisabilityDetailsContainer').show();
+                        } else {
+                            $('#editDisabilityDetailsContainer').hide();
+                        }
+                        
+                        if (student.has_chronic_illness == 1 || student.has_chronic_illness === true) {
+                            $('#editChronicIllnessDetailsContainer').show();
+                        } else {
+                            $('#editChronicIllnessDetailsContainer').hide();
+                        }
+                        
                         if (student.has_allergies == 1 || student.has_allergies === true) {
                             $('#editAllergiesDetailsContainer').show();
                         } else {
@@ -1852,6 +2213,17 @@
                 if (studentResponse[0].success && schoolResponse[0].success) {
                     let student = studentResponse[0].student;
                     let school = schoolResponse[0].school;
+                    
+                    // Check if required data exists
+                    if (!student || !school) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Missing student or school data'
+                        });
+                        hideModal('studentIdCardModal');
+                        return;
+                    }
                     let cardColor = $('#idCardColorPicker').val() || '#940000';
 
                     // Generate barcode value (using admission number)
@@ -1929,11 +2301,30 @@
                     });
                     hideModal('studentIdCardModal');
                 }
-            }).fail(function() {
+            }).fail(function(xhr, status, error) {
+                console.error('Error loading ID card:', error);
+                console.error('Response:', xhr.responseText);
+                console.error('Status:', status);
+                let errorMessage = 'Failed to load ID card data';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                } else if (xhr.responseText) {
+                    try {
+                        let errorData = JSON.parse(xhr.responseText);
+                        if (errorData.message) {
+                            errorMessage = errorData.message;
+                        }
+                    } catch (e) {
+                        if (xhr.responseText.length < 200) {
+                            errorMessage = xhr.responseText;
+                        }
+                    }
+                }
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: 'Failed to load ID card data'
+                    text: errorMessage,
+                    footer: 'Status: ' + xhr.status + ' | Error: ' + error
                 });
                 hideModal('studentIdCardModal');
             });
@@ -2601,17 +2992,70 @@ Would you like to try direct registration anyway, or use the manual method?`;
 
         // Function to show modal manually
         function showModal(modalId) {
-            $('#' + modalId).removeClass('fade').css({
+            if (!modalId) return;
+            
+            let $modal = $('#' + modalId);
+            if ($modal.length === 0) return;
+            
+            // Try Bootstrap modal first if available
+            if (typeof bootstrap !== 'undefined' && typeof bootstrap.Modal !== 'undefined') {
+                try {
+                    let bsModal = new bootstrap.Modal($modal[0], {
+                        backdrop: true,
+                        keyboard: true
+                    });
+                    bsModal.show();
+                    return;
+                } catch (e) {
+                    console.log('Bootstrap modal not available, using manual show');
+                }
+            }
+            
+            // Manual show
+            $('body').addClass('modal-open');
+            $modal.removeClass('fade').css({
                 'display': 'block',
                 'z-index': 1050
             }).addClass('show');
-            $('body').append('<div class="modal-backdrop fade show" style="z-index: 1040;"></div>');
+            
+            // Add backdrop if it doesn't exist
+            if ($('.modal-backdrop').length === 0) {
+                $('body').append('<div class="modal-backdrop fade show" style="z-index: 1040; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.5);"></div>');
+            }
         }
 
         // Function to hide modal manually
         function hideModal(modalId) {
-            $('#' + modalId).removeClass('show').css('display', 'none');
+            if (!modalId) return;
+            
+            let $modal = $('#' + modalId);
+            if ($modal.length === 0) return;
+            
+            // Try Bootstrap modal first if available
+            if (typeof bootstrap !== 'undefined' && typeof bootstrap.Modal !== 'undefined') {
+                try {
+                    let bsModal = bootstrap.Modal.getInstance($modal[0]);
+                    if (bsModal) {
+                        bsModal.hide();
+                        return;
+                    }
+                } catch (e) {
+                    console.log('Bootstrap modal not available, using manual close');
+                }
+            }
+            
+            // Manual close
+            $modal.removeClass('show fade').css({
+                'display': 'none',
+                'z-index': ''
+            });
+            $('body').removeClass('modal-open');
             $('.modal-backdrop').remove();
+            
+            // Remove padding from body if no other modals are open
+            if ($('.modal.show').length === 0) {
+                $('body').css('padding-right', '');
+            }
 
             // Destroy Select2 instances in the modal to prevent conflicts
             $('#' + modalId + ' select').each(function() {
@@ -2622,18 +3066,36 @@ Would you like to try direct registration anyway, or use the manual method?`;
         }
 
         // Close modal handlers for all modals
-        $(document).on('click', '.modal .btn-close, .modal .btn-secondary[data-bs-dismiss="modal"], .modal button[data-bs-dismiss="modal"]', function() {
+        $(document).on('click', '.modal .btn-close, .modal .btn-secondary[data-bs-dismiss="modal"], .modal button[data-bs-dismiss="modal"], .modal-footer .btn-secondary', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
             let modal = $(this).closest('.modal');
             if (modal.length) {
-                hideModal(modal.attr('id'));
+                let modalId = modal.attr('id');
+                if (modalId) {
+                    hideModal(modalId);
+                }
             }
         });
 
         // Close modal when clicking backdrop
-        $(document).on('click', '.modal-backdrop', function() {
+        $(document).on('click', '.modal-backdrop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
             $('.modal.show').each(function() {
-                hideModal($(this).attr('id'));
+                let modalId = $(this).attr('id');
+                if (modalId) {
+                    hideModal(modalId);
+                }
             });
+        });
+        
+        // Also handle Bootstrap modal close events
+        $(document).on('hidden.bs.modal', '.modal', function() {
+            let modalId = $(this).attr('id');
+            if (modalId) {
+                hideModal(modalId);
+            }
         });
 
         // Load classes and subclasses for filters
@@ -2975,11 +3437,69 @@ Would you like to try direct registration anyway, or use the manual method?`;
             }
         });
 
+        // Check if subclassID is provided in URL (for teacher view)
+        const urlParams = new URLSearchParams(window.location.search);
+        const subclassID = urlParams.get('subclassID');
+        
         // Initialize on page load
-        loadFormData();
+        loadFormData(subclassID || null);
         initializeTables();
         loadClassesForFilter();
         loadAllSubclassesForFilter();
+        
+        // If subclassID is provided, auto-open registration modal
+        if (subclassID) {
+            console.log('SubclassID found in URL:', subclassID);
+            
+            // Listen for when subclass is pre-selected
+            $(document).on('subclassPreSelected', function(event, selectedSubclassID) {
+                console.log('Subclass pre-selected:', selectedSubclassID);
+                if (selectedSubclassID == subclassID) {
+                    // Wait a bit more for Select2 to initialize
+                    setTimeout(function() {
+                        openRegistrationModal();
+                    }, 300);
+                }
+            });
+            
+            // Also try to open after form data loads (fallback)
+            setTimeout(function() {
+                if ($('#subclassID').val() == subclassID) {
+                    openRegistrationModal();
+                }
+            }, 2000);
+            
+            function openRegistrationModal() {
+                const modal = document.getElementById('addStudentModal');
+                if (modal) {
+                    console.log('Opening registration modal...');
+                    // Use Bootstrap 5 modal
+                    if (window.bootstrap && typeof bootstrap.Modal === 'function') {
+                        const bsModal = new bootstrap.Modal(modal, {
+                            backdrop: 'static',
+                            keyboard: true
+                        });
+                        bsModal.show();
+                        console.log('Modal opened successfully');
+                    } else if (window.jQuery && typeof jQuery.fn.modal === 'function') {
+                        // Fallback to jQuery Bootstrap modal
+                        jQuery(modal).modal('show');
+                        console.log('Modal opened with jQuery');
+                    } else {
+                        // Manual fallback
+                        modal.style.display = 'block';
+                        modal.classList.add('show');
+                        document.body.classList.add('modal-open');
+                        const backdrop = document.createElement('div');
+                        backdrop.className = 'modal-backdrop fade show';
+                        document.body.appendChild(backdrop);
+                        console.log('Modal opened manually');
+                    }
+                } else {
+                    console.error('Modal not found');
+                }
+            }
+        }
 
         // Load initial data
         setTimeout(function() {
@@ -2987,6 +3507,1184 @@ Would you like to try direct registration anyway, or use the manual method?`;
             loadStatistics();
         }, 500);
     });
+
+    // Function to load academic years for student
+    function loadAcademicYearsForStudent(studentID) {
+        if (!studentID) {
+            console.error('Student ID is required');
+            $('#academicYearSelector').html('<option value="">Error: Student ID missing</option>');
+            return;
+        }
+        
+        $.ajax({
+            url: '{{ route("get_student_academic_years", ":id") }}'.replace(':id', studentID),
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                if (response.success && response.years) {
+                    let selector = $('#academicYearSelector');
+                    if (selector.length === 0) {
+                        console.error('Academic year selector not found');
+                        return;
+                    }
+                    
+                    selector.html('<option value="">Select Academic Year</option>');
+                    
+                    response.years.forEach(function(year) {
+                        let selected = year.is_active ? 'selected' : '';
+                        let statusBadge = year.status === 'Active' ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Closed</span>';
+                        selector.append('<option value="' + year.academic_yearID + '" data-status="' + year.status + '" ' + selected + '>' + year.year_name + ' ' + statusBadge + '</option>');
+                    });
+                    
+                    // Enable widgets if active year is selected by default
+                    if (response.years.some(y => y.is_active)) {
+                        $('.academic-widget').removeClass('disabled').css('opacity', '1');
+                        let activeYear = response.years.find(y => y.is_active);
+                        if (activeYear) {
+                            loadAcademicDataForYear(studentID, activeYear.academic_yearID, activeYear.status);
+                        }
+                    }
+                } else {
+                    console.error('Invalid response:', response);
+                    $('#academicYearSelector').html('<option value="">No academic years found</option>');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading academic years:', error);
+                console.error('Response:', xhr.responseText);
+                console.error('Status:', status);
+                $('#academicYearSelector').html('<option value="">Error loading years</option>');
+            }
+        });
+    }
+    
+    // Handle academic year selection change
+    $(document).on('change', '#academicYearSelector', function() {
+        let studentID = $(this).data('student-id');
+        let academicYearID = $(this).val();
+        let status = $(this).find('option:selected').data('status');
+        
+        if (academicYearID) {
+            // Enable widgets
+            $('.academic-widget').removeClass('disabled').css('opacity', '1');
+            loadAcademicDataForYear(studentID, academicYearID, status);
+        } else {
+            // Reset widgets
+            $('.academic-widget').addClass('disabled').css('opacity', '0.6');
+            $('#classWidgetContent, #resultsWidgetContent, #attendanceWidgetContent').html('<p class="text-muted text-center py-3">Select Academic Year first</p>');
+            // Collapse all widgets
+            $('.academic-widget').attr('data-expanded', 'false');
+            $('.widget-content').slideUp();
+            $('.widget-toggle-icon').removeClass('bi-chevron-up').addClass('bi-chevron-down');
+        }
+    });
+    
+    // Handle widget click to expand/collapse
+    $(document).on('click', '.academic-widget .card-header', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        let widget = $(this).closest('.academic-widget');
+        let isExpanded = widget.attr('data-expanded') === 'true';
+        let content = widget.find('.widget-content');
+        let icon = widget.find('.widget-toggle-icon');
+        let widgetId = widget.attr('id');
+        let studentID = $('#academicYearSelector').data('student-id');
+        let academicYearID = $('#academicYearSelector').val();
+        let yearStatus = $('#academicYearSelector').find('option:selected').data('status');
+        
+        // Check if academic year is selected
+        if (!academicYearID) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Select Academic Year',
+                text: 'Please select an academic year first'
+            });
+            return;
+        }
+        
+        if (isExpanded) {
+            // Collapse
+            content.slideUp(300, function() {
+                widget.attr('data-expanded', 'false');
+            });
+            icon.removeClass('bi-chevron-up').addClass('bi-chevron-down');
+        } else {
+            // Expand first
+            content.slideDown(300, function() {
+                widget.attr('data-expanded', 'true');
+            });
+            icon.removeClass('bi-chevron-down').addClass('bi-chevron-up');
+            
+            // Load data if not loaded yet
+            let contentText = widget.find('.widget-content').text().trim();
+            let needsLoading = contentText.includes('Click to load') || 
+                              contentText.includes('Select Academic Year') || 
+                              contentText.includes('Loading...') ||
+                              contentText === '' ||
+                              contentText.length < 50; // If content is too short, probably needs loading
+            
+            console.log('Widget clicked:', widgetId, 'Needs loading:', needsLoading, 'Content:', contentText);
+            
+            if (needsLoading && academicYearID) {
+                if (widgetId === 'classWidget') {
+                    console.log('Loading class data...');
+                    loadClassDataForWidget(studentID, academicYearID, yearStatus);
+                } else if (widgetId === 'resultsWidget') {
+                    console.log('Loading results data...');
+                    loadResultsDataForWidget(studentID, academicYearID, yearStatus);
+                } else if (widgetId === 'attendanceWidget') {
+                    console.log('Loading attendance data...');
+                    loadAttendanceDataForWidget(studentID, academicYearID, yearStatus);
+                } else if (widgetId === 'paymentsWidget') {
+                    console.log('Loading payments data...');
+                    loadPaymentsDataForWidget(studentID, academicYearID, yearStatus);
+                } else if (widgetId === 'debitsWidget') {
+                    console.log('Loading debts data...');
+                    loadDebitsDataForWidget(studentID, academicYearID, yearStatus);
+                }
+            }
+        }
+    });
+    
+    // Function to load academic data for selected year (prepare widgets)
+    function loadAcademicDataForYear(studentID, academicYearID, yearStatus) {
+        // Just prepare widgets - data will load when clicked
+        // Make sure widgets are visible and ready
+        $('.academic-widget').removeClass('disabled').css('opacity', '1');
+        $('#classWidgetContent').html('<p class="text-muted text-center py-3"><i class="bi bi-hourglass-split"></i> Click widget header to load class data...</p>');
+        $('#resultsWidgetContent').html('<p class="text-muted text-center py-3"><i class="bi bi-hourglass-split"></i> Click widget header to load results...</p>');
+        $('#attendanceWidgetContent').html('<p class="text-muted text-center py-3"><i class="bi bi-hourglass-split"></i> Click widget header to load attendance...</p>');
+        $('#paymentsWidgetContent').html('<p class="text-muted text-center py-3"><i class="bi bi-hourglass-split"></i> Click widget header to load payments...</p>');
+        $('#debitsWidgetContent').html('<p class="text-muted text-center py-3"><i class="bi bi-hourglass-split"></i> Click widget header to load debts...</p>');
+        
+        // Collapse all widgets initially
+        $('.academic-widget').attr('data-expanded', 'false');
+        $('.widget-content').hide();
+        $('.widget-toggle-icon').removeClass('bi-chevron-up').addClass('bi-chevron-down');
+    }
+    
+    // Function to load class data for widget
+    function loadClassDataForWidget(studentID, academicYearID, yearStatus) {
+        if (!studentID || !academicYearID) {
+            $('#classWidgetContent').html('<p class="text-danger text-center py-3">Missing required parameters</p>');
+            return;
+        }
+        
+        $('#classWidgetContent').html('<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary" role="status"></div><p class="mt-2">Loading classes...</p></div>');
+        
+        $.ajax({
+            url: '{{ route("get_student_classes_for_year") }}',
+            type: 'GET',
+            data: {
+                student_id: studentID,
+                academic_year_id: academicYearID,
+                year_status: yearStatus
+            },
+            dataType: 'json',
+            success: function(response) {
+                console.log('Class data response:', response);
+                if (response.success && response.classes && response.classes.length > 0) {
+                    let content = '<div class="list-group" style="border-radius: 0;">';
+                    response.classes.forEach(function(cls) {
+                        content += '<div class="list-group-item class-item" data-class-id="' + cls.class_id + '" data-class-name="' + cls.class_name + '" style="border-radius: 0; cursor: pointer;">';
+                        content += '<div class="d-flex justify-content-between align-items-center">';
+                        content += '<div><i class="bi bi-book text-primary-custom"></i> <strong>' + cls.class_name + '</strong></div>';
+                        content += '<i class="bi bi-chevron-right"></i>';
+                        content += '</div>';
+                        content += '<div class="subclasses-list mt-2" style="display: none;"></div>';
+                        content += '</div>';
+                    });
+                    content += '</div>';
+                    $('#classWidgetContent').html(content);
+                } else {
+                    $('#classWidgetContent').html('<p class="text-muted text-center py-3">No classes found for this academic year</p>');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading classes:', error, xhr.responseText);
+                $('#classWidgetContent').html('<p class="text-danger text-center py-3">Error loading classes. Please try again.</p>');
+            }
+        });
+    }
+    
+    // Function to load results data for widget
+    function loadResultsDataForWidget(studentID, academicYearID, yearStatus) {
+        if (!studentID || !academicYearID) {
+            $('#resultsWidgetContent').html('<p class="text-danger text-center py-3">Missing required parameters</p>');
+            return;
+        }
+        
+        $('#resultsWidgetContent').html('<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary" role="status"></div><p class="mt-2">Loading results...</p></div>');
+        
+        $.ajax({
+            url: '{{ route("get_student_terms_for_year") }}',
+            type: 'GET',
+            data: {
+                student_id: studentID,
+                academic_year_id: academicYearID,
+                year_status: yearStatus
+            },
+            dataType: 'json',
+            success: function(response) {
+                console.log('Results/terms response:', response);
+                if (response.success && response.terms && response.terms.length > 0) {
+                    let content = '<div class="mb-3">';
+                    content += '<label class="form-label fw-bold">Select Term:</label>';
+                    content += '<select class="form-select term-selector" style="border-radius: 0;">';
+                    content += '<option value="">Select Term</option>';
+                    response.terms.forEach(function(term) {
+                        content += '<option value="' + term.term + '">' + term.term_name + '</option>';
+                    });
+                    content += '</select>';
+                    content += '</div>';
+                    content += '<div id="termResultsOptions" style="display: none;"></div>';
+                    $('#resultsWidgetContent').html(content);
+                } else {
+                    $('#resultsWidgetContent').html('<p class="text-muted text-center py-3">No terms/results found for this academic year</p>');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading results:', error);
+                console.error('Response:', xhr.responseText);
+                let errorMessage = 'Error loading results. Please try again.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                } else if (xhr.responseText) {
+                    try {
+                        let errorData = JSON.parse(xhr.responseText);
+                        if (errorData.message) {
+                            errorMessage = errorData.message;
+                        }
+                    } catch (e) {
+                        // Not JSON, use default message
+                    }
+                }
+                $('#resultsWidgetContent').html('<p class="text-danger text-center py-3">' + errorMessage + '</p>');
+            }
+        });
+    }
+    
+    // Function to load attendance data for widget
+    function loadAttendanceDataForWidget(studentID, academicYearID, yearStatus) {
+        let content = '<div class="mb-3">';
+        content += '<label class="form-label fw-bold">Filter Type:</label>';
+        content += '<select class="form-select attendance-filter-type" style="border-radius: 0;">';
+        content += '<option value="">Select Filter Type</option>';
+        content += '<option value="date_range">Filter by Date Range</option>';
+        content += '<option value="month">Filter by Month</option>';
+        content += '</select>';
+        content += '</div>';
+        content += '<div id="attendanceFilterOptions" style="display: none;"></div>';
+        content += '<div id="attendanceResults" class="mt-3"></div>';
+        $('#attendanceWidgetContent').html(content);
+    }
+    
+    // Function to load payments data for widget
+    function loadPaymentsDataForWidget(studentID, academicYearID, yearStatus) {
+        if (!studentID || !academicYearID) {
+            $('#paymentsWidgetContent').html('<p class="text-danger text-center py-3">Missing required parameters</p>');
+            return;
+        }
+        
+        $('#paymentsWidgetContent').html('<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary" role="status"></div><p class="mt-2">Loading payments...</p></div>');
+        
+        $.ajax({
+            url: '{{ route("get_student_payments_for_year") }}',
+            type: 'GET',
+            data: {
+                student_id: studentID,
+                academic_year_id: academicYearID,
+                year_status: yearStatus
+            },
+            dataType: 'json',
+            success: function(response) {
+                console.log('Payments response:', response);
+                if (response.success) {
+                    let content = '<div class="table-responsive"><table class="table table-bordered" style="border-radius: 0;"><thead class="table-light"><tr><th>Date</th><th>Control Number</th><th>Fee Type</th><th>Amount</th><th>Payment Method</th><th>Receipt</th></tr></thead><tbody>';
+                    
+                    if (response.payments && response.payments.length > 0) {
+                        response.payments.forEach(function(payment) {
+                            content += '<tr>';
+                            content += '<td>' + (payment.date || 'N/A') + '</td>';
+                            content += '<td>' + (payment.control_number || 'N/A') + '</td>';
+                            content += '<td>' + (payment.fee_type || 'N/A') + '</td>';
+                            content += '<td>' + (payment.amount || 0) + ' TZS</td>';
+                            content += '<td>' + (payment.payment_method || 'N/A') + '</td>';
+                            content += '<td>' + (payment.receipt_number || 'N/A') + '</td>';
+                            content += '</tr>';
+                        });
+                    } else {
+                        content += '<tr><td colspan="6" class="text-center text-muted">No payments found for this academic year</td></tr>';
+                    }
+                    
+                    content += '</tbody></table></div>';
+                    $('#paymentsWidgetContent').html(content);
+                } else {
+                    $('#paymentsWidgetContent').html('<p class="text-muted text-center py-3">No payments found</p>');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading payments:', error);
+                console.error('Response:', xhr.responseText);
+                let errorMessage = 'Error loading payments. Please try again.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                } else if (xhr.responseText) {
+                    try {
+                        let errorData = JSON.parse(xhr.responseText);
+                        if (errorData.message) {
+                            errorMessage = errorData.message;
+                        }
+                    } catch (e) {
+                        // Not JSON, use default message
+                    }
+                }
+                $('#paymentsWidgetContent').html('<p class="text-danger text-center py-3">' + errorMessage + '</p>');
+            }
+        });
+    }
+    
+    // Function to load debits (debts) data for widget
+    function loadDebitsDataForWidget(studentID, academicYearID, yearStatus) {
+        if (!studentID || !academicYearID) {
+            $('#debitsWidgetContent').html('<p class="text-danger text-center py-3">Missing required parameters</p>');
+            return;
+        }
+        
+        $('#debitsWidgetContent').html('<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary" role="status"></div><p class="mt-2">Loading debts...</p></div>');
+        
+        $.ajax({
+            url: '{{ route("get_student_debts_for_year") }}',
+            type: 'GET',
+            data: {
+                student_id: studentID,
+                academic_year_id: academicYearID,
+                year_status: yearStatus
+            },
+            dataType: 'json',
+            success: function(response) {
+                console.log('Debts response:', response);
+                if (response.success) {
+                    let content = '<div class="alert alert-warning" style="border-radius: 0;"><strong>Total Outstanding Debt: ' + (response.total_debt || 0) + ' TZS</strong></div>';
+                    content += '<div class="table-responsive"><table class="table table-bordered" style="border-radius: 0;"><thead class="table-light"><tr><th>Fee Type</th><th>Required Amount</th><th>Paid Amount</th><th>Outstanding</th></tr></thead><tbody>';
+                    
+                    if (response.debts && response.debts.length > 0) {
+                        response.debts.forEach(function(debt) {
+                            content += '<tr>';
+                            content += '<td>' + (debt.fee_type || 'N/A') + '</td>';
+                            content += '<td>' + (debt.required_amount || 0) + ' TZS</td>';
+                            content += '<td>' + (debt.paid_amount || 0) + ' TZS</td>';
+                            content += '<td class="text-danger"><strong>' + (debt.outstanding || 0) + ' TZS</strong></td>';
+                            content += '</tr>';
+                        });
+                    } else {
+                        content += '<tr><td colspan="4" class="text-center text-success"><strong>No outstanding debts</strong></td></tr>';
+                    }
+                    
+                    content += '</tbody></table></div>';
+                    
+                    // Add library records section (books not returned)
+                    if (response.library_records && response.library_records.length > 0) {
+                        content += '<div class="mt-4"><h6 class="fw-bold mb-3"><i class="bi bi-book"></i> Library Books Not Returned</h6>';
+                        content += '<div class="table-responsive"><table class="table table-bordered" style="border-radius: 0;"><thead class="table-light"><tr><th>Borrow Date</th><th>Book Title</th><th>Subject</th><th>Class</th></tr></thead><tbody>';
+                        
+                        response.library_records.forEach(function(record) {
+                            content += '<tr>';
+                            content += '<td>' + (record.borrow_date || 'N/A') + '</td>';
+                            content += '<td>' + (record.book_title || 'N/A') + '</td>';
+                            content += '<td>' + (record.subject_name || 'N/A') + '</td>';
+                            content += '<td>' + (record.class_name || 'N/A') + '</td>';
+                            content += '</tr>';
+                        });
+                        
+                        content += '</tbody></table></div></div>';
+                    } else {
+                        content += '<div class="mt-4"><h6 class="fw-bold mb-3"><i class="bi bi-book"></i> Library Books Not Returned</h6>';
+                        content += '<p class="text-muted text-center py-2">No books borrowed or all books have been returned</p></div>';
+                    }
+                    
+                    $('#debitsWidgetContent').html(content);
+                } else {
+                    $('#debitsWidgetContent').html('<p class="text-muted text-center py-3">No debts found</p>');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading debts:', error);
+                $('#debitsWidgetContent').html('<p class="text-danger text-center py-3">Error loading debts</p>');
+            }
+        });
+    }
+    
+    // Handle class item click to show subclasses
+    $(document).on('click', '.class-item', function() {
+        let classID = $(this).data('class-id');
+        let className = $(this).data('class-name');
+        let subclassesList = $(this).find('.subclasses-list');
+        
+        if (subclassesList.is(':visible')) {
+            subclassesList.slideUp();
+            return;
+        }
+        
+        let studentID = $('#academicYearSelector').data('student-id');
+        let academicYearID = $('#academicYearSelector').val();
+        let yearStatus = $('#academicYearSelector').find('option:selected').data('status');
+        
+        subclassesList.html('<div class="text-center py-2"><div class="spinner-border spinner-border-sm" role="status"></div></div>').slideDown();
+        
+        $.ajax({
+            url: '{{ route("get_student_subclasses_for_class") }}',
+            type: 'GET',
+            data: {
+                student_id: studentID,
+                academic_year_id: academicYearID,
+                class_id: classID,
+                year_status: yearStatus
+            },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success && response.subclasses && response.subclasses.length > 0) {
+                    let html = '<ul class="list-group list-group-flush" style="border-radius: 0;">';
+                    response.subclasses.forEach(function(subclass) {
+                        html += '<li class="list-group-item" style="border-radius: 0;"><i class="bi bi-layers text-info"></i> ' + subclass.subclass_name + '</li>';
+                    });
+                    html += '</ul>';
+                    subclassesList.html(html);
+                } else {
+                    subclassesList.html('<p class="text-muted text-center py-2">No subclasses found</p>');
+                }
+            },
+            error: function() {
+                subclassesList.html('<p class="text-danger text-center py-2">Error loading subclasses</p>');
+            }
+        });
+    });
+    
+    // Handle term selection for results widget
+    $(document).on('change', '.term-selector', function() {
+        let term = $(this).val();
+        let studentID = $('#academicYearSelector').data('student-id');
+        let academicYearID = $('#academicYearSelector').val();
+        let yearStatus = $('#academicYearSelector').find('option:selected').data('status');
+        
+        if (term && academicYearID) {
+            // Show filter options for exam results or term report
+            let content = '<div class="mb-3">';
+            content += '<label class="form-label fw-bold">View Type:</label>';
+            content += '<select class="form-select" id="resultViewType" style="border-radius: 0;">';
+            content += '<option value="">Select View Type</option>';
+            content += '<option value="exam_results">Exam Results</option>';
+            content += '<option value="term_report">Term Report</option>';
+            content += '</select>';
+            content += '</div>';
+            content += '<div id="examFilterContainer" style="display: none;" class="mb-3">';
+            content += '<label class="form-label fw-bold">Select Exam:</label>';
+            content += '<select class="form-select" id="examSelector" style="border-radius: 0;">';
+            content += '<option value="">Loading...</option>';
+            content += '</select>';
+            content += '</div>';
+            content += '<div id="resultsDisplayArea"></div>';
+            
+            $('#termResultsOptions').html(content).slideDown();
+            
+            // Load exams for this term
+            loadExamsForTerm(studentID, academicYearID, term, yearStatus);
+        } else {
+            $('#termResultsOptions').slideUp().html('');
+        }
+    });
+    
+    // Handle result view type change
+    $(document).on('change', '#resultViewType', function() {
+        let viewType = $(this).val();
+        let studentID = $('#academicYearSelector').data('student-id');
+        let academicYearID = $('#academicYearSelector').val();
+        let term = $('.term-selector').val(); // Get term from term selector
+        let yearStatus = $('#academicYearSelector').find('option:selected').data('status');
+        
+        if (viewType === 'exam_results') {
+            $('#examFilterContainer').show();
+        } else if (viewType === 'term_report') {
+            $('#examFilterContainer').hide();
+            // Load term report
+            if (term) {
+                loadTermReport(studentID, academicYearID, term, yearStatus);
+            }
+        } else {
+            $('#examFilterContainer').hide();
+            $('#resultsDisplayArea').html('');
+        }
+    });
+    
+    // Handle exam selection change
+    $(document).on('change', '#examSelector', function() {
+        let studentID = $('#academicYearSelector').data('student-id');
+        let academicYearID = $('#academicYearSelector').val();
+        let term = $('.term-selector').val(); // Get term from term selector
+        let examID = $(this).val();
+        let yearStatus = $('#academicYearSelector').find('option:selected').data('status');
+        
+        console.log('Exam selected:', examID, 'Term:', term, 'Year:', academicYearID, 'Status:', yearStatus);
+        
+        if (examID && term && academicYearID) {
+            $('#resultsDisplayArea').html('<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary" role="status"></div><p class="mt-2">Loading results...</p></div>');
+            loadExamResults(studentID, academicYearID, term, examID, yearStatus);
+        } else {
+            $('#resultsDisplayArea').html('<p class="text-warning text-center py-3">Please select term and exam</p>');
+        }
+    });
+    
+    // Function to load exams for term
+    function loadExamsForTerm(studentID, academicYearID, term, yearStatus) {
+        $.ajax({
+            url: '{{ route("get_exams_for_term") }}',
+            type: 'GET',
+            data: {
+                student_id: studentID,
+                academic_year_id: academicYearID,
+                term: term,
+                year_status: yearStatus
+            },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    let examSelector = $('#examSelector');
+                    examSelector.html('<option value="">Select Exam</option>');
+                    
+                    if (response.exams && response.exams.length > 0) {
+                        response.exams.forEach(function(exam) {
+                            examSelector.append('<option value="' + exam.exam_id + '">' + exam.exam_name + '</option>');
+                        });
+                    } else {
+                        examSelector.append('<option value="">No exams found</option>');
+                    }
+                }
+            }
+        });
+    }
+    
+    // Function to load exam results
+    function loadExamResults(studentID, academicYearID, term, examID, yearStatus) {
+        if (!studentID || !academicYearID || !term || !examID) {
+            $('#resultsDisplayArea').html('<p class="text-danger text-center py-3">Missing required parameters</p>');
+            return;
+        }
+        
+        $.ajax({
+            url: '{{ route("get_student_exam_results") }}',
+            type: 'GET',
+            data: {
+                student_id: studentID,
+                academic_year_id: academicYearID,
+                term: term,
+                exam_id: examID,
+                year_status: yearStatus
+            },
+            dataType: 'json',
+            success: function(response) {
+                console.log('Exam results response:', response);
+                if (response.success) {
+                    let content = '';
+                    
+                    // Position summary
+                    if (response.position && response.total_students) {
+                        content += '<div class="alert alert-info mb-3" style="border-radius: 0;">';
+                        content += '<strong><i class="bi bi-trophy"></i> Position: ' + response.position + ' out of ' + response.total_students + ' students</strong>';
+                        content += '</div>';
+                    }
+                    
+                    content += '<div class="table-responsive"><table class="table table-bordered" style="border-radius: 0;"><thead class="table-light"><tr><th>Subject</th><th>Marks</th><th>Grade</th><th>Remark</th></tr></thead><tbody>';
+                    
+                    if (response.results && response.results.length > 0) {
+                        response.results.forEach(function(result) {
+                            content += '<tr><td>' + (result.subject_name || 'N/A') + '</td><td>' + (result.marks || 0) + '</td><td>' + (result.grade || 'N/A') + '</td><td>' + (result.remark || '') + '</td></tr>';
+                        });
+                    } else {
+                        content += '<tr><td colspan="4" class="text-center text-muted">No results found for this exam</td></tr>';
+                    }
+                    
+                    content += '</tbody></table></div>';
+                    if (response.results && response.results.length > 0) {
+                        content += '<div class="mt-3"><button class="btn btn-primary export-exam-pdf-btn" data-student-id="' + studentID + '" data-year-id="' + academicYearID + '" data-term="' + term + '" data-exam-id="' + examID + '" data-year-status="' + yearStatus + '" style="border-radius: 0;"><i class="bi bi-file-pdf"></i> Export PDF</button></div>';
+                    }
+                    
+                    $('#resultsDisplayArea').html(content);
+                } else {
+                    $('#resultsDisplayArea').html('<p class="text-muted text-center py-3">No results found</p>');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading exam results:', error);
+                console.error('Response:', xhr.responseText);
+                $('#resultsDisplayArea').html('<p class="text-muted text-center py-3">No results found for this exam</p>');
+            }
+        });
+    }
+    
+    // Function to load term report
+    function loadTermReport(studentID, academicYearID, term, yearStatus) {
+        if (!studentID || !academicYearID || !term) {
+            $('#resultsDisplayArea').html('<p class="text-danger text-center py-3">Missing required parameters</p>');
+            return;
+        }
+        
+        $('#resultsDisplayArea').html('<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary" role="status"></div><p class="mt-2">Loading term report...</p></div>');
+        
+        $.ajax({
+            url: '{{ route("get_student_term_report") }}',
+            type: 'GET',
+            data: {
+                student_id: studentID,
+                academic_year_id: academicYearID,
+                term: term,
+                year_status: yearStatus
+            },
+            dataType: 'json',
+            success: function(response) {
+                console.log('Term report response:', response);
+                if (response.success) {
+                    let content = '';
+                    
+                    // Student Information Section
+                    content += '<div class="card mb-3" style="border-radius: 0;">';
+                    content += '<div class="card-header bg-primary text-white"><h5 class="mb-0"><i class="bi bi-person"></i> Student Information</h5></div>';
+                    content += '<div class="card-body">';
+                    content += '<div class="row">';
+                    content += '<div class="col-md-6"><strong>Student Name:</strong> ' + (response.student_name || 'N/A') + '</div>';
+                    content += '<div class="col-md-3"><strong>Term:</strong> ' + (response.term || 'N/A') + '</div>';
+                    content += '<div class="col-md-3"><strong>Year:</strong> ' + (response.year || 'N/A') + '</div>';
+                    content += '</div>';
+                    if (response.position && response.total_students) {
+                        content += '<div class="row mt-2">';
+                        content += '<div class="col-md-6"><strong>Position:</strong> ' + response.position + ' out of ' + response.total_students + '</div>';
+                        content += '<div class="col-md-3"><strong>Overall Average:</strong> ' + (response.overall_average || 0) + '</div>';
+                        content += '<div class="col-md-3"><strong>Grade:</strong> ' + (response.overall_grade || 'N/A') + '</div>';
+                        content += '</div>';
+                    } else {
+                        content += '<div class="row mt-2">';
+                        content += '<div class="col-md-6"><strong>Overall Average:</strong> ' + (response.overall_average || 0) + '</div>';
+                        content += '<div class="col-md-6"><strong>Grade:</strong> ' + (response.overall_grade || 'N/A') + '</div>';
+                        content += '</div>';
+                    }
+                    content += '</div></div>';
+                    
+                    // Examinations Table
+                    if (response.examinations && response.examinations.length > 0) {
+                        content += '<div class="card mb-3" style="border-radius: 0;">';
+                        content += '<div class="card-header bg-info text-white"><h6 class="mb-0"><i class="bi bi-file-earmark-text"></i> Examinations</h6></div>';
+                        content += '<div class="card-body">';
+                        content += '<div class="table-responsive"><table class="table table-bordered" style="border-radius: 0;"><thead class="table-light"><tr><th>Examination</th><th>Average</th><th>Grade</th></tr></thead><tbody>';
+                        
+                        response.examinations.forEach(function(exam) {
+                            content += '<tr>';
+                            content += '<td>' + (exam.exam_name || 'N/A') + '</td>';
+                            content += '<td>' + (exam.average || 0) + '</td>';
+                            content += '<td>' + (exam.grade || 'N/A') + '</td>';
+                            content += '</tr>';
+                        });
+                        
+                        content += '</tbody></table></div>';
+                        content += '</div></div>';
+                    }
+                    
+                    // Subject Results Table
+                    if (response.report && response.report.length > 0) {
+                        content += '<div class="card mb-3" style="border-radius: 0;">';
+                        content += '<div class="card-header bg-success text-white"><h6 class="mb-0"><i class="bi bi-book"></i> Subject Results</h6></div>';
+                        content += '<div class="card-body">';
+                        
+                        // Build table header with exam names
+                        let examNames = [];
+                        if (response.examinations && response.examinations.length > 0) {
+                            response.examinations.forEach(function(exam) {
+                                examNames.push(exam.exam_name);
+                            });
+                        }
+                        
+                        content += '<div class="table-responsive"><table class="table table-bordered" style="border-radius: 0;"><thead class="table-light"><tr><th>Subject</th>';
+                        examNames.forEach(function(examName) {
+                            content += '<th>' + examName + '</th>';
+                        });
+                        content += '<th>Average</th><th>Grade</th></tr></thead><tbody>';
+                        
+                        response.report.forEach(function(item) {
+                            content += '<tr>';
+                            content += '<td>' + (item.subject_name || 'N/A') + '</td>';
+                            
+                            // Add marks for each exam
+                            examNames.forEach(function(examName) {
+                                if (item.exam_marks && item.exam_marks[examName]) {
+                                    let examMark = item.exam_marks[examName];
+                                    content += '<td>' + examMark.marks + '-' + examMark.grade + '</td>';
+                                } else {
+                                    content += '<td>-</td>';
+                                }
+                            });
+                            
+                            content += '<td>' + (item.average || 0) + '</td>';
+                            content += '<td>' + (item.grade || 'N/A') + '</td>';
+                            content += '</tr>';
+                        });
+                        
+                        content += '</tbody></table></div>';
+                        content += '</div></div>';
+                    } else {
+                        content += '<div class="alert alert-info" style="border-radius: 0;">No report data found for this term</div>';
+                    }
+                    
+                    if (response.report && response.report.length > 0) {
+                        // Store response data in a global variable for PDF export
+                        window.termReportData = response;
+                        content += '<div class="mt-3"><button class="btn btn-primary export-term-pdf-btn" data-student-id="' + studentID + '" data-year-id="' + academicYearID + '" data-term="' + term + '" data-year-status="' + yearStatus + '" style="border-radius: 0;"><i class="bi bi-file-pdf"></i> Export PDF</button></div>';
+                    }
+                    
+                    $('#resultsDisplayArea').html(content);
+                } else {
+                    $('#resultsDisplayArea').html('<p class="text-muted text-center py-3">No report data found</p>');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading term report:', error);
+                console.error('Response:', xhr.responseText);
+                $('#resultsDisplayArea').html('<p class="text-muted text-center py-3">No report data found for this term</p>');
+            }
+        });
+    }
+    
+    // Handle PDF export for exam results
+    $(document).on('click', '.export-exam-pdf-btn', function() {
+        let studentID = $(this).data('student-id');
+        let academicYearID = $(this).data('year-id');
+        let term = $(this).data('term');
+        let examID = $(this).data('exam-id');
+        let yearStatus = $(this).data('year-status');
+        
+        // Get results data from table
+        let results = [];
+        $('#resultsDisplayArea table tbody tr').each(function() {
+            let cells = $(this).find('td');
+            if (cells.length >= 3) {
+                results.push({
+                    subject: $(cells[0]).text().trim(),
+                    marks: $(cells[1]).text().trim(),
+                    grade: $(cells[2]).text().trim(),
+                    remark: $(cells[3]).text().trim() || ''
+                });
+            }
+        });
+        
+        if (results.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Data',
+                text: 'No results to export'
+            });
+            return;
+        }
+        
+        // Get student name
+        let studentName = $('#viewStudentModal .school-title').text().trim() || 'Student';
+        
+        // Generate PDF using jsPDF
+        if (typeof jsPDF === 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'PDF library not loaded'
+            });
+            return;
+        }
+        
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Header
+        doc.setFontSize(16);
+        doc.setTextColor(148, 0, 0);
+        doc.text('EXAM RESULTS', 105, 15, { align: 'center' });
+        
+        // Student info
+        doc.setFontSize(12);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Student: ' + studentName, 14, 25);
+        doc.text('Term: ' + term.replace('_', ' ').toUpperCase(), 14, 32);
+        
+        // Table
+        doc.autoTable({
+            startY: 40,
+            head: [['Subject', 'Marks', 'Grade', 'Remark']],
+            body: results.map(r => [r.subject, r.marks, r.grade, r.remark]),
+            theme: 'grid',
+            headStyles: { fillColor: [148, 0, 0], textColor: [255, 255, 255] },
+            styles: { fontSize: 9 }
+        });
+        
+        // Add footer on all pages
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(128, 128, 128);
+            doc.text('Powered by EMCA Technology', 105, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
+        }
+        
+        // Save
+        let filename = 'Exam_Results_' + studentName.replace(/\s+/g, '_') + '_' + term + '.pdf';
+        doc.save(filename);
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Success!',
+            text: 'PDF exported successfully',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    });
+    
+    // Handle PDF export for term report
+    $(document).on('click', '.export-term-pdf-btn', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log('Export PDF button clicked');
+        
+        let studentID = $(this).data('student-id');
+        let academicYearID = $(this).data('year-id');
+        let term = $(this).data('term');
+        let yearStatus = $(this).data('year-status');
+        
+        console.log('Button data:', { studentID, academicYearID, term, yearStatus });
+        console.log('Stored termReportData:', window.termReportData);
+        
+        // Get report data from stored response
+        let response = window.termReportData;
+        
+        if (!response) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Report data not found. Please reload the term report first.'
+            });
+            return;
+        }
+        
+        if (!response.report || response.report.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Data',
+                text: 'No report data to export'
+            });
+            return;
+        }
+        
+        // Get student name and other info from response
+        let studentName = response.student_name || 'Student';
+        let termName = response.term || term.replace('_', ' ').toUpperCase();
+        let yearName = response.year || 'N/A';
+        let overallAvg = response.overall_average || 0;
+        let overallGrade = response.overall_grade || 'N/A';
+        let position = response.position || null;
+        let totalStudents = response.total_students || null;
+        
+        // Generate PDF using jsPDF
+        if (typeof window.jspdf === 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'PDF library not loaded. Please refresh the page.'
+            });
+            console.error('jsPDF library not found');
+            return;
+        }
+        
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            
+            // Header
+            doc.setFontSize(18);
+            doc.setTextColor(148, 0, 0);
+            doc.text(studentName.toUpperCase() + ' - TERM REPORT DETAILS', 105, 15, { align: 'center' });
+            
+            // Student Information Section
+            let yPos = 30;
+            doc.setFontSize(12);
+            doc.setTextColor(148, 0, 0);
+            doc.text('Student Information', 14, yPos);
+            yPos += 8;
+            
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.text('Student Name: ' + studentName, 14, yPos);
+            yPos += 6;
+            doc.text('Term: ' + termName, 14, yPos);
+            yPos += 6;
+            doc.text('Year: ' + yearName, 14, yPos);
+            yPos += 6;
+            if (position && totalStudents) {
+                doc.text('Position: ' + position + ' out of ' + totalStudents, 14, yPos);
+                yPos += 6;
+            }
+            doc.text('Overall Average: ' + overallAvg, 14, yPos);
+            yPos += 6;
+            doc.text('Grade: ' + overallGrade, 14, yPos);
+            yPos += 10;
+            
+            // Examinations Table
+            if (response.examinations && response.examinations.length > 0) {
+                doc.setFontSize(12);
+                doc.setTextColor(148, 0, 0);
+                doc.text('Examinations', 14, yPos);
+                yPos += 8;
+                
+                let examTableData = response.examinations.map(exam => [
+                    exam.exam_name || 'N/A',
+                    exam.average || 0,
+                    exam.grade || 'N/A'
+                ]);
+                
+                doc.autoTable({
+                    startY: yPos,
+                    head: [['Examination', 'Average', 'Grade']],
+                    body: examTableData,
+                    theme: 'grid',
+                    headStyles: { fillColor: [148, 0, 0], textColor: [255, 255, 255] },
+                    styles: { fontSize: 9 },
+                    margin: { left: 14 }
+                });
+                
+                yPos = doc.lastAutoTable.finalY + 10;
+            }
+            
+            // Subject Results Table
+            if (response.report && response.report.length > 0) {
+                doc.setFontSize(12);
+                doc.setTextColor(148, 0, 0);
+                doc.text('Subject Results', 14, yPos);
+                yPos += 8;
+                
+                // Build table header with exam names
+                let examNames = [];
+                if (response.examinations && response.examinations.length > 0) {
+                    response.examinations.forEach(function(exam) {
+                        examNames.push(exam.exam_name);
+                    });
+                }
+                
+                let tableHead = ['Subject'];
+                examNames.forEach(function(examName) {
+                    tableHead.push(examName);
+                });
+                tableHead.push('Average');
+                tableHead.push('Grade');
+                
+                let tableBody = [];
+                response.report.forEach(function(item) {
+                    let row = [item.subject_name || 'N/A'];
+                    
+                    // Add marks for each exam
+                    examNames.forEach(function(examName) {
+                        if (item.exam_marks && item.exam_marks[examName]) {
+                            let examMark = item.exam_marks[examName];
+                            row.push(examMark.marks + '-' + examMark.grade);
+                        } else {
+                            row.push('-');
+                        }
+                    });
+                    
+                    row.push(item.average || 0);
+                    row.push(item.grade || 'N/A');
+                    tableBody.push(row);
+                });
+                
+                doc.autoTable({
+                    startY: yPos,
+                    head: [tableHead],
+                    body: tableBody,
+                    theme: 'grid',
+                    headStyles: { fillColor: [148, 0, 0], textColor: [255, 255, 255] },
+                    styles: { fontSize: 8 },
+                    margin: { left: 14 },
+                    columnStyles: {
+                        0: { cellWidth: 50 }, // Subject column
+                    }
+                });
+            }
+            
+            // Add footer on all pages
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor(128, 128, 128);
+                doc.text('Powered by EMCA Technology', 105, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
+            }
+            
+            // Save
+            let filename = 'Term_Report_' + studentName.replace(/\s+/g, '_') + '_' + term + '.pdf';
+            doc.save(filename);
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: 'PDF exported successfully',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to generate PDF: ' + (error.message || 'Unknown error')
+            });
+        }
+    });
+    
+    // Handle attendance filter type selection
+    $(document).on('change', '.attendance-filter-type', function() {
+        let filterType = $(this).val();
+        let studentID = $('#academicYearSelector').data('student-id');
+        let academicYearID = $('#academicYearSelector').val();
+        let yearStatus = $('#academicYearSelector').find('option:selected').data('status');
+        
+        if (filterType && academicYearID) {
+            let content = '';
+            
+            if (filterType === 'date_range') {
+                content += '<div class="row g-3 mb-3">';
+                content += '<div class="col-md-6"><label class="form-label fw-bold">From Date</label><input type="date" class="form-control" id="attendanceFromDate" style="border-radius: 0;"></div>';
+                content += '<div class="col-md-6"><label class="form-label fw-bold">To Date</label><input type="date" class="form-control" id="attendanceToDate" style="border-radius: 0;"></div>';
+                content += '</div>';
+                content += '<button class="btn btn-primary load-attendance-btn" data-filter-type="date_range" style="border-radius: 0;"><i class="bi bi-search"></i> Load Attendance</button>';
+            } else if (filterType === 'month') {
+                content += '<div class="row g-3 mb-3">';
+                content += '<div class="col-md-6"><label class="form-label fw-bold">Month</label><input type="month" class="form-control" id="attendanceMonth" style="border-radius: 0;"></div>';
+                content += '</div>';
+                content += '<button class="btn btn-primary load-attendance-btn" data-filter-type="month" style="border-radius: 0;"><i class="bi bi-search"></i> Load Attendance</button>';
+            }
+            
+            $('#attendanceFilterOptions').html(content).slideDown();
+        } else {
+            $('#attendanceFilterOptions').slideUp().html('');
+            $('#attendanceResults').html('');
+        }
+    });
+    
+    // Handle load attendance button click
+    $(document).on('click', '.load-attendance-btn', function() {
+        let filterType = $(this).data('filter-type');
+        let studentID = $('#academicYearSelector').data('student-id');
+        let academicYearID = $('#academicYearSelector').val();
+        let yearStatus = $('#academicYearSelector').find('option:selected').data('status');
+        
+        if (filterType === 'date_range') {
+            loadAttendanceByDateRange(studentID, academicYearID, yearStatus);
+        } else if (filterType === 'month') {
+            loadAttendanceByMonth(studentID, academicYearID, yearStatus);
+        }
+    });
+    
+    // Function to load attendance by date range
+    function loadAttendanceByDateRange(studentID, academicYearID, yearStatus) {
+        let fromDate = $('#attendanceFromDate').val();
+        let toDate = $('#attendanceToDate').val();
+        
+        if (!fromDate || !toDate) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Validation Error',
+                text: 'Please select both from and to dates'
+            });
+            return;
+        }
+        
+        $.ajax({
+            url: '{{ route("get_student_attendance") }}',
+            type: 'GET',
+            data: {
+                student_id: studentID,
+                academic_year_id: academicYearID,
+                from_date: fromDate,
+                to_date: toDate,
+                year_status: yearStatus
+            },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    displayAttendanceData(response.attendance, studentID, academicYearID, fromDate, toDate);
+                }
+            }
+        });
+    }
+    
+    // Function to load attendance by month
+    function loadAttendanceByMonth(studentID, academicYearID, yearStatus) {
+        let month = $('#attendanceMonth').val();
+        
+        if (!month) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Validation Error',
+                text: 'Please select a month'
+            });
+            return;
+        }
+        
+        $.ajax({
+            url: '{{ route("get_student_attendance") }}',
+            type: 'GET',
+            data: {
+                student_id: studentID,
+                academic_year_id: academicYearID,
+                month: month,
+                year_status: yearStatus
+            },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    displayAttendanceData(response.attendance, studentID, academicYearID, null, null, month);
+                }
+            }
+        });
+    }
+    
+    // Function to display attendance data
+    function displayAttendanceData(attendance, studentID, academicYearID, fromDate, toDate, month) {
+        let content = '<div class="table-responsive"><table class="table table-bordered" style="border-radius: 0;"><thead class="table-light"><tr><th>Date</th><th>Status</th><th>Check In</th><th>Check Out</th><th>Remark</th></tr></thead><tbody>';
+        
+        if (attendance && attendance.length > 0) {
+            attendance.forEach(function(record) {
+                content += '<tr><td>' + record.date + '</td><td><span class="badge bg-' + (record.status === 'Present' ? 'success' : 'danger') + '">' + record.status + '</span></td><td>' + (record.check_in || 'N/A') + '</td><td>' + (record.check_out || 'N/A') + '</td><td>' + (record.remark || '') + '</td></tr>';
+            });
+        } else {
+            content += '<tr><td colspan="5" class="text-center">No attendance records found</td></tr>';
+        }
+        
+        content += '</tbody></table></div>';
+        content += '<div class="mt-3">';
+        content += '<button class="btn btn-primary me-2" onclick="exportAttendancePDF(\'' + studentID + '\', \'' + academicYearID + '\', \'' + fromDate + '\', \'' + toDate + '\', \'' + month + '\')" style="border-radius: 0;"><i class="bi bi-file-pdf"></i> Export PDF</button>';
+        content += '<button class="btn btn-success" onclick="exportAttendanceExcel(\'' + studentID + '\', \'' + academicYearID + '\', \'' + fromDate + '\', \'' + toDate + '\', \'' + month + '\')" style="border-radius: 0;"><i class="bi bi-file-excel"></i> Export Excel</button>';
+        content += '</div>';
+        
+        $('#attendanceResults').html(content);
+    }
+    
+    // Export functions (to be implemented)
+    function exportResultsPDF(studentID, academicYearID, term, examID, type) {
+        // Implementation for PDF export
+        window.location.href = '{{ route("export_student_results_pdf") }}?student_id=' + studentID + '&academic_year_id=' + academicYearID + '&term=' + term + '&exam_id=' + examID + '&type=' + type;
+    }
+    
+    function exportAttendancePDF(studentID, academicYearID, fromDate, toDate, month) {
+        // Implementation for PDF export
+        window.location.href = '{{ route("export_student_attendance_pdf") }}?student_id=' + studentID + '&academic_year_id=' + academicYearID + '&from_date=' + fromDate + '&to_date=' + toDate + '&month=' + month;
+    }
+    
+    function exportAttendanceExcel(studentID, academicYearID, fromDate, toDate, month) {
+        // Implementation for Excel export
+        window.location.href = '{{ route("export_student_attendance_excel") }}?student_id=' + studentID + '&academic_year_id=' + academicYearID + '&from_date=' + fromDate + '&to_date=' + toDate + '&month=' + month;
+    }
 
     // Handle Send Student to Fingerprint Device Button Click
     $(document).on('click', '.send-student-to-fingerprint-btn', function(e) {

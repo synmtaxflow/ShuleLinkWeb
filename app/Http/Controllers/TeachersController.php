@@ -1800,6 +1800,7 @@ class TeachersController extends Controller
         $subjectID = $classSubject->subjectID;
         
         // Get all schemes for this subject (from any class subject with same subjectID)
+        // Include schemes from scheme_of_works table (current, past, and archived schemes)
         $existingSchemes = SchemeOfWork::with(['classSubject.subject', 'classSubject.class', 'classSubject.subclass.class', 'createdBy', 'items', 'learningObjectives'])
             ->whereHas('classSubject', function($query) use ($subjectID) {
                 $query->where('subjectID', $subjectID);
@@ -1807,8 +1808,35 @@ class TeachersController extends Controller
             ->orderBy('year', 'desc')
             ->orderBy('created_at', 'desc')
             ->get();
+        
+        // Also get schemes from history table for closed academic years (same subject)
+        // Join with scheme_of_works table using original_scheme_of_workID
+        // Schemes are marked as Archived (not deleted) so they can still be accessed
+        $historySchemes = DB::table('scheme_of_works_history')
+            ->join('class_subjects', 'scheme_of_works_history.original_class_subjectID', '=', 'class_subjects.class_subjectID')
+            ->join('scheme_of_works', 'scheme_of_works_history.original_scheme_of_workID', '=', 'scheme_of_works.scheme_of_workID')
+            ->where('class_subjects.subjectID', $subjectID)
+            ->whereNotNull('scheme_of_works.scheme_of_workID')
+            ->select('scheme_of_works.scheme_of_workID')
+            ->distinct()
+            ->pluck('scheme_of_workID')
+            ->toArray();
+        
+        // Get schemes from history that are not already in existing schemes
+        $historySchemeModels = SchemeOfWork::with(['classSubject.subject', 'classSubject.class', 'classSubject.subclass.class', 'createdBy', 'items', 'learningObjectives'])
+            ->whereIn('scheme_of_workID', $historySchemes)
+            ->whereNotIn('scheme_of_workID', $existingSchemes->pluck('scheme_of_workID')->toArray())
+            ->orderBy('year', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        // Merge existing schemes with history schemes
+        $allSchemes = $existingSchemes->merge($historySchemeModels)
+            ->sortByDesc('year')
+            ->sortByDesc('created_at')
+            ->values();
 
-        return view('Teacher.use_existing_schemes', compact('classSubject', 'existingSchemes'));
+        return view('Teacher.use_existing_schemes', compact('classSubject', 'existingSchemes', 'allSchemes'));
     }
 
     public function useThisScheme(Request $request, $schemeOfWorkID)
@@ -2214,7 +2242,29 @@ class TeachersController extends Controller
                 ->where('enter_result', true) // Only exams with enter_result = true
                 ->orderBy('created_at', 'desc')
                 ->get()
-                ->map(function($exam) {
+                ->map(function($exam) use ($schoolID) {
+                    // Check if term is closed
+                    $isTermClosed = false;
+                    if ($exam->term && $exam->year) {
+                        // Convert term string to term_number (first_term = 1, second_term = 2)
+                        $termNumber = null;
+                        if ($exam->term === 'first_term' || $exam->term === '1') {
+                            $termNumber = 1;
+                        } elseif ($exam->term === 'second_term' || $exam->term === '2') {
+                            $termNumber = 2;
+                        }
+                        
+                        if ($termNumber) {
+                            $term = DB::table('terms')
+                                ->where('schoolID', $schoolID)
+                                ->where('year', $exam->year)
+                                ->where('term_number', $termNumber)
+                                ->where('status', 'Closed')
+                                ->first();
+                            $isTermClosed = $term ? true : false;
+                        }
+                    }
+
                     return [
                         'examID' => $exam->examID,
                         'exam_name' => $exam->exam_name,
@@ -2225,6 +2275,7 @@ class TeachersController extends Controller
                         'enter_result' => $exam->enter_result,
                         'exam_category' => $exam->exam_category,
                         'term' => $exam->term,
+                        'is_term_closed' => $isTermClosed,
                     ];
                 });
 
@@ -2293,6 +2344,37 @@ class TeachersController extends Controller
                 return response()->json([
                     'error' => 'You are not allowed to enter results for this examination. Result entry has been disabled.'
                 ], 403);
+            }
+
+            // Check if term is closed - prevent editing results for closed terms
+            if ($examination->term && $examination->year) {
+                $term = DB::table('terms')
+                    ->where('schoolID', Session::get('schoolID'))
+                    ->where('year', $examination->year)
+                    ->where('term_number', $examination->term)
+                    ->where('status', 'Closed')
+                    ->first();
+
+                if ($term) {
+                    // Check if this is an edit operation (result already exists)
+                    $isEdit = false;
+                    foreach ($request->results as $resultData) {
+                        $existingResult = \App\Models\Result::where('studentID', $resultData['studentID'])
+                            ->where('examID', $request->examID)
+                            ->where('class_subjectID', $request->class_subjectID)
+                            ->first();
+                        if ($existingResult) {
+                            $isEdit = true;
+                            break;
+                        }
+                    }
+
+                    if ($isEdit) {
+                        return response()->json([
+                            'error' => 'You are not allowed to edit results for this term. The term has been closed.'
+                        ], 403);
+                    }
+                }
             }
 
             DB::beginTransaction();

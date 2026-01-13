@@ -30,6 +30,88 @@ class ParentsContoller extends Controller
         $this->smsService = new SmsService();
     }
 
+    /**
+     * Get current academic year ID for a school
+     * Returns the academic year ID for current year, or null if not found
+     */
+    private function getCurrentAcademicYearID($schoolID)
+    {
+        // First, try to get active academic year (prioritize active year)
+        $activeAcademicYear = DB::table('academic_years')
+            ->where('schoolID', $schoolID)
+            ->where('status', 'Active')
+            ->orderBy('year', 'desc')
+            ->first();
+        
+        if ($activeAcademicYear) {
+            return $activeAcademicYear->academic_yearID;
+        }
+        
+        // If no active year, try to get academic year for current calendar year
+        $currentYear = date('Y');
+        $academicYear = DB::table('academic_years')
+            ->where('schoolID', $schoolID)
+            ->where('year', $currentYear)
+            ->first();
+        
+        // If found, return its ID
+        if ($academicYear) {
+            return $academicYear->academic_yearID;
+        }
+        
+        // If not found, return null
+        return null;
+    }
+
+    /**
+     * Get previous year outstanding balance (debt) for a student
+     * Returns array with 'school_fee_balance' and 'other_contribution_balance'
+     */
+    private function getPreviousYearBalance($studentID, $schoolID)
+    {
+        $currentYear = date('Y');
+        $previousYear = $currentYear - 1;
+        
+        // Get the most recent closed academic year
+        $closedAcademicYear = DB::table('academic_years')
+            ->where('schoolID', $schoolID)
+            ->where('status', 'Closed')
+            ->where('year', '<', $currentYear)
+            ->orderBy('year', 'desc')
+            ->first();
+        
+        if (!$closedAcademicYear) {
+            // No closed academic year found, return zero balance
+            return ['school_fee_balance' => 0, 'other_contribution_balance' => 0];
+        }
+        
+        // Get payments from history for closed academic year
+        $previousYearPayments = DB::table('payments_history')
+            ->where('studentID', $studentID)
+            ->where('academic_yearID', $closedAcademicYear->academic_yearID)
+            ->get();
+        
+        // Calculate outstanding balances
+        $schoolFeeBalance = 0;
+        $otherContributionBalance = 0;
+        
+        foreach ($previousYearPayments as $payment) {
+            $balance = (float) $payment->balance;
+            
+            // Map fee types: 'Tuition Fees' -> 'School Fee', 'Other Fees' -> 'Other Contribution'
+            if ($payment->fee_type === 'Tuition Fees') {
+                $schoolFeeBalance += $balance;
+            } elseif ($payment->fee_type === 'Other Fees') {
+                $otherContributionBalance += $balance;
+            }
+        }
+        
+        return [
+            'school_fee_balance' => max(0, $schoolFeeBalance), // Ensure non-negative
+            'other_contribution_balance' => max(0, $otherContributionBalance) // Ensure non-negative
+        ];
+    }
+
     public function parentDashboard()
     {
         $userType = Session::get('user_type');
@@ -2105,6 +2187,13 @@ class ParentsContoller extends Controller
             if ($tuitionFees->count() > 0) {
                 $tuitionAmount = $tuitionFees->sum('amount');
                 
+                // Get previous year balance (debt) for School Fee
+                $previousYearBalance = $this->getPreviousYearBalance($studentID, $schoolID);
+                $schoolFeeDebt = $previousYearBalance['school_fee_balance'];
+                
+                // Add previous year debt to current year amount
+                $totalTuitionAmount = $tuitionAmount + $schoolFeeDebt;
+                
                 // Check if student already has tuition payment
                 $existingTuitionPayment = Payment::where('studentID', $studentID)
                     ->where('fee_type', 'Tuition Fees')
@@ -2116,15 +2205,17 @@ class ParentsContoller extends Controller
                     
                     $payment = Payment::create([
                         'schoolID' => $schoolID,
+                        'academic_yearID' => $this->getCurrentAcademicYearID($schoolID),
                         'studentID' => $studentID,
                         'feeID' => null,
                         'fee_type' => 'Tuition Fees',
                         'control_number' => $controlNumber,
-                        'amount_required' => $tuitionAmount,
+                        'amount_required' => $totalTuitionAmount,
                         'amount_paid' => 0,
-                        'balance' => $tuitionAmount,
+                        'balance' => $totalTuitionAmount,
                         'payment_status' => 'Pending',
                         'sms_sent' => 'No',
+                        'notes' => $schoolFeeDebt > 0 ? "Imeongezewa na deni la mwaka uliopita: " . number_format($schoolFeeDebt, 0) . " TZS" : null,
                     ]);
                     $generated++;
                     $messages[] = "Tuition Fees control number generated: {$controlNumber}";
@@ -2160,19 +2251,28 @@ class ParentsContoller extends Controller
                     ->first();
 
                 if (!$existingOtherPayment) {
+                    // Get previous year balance (debt) for Other Contribution
+                    $previousYearBalance = $this->getPreviousYearBalance($studentID, $schoolID);
+                    $otherContributionDebt = $previousYearBalance['other_contribution_balance'];
+                    
+                    // Add previous year debt to current year amount
+                    $totalOtherAmount = $otherAmount + $otherContributionDebt;
+                    
                     $controlNumber = $this->generateControlNumber($schoolID, $studentID, 'OTHER');
                     
                     $payment = Payment::create([
                         'schoolID' => $schoolID,
+                        'academic_yearID' => $this->getCurrentAcademicYearID($schoolID),
                         'studentID' => $studentID,
                         'feeID' => null,
                         'fee_type' => 'Other Fees',
                         'control_number' => $controlNumber,
-                        'amount_required' => $otherAmount,
+                        'amount_required' => $totalOtherAmount,
                         'amount_paid' => 0,
-                        'balance' => $otherAmount,
+                        'balance' => $totalOtherAmount,
                         'payment_status' => 'Pending',
                         'sms_sent' => 'No',
+                        'notes' => $otherContributionDebt > 0 ? "Imeongezewa na deni la mwaka uliopita: " . number_format($otherContributionDebt, 0) . " TZS" : null,
                     ]);
                     $generated++;
                     $messages[] = "Other Fees control number generated: {$controlNumber}";
@@ -2230,10 +2330,11 @@ class ParentsContoller extends Controller
     private function generateControlNumber($schoolID, $studentID, $type = 'TUITION')
     {
         do {
-            // Format: SCHOOLID-STUDENTID-TYPE-TIMESTAMP (last 6 digits)
-            $timestamp = substr(time(), -6);
-            $typeCode = $type === 'TUITION' ? 'T' : 'O';
-            $controlNumber = $schoolID . str_pad($studentID, 4, '0', STR_PAD_LEFT) . $typeCode . $timestamp;
+            // Generate 5 random digits (0-9)
+            $randomDigits = str_pad(rand(0, 99999), 5, '0', STR_PAD_LEFT);
+            
+            // Format: 3345 + 5 random digits = 9 digits total
+            $controlNumber = '3345' . $randomDigits;
             
             // Check if control number already exists
             $exists = Payment::where('control_number', $controlNumber)->exists();

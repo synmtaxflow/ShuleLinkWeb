@@ -379,13 +379,6 @@ class ManageStudentController extends Controller
                       $this->hasPermission('view_students'); // Legacy support
         }
 
-        if (!$canView) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You do not have permission to view student details.',
-            ], 403);
-        }
-
         $schoolID = Session::get('schoolID');
 
         $student = Student::with(['parent', 'subclass.class'])
@@ -398,6 +391,21 @@ class ManageStudentController extends Controller
                 'success' => false,
                 'message' => 'Student not found'
             ], 404);
+        }
+
+        // For teachers, check if they are the class teacher of the student's subclass
+        if (!$canView && $userType === 'Teacher') {
+            $teacherID = Session::get('teacherID');
+            if ($teacherID && $student->subclass && $student->subclass->teacherID == $teacherID) {
+                $canView = true;
+            }
+        }
+
+        if (!$canView) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have permission to view student details.',
+            ], 403);
         }
 
         // Helper function to safely format dates
@@ -1726,13 +1734,6 @@ class ManageStudentController extends Controller
                       $this->hasPermission('view_students'); // Legacy support
         }
 
-        if (!$canView) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You do not have permission to view student details.',
-            ], 403);
-        }
-
         $schoolID = Session::get('schoolID');
 
         $student = Student::with(['subclass.class', 'parent'])
@@ -1747,11 +1748,42 @@ class ManageStudentController extends Controller
             ], 404);
         }
 
+        // For teachers, check if they are the class teacher of the student's subclass
+        if (!$canView && $userType === 'Teacher') {
+            $teacherID = Session::get('teacherID');
+            if ($teacherID && $student->subclass && $student->subclass->teacherID == $teacherID) {
+                $canView = true;
+            }
+        }
+
+        if (!$canView) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have permission to view student details.',
+            ], 403);
+        }
+
         $studentImgPath = $student->photo
             ? asset('userImages/' . $student->photo)
             : ($student->gender == 'Female'
                 ? asset('images/female.png')
                 : asset('images/male.png'));
+
+        // Helper function to safely format dates
+        $formatDate = function($date) {
+            if (!$date) return 'N/A';
+            if (is_string($date)) {
+                try {
+                    return \Carbon\Carbon::parse($date)->format('d M Y');
+                } catch (\Exception $e) {
+                    return $date; // Return as-is if parsing fails
+                }
+            }
+            if ($date instanceof \Carbon\Carbon || $date instanceof \DateTime) {
+                return $date->format('d M Y');
+            }
+            return 'N/A';
+        };
 
         return response()->json([
             'success' => true,
@@ -1763,8 +1795,8 @@ class ManageStudentController extends Controller
                 'last_name' => $student->last_name,
                 'full_name' => $student->first_name . ' ' . ($student->middle_name ? $student->middle_name . ' ' : '') . $student->last_name,
                 'gender' => $student->gender,
-                'date_of_birth' => $student->date_of_birth ? $student->date_of_birth->format('d M Y') : 'N/A',
-                'admission_date' => $student->admission_date ? $student->admission_date->format('d M Y') : 'N/A',
+                'date_of_birth' => $formatDate($student->date_of_birth),
+                'admission_date' => $formatDate($student->admission_date),
                 'address' => $student->address ?? 'N/A',
                 'photo' => $studentImgPath,
                 'status' => $student->status,
@@ -1796,7 +1828,7 @@ class ManageStudentController extends Controller
                 'has_allergies' => $student->has_allergies ?? false,
                 'allergies_details' => $student->allergies_details ?? null,
                 'registering_officer_name' => $student->registering_officer_name ?? 'N/A',
-                'declaration_date' => $student->declaration_date ? $student->declaration_date->format('d M Y') : 'N/A',
+                'declaration_date' => $formatDate($student->declaration_date),
             ]
         ]);
     }
@@ -2339,5 +2371,1527 @@ class ManageStudentController extends Controller
                 'trace' => $e->getFile() . ':' . $e->getLine()
             ], 500);
         }
+    }
+
+    /**
+     * Get academic years for a student
+     */
+    public function get_student_academic_years($studentID)
+    {
+        $schoolID = Session::get('schoolID');
+        
+        $student = Student::where('studentID', $studentID)
+            ->where('schoolID', $schoolID)
+            ->first();
+            
+        if (!$student) {
+            return response()->json(['success' => false, 'message' => 'Student not found'], 404);
+        }
+        
+        // Get active academic year
+        $activeYear = DB::table('academic_years')
+            ->where('schoolID', $schoolID)
+            ->where('status', 'Active')
+            ->first();
+        
+        // If student is graduated, all years should be closed/past
+        // Otherwise, get all years but default to active year
+        if ($student->status === 'Graduated') {
+            // For graduated students, get all years they were enrolled in
+            $enrolledYears = DB::table('student_class_history')
+                ->where('studentID', $studentID)
+                ->distinct()
+                ->pluck('academic_yearID');
+            
+            $academicYears = DB::table('academic_years')
+                ->where('schoolID', $schoolID)
+                ->whereIn('academic_yearID', $enrolledYears)
+                ->orderBy('year', 'desc')
+                ->get();
+        } else {
+            // For active students, get all years but default to active year
+            $academicYears = DB::table('academic_years')
+                ->where('schoolID', $schoolID)
+                ->orderBy('year', 'desc')
+                ->get();
+        }
+        
+        $years = $academicYears->map(function($year) use ($activeYear, $student) {
+            // For graduated students, all years are considered closed
+            $isActive = false;
+            if ($student->status !== 'Graduated' && $activeYear && $activeYear->academic_yearID == $year->academic_yearID) {
+                $isActive = true;
+            }
+            
+            return [
+                'academic_yearID' => $year->academic_yearID,
+                'year' => $year->year,
+                'year_name' => $year->year_name ?? $year->year,
+                'status' => $student->status === 'Graduated' ? 'Closed' : $year->status,
+                'is_active' => $isActive
+            ];
+        });
+        
+        return response()->json([
+            'success' => true,
+            'years' => $years->values()->toArray()
+        ]);
+    }
+
+    /**
+     * Get student classes for a specific academic year
+     */
+    public function get_student_classes_for_year(Request $request)
+    {
+        $studentID = $request->input('student_id');
+        $academicYearID = $request->input('academic_year_id');
+        $yearStatus = $request->input('year_status');
+        
+        $schoolID = Session::get('schoolID');
+        
+        $classes = [];
+        
+        if ($yearStatus === 'Closed') {
+            // Get from history
+            $classHistory = DB::table('student_class_history')
+                ->where('studentID', $studentID)
+                ->where('academic_yearID', $academicYearID)
+                ->get();
+            
+            $uniqueClasses = [];
+            foreach ($classHistory as $history) {
+                $classHistoryData = DB::table('classes_history')
+                    ->where('academic_yearID', $academicYearID)
+                    ->where('original_classID', $history->classID)
+                    ->first();
+                
+                if ($classHistoryData && !isset($uniqueClasses[$classHistoryData->original_classID])) {
+                    $uniqueClasses[$classHistoryData->original_classID] = [
+                        'class_id' => $classHistoryData->original_classID,
+                        'class_name' => $classHistoryData->class_name
+                    ];
+                }
+            }
+            $classes = array_values($uniqueClasses);
+        } else {
+            // Get current classes
+            $student = Student::where('studentID', $studentID)->first();
+            if ($student && $student->subclass) {
+                $class = $student->subclass->class;
+                if ($class) {
+                    $classes[] = [
+                        'class_id' => $class->classID,
+                        'class_name' => $class->class_name
+                    ];
+                }
+            }
+        }
+        
+        return response()->json([
+            'success' => true,
+            'classes' => $classes
+        ]);
+    }
+
+    /**
+     * Get student subclasses for a specific class in an academic year
+     */
+    public function get_student_subclasses_for_class(Request $request)
+    {
+        $studentID = $request->input('student_id');
+        $academicYearID = $request->input('academic_year_id');
+        $classID = $request->input('class_id');
+        $yearStatus = $request->input('year_status');
+        
+        $subclasses = [];
+        
+        if ($yearStatus === 'Closed') {
+            // Get from history
+            $subclassHistory = DB::table('student_class_history')
+                ->where('studentID', $studentID)
+                ->where('academic_yearID', $academicYearID)
+                ->where('classID', $classID)
+                ->get();
+            
+            foreach ($subclassHistory as $history) {
+                $subclassHistoryData = DB::table('subclasses_history')
+                    ->where('academic_yearID', $academicYearID)
+                    ->where('original_subclassID', $history->subclassID)
+                    ->where('original_classID', $classID)
+                    ->first();
+                
+                if ($subclassHistoryData) {
+                    $subclasses[] = [
+                        'subclass_id' => $subclassHistoryData->original_subclassID,
+                        'subclass_name' => $subclassHistoryData->subclass_name
+                    ];
+                }
+            }
+        } else {
+            // Get current subclasses
+            $student = Student::where('studentID', $studentID)->first();
+            if ($student && $student->subclass && $student->subclass->classID == $classID) {
+                $subclasses[] = [
+                    'subclass_id' => $student->subclass->subclassID,
+                    'subclass_name' => $student->subclass->subclass_name
+                ];
+            }
+        }
+        
+        return response()->json([
+            'success' => true,
+            'subclasses' => $subclasses
+        ]);
+    }
+
+    /**
+     * Get terms for a student in an academic year
+     */
+    public function get_student_terms_for_year(Request $request)
+    {
+        try {
+            $studentID = $request->input('student_id');
+            $academicYearID = $request->input('academic_year_id');
+            $yearStatus = $request->input('year_status');
+            
+            if (!$studentID || !$academicYearID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Missing required parameters'
+                ], 400);
+            }
+            
+            // Get terms from both examinations and results (to catch all terms student has data for)
+            $terms = [];
+            $uniqueTerms = [];
+            
+            // Get terms from examinations
+            if ($yearStatus === 'Closed') {
+                $examTerms = DB::table('examinations_history')
+                    ->where('academic_yearID', $academicYearID)
+                    ->distinct()
+                    ->pluck('term')
+                    ->filter(function($term) {
+                        return !empty($term);
+                    })
+                    ->toArray();
+                
+                // Also get terms from results_history by getting exam IDs first
+                $resultExamIDs = DB::table('results_history')
+                    ->where('academic_yearID', $academicYearID)
+                    ->where('studentID', $studentID)
+                    ->distinct()
+                    ->pluck('original_examID')
+                    ->toArray();
+                
+                if (!empty($resultExamIDs)) {
+                    $resultTerms = DB::table('examinations_history')
+                        ->where('academic_yearID', $academicYearID)
+                        ->whereIn('original_examID', $resultExamIDs)
+                        ->distinct()
+                        ->pluck('term')
+                        ->filter(function($term) {
+                            return !empty($term);
+                        })
+                        ->toArray();
+                } else {
+                    $resultTerms = [];
+                }
+            } else {
+                // For active year, get from current tables
+                // First get the academic year to get the year value
+                $academicYear = DB::table('academic_years')
+                    ->where('academic_yearID', $academicYearID)
+                    ->first();
+                
+                if (!$academicYear) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Academic year not found'
+                    ], 404);
+                }
+                
+                $yearValue = $academicYear->year;
+                
+                // Examinations table uses 'year' column, not 'academic_yearID'
+                $examTerms = DB::table('examinations')
+                    ->where('year', $yearValue)
+                    ->where('schoolID', Session::get('schoolID'))
+                    ->distinct()
+                    ->pluck('term')
+                    ->filter(function($term) {
+                        return !empty($term);
+                    })
+                    ->toArray();
+                
+                // Also get terms from results
+                // Results table doesn't have academic_yearID, so we need to join with examinations
+                // and match by year with academic_years
+                $resultExamIDs = DB::table('results')
+                    ->join('examinations', 'results.examID', '=', 'examinations.examID')
+                    ->where('examinations.year', $yearValue)
+                    ->where('examinations.schoolID', Session::get('schoolID'))
+                    ->where('results.studentID', $studentID)
+                    ->where('results.status', 'allowed')
+                    ->distinct()
+                    ->pluck('results.examID')
+                    ->toArray();
+                
+                if (!empty($resultExamIDs)) {
+                    $resultTerms = DB::table('examinations')
+                        ->where('year', $yearValue)
+                        ->where('schoolID', Session::get('schoolID'))
+                        ->whereIn('examID', $resultExamIDs)
+                        ->distinct()
+                        ->pluck('term')
+                        ->filter(function($term) {
+                            return !empty($term);
+                        })
+                        ->toArray();
+                } else {
+                    $resultTerms = [];
+                }
+            }
+            
+            // Combine and get unique terms
+            $allTerms = array_unique(array_merge($examTerms, $resultTerms));
+            
+            $termMap = [
+                'first_term' => 'First Term',
+                'second_term' => 'Second Term',
+                'third_term' => 'Third Term'
+            ];
+            
+            foreach ($allTerms as $term) {
+                if ($term && isset($termMap[$term]) && !isset($uniqueTerms[$term])) {
+                    $uniqueTerms[$term] = true;
+                    $terms[] = [
+                        'term' => $term,
+                        'term_name' => $termMap[$term]
+                    ];
+                }
+            }
+            
+            // Sort terms in order: first_term, second_term, third_term
+            usort($terms, function($a, $b) {
+                $order = ['first_term' => 1, 'second_term' => 2, 'third_term' => 3];
+                return ($order[$a['term']] ?? 999) - ($order[$b['term']] ?? 999);
+            });
+            
+            return response()->json([
+                'success' => true,
+                'terms' => $terms
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error loading terms: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get exams for a specific term
+     */
+    public function get_exams_for_term(Request $request)
+    {
+        $studentID = $request->input('student_id');
+        $academicYearID = $request->input('academic_year_id');
+        $term = $request->input('term');
+        $yearStatus = $request->input('year_status');
+        
+        $exams = [];
+        
+        if ($yearStatus === 'Closed') {
+            $examData = DB::table('examinations_history')
+                ->where('academic_yearID', $academicYearID)
+                ->where('term', $term)
+                ->get();
+        } else {
+            $examData = DB::table('examinations')
+                ->where('academic_yearID', $academicYearID)
+                ->where('term', $term)
+                ->get();
+        }
+        
+        foreach ($examData as $exam) {
+            $exams[] = [
+                'exam_id' => $yearStatus === 'Closed' ? $exam->original_examID : $exam->examID,
+                'exam_name' => $exam->exam_name ?? 'Exam'
+            ];
+        }
+        
+        return response()->json([
+            'success' => true,
+            'exams' => $exams
+        ]);
+    }
+
+    /**
+     * Get student exam results with position
+     */
+    public function get_student_exam_results(Request $request)
+    {
+        $studentID = $request->input('student_id');
+        $academicYearID = $request->input('academic_year_id');
+        $term = $request->input('term');
+        $examID = $request->input('exam_id');
+        $yearStatus = $request->input('year_status');
+        $schoolID = Session::get('schoolID');
+        
+        $results = [];
+        
+        // Get student and class info
+        $student = Student::where('studentID', $studentID)->first();
+        if (!$student) {
+            return response()->json(['success' => false, 'message' => 'Student not found'], 404);
+        }
+        
+        // Get class ID
+        $classID = null;
+        if ($yearStatus === 'Closed') {
+            $classHistory = DB::table('student_class_history')
+                ->where('studentID', $studentID)
+                ->where('academic_yearID', $academicYearID)
+                ->first();
+            $classID = $classHistory->classID ?? null;
+        } else {
+            if ($student->subclass && $student->subclass->class) {
+                $classID = $student->subclass->class->classID ?? null;
+            }
+        }
+        
+        if ($yearStatus === 'Closed') {
+            $resultData = DB::table('results_history')
+                ->where('academic_yearID', $academicYearID)
+                ->where('studentID', $studentID)
+                ->where('original_examID', $examID)
+                ->get();
+        } else {
+            $resultData = DB::table('results')
+                ->where('academic_yearID', $academicYearID)
+                ->where('studentID', $studentID)
+                ->where('examID', $examID)
+                ->where('status', 'allowed')
+                ->get();
+        }
+        
+        foreach ($resultData as $result) {
+            // Get subject name
+            $subjectName = 'N/A';
+            
+            if ($yearStatus === 'Closed') {
+                // For closed years, get from history tables
+                $classSubjectID = $result->original_class_subjectID ?? null;
+                if ($classSubjectID) {
+                    // Try to get from class_subjects_history if it exists, otherwise from class_subjects
+                    $subject = DB::table('class_subjects')
+                        ->join('school_subjects', 'class_subjects.subjectID', '=', 'school_subjects.subjectID')
+                        ->where('class_subjects.class_subjectID', $classSubjectID)
+                        ->select('school_subjects.subject_name')
+                        ->first();
+                    
+                    if ($subject) {
+                        $subjectName = $subject->subject_name;
+                    } else {
+                        // Try from history if available
+                        $subjectHistory = DB::table('class_subjects_history')
+                            ->join('school_subjects', 'class_subjects_history.subjectID', '=', 'school_subjects.subjectID')
+                            ->where('class_subjects_history.original_class_subjectID', $classSubjectID)
+                            ->where('class_subjects_history.academic_yearID', $academicYearID)
+                            ->select('school_subjects.subject_name')
+                            ->first();
+                        
+                        if ($subjectHistory) {
+                            $subjectName = $subjectHistory->subject_name;
+                        }
+                    }
+                }
+            } else {
+                // For active years, get from current tables
+                $classSubjectID = $result->class_subjectID ?? null;
+                if ($classSubjectID) {
+                    $subject = DB::table('class_subjects')
+                        ->join('school_subjects', 'class_subjects.subjectID', '=', 'school_subjects.subjectID')
+                        ->where('class_subjects.class_subjectID', $classSubjectID)
+                        ->select('school_subjects.subject_name')
+                        ->first();
+                    
+                    if ($subject) {
+                        $subjectName = $subject->subject_name;
+                    }
+                }
+            }
+            
+            $results[] = [
+                'subject_name' => $subjectName,
+                'marks' => $result->marks ?? 0,
+                'grade' => $result->grade ?? 'N/A',
+                'remark' => $result->remark ?? ''
+            ];
+        }
+        
+        // Calculate position in class for this exam
+        $position = null;
+        $totalStudents = 0;
+        if ($classID) {
+            // Get all students in the same class
+            $classStudents = [];
+            if ($yearStatus === 'Closed') {
+                $classStudentIDs = DB::table('student_class_history')
+                    ->where('academic_yearID', $academicYearID)
+                    ->where('classID', $classID)
+                    ->pluck('studentID')
+                    ->toArray();
+            } else {
+                $classStudentIDs = DB::table('students')
+                    ->join('subclasses', 'students.subclassID', '=', 'subclasses.subclassID')
+                    ->where('subclasses.classID', $classID)
+                    ->where('students.schoolID', $schoolID)
+                    ->where('students.status', 'Active')
+                    ->pluck('students.studentID')
+                    ->toArray();
+            }
+            
+            // Calculate average for each student in this exam
+            $studentAverages = [];
+            foreach ($classStudentIDs as $classStudentID) {
+                $studentTotalMarks = 0;
+                $studentSubjectCount = 0;
+                
+                if ($yearStatus === 'Closed') {
+                    $studentResults = DB::table('results_history')
+                        ->where('academic_yearID', $academicYearID)
+                        ->where('studentID', $classStudentID)
+                        ->where('original_examID', $examID)
+                        ->whereNotNull('marks')
+                        ->get();
+                } else {
+                    $studentResults = DB::table('results')
+                        ->where('academic_yearID', $academicYearID)
+                        ->where('studentID', $classStudentID)
+                        ->where('examID', $examID)
+                        ->whereNotNull('marks')
+                        ->where('status', 'allowed')
+                        ->get();
+                }
+                
+                foreach ($studentResults as $studentResult) {
+                    if ($studentResult->marks !== null && $studentResult->marks !== '') {
+                        $studentTotalMarks += (float)$studentResult->marks;
+                        $studentSubjectCount++;
+                    }
+                }
+                
+                if ($studentSubjectCount > 0) {
+                    $studentAverage = $studentTotalMarks / $studentSubjectCount;
+                    $studentAverages[] = [
+                        'studentID' => $classStudentID,
+                        'average' => $studentAverage
+                    ];
+                }
+            }
+            
+            // Sort by average (descending)
+            usort($studentAverages, function($a, $b) {
+                return $b['average'] <=> $a['average'];
+            });
+            
+            // Find position (handle ties)
+            $currentPos = 1;
+            $prevAverage = null;
+            foreach ($studentAverages as $studentAvg) {
+                $currentAverage = $studentAvg['average'];
+                
+                if ($prevAverage !== null && abs($currentAverage - $prevAverage) > 0.01) {
+                    $currentPos++;
+                }
+                
+                if ($studentAvg['studentID'] == $studentID) {
+                    $position = $currentPos;
+                    break;
+                }
+                
+                $prevAverage = $currentAverage;
+            }
+            
+            $totalStudents = count($studentAverages);
+        }
+        
+        return response()->json([
+            'success' => true,
+            'results' => $results,
+            'position' => $position,
+            'total_students' => $totalStudents
+        ]);
+    }
+
+    /**
+     * Get student term report (average of all exams in term) - Same logic as ResultManagementController
+     */
+    public function get_student_term_report(Request $request)
+    {
+        $studentID = $request->input('student_id');
+        $academicYearID = $request->input('academic_year_id');
+        $term = $request->input('term');
+        $yearStatus = $request->input('year_status');
+        $schoolID = Session::get('schoolID');
+        
+        // Get school type
+        $school = DB::table('schools')->where('schoolID', $schoolID)->first();
+        $schoolType = $school->school_type ?? 'Secondary';
+        
+        // Get student and class info
+        $student = Student::where('studentID', $studentID)->first();
+        if (!$student) {
+            return response()->json(['success' => false, 'message' => 'Student not found'], 404);
+        }
+        
+        // Get academic year info
+        $academicYear = DB::table('academic_years')
+            ->where('academic_yearID', $academicYearID)
+            ->where('schoolID', $schoolID)
+            ->first();
+        
+        $studentName = trim(($student->first_name ?? '') . ' ' . ($student->middle_name ?? '') . ' ' . ($student->last_name ?? ''));
+        $yearName = $academicYear->year_name ?? $academicYear->year ?? 'N/A';
+        
+        $className = '';
+        $classID = null;
+        if ($yearStatus === 'Closed') {
+            // Get from history
+            $classHistory = DB::table('student_class_history')
+                ->where('studentID', $studentID)
+                ->where('academic_yearID', $academicYearID)
+                ->first();
+            
+            if ($classHistory) {
+                $classHistoryData = DB::table('classes_history')
+                    ->where('academic_yearID', $academicYearID)
+                    ->where('original_classID', $classHistory->classID)
+                    ->first();
+                if ($classHistoryData) {
+                    $className = $classHistoryData->class_name ?? '';
+                    $classID = $classHistory->classID; // Use original classID for grade definitions
+                }
+            }
+        } else {
+            if ($student->subclass && $student->subclass->class) {
+                $className = $student->subclass->class->class_name ?? '';
+                $classID = $student->subclass->class->classID ?? null;
+            }
+        }
+        
+        // Get all exams for this term
+        if ($yearStatus === 'Closed') {
+            $exams = DB::table('examinations_history')
+                ->where('academic_yearID', $academicYearID)
+                ->where('term', $term)
+                ->orderBy('start_date')
+                ->get();
+        } else {
+            $exams = DB::table('examinations')
+                ->where('academic_yearID', $academicYearID)
+                ->where('term', $term)
+                ->where('approval_status', 'Approved')
+                ->orderBy('start_date')
+                ->get();
+        }
+        
+        if ($exams->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'report' => [],
+                'overall_average' => 0,
+                'overall_grade' => 'N/A',
+                'division' => null
+            ]);
+        }
+        
+        $examIDs = $yearStatus === 'Closed' 
+            ? $exams->pluck('original_examID')->toArray()
+            : $exams->pluck('examID')->toArray();
+        
+        // Get all results for this student in all exams of this term
+        $allExamResults = [];
+        $totalMarksAllExams = 0;
+        $totalSubjectCount = 0;
+        $allSubjectPoints = [];
+        $subjectData = []; // Store subject data with all exam marks
+        $subjectExamMarks = []; // Store marks per subject per exam
+        
+        foreach ($exams as $exam) {
+            $examID = $yearStatus === 'Closed' ? $exam->original_examID : $exam->examID;
+            
+            if ($yearStatus === 'Closed') {
+                $examResults = DB::table('results_history')
+                    ->where('academic_yearID', $academicYearID)
+                    ->where('studentID', $studentID)
+                    ->where('original_examID', $examID)
+                    ->whereNotNull('marks')
+                    ->get();
+            } else {
+                $examResults = DB::table('results')
+                    ->where('academic_yearID', $academicYearID)
+                    ->where('studentID', $studentID)
+                    ->where('examID', $examID)
+                    ->whereNotNull('marks')
+                    ->where('status', 'allowed')
+                    ->get();
+            }
+            
+            if ($examResults->isEmpty()) {
+                continue;
+            }
+            
+            $examTotalMarks = 0;
+            $examSubjectCount = 0;
+            
+            foreach ($examResults as $result) {
+                $classSubjectID = $yearStatus === 'Closed' ? ($result->original_class_subjectID ?? null) : ($result->class_subjectID ?? null);
+                
+                if ($classSubjectID && $result->marks !== null && $result->marks !== '') {
+                    $marks = (float)$result->marks;
+                    $examTotalMarks += $marks;
+                    $examSubjectCount++;
+                    
+                    // Get subject name
+                    $subject = DB::table('class_subjects')
+                        ->join('school_subjects', 'class_subjects.subjectID', '=', 'school_subjects.subjectID')
+                        ->where('class_subjects.class_subjectID', $classSubjectID)
+                        ->select('school_subjects.subject_name')
+                        ->first();
+                    
+                    $subjectName = $subject->subject_name ?? 'N/A';
+                    
+                    // Store subject data
+                    if (!isset($subjectData[$subjectName])) {
+                        $subjectData[$subjectName] = [
+                            'marks' => [],
+                            'grades' => []
+                        ];
+                        $subjectExamMarks[$subjectName] = [];
+                    }
+                    $subjectData[$subjectName]['marks'][] = $marks;
+                    
+                    // Store marks per exam for this subject (only store once per exam per subject)
+                    $examName = $exam->exam_name ?? 'N/A';
+                    if (!isset($subjectExamMarks[$subjectName][$examName])) {
+                        $gradeResult = $this->getGradeFromDefinition($marks, $classID);
+                        $subjectExamMarks[$subjectName][$examName] = [
+                            'marks' => $marks,
+                            'grade' => $gradeResult['grade'] ?? 'N/A'
+                        ];
+                    }
+                    
+                    // Calculate grade points for this subject mark
+                    $gradePoints = $this->calculateGradePointsForTermReport($marks, $schoolType, $className, $classID);
+                    if ($gradePoints['points'] !== null) {
+                        $allSubjectPoints[] = $gradePoints['points'];
+                    }
+                }
+            }
+            
+            if ($examSubjectCount > 0) {
+                $examAverage = $examTotalMarks / $examSubjectCount;
+                $examAverageRounded = round($examAverage); // Approximate (no decimal)
+                
+                // Calculate grade for this exam based on average
+                $examGrade = null;
+                if ($classID && $examAverageRounded > 0) {
+                    $gradeResult = $this->getGradeFromDefinition($examAverageRounded, $classID);
+                    $examGrade = $gradeResult['grade'];
+                } else {
+                    // Fallback
+                    if ($examAverageRounded >= 75) $examGrade = 'A';
+                    elseif ($examAverageRounded >= 65) $examGrade = 'B';
+                    elseif ($examAverageRounded >= 45) $examGrade = 'C';
+                    elseif ($examAverageRounded >= 30) $examGrade = 'D';
+                    else $examGrade = 'F';
+                }
+                
+                $allExamResults[] = [
+                    'exam' => $exam,
+                    'exam_name' => $exam->exam_name ?? 'N/A',
+                    'total_marks' => $examTotalMarks,
+                    'subject_count' => $examSubjectCount,
+                    'average' => $examAverageRounded, // Approximate
+                    'grade' => $examGrade,
+                ];
+                $totalMarksAllExams += $examTotalMarks;
+                $totalSubjectCount += $examSubjectCount;
+            }
+        }
+        
+        if (empty($allExamResults)) {
+            return response()->json([
+                'success' => true,
+                'report' => [],
+                'overall_average' => 0,
+                'overall_grade' => 'N/A',
+                'division' => null
+            ]);
+        }
+        
+        // Calculate overall average as average of exam averages (for report view)
+        $examAveragesSum = 0;
+        foreach ($allExamResults as $examResult) {
+            $examAveragesSum += $examResult['average'];
+        }
+        $overallAverage = count($allExamResults) > 0 ? round($examAveragesSum / count($allExamResults)) : 0; // Approximate
+        
+        // Calculate total points for division
+        $totalPoints = 0;
+        $classNameLower = strtolower(preg_replace('/[\s\-]+/', '_', $className));
+        if ($schoolType === 'Secondary' && in_array($classNameLower, ['form_one', 'form_two', 'form_three', 'form_four'])) {
+            // O-Level: Use 7 best subjects (lowest points = best performance)
+            if (count($allSubjectPoints) > 0) {
+                sort($allSubjectPoints); // Sort ascending (lowest first = best)
+                $bestSeven = array_slice($allSubjectPoints, 0, min(7, count($allSubjectPoints)));
+                $totalPoints = array_sum($bestSeven);
+            }
+        } elseif ($schoolType === 'Secondary' && in_array($classNameLower, ['form_five', 'form_six'])) {
+            // A-Level: Use 3 best principal subjects (highest points)
+            if (count($allSubjectPoints) > 0) {
+                rsort($allSubjectPoints); // Sort descending (highest first)
+                $bestThree = array_slice($allSubjectPoints, 0, min(3, count($allSubjectPoints)));
+                $totalPoints = array_sum($bestThree);
+            }
+        }
+        
+        // Calculate overall grade based on overall average
+        $overallGrade = null;
+        if ($classID && $overallAverage > 0) {
+            $gradeResult = $this->getGradeFromDefinition($overallAverage, $classID);
+            $overallGrade = $gradeResult['grade'];
+        } else {
+            // Fallback
+            if ($overallAverage >= 75) $overallGrade = 'A';
+            elseif ($overallAverage >= 65) $overallGrade = 'B';
+            elseif ($overallAverage >= 45) $overallGrade = 'C';
+            elseif ($overallAverage >= 30) $overallGrade = 'D';
+            else $overallGrade = 'F';
+        }
+        
+        // Calculate division for Secondary using points
+        $gradeDivision = $this->calculateGradeDivision($totalMarksAllExams, $overallAverage, $totalSubjectCount, $schoolType, $className, $totalPoints, $classID);
+        
+        // Build examinations array for display
+        $examinations = [];
+        foreach ($allExamResults as $examResult) {
+            $examinations[] = [
+                'exam_name' => $examResult['exam_name'],
+                'average' => $examResult['average'], // Already rounded
+                'grade' => $examResult['grade']
+            ];
+        }
+        
+        // Build subject report with marks per exam
+        $report = [];
+        foreach ($subjectData as $subjectName => $data) {
+            $averageMarks = count($data['marks']) > 0 ? array_sum($data['marks']) / count($data['marks']) : 0;
+            $averageMarksRounded = round($averageMarks); // Approximate
+            
+            // Calculate grade for this subject's average
+            $subjectGrade = null;
+            if ($classID && $averageMarksRounded > 0) {
+                $gradeResult = $this->getGradeFromDefinition($averageMarksRounded, $classID);
+                $subjectGrade = $gradeResult['grade'];
+            } else {
+                // Fallback
+                if ($averageMarksRounded >= 75) $subjectGrade = 'A';
+                elseif ($averageMarksRounded >= 65) $subjectGrade = 'B';
+                elseif ($averageMarksRounded >= 45) $subjectGrade = 'C';
+                elseif ($averageMarksRounded >= 30) $subjectGrade = 'D';
+                else $subjectGrade = 'F';
+            }
+            
+            // Get marks per exam for this subject
+            $examMarks = [];
+            if (isset($subjectExamMarks[$subjectName])) {
+                foreach ($allExamResults as $examResult) {
+                    $examName = $examResult['exam_name'];
+                    if (isset($subjectExamMarks[$subjectName][$examName])) {
+                        $markData = $subjectExamMarks[$subjectName][$examName];
+                        $examMarks[$examName] = [
+                            'marks' => round($markData['marks']), // Approximate
+                            'grade' => $markData['grade']
+                        ];
+                    } else {
+                        $examMarks[$examName] = null; // No marks for this exam
+                    }
+                }
+            }
+            
+            $report[] = [
+                'subject_name' => $subjectName,
+                'average' => $averageMarksRounded, // Approximate
+                'grade' => $subjectGrade ?? 'N/A',
+                'exam_marks' => $examMarks
+            ];
+        }
+        
+        // Sort by subject name
+        usort($report, function($a, $b) {
+            return strcmp($a['subject_name'], $b['subject_name']);
+        });
+        
+        // Get position (calculate from class)
+        $position = null;
+        $totalStudents = 0;
+        if ($classID) {
+            // Get all students in the same class for this academic year
+            $classStudents = [];
+            if ($yearStatus === 'Closed') {
+                $classStudentIDs = DB::table('student_class_history')
+                    ->where('academic_yearID', $academicYearID)
+                    ->where('classID', $classID)
+                    ->pluck('studentID')
+                    ->toArray();
+            } else {
+                $classStudentIDs = DB::table('students')
+                    ->join('subclasses', 'students.subclassID', '=', 'subclasses.subclassID')
+                    ->where('subclasses.classID', $classID)
+                    ->where('students.schoolID', $schoolID)
+                    ->where('students.status', 'Active')
+                    ->pluck('students.studentID')
+                    ->toArray();
+            }
+            
+            // Calculate overall average for each student
+            $studentAverages = [];
+            foreach ($classStudentIDs as $classStudentID) {
+                // Get all exam results for this student in this term
+                $studentExamAverages = [];
+                foreach ($exams as $exam) {
+                    $examID = $yearStatus === 'Closed' ? $exam->original_examID : $exam->examID;
+                    
+                    if ($yearStatus === 'Closed') {
+                        $studentResults = DB::table('results_history')
+                            ->where('academic_yearID', $academicYearID)
+                            ->where('studentID', $classStudentID)
+                            ->where('original_examID', $examID)
+                            ->whereNotNull('marks')
+                            ->get();
+                    } else {
+                        $studentResults = DB::table('results')
+                            ->where('academic_yearID', $academicYearID)
+                            ->where('studentID', $classStudentID)
+                            ->where('examID', $examID)
+                            ->whereNotNull('marks')
+                            ->where('status', 'allowed')
+                            ->get();
+                    }
+                    
+                    if ($studentResults->count() > 0) {
+                        $examTotal = 0;
+                        foreach ($studentResults as $result) {
+                            $examTotal += (float)$result->marks;
+                        }
+                        $examAvg = round($examTotal / $studentResults->count());
+                        $studentExamAverages[] = $examAvg;
+                    }
+                }
+                
+                if (count($studentExamAverages) > 0) {
+                    $studentOverallAvg = round(array_sum($studentExamAverages) / count($studentExamAverages));
+                    $studentAverages[] = [
+                        'studentID' => $classStudentID,
+                        'average' => $studentOverallAvg
+                    ];
+                }
+            }
+            
+            // Sort by average (descending)
+            usort($studentAverages, function($a, $b) {
+                return $b['average'] <=> $a['average'];
+            });
+            
+            // Find position
+            $currentPos = 1;
+            $prevAverage = null;
+            foreach ($studentAverages as $studentAvg) {
+                $currentAverage = $studentAvg['average'];
+                
+                if ($prevAverage !== null && abs($currentAverage - $prevAverage) > 0.01) {
+                    $currentPos++;
+                }
+                
+                if ($studentAvg['studentID'] == $studentID) {
+                    $position = $currentPos;
+                    break;
+                }
+                
+                $prevAverage = $currentAverage;
+            }
+            
+            $totalStudents = count($studentAverages);
+        }
+        
+        return response()->json([
+            'success' => true,
+            'report' => $report,
+            'examinations' => $examinations,
+            'overall_average' => $overallAverage, // Already rounded
+            'overall_grade' => $overallGrade ?? 'N/A',
+            'division' => $gradeDivision['division'] ?? null,
+            'total_points' => $totalPoints,
+            'exam_count' => count($allExamResults),
+            'student_name' => $studentName,
+            'term' => ucfirst(str_replace('_', ' ', $term)),
+            'year' => $yearName,
+            'position' => $position,
+            'total_students' => $totalStudents
+        ]);
+    }
+    
+    /**
+     * Calculate grade points for term report (same as ResultManagementController)
+     */
+    private function calculateGradePointsForTermReport($marks, $schoolType, $className, $classID = null)
+    {
+        if ($marks === null || $marks === '') {
+            return ['grade' => null, 'points' => null];
+        }
+        
+        // If classID is provided, use grade_definitions table
+        if ($classID) {
+            return $this->getGradeFromDefinition($marks, $classID);
+        }
+        
+        // Fallback to old logic
+        $marksNum = (float)$marks;
+        $classNameLower = strtolower(preg_replace('/[\s\-]+/', '_', $className));
+        
+        if ($schoolType === 'Secondary') {
+            if (in_array($classNameLower, ['form_one', 'form_two', 'form_three', 'form_four'])) {
+                // O-Level
+                if ($marksNum >= 75 && $marksNum <= 100) return ['grade' => 'A', 'points' => 1];
+                elseif ($marksNum >= 65 && $marksNum <= 74) return ['grade' => 'B', 'points' => 2];
+                elseif ($marksNum >= 45 && $marksNum <= 64) return ['grade' => 'C', 'points' => 3];
+                elseif ($marksNum >= 30 && $marksNum <= 44) return ['grade' => 'D', 'points' => 4];
+                else return ['grade' => 'F', 'points' => 5];
+            } elseif (in_array($classNameLower, ['form_five', 'form_six'])) {
+                // A-Level
+                if ($marksNum >= 80) return ['grade' => 'A', 'points' => 5];
+                elseif ($marksNum >= 70) return ['grade' => 'B', 'points' => 4];
+                elseif ($marksNum >= 60) return ['grade' => 'C', 'points' => 3];
+                elseif ($marksNum >= 50) return ['grade' => 'D', 'points' => 2];
+                elseif ($marksNum >= 40) return ['grade' => 'E', 'points' => 1];
+                else return ['grade' => 'S/F', 'points' => 0];
+            }
+        }
+        
+        return ['grade' => null, 'points' => null];
+    }
+    
+    /**
+     * Get grade from grade_definitions table (same as ResultManagementController)
+     */
+    private function getGradeFromDefinition($marks, $classID)
+    {
+        if ($marks === null || $marks === '' || !$classID) {
+            return ['grade' => null, 'points' => null];
+        }
+        
+        $marksNum = (float)$marks;
+        $gradeDefinition = DB::table('grade_definitions')
+            ->where('classID', $classID)
+            ->where('first', '<=', $marksNum)
+            ->where('last', '>=', $marksNum)
+            ->first();
+        
+        if (!$gradeDefinition) {
+            return ['grade' => null, 'points' => null];
+        }
+        
+        $grade = $gradeDefinition->grade;
+        $points = null;
+        
+        // Calculate points based on grade
+        $class = DB::table('classes')->where('classID', $classID)->first();
+        $className = $class->class_name ?? '';
+        $classNameLower = strtolower(preg_replace('/[\s\-]+/', '_', $className));
+        
+        if (in_array($classNameLower, ['form_one', 'form_two', 'form_three', 'form_four'])) {
+            $pointsMap = ['A' => 1, 'B' => 2, 'C' => 3, 'D' => 4, 'F' => 5];
+            $points = $pointsMap[$grade] ?? 5;
+        } elseif (in_array($classNameLower, ['form_five', 'form_six'])) {
+            $pointsMap = ['A' => 5, 'B' => 4, 'C' => 3, 'D' => 2, 'E' => 1, 'S/F' => 0];
+            $points = $pointsMap[$grade] ?? 0;
+        }
+        
+        return ['grade' => $grade, 'points' => $points];
+    }
+    
+    /**
+     * Calculate grade or division (same as ResultManagementController)
+     */
+    private function calculateGradeDivision($totalMarks, $averageMarks, $subjectCount, $schoolType, $className, $totalPoints = 0, $classID = null)
+    {
+        $classNameLower = strtolower(preg_replace('/[\s\-]+/', '_', $className));
+        
+        if ($schoolType === 'Secondary' && in_array($classNameLower, ['form_one', 'form_two', 'form_three', 'form_four'])) {
+            // O-Level
+            if ($totalPoints >= 7 && $totalPoints <= 17) {
+                return ['grade' => null, 'division' => 'I.' . $totalPoints];
+            } elseif ($totalPoints >= 18 && $totalPoints <= 21) {
+                return ['grade' => null, 'division' => 'II.' . $totalPoints];
+            } elseif ($totalPoints >= 22 && $totalPoints <= 25) {
+                return ['grade' => null, 'division' => 'III.' . $totalPoints];
+            } elseif ($totalPoints >= 26 && $totalPoints <= 33) {
+                return ['grade' => null, 'division' => 'IV.' . $totalPoints];
+            } else {
+                return ['grade' => null, 'division' => '0.' . $totalPoints];
+            }
+        } elseif ($schoolType === 'Secondary' && in_array($classNameLower, ['form_five', 'form_six'])) {
+            // A-Level
+            if ($totalPoints >= 12 && $totalPoints <= 15) {
+                return ['grade' => null, 'division' => 'I.' . $totalPoints];
+            } elseif ($totalPoints >= 9 && $totalPoints <= 11) {
+                return ['grade' => null, 'division' => 'II.' . $totalPoints];
+            } elseif ($totalPoints >= 6 && $totalPoints <= 8) {
+                return ['grade' => null, 'division' => 'III.' . $totalPoints];
+            } elseif ($totalPoints >= 3 && $totalPoints <= 5) {
+                return ['grade' => null, 'division' => 'IV.' . $totalPoints];
+            } else {
+                return ['grade' => null, 'division' => '0.' . $totalPoints];
+            }
+        } else {
+            // Primary or Secondary without division
+            if ($classID && $averageMarks !== null && $averageMarks !== '') {
+                $gradeResult = $this->getGradeFromDefinition($averageMarks, $classID);
+                return ['grade' => $gradeResult['grade'], 'division' => null];
+            }
+            
+            // Fallback
+            if ($averageMarks >= 75) return ['grade' => 'A', 'division' => null];
+            elseif ($averageMarks >= 65) return ['grade' => 'B', 'division' => null];
+            elseif ($averageMarks >= 45) return ['grade' => 'C', 'division' => null];
+            elseif ($averageMarks >= 30) return ['grade' => 'D', 'division' => null];
+            else return ['grade' => 'F', 'division' => null];
+        }
+    }
+
+    /**
+     * Get student attendance
+     */
+    public function get_student_attendance(Request $request)
+    {
+        $studentID = $request->input('student_id');
+        $academicYearID = $request->input('academic_year_id');
+        $fromDate = $request->input('from_date');
+        $toDate = $request->input('to_date');
+        $month = $request->input('month');
+        $yearStatus = $request->input('year_status');
+        
+        $attendance = [];
+        
+        if ($yearStatus === 'Closed') {
+            $query = DB::table('attendances_history')
+                ->where('academic_yearID', $academicYearID)
+                ->where('studentID', $studentID);
+        } else {
+            $query = DB::table('attendances')
+                ->where('academic_yearID', $academicYearID)
+                ->where('studentID', $studentID);
+        }
+        
+        if ($fromDate && $toDate) {
+            $query->whereBetween('attendance_date', [$fromDate, $toDate]);
+        } elseif ($month) {
+            $query->whereYear('attendance_date', date('Y', strtotime($month . '-01')))
+                  ->whereMonth('attendance_date', date('m', strtotime($month . '-01')));
+        }
+        
+        $attendanceData = $query->orderBy('attendance_date', 'desc')->get();
+        
+        foreach ($attendanceData as $record) {
+            $attendance[] = [
+                'date' => $record->attendance_date,
+                'status' => $record->status,
+                'check_in' => $record->check_in_time ?? 'N/A',
+                'check_out' => $record->check_out_time ?? 'N/A',
+                'remark' => $record->remark ?? ''
+            ];
+        }
+        
+        return response()->json([
+            'success' => true,
+            'attendance' => $attendance
+        ]);
+    }
+
+    /**
+     * Export student results PDF
+     */
+    public function export_student_results_pdf(Request $request)
+    {
+        // Implementation for PDF export
+        return response()->json(['success' => false, 'message' => 'Not implemented yet']);
+    }
+
+    /**
+     * Export student attendance PDF
+     */
+    public function export_student_attendance_pdf(Request $request)
+    {
+        // Implementation for PDF export
+        return response()->json(['success' => false, 'message' => 'Not implemented yet']);
+    }
+
+    /**
+     * Export student attendance Excel
+     */
+    public function export_student_attendance_excel(Request $request)
+    {
+        // Implementation for Excel export
+        return response()->json(['success' => false, 'message' => 'Not implemented yet']);
+    }
+    
+    /**
+     * Get student payments for academic year
+     */
+    public function get_student_payments_for_year(Request $request)
+    {
+        try {
+            $studentID = $request->input('student_id');
+            $academicYearID = $request->input('academic_year_id');
+            $yearStatus = $request->input('year_status');
+            
+            if (!$studentID || !$academicYearID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Missing required parameters'
+                ], 400);
+            }
+            
+            if ($yearStatus === 'Closed') {
+                // For closed years, get from payments_history
+                $payments = DB::table('payments_history')
+                    ->where('studentID', $studentID)
+                    ->where('academic_yearID', $academicYearID)
+                    ->orderBy('payment_date', 'desc')
+                    ->get();
+                
+                $paymentsData = [];
+                foreach ($payments as $payment) {
+                    // Map fee_type: 'Tuition Fees' -> 'School Fee', 'Other Fees' -> 'Other Contribution'
+                    $feeTypeDisplay = 'N/A';
+                    if ($payment->fee_type === 'Tuition Fees') {
+                        $feeTypeDisplay = 'School Fee';
+                    } elseif ($payment->fee_type === 'Other Fees') {
+                        $feeTypeDisplay = 'Other Contribution';
+                    }
+                    
+                    $paymentsData[] = [
+                        'date' => $payment->payment_date ? \Carbon\Carbon::parse($payment->payment_date)->format('d M Y') : 'N/A',
+                        'control_number' => $payment->control_number ?? 'N/A',
+                        'fee_type' => $feeTypeDisplay,
+                        'amount' => number_format($payment->amount_paid ?? 0, 0),
+                        'payment_method' => 'N/A', // payments_history doesn't have payment_method
+                        'receipt_number' => $payment->payment_reference ?? 'N/A'
+                    ];
+                }
+            } else {
+                // For active years, get payment_records joined with payments
+                $payments = DB::table('payment_records')
+                    ->join('payments', 'payment_records.paymentID', '=', 'payments.paymentID')
+                    ->where('payments.studentID', $studentID)
+                    ->where('payments.academic_yearID', $academicYearID)
+                    ->select(
+                        'payment_records.payment_date',
+                        'payment_records.paid_amount',
+                        'payment_records.payment_source',
+                        'payment_records.reference_number',
+                        'payments.control_number',
+                        'payments.fee_type'
+                    )
+                    ->orderBy('payment_records.payment_date', 'desc')
+                    ->get();
+                
+                $paymentsData = [];
+                foreach ($payments as $payment) {
+                    // Map fee_type: 'Tuition Fees' -> 'School Fee', 'Other Fees' -> 'Other Contribution'
+                    $feeTypeDisplay = 'N/A';
+                    if ($payment->fee_type === 'Tuition Fees') {
+                        $feeTypeDisplay = 'School Fee';
+                    } elseif ($payment->fee_type === 'Other Fees') {
+                        $feeTypeDisplay = 'Other Contribution';
+                    }
+                    
+                    $paymentsData[] = [
+                        'date' => $payment->payment_date ? \Carbon\Carbon::parse($payment->payment_date)->format('d M Y') : 'N/A',
+                        'control_number' => $payment->control_number ?? 'N/A',
+                        'fee_type' => $feeTypeDisplay,
+                        'amount' => number_format($payment->paid_amount ?? 0, 0),
+                        'payment_method' => $payment->payment_source ?? 'N/A',
+                        'receipt_number' => $payment->reference_number ?? 'N/A'
+                    ];
+                }
+            }
+            
+            return response()->json([
+                'success' => true,
+                'payments' => $paymentsData
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error loading payments: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Get student debts for academic year
+     */
+    public function get_student_debts_for_year(Request $request)
+    {
+        try {
+            $studentID = $request->input('student_id');
+            $academicYearID = $request->input('academic_year_id');
+            $yearStatus = $request->input('year_status');
+            $schoolID = Session::get('schoolID');
+            
+            if (!$studentID || !$academicYearID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Missing required parameters'
+                ], 400);
+            }
+            
+            // Get the selected academic year to get its year value
+            $selectedYear = DB::table('academic_years')
+                ->where('academic_yearID', $academicYearID)
+                ->where('schoolID', $schoolID)
+                ->first();
+            
+            if (!$selectedYear) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Academic year not found'
+                ], 404);
+            }
+            
+            $selectedYearValue = $selectedYear->year;
+            
+            // Get all closed academic years up to and including the selected year
+            $closedYears = DB::table('academic_years')
+                ->where('schoolID', $schoolID)
+                ->where('status', 'Closed')
+                ->where('year', '<=', $selectedYearValue)
+                ->orderBy('year', 'asc')
+                ->get();
+            
+            // Also include current year if it's active
+            if ($yearStatus === 'Active') {
+                $activeYear = DB::table('academic_years')
+                    ->where('schoolID', $schoolID)
+                    ->where('status', 'Active')
+                    ->where('academic_yearID', $academicYearID)
+                    ->first();
+                
+                if ($activeYear) {
+                    $closedYears->push($activeYear);
+                }
+            }
+            
+            $debtsData = [];
+            $totalDebt = 0;
+            
+            // Calculate cumulative debt from all years up to selected year
+            foreach ($closedYears as $year) {
+                if ($year->status === 'Closed') {
+                    $payments = DB::table('payments_history')
+                        ->where('studentID', $studentID)
+                        ->where('academic_yearID', $year->academic_yearID)
+                        ->get();
+                } else {
+                    // For active year, get from current payments table
+                    $payments = DB::table('payments')
+                        ->where('studentID', $studentID)
+                        ->where('academic_yearID', $year->academic_yearID)
+                        ->get();
+                }
+                
+                foreach ($payments as $payment) {
+                    $requiredAmount = $payment->amount_required ?? 0;
+                    $paidAmount = $payment->amount_paid ?? 0;
+                    $outstanding = $requiredAmount - $paidAmount;
+                    
+                    if ($outstanding > 0) {
+                        // Group by fee_type and accumulate
+                        $feeType = $payment->fee_type ?? 'N/A';
+                        if (!isset($debtsData[$feeType])) {
+                            $debtsData[$feeType] = [
+                                'fee_type' => $feeType,
+                                'required_amount' => 0,
+                                'paid_amount' => 0,
+                                'outstanding' => 0
+                            ];
+                        }
+                        
+                        $debtsData[$feeType]['required_amount'] += $requiredAmount;
+                        $debtsData[$feeType]['paid_amount'] += $paidAmount;
+                        $debtsData[$feeType]['outstanding'] += $outstanding;
+                        $totalDebt += $outstanding;
+                    }
+                }
+            }
+            
+            // Format the debts data and map fee types
+            $formattedDebts = [];
+            foreach ($debtsData as $debt) {
+                // Map fee_type: 'Tuition Fees' -> 'School Fee', 'Other Fees' -> 'Other Contribution'
+                $feeTypeDisplay = $debt['fee_type'];
+                if ($debt['fee_type'] === 'Tuition Fees') {
+                    $feeTypeDisplay = 'School Fee';
+                } elseif ($debt['fee_type'] === 'Other Fees') {
+                    $feeTypeDisplay = 'Other Contribution';
+                }
+                
+                $formattedDebts[] = [
+                    'fee_type' => $feeTypeDisplay,
+                    'required_amount' => number_format($debt['required_amount'], 0),
+                    'paid_amount' => number_format($debt['paid_amount'], 0),
+                    'outstanding' => number_format($debt['outstanding'], 0)
+                ];
+            }
+            
+            // Get library records (books not returned) for this student
+            // Only get books from this school
+            $libraryRecords = DB::table('book_borrows')
+                ->join('books', 'book_borrows.bookID', '=', 'books.bookID')
+                ->leftJoin('school_subjects', 'books.subjectID', '=', 'school_subjects.subjectID')
+                ->leftJoin('classes', 'books.classID', '=', 'classes.classID')
+                ->where('book_borrows.studentID', $studentID)
+                ->where('books.schoolID', $schoolID)
+                ->where(function($query) {
+                    $query->where('book_borrows.status', 'borrowed')
+                          ->orWhereNull('book_borrows.return_date');
+                })
+                ->select(
+                    'book_borrows.borrow_date',
+                    'books.book_title',
+                    'school_subjects.subject_name',
+                    'classes.class_name'
+                )
+                ->orderBy('book_borrows.borrow_date', 'desc')
+                ->get();
+            
+            $libraryData = [];
+            foreach ($libraryRecords as $record) {
+                $libraryData[] = [
+                    'borrow_date' => $record->borrow_date ? \Carbon\Carbon::parse($record->borrow_date)->format('d M Y') : 'N/A',
+                    'book_title' => $record->book_title ?? 'N/A',
+                    'subject_name' => $record->subject_name ?? 'N/A',
+                    'class_name' => $record->class_name ?? 'N/A'
+                ];
+            }
+            
+            return response()->json([
+                'success' => true,
+                'debts' => $formattedDebts,
+                'total_debt' => number_format($totalDebt, 0),
+                'library_records' => $libraryData
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error loading debts: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Get student library records for academic year
+     */
+    public function get_student_library_for_year(Request $request)
+    {
+        $studentID = $request->input('student_id');
+        $academicYearID = $request->input('academic_year_id');
+        $yearStatus = $request->input('year_status');
+        
+        if ($yearStatus === 'Closed') {
+            $libraryRecords = DB::table('library_transactions_history')
+                ->where('studentID', $studentID)
+                ->where('academic_yearID', $academicYearID)
+                ->orderBy('borrowed_date', 'desc')
+                ->get();
+        } else {
+            $libraryRecords = DB::table('library_transactions')
+                ->where('studentID', $studentID)
+                ->where('academic_yearID', $academicYearID)
+                ->orderBy('borrowed_date', 'desc')
+                ->get();
+        }
+        
+        $libraryData = [];
+        foreach ($libraryRecords as $record) {
+            $libraryData[] = [
+                'book_title' => $record->book_title ?? 'N/A',
+                'borrowed_date' => $record->borrowed_date ? \Carbon\Carbon::parse($record->borrowed_date)->format('d M Y') : 'N/A',
+                'return_date' => $record->return_date ? \Carbon\Carbon::parse($record->return_date)->format('d M Y') : 'Pending',
+                'status' => $record->return_date ? 'Returned' : 'Borrowed',
+                'fine' => number_format($record->fine ?? 0, 0)
+            ];
+        }
+        
+        return response()->json([
+            'success' => true,
+            'library_records' => $libraryData
+        ]);
+    }
+    
+    /**
+     * Get student fees for academic year
+     */
+    public function get_student_fees_for_year(Request $request)
+    {
+        $studentID = $request->input('student_id');
+        $academicYearID = $request->input('academic_year_id');
+        $yearStatus = $request->input('year_status');
+        
+        // Get payments for this student and year
+        if ($yearStatus === 'Closed') {
+            $payments = DB::table('payments_history')
+                ->where('studentID', $studentID)
+                ->where('academic_yearID', $academicYearID)
+                ->get();
+        } else {
+            $payments = DB::table('payments')
+                ->where('studentID', $studentID)
+                ->where('academic_yearID', $academicYearID)
+                ->get();
+        }
+        
+        $feesData = [];
+        foreach ($payments as $payment) {
+            $requiredAmount = $payment->amount_required ?? 0;
+            $paidAmount = $payment->amount_paid ?? 0;
+            $balance = $requiredAmount - $paidAmount;
+            
+            $status = 'Pending';
+            if ($paidAmount >= $requiredAmount) {
+                $status = 'Paid';
+            } elseif ($paidAmount > 0) {
+                $status = 'Partial';
+            }
+            
+            $feesData[] = [
+                'fee_type' => $payment->fee_type ?? 'N/A',
+                'control_number' => $payment->control_number ?? 'N/A',
+                'required_amount' => number_format($requiredAmount, 0),
+                'paid_amount' => number_format($paidAmount, 0),
+                'balance' => number_format($balance, 0),
+                'status' => $status
+            ];
+        }
+        
+        return response()->json([
+            'success' => true,
+            'fees' => $feesData
+        ]);
     }
 }

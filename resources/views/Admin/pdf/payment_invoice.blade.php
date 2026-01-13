@@ -104,19 +104,23 @@
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 20px;
+            table-layout: fixed;
         }
         .summary-table th {
             background: #940000;
             color: white;
-            padding: 12px;
+            padding: 8px 4px;
             text-align: left;
             font-weight: bold;
-            font-size: 11px;
+            font-size: 9px;
             text-transform: uppercase;
+            word-wrap: break-word;
         }
         .summary-table td {
-            padding: 10px 12px;
+            padding: 8px 4px;
             border-bottom: 1px solid #dee2e6;
+            word-wrap: break-word;
+            font-size: 9px;
         }
         .summary-table tr:nth-child(even) {
             background: #f8f9fa;
@@ -152,19 +156,23 @@
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 20px;
-            font-size: 10px;
+            font-size: 8px;
+            table-layout: fixed;
         }
         .details-table th {
             background: #495057;
             color: white;
-            padding: 10px;
+            padding: 6px 3px;
             text-align: left;
             font-weight: bold;
-            font-size: 10px;
+            font-size: 8px;
+            word-wrap: break-word;
         }
         .details-table td {
-            padding: 8px 10px;
+            padding: 6px 3px;
             border: 1px solid #dee2e6;
+            word-wrap: break-word;
+            font-size: 8px;
         }
         .details-table tr:nth-child(even) {
             background: #f8f9fa;
@@ -287,7 +295,17 @@
         @if($student->subclass)
             <div class="info-row">
                 <div class="info-label">Class:</div>
-                <div class="info-value">{{ $student->subclass->subclass_name ?? 'N/A' }}</div>
+                <div class="info-value">
+                    @if($student->subclass->class && $student->subclass->subclass_name)
+                        {{ $student->subclass->class->class_name }} {{ $student->subclass->subclass_name }}
+                    @elseif($student->subclass->subclass_name)
+                        {{ $student->subclass->subclass_name }}
+                    @elseif($student->subclass->class)
+                        {{ $student->subclass->class->class_name }}
+                    @else
+                        N/A
+                    @endif
+                </div>
             </div>
         @endif
         @if($student->parent)
@@ -310,30 +328,66 @@
         <table class="summary-table">
             <thead>
                 <tr>
-                    <th style="width: 40%;">Fee Type</th>
-                    <th style="width: 20%;" class="text-right">Amount Required</th>
-                    <th style="width: 20%;" class="text-right">Amount Paid</th>
-                    <th style="width: 20%;" class="text-right">Balance</th>
+                    <th style="width: 20%;">Fee Type</th>
+                    <th style="width: 13%;" class="text-right">Required Amount</th>
+                    <th style="width: 13%;" class="text-right">Debt</th>
+                    <th style="width: 13%;" class="text-right">Total Required</th>
+                    <th style="width: 13%;" class="text-right">Amount Paid</th>
+                    <th style="width: 13%;" class="text-right">Balance</th>
+                    <th style="width: 15%;" class="text-center">Status</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td><strong>Tuition Fees</strong></td>
-                    <td class="amount">TZS {{ number_format($tuitionRequired, 2) }}</td>
-                    <td class="amount" style="color: #28a745;">TZS {{ number_format($tuitionPaid, 2) }}</td>
-                    <td class="amount" style="color: #dc3545;">TZS {{ number_format($tuitionBalance, 2) }}</td>
+                    <td><strong>School Fee</strong></td>
+                    <td class="amount">TZS {{ number_format($tuitionBaseRequired ?? 0, 0) }}</td>
+                    <td class="amount" style="color: #ffc107;">TZS {{ number_format($tuitionDebt ?? 0, 0) }}</td>
+                    <td class="amount"><strong>TZS {{ number_format($tuitionRequired ?? 0, 0) }}</strong></td>
+                    <td class="amount" style="color: #28a745;">TZS {{ number_format($tuitionPaid ?? 0, 0) }}</td>
+                    <td class="amount" style="color: #dc3545;">TZS {{ number_format($tuitionBalance ?? 0, 0) }}</td>
+                    <td class="text-center">
+                        @if($tuitionBalance <= 0 && $tuitionPaid > 0)
+                            <span class="badge badge-success">Paid</span>
+                        @elseif($tuitionPaid > 0)
+                            <span class="badge badge-info">Incomplete</span>
+                        @else
+                            <span class="badge badge-warning">Pending</span>
+                        @endif
+                    </td>
                 </tr>
                 <tr>
-                    <td><strong>Other Fees</strong></td>
-                    <td class="amount">TZS {{ number_format($otherRequired, 2) }}</td>
-                    <td class="amount" style="color: #28a745;">TZS {{ number_format($otherPaid, 2) }}</td>
-                    <td class="amount" style="color: #dc3545;">TZS {{ number_format($otherBalance, 2) }}</td>
+                    <td><strong>Other Contribution</strong></td>
+                    <td class="amount">TZS {{ number_format($otherBaseRequired ?? 0, 0) }}</td>
+                    <td class="amount" style="color: #ffc107;">TZS {{ number_format($otherDebt ?? 0, 0) }}</td>
+                    <td class="amount"><strong>TZS {{ number_format($otherRequired ?? 0, 0) }}</strong></td>
+                    <td class="amount" style="color: #28a745;">TZS {{ number_format($otherPaid ?? 0, 0) }}</td>
+                    <td class="amount" style="color: #dc3545;">TZS {{ number_format($otherBalance ?? 0, 0) }}</td>
+                    <td class="text-center">
+                        @if($otherBalance <= 0 && $otherPaid > 0)
+                            <span class="badge badge-success">Paid</span>
+                        @elseif($otherPaid > 0)
+                            <span class="badge badge-info">Incomplete</span>
+                        @else
+                            <span class="badge badge-warning">Pending</span>
+                        @endif
+                    </td>
                 </tr>
                 <tr class="total-row">
                     <td><strong>TOTAL</strong></td>
-                    <td class="amount">TZS {{ number_format($totalRequired, 2) }}</td>
-                    <td class="amount">TZS {{ number_format($totalPaid, 2) }}</td>
-                    <td class="amount">TZS {{ number_format($totalBalance, 2) }}</td>
+                    <td class="amount">TZS {{ number_format(($tuitionBaseRequired ?? 0) + ($otherBaseRequired ?? 0), 0) }}</td>
+                    <td class="amount">TZS {{ number_format(($tuitionDebt ?? 0) + ($otherDebt ?? 0), 0) }}</td>
+                    <td class="amount">TZS {{ number_format($totalRequired ?? 0, 0) }}</td>
+                    <td class="amount">TZS {{ number_format($totalPaid ?? 0, 0) }}</td>
+                    <td class="amount">TZS {{ number_format($totalBalance ?? 0, 0) }}</td>
+                    <td class="text-center">
+                        @if($totalBalance <= 0 && $totalPaid > 0)
+                            <span class="badge badge-success">Paid</span>
+                        @elseif($totalPaid > 0)
+                            <span class="badge badge-info">Incomplete</span>
+                        @else
+                            <span class="badge badge-warning">Pending</span>
+                        @endif
+                    </td>
                 </tr>
             </tbody>
         </table>
@@ -342,24 +396,45 @@
     <!-- Tuition Fees Details -->
     @if($tuitionPayments->count() > 0)
     <div class="details-section">
-        <div class="details-title">TUITION FEES DETAILS</div>
-        @foreach($tuitionPayments as $payment)
+        <div class="details-title">SCHOOL FEE DETAILS</div>
+        @foreach($tuitionPayments->filter(function($p) { return $p->control_number && $p->amount_required > 0; }) as $payment)
             <table class="details-table">
                 <thead>
                     <tr>
                         <th style="width: 15%;">Control Number</th>
-                        <th style="width: 20%;">Amount Required</th>
-                        <th style="width: 20%;">Amount Paid</th>
-                        <th style="width: 20%;">Balance</th>
-                        <th style="width: 25%;">Status</th>
+                        <th style="width: 12%;" class="text-right">Required Amount</th>
+                        <th style="width: 12%;" class="text-right">Debt</th>
+                        <th style="width: 12%;" class="text-right">Total Required</th>
+                        <th style="width: 12%;" class="text-right">Amount Paid</th>
+                        <th style="width: 12%;" class="text-right">Balance</th>
+                        <th style="width: 10%;" class="text-center">Status</th>
                     </tr>
                 </thead>
                 <tbody>
+                    @php
+                        $paymentDebt = $tuitionDebt ?? 0;
+                        // Use base amount from controller (divide by number of payments if multiple)
+                        $numPayments = $tuitionPayments->count();
+                        $baseAmount = $numPayments > 0 ? ($tuitionBaseRequired / $numPayments) : $tuitionBaseRequired;
+                        // If payment amount_required is greater than calculated base, it might include debt
+                        if ($payment->amount_required > $baseAmount && $payment->amount_required > $paymentDebt) {
+                            $expectedTotal = $baseAmount + $paymentDebt;
+                            if (abs($payment->amount_required - $expectedTotal) < 100) {
+                                // Debt is included, subtract to get base
+                                $baseAmount = $payment->amount_required - $paymentDebt;
+                            }
+                        }
+                        $totalAmountRequired = $baseAmount + $paymentDebt;
+                        $amountPaid = $payment->amount_paid ?? 0;
+                        $balance = $totalAmountRequired - $amountPaid; // Calculate balance from total required
+                    @endphp
                     <tr>
                         <td><strong>{{ $payment->control_number ?? 'N/A' }}</strong></td>
-                        <td class="text-right">TZS {{ number_format($payment->amount_required, 2) }}</td>
-                        <td class="text-right" style="color: #28a745;">TZS {{ number_format($payment->amount_paid, 2) }}</td>
-                        <td class="text-right" style="color: #dc3545;">TZS {{ number_format($payment->balance, 2) }}</td>
+                        <td class="text-right">TZS {{ number_format($baseAmount, 0) }}</td>
+                        <td class="text-right" style="color: #ffc107;">TZS {{ number_format($paymentDebt, 0) }}</td>
+                        <td class="text-right"><strong>TZS {{ number_format($totalAmountRequired, 0) }}</strong></td>
+                        <td class="text-right" style="color: #28a745;">TZS {{ number_format($amountPaid, 0) }}</td>
+                        <td class="text-right" style="color: #dc3545;">TZS {{ number_format($balance, 0) }}</td>
                         <td>
                             @if($payment->payment_status == 'Paid')
                                 <span class="badge badge-success">Paid</span>
@@ -409,24 +484,45 @@
     <!-- Other Fees Details -->
     @if($otherFeePayments->count() > 0)
     <div class="details-section">
-        <div class="details-title">OTHER FEES DETAILS</div>
-        @foreach($otherFeePayments as $payment)
+        <div class="details-title">OTHER CONTRIBUTION DETAILS</div>
+        @foreach($otherFeePayments->filter(function($p) { return $p->control_number && $p->amount_required > 0; }) as $payment)
             <table class="details-table">
                 <thead>
                     <tr>
                         <th style="width: 15%;">Control Number</th>
-                        <th style="width: 20%;">Amount Required</th>
-                        <th style="width: 20%;">Amount Paid</th>
-                        <th style="width: 20%;">Balance</th>
-                        <th style="width: 25%;">Status</th>
+                        <th style="width: 12%;" class="text-right">Required Amount</th>
+                        <th style="width: 12%;" class="text-right">Debt</th>
+                        <th style="width: 12%;" class="text-right">Total Required</th>
+                        <th style="width: 12%;" class="text-right">Amount Paid</th>
+                        <th style="width: 12%;" class="text-right">Balance</th>
+                        <th style="width: 10%;" class="text-center">Status</th>
                     </tr>
                 </thead>
                 <tbody>
+                    @php
+                        $paymentDebt = $otherDebt ?? 0;
+                        // Use base amount from controller (divide by number of payments if multiple)
+                        $numPayments = $otherFeePayments->count();
+                        $baseAmount = $numPayments > 0 ? ($otherBaseRequired / $numPayments) : $otherBaseRequired;
+                        // If payment amount_required is greater than calculated base, it might include debt
+                        if ($payment->amount_required > $baseAmount && $payment->amount_required > $paymentDebt) {
+                            $expectedTotal = $baseAmount + $paymentDebt;
+                            if (abs($payment->amount_required - $expectedTotal) < 100) {
+                                // Debt is included, subtract to get base
+                                $baseAmount = $payment->amount_required - $paymentDebt;
+                            }
+                        }
+                        $totalAmountRequired = $baseAmount + $paymentDebt;
+                        $amountPaid = $payment->amount_paid ?? 0;
+                        $balance = $totalAmountRequired - $amountPaid; // Calculate balance from total required
+                    @endphp
                     <tr>
                         <td><strong>{{ $payment->control_number ?? 'N/A' }}</strong></td>
-                        <td class="text-right">TZS {{ number_format($payment->amount_required, 2) }}</td>
-                        <td class="text-right" style="color: #28a745;">TZS {{ number_format($payment->amount_paid, 2) }}</td>
-                        <td class="text-right" style="color: #dc3545;">TZS {{ number_format($payment->balance, 2) }}</td>
+                        <td class="text-right">TZS {{ number_format($baseAmount, 0) }}</td>
+                        <td class="text-right" style="color: #ffc107;">TZS {{ number_format($paymentDebt, 0) }}</td>
+                        <td class="text-right"><strong>TZS {{ number_format($totalAmountRequired, 0) }}</strong></td>
+                        <td class="text-right" style="color: #28a745;">TZS {{ number_format($amountPaid, 0) }}</td>
+                        <td class="text-right" style="color: #dc3545;">TZS {{ number_format($balance, 0) }}</td>
                         <td>
                             @if($payment->payment_status == 'Paid')
                                 <span class="badge badge-success">Paid</span>

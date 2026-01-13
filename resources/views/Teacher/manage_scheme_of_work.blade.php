@@ -645,20 +645,41 @@
             // Structure: row-number, main_competence, specific_competences, learning_activities, specific_activities, week, number_of_periods, teaching_methods, teaching_resources, assessment_tools, references, remarks, action
             // Note: Month cell is NOT included in new row because it uses rowspan from first row
             // Total: 13 columns (matching existing subsequent rows)
+            // Match exact structure from existing rows (no form-control classes, textarea for main_competence)
             const newRow = document.createElement('tr');
             newRow.setAttribute('data-month', month);
             newRow.innerHTML = `
                 <td class="row-number">${newRowNumber}</td>
-                <td><textarea name="items[${newRowId}][main_competence]" rows="2"></textarea></td>
-                <td><textarea name="items[${newRowId}][specific_competences]" rows="2"></textarea></td>
-                <td><textarea name="items[${newRowId}][learning_activities]" rows="2"></textarea></td>
-                <td><textarea name="items[${newRowId}][specific_activities]" rows="2"></textarea></td>
-                <td><input type="text" name="items[${newRowId}][week]" value=""></td>
-                <td><input type="number" name="items[${newRowId}][number_of_periods]" min="0" value=""></td>
-                <td><textarea name="items[${newRowId}][teaching_methods]" rows="2"></textarea></td>
-                <td><textarea name="items[${newRowId}][teaching_resources]" rows="2"></textarea></td>
-                <td><textarea name="items[${newRowId}][assessment_tools]" rows="2"></textarea></td>
-                <td><textarea name="items[${newRowId}][references]" rows="2"></textarea></td>
+                <td>
+                    <textarea name="items[${newRowId}][main_competence]" rows="2"></textarea>
+                </td>
+                <td>
+                    <textarea name="items[${newRowId}][specific_competences]" rows="2"></textarea>
+                </td>
+                <td>
+                    <textarea name="items[${newRowId}][learning_activities]" rows="2"></textarea>
+                </td>
+                <td>
+                    <textarea name="items[${newRowId}][specific_activities]" rows="2"></textarea>
+                </td>
+                <td>
+                    <input type="text" name="items[${newRowId}][week]" value="">
+                </td>
+                <td>
+                    <input type="number" name="items[${newRowId}][number_of_periods]" value="" min="0">
+                </td>
+                <td>
+                    <textarea name="items[${newRowId}][teaching_methods]" rows="2"></textarea>
+                </td>
+                <td>
+                    <textarea name="items[${newRowId}][teaching_resources]" rows="2"></textarea>
+                </td>
+                <td>
+                    <textarea name="items[${newRowId}][assessment_tools]" rows="2"></textarea>
+                </td>
+                <td>
+                    <textarea name="items[${newRowId}][references]" rows="2"></textarea>
+                </td>
                 <td style="text-align: center;">
                     <input type="checkbox" class="remark-checkbox" data-item-id="${newRowId}" onchange="updateRemarkStatus(this, '${newRowId}')" title="Mark as Done" disabled>
                 </td>

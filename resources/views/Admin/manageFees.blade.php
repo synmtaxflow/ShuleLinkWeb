@@ -224,12 +224,12 @@
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-bordered table-hover mb-0" style="border-collapse: separate; border-spacing: 0;">
-                                <thead class="table-primary" style="background-color: #940000 !important;">
-                                    <tr>
-                                        <th style="width: 12%;" class="text-center border-end text-white">Class</th>
-                                        <th style="width: 30%;" class="border-end text-white">Tuition Fee (TZS)</th>
-                                        <th style="width: 35%;" class="border-end text-white">Other Fee (TZS)</th>
-                                        <th style="width: 23%;" class="text-end border-end text-white">Total Fee (TZS)</th>
+                                <thead style="background-color: #940000 !important;">
+                                    <tr style="background-color: #940000 !important;">
+                                        <th style="width: 12%; background-color: #940000 !important;" class="text-center border-end text-white">Class</th>
+                                        <th style="width: 30%; background-color: #940000 !important;" class="border-end text-white">School Fee (TZS)</th>
+                                        <th style="width: 35%; background-color: #940000 !important;" class="border-end text-white">Other Contribution (TZS)</th>
+                                        <th style="width: 23%; background-color: #940000 !important;" class="text-end border-end text-white">Total Fee (TZS)</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -439,13 +439,9 @@
                         <label class="form-label fw-bold">Fee Type <span class="text-danger">*</span></label>
                         <select name="fee_type" id="fee_type_select" class="form-select" required>
                             <option value="">Choose fee type...</option>
-                            <option value="Tuition Fees">Tuition Fees</option>
-                            <option value="Other Fees">Other Fees</option>
+                            <option value="Tuition Fees">School Fee</option>
+                            <option value="Other Fees">Other Contribution</option>
                         </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Fee Name <span class="text-danger">*</span></label>
-                        <input type="text" name="fee_name" class="form-control" placeholder="e.g., School Fees, Library Fee, Sports Fee" required maxlength="200">
                     </div>
                     
                     <!-- Other Fees Details Section -->
@@ -601,13 +597,9 @@
                         <label class="form-label fw-bold">Fee Type <span class="text-danger">*</span></label>
                         <select name="fee_type" id="edit_fee_type_select" class="form-select" required>
                             <option value="">Choose fee type...</option>
-                            <option value="Tuition Fees">Tuition Fees</option>
-                            <option value="Other Fees">Other Fees</option>
+                            <option value="Tuition Fees">School Fee</option>
+                            <option value="Other Fees">Other Contribution</option>
                         </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Fee Name <span class="text-danger">*</span></label>
-                        <input type="text" name="fee_name" id="edit_fee_name" class="form-control" placeholder="e.g., School Fees, Library Fee, Sports Fee" required maxlength="200">
                     </div>
                     
                     <!-- Other Fees Details Section for Edit -->
