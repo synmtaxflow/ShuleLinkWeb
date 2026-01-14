@@ -110,7 +110,7 @@ class ApiController extends Controller
         // Clear rate limiter on successful login
         RateLimiter::clear($key);
 
-        // Handle different user types
+        // Handle different user types and SET SESSION DATA
         $responseData = [
             'user' => [
                 'id' => $userLogin->id,
@@ -131,6 +131,16 @@ class ApiController extends Controller
                     ], 404);
                 }
 
+                // Set session data (same as web login)
+                Session::put('schoolID', $school->schoolID);
+                Session::put('user_type', $userLogin->user_type);
+                Session::put('userID', $userLogin->id);
+                Session::put('user_name', $userLogin->name);
+                Session::put('user_email', $userLogin->email);
+
+                // Regenerate session ID for security
+                $request->session()->regenerate();
+
                 $responseData['schoolID'] = $school->schoolID;
                 $responseData['school'] = [
                     'schoolID' => $school->schoolID,
@@ -149,6 +159,25 @@ class ApiController extends Controller
                     ], 404);
                 }
 
+                // Set session data (same as web login)
+                Session::put('schoolID', $teacher->schoolID);
+                Session::put('teacherID', $teacher->id);
+                Session::put('user_type', $userLogin->user_type);
+                Session::put('userID', $userLogin->id);
+                Session::put('user_name', $userLogin->name);
+                Session::put('user_email', $userLogin->email);
+                Session::put('teacher_name', $teacher->first_name . ' ' . $teacher->last_name);
+
+                // Load teacher roles if Spatie is installed
+                if (class_exists(\Spatie\Permission\Models\Permission::class) && method_exists($teacher, 'roles')) {
+                    $roles = $teacher->roles()->pluck('name')->toArray();
+                    Session::put('teacher_roles', $roles);
+                    $responseData['teacher_roles'] = $roles;
+                }
+
+                // Regenerate session ID for security
+                $request->session()->regenerate();
+
                 $responseData['schoolID'] = $teacher->schoolID;
                 $responseData['teacherID'] = $teacher->id;
                 $responseData['teacher'] = [
@@ -156,13 +185,8 @@ class ApiController extends Controller
                     'first_name' => $teacher->first_name ?? null,
                     'last_name' => $teacher->last_name ?? null,
                     'employee_number' => $teacher->employee_number ?? null,
+                    'full_name' => trim(($teacher->first_name ?? '') . ' ' . ($teacher->last_name ?? '')),
                 ];
-
-                // Load teacher roles if Spatie is installed
-                if (class_exists(\Spatie\Permission\Models\Permission::class) && method_exists($teacher, 'roles')) {
-                    $roles = $teacher->roles()->pluck('name')->toArray();
-                    $responseData['teacher_roles'] = $roles;
-                }
                 break;
 
             case 'parent':
@@ -175,11 +199,21 @@ class ApiController extends Controller
                     ], 404);
                 }
 
+                // Set session data (same as web login)
+                Session::put('parentID', $parent->parentID);
+                Session::put('schoolID', $parent->schoolID);
+                Session::put('user_type', $userLogin->user_type);
+
+                // Regenerate session ID for security
+                $request->session()->regenerate();
+
                 $responseData['parentID'] = $parent->parentID;
                 $responseData['schoolID'] = $parent->schoolID;
                 $responseData['parent'] = [
                     'parentID' => $parent->parentID,
                     'phone' => $parent->phone ?? null,
+                    'first_name' => $parent->first_name ?? null,
+                    'last_name' => $parent->last_name ?? null,
                 ];
                 break;
 
@@ -190,11 +224,37 @@ class ApiController extends Controller
                 ], 400);
         }
 
-        return response()->json([
+        // Get session cookie name and value
+        $sessionName = config('session.cookie');
+        $sessionId = $request->session()->getId();
+
+        // Return response with session information
+        $response = response()->json([
             'success' => true,
             'message' => 'Login successful',
-            'data' => $responseData
+            'data' => $responseData,
+            'session' => [
+                'cookie_name' => $sessionName,
+                'session_id' => $sessionId,
+                'cookie_value' => $sessionId,
+                'cookie_header' => $sessionName . '=' . $sessionId,
+            ]
         ], 200);
+
+        // Set session cookie in response
+        $response->cookie(
+            $sessionName,
+            $sessionId,
+            config('session.lifetime'),
+            config('session.path'),
+            config('session.domain'),
+            config('session.secure'),
+            config('session.http_only'),
+            false,
+            config('session.same_site')
+        );
+
+        return $response;
     }
 
     /**
@@ -213,12 +273,26 @@ class ApiController extends Controller
      */
     public function logout(Request $request)
     {
-        // For API, we might want to invalidate tokens in the future
-        // For now, just return success
-        return response()->json([
-            'success' => true,
-            'message' => 'Logged out successfully.'
-        ], 200);
+        try {
+            // Clear all session data
+            Session::flush();
+
+            // Invalidate session
+            $request->session()->invalidate();
+
+            // Regenerate CSRF token
+            $request->session()->regenerateToken();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Logged out successfully.'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Logged out successfully.'
+            ], 200);
+        }
     }
 
     /**
