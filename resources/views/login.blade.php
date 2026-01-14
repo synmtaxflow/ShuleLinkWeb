@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>ShuleLink - Settings</title>
+    <title>ShuleXpert - Settings</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <meta content="" name="keywords">
     <meta content="" name="description">
@@ -63,7 +63,7 @@
                 <div class="card shadow-sm card-brand fade-in">
                     <div class="card-header bg-white d-flex align-items-center justify-content-between">
                         <h5 class="mb-0 brand-text"><i class="bi bi-building me-2"></i>School Member Login</h5>
-                        <span class="text-muted small">ShuleLink</span>
+                        <span class="text-muted small">ShuleXpert</span>
                     </div>
                     <div class="card-body">
               @if (session('success'))

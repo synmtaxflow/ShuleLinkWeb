@@ -141,8 +141,8 @@
 </head>
 <body>
     <div class="header">
-        @if($schoolLogoPath && file_exists($schoolLogoPath))
-            <img src="{{ $schoolLogoPath }}" alt="School Logo" class="logo">
+        @if(isset($schoolLogoBase64) && $schoolLogoBase64)
+            <img src="{{ $schoolLogoBase64 }}" alt="School Logo" class="logo">
         @endif
         @if($school && $school->school_name)
             <div class="school-name">{{ strtoupper($school->school_name) }}</div>
@@ -193,9 +193,45 @@
         </tr>
         <tr>
             <th>TIME</th>
-            <td>{{ \Carbon\Carbon::parse($lessonPlan->lesson_time_start)->format('h:i A') }} - {{ \Carbon\Carbon::parse($lessonPlan->lesson_time_end)->format('h:i A') }}</td>
+            <td>
+                @php
+                    $startTime = $lessonPlan->lesson_time_start;
+                    $endTime = $lessonPlan->lesson_time_end;
+                    if (is_string($startTime)) {
+                        $parts = explode(':', $startTime);
+                        $hours = (int)$parts[0];
+                        $minutes = $parts[1] ?? '00';
+                        $ampm = $hours >= 12 ? 'PM' : 'AM';
+                        $displayHours = $hours % 12 ?: 12;
+                        $startTimeFormatted = $displayHours . ':' . $minutes . ' ' . $ampm;
+                    } else {
+                        $startTimeFormatted = $startTime;
+                    }
+                    if (is_string($endTime)) {
+                        $parts = explode(':', $endTime);
+                        $hours = (int)$parts[0];
+                        $minutes = $parts[1] ?? '00';
+                        $ampm = $hours >= 12 ? 'PM' : 'AM';
+                        $displayHours = $hours % 12 ?: 12;
+                        $endTimeFormatted = $displayHours . ':' . $minutes . ' ' . $ampm;
+                    } else {
+                        $endTimeFormatted = $endTime;
+                    }
+                @endphp
+                {{ $startTimeFormatted }} - {{ $endTimeFormatted }}
+            </td>
             <th>DATE</th>
-            <td colspan="3">{{ \Carbon\Carbon::parse($lessonPlan->lesson_date)->format('d/m/Y') }}</td>
+            <td colspan="3">
+                @php
+                    $date = $lessonPlan->lesson_date;
+                    if ($date instanceof \Carbon\Carbon) {
+                        $dateFormatted = $date->format('d/m/Y');
+                    } else {
+                        $dateFormatted = \Carbon\Carbon::parse($date)->format('d/m/Y');
+                    }
+                @endphp
+                {{ $dateFormatted }}
+            </td>
         </tr>
     </table>
     
@@ -284,8 +320,8 @@
                 <td style="width: 50%; border: none; padding: 5px;">
                     <div class="signature-label">Subject Teacher's Signature:</div>
                     <div class="signature-box">
-                        @if($lessonPlan->teacher_signature)
-                            <img src="{{ $lessonPlan->teacher_signature }}" class="signature-image" alt="Teacher Signature">
+                        @if(isset($teacherSignatureBase64) && $teacherSignatureBase64)
+                            <img src="{{ $teacherSignatureBase64 }}" class="signature-image" alt="Teacher Signature">
                         @else
                             <div style="height: 80px;"></div>
                         @endif
@@ -294,8 +330,8 @@
                 <td style="width: 50%; border: none; padding: 5px;">
                     <div class="signature-label">Academic/Supervisor's Signature:</div>
                     <div class="signature-box">
-                        @if($lessonPlan->supervisor_signature)
-                            <img src="{{ $lessonPlan->supervisor_signature }}" class="signature-image" alt="Supervisor Signature">
+                        @if(isset($supervisorSignatureBase64) && $supervisorSignatureBase64)
+                            <img src="{{ $supervisorSignatureBase64 }}" class="signature-image" alt="Supervisor Signature">
                         @else
                             <div style="height: 80px;"></div>
                         @endif

@@ -1,5 +1,31 @@
 @include('includes.teacher_nav')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<style>
+    .dashboard-widget-row {
+        display: flex;
+        flex-wrap: wrap;
+        margin-bottom: 1.5rem;
+    }
+    .dashboard-widget-row::after {
+        content: "";
+        display: table;
+        clear: both;
+    }
+    .dashboard-widget {
+        float: left;
+        width: 100%;
+    }
+    @media (min-width: 768px) {
+        .dashboard-widget {
+            width: 50%;
+        }
+    }
+    @media (min-width: 992px) {
+        .dashboard-widget {
+            width: 25%;
+        }
+    }
+</style>
 <div class="container-fluid mt-3">
   @if (session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -113,9 +139,6 @@
             </div>
         </div>
     </div>
-    @else
-    <!-- Placeholder if not class teacher -->
-    <div class="col-lg-3 col-md-6 mb-3"></div>
     @endif
 
     <!-- Sessions Per Week -->
@@ -140,8 +163,6 @@
     </div>
 </div>
 
-<!-- Second Row: Remaining Widgets (4 widgets) -->
-<div class="row mb-4">
     <!-- Coordinator Main Classes Count -->
     @if(isset($dashboardStats['coordinator_classes_count']) && $dashboardStats['coordinator_classes_count'] > 0)
     <div class="col-lg-3 col-md-6 mb-3">
@@ -163,9 +184,6 @@
             </div>
         </div>
     </div>
-    @else
-    <!-- Placeholder if not coordinator -->
-    <div class="col-lg-3 col-md-6 mb-3"></div>
     @endif
 
     <!-- Sessions Per Year -->
@@ -205,6 +223,50 @@
                 </div>
                 <a href="{{ route('teacher.mySessions') }}" class="btn btn-sm btn-outline-secondary mt-3 w-100">
                     <i class="fa fa-list"></i> View More
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scheme of Work -->
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #fd7e14 !important;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2" style="font-size: 0.85rem; font-weight: 600;">Scheme of Work</h6>
+                        <h3 class="mb-0" style="color: #fd7e14; font-weight: bold;">{{ $dashboardStats['scheme_of_work_count'] ?? 0 }}</h3>
+                        <small class="text-muted">For current year</small>
+                    </div>
+                    <div style="font-size: 2.5rem; opacity: 0.3; color: #fd7e14;">
+                        <i class="fa fa-book-open"></i>
+                    </div>
+                </div>
+                <a href="{{ route('teacher.schemeOfWork') }}" class="btn btn-sm mt-3 w-100" style="background-color: #fd7e14; border-color: #fd7e14; color: white; border-radius: 0;">
+                    <i class="fa fa-eye"></i> View Scheme of Work
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lesson Plans -->
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #007bff !important;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2" style="font-size: 0.85rem; font-weight: 600;">Lesson Plans</h6>
+                        <h3 class="mb-0" style="color: #007bff; font-weight: bold;">{{ $dashboardStats['lesson_plans_count'] ?? 0 }}</h3>
+                        <small class="text-muted">
+                            {{ $dashboardStats['lesson_plans_sent_count'] ?? 0 }} sent to admin
+                        </small>
+                    </div>
+                    <div style="font-size: 2.5rem; opacity: 0.3; color: #007bff;">
+                        <i class="fa fa-file-text"></i>
+                    </div>
+                </div>
+                <a href="{{ route('teacher.lessonPlans') }}" class="btn btn-sm mt-3 w-100" style="background-color: #007bff; border-color: #007bff; color: white; border-radius: 0;">
+                    <i class="fa fa-eye"></i> View Lesson Plans
                 </a>
             </div>
         </div>
@@ -420,7 +482,7 @@
 <div class="row mb-4">
     <div class="col-12">
         <div class="card border-0 shadow-sm">
-            <div class="card-header bg-primary-custom text-white">
+            <div class="card-header text-white" style="background: linear-gradient(135deg, #940000 0%, #b30000 100%);">
                 <h5 class="mb-0">
                     <i class="fa fa-book"></i> Teaching Subjects
                 </h5>
@@ -471,7 +533,7 @@
     <!-- Graph 1: Sessions per week by day -->
     <div class="col-lg-6 mb-4">
         <div class="card border-0 shadow-sm">
-            <div class="card-header bg-primary-custom text-white">
+            <div class="card-header text-white" style="background: linear-gradient(135deg, #940000 0%, #b30000 100%);">
                 <h5 class="mb-0">
                     <i class="fa fa-calendar-week"></i> Sessions Per Week by Day
                 </h5>
@@ -486,7 +548,7 @@
     <!-- Graph 2: Subject Performance -->
     <div class="col-lg-6 mb-4">
         <div class="card border-0 shadow-sm">
-            <div class="card-header bg-primary-custom text-white">
+            <div class="card-header text-white" style="background: linear-gradient(135deg, #940000 0%, #b30000 100%);">
                 <h5 class="mb-0">
                     <i class="fa fa-line-chart"></i> Subject Performance (Pass/Fail Rates)
                 </h5>
@@ -501,7 +563,7 @@
     <!-- Graph 3: Classes with Most Sessions -->
     <div class="col-lg-12 mb-4">
         <div class="card border-0 shadow-sm">
-            <div class="card-header bg-primary-custom text-white">
+            <div class="card-header text-white" style="background: linear-gradient(135deg, #940000 0%, #b30000 100%);">
                 <h5 class="mb-0">
                     <i class="fa fa-users"></i> Classes with Most Sessions
                 </h5>

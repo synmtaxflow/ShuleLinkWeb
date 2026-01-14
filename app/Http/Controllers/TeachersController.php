@@ -25,6 +25,7 @@ use App\Models\SchemeOfWorkItem;
 use App\Models\SchemeOfWorkLearningObjective;
 use App\Models\LessonPlan;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
+use Dompdf\Dompdf;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -536,6 +537,33 @@ class TeachersController extends Controller
                 }
             }
             
+            // Count Scheme of Work
+            $schemeOfWorkCount = 0;
+            if ($teacherID) {
+                $currentYear = Carbon::now()->year;
+                $schemeOfWorkCount = SchemeOfWork::whereHas('classSubject', function($query) use ($teacherID) {
+                    $query->where('teacherID', $teacherID)
+                          ->where('status', 'Active');
+                })
+                ->where('year', $currentYear)
+                ->count();
+            }
+            
+            // Count Lesson Plans
+            $lessonPlansCount = 0;
+            $lessonPlansSentCount = 0;
+            if ($teacherID) {
+                $currentYear = Carbon::now()->year;
+                $lessonPlansCount = LessonPlan::where('teacherID', $teacherID)
+                    ->whereYear('lesson_date', $currentYear)
+                    ->count();
+                
+                $lessonPlansSentCount = LessonPlan::where('teacherID', $teacherID)
+                    ->where('sent_to_admin', true)
+                    ->whereYear('lesson_date', $currentYear)
+                    ->count();
+            }
+            
             $dashboardStats = [
                 'subjects_count' => $subjectsCount,
                 'classes_count' => $classesCount,
@@ -546,6 +574,9 @@ class TeachersController extends Controller
                 'class_teacher_subclasses_count' => $classTeacherSubclassesCount,
                 'coordinator_classes_count' => $coordinatorClassesCount,
                 'coordinator_classes' => $coordinatorClasses, // Pass coordinator classes list
+                'scheme_of_work_count' => $schemeOfWorkCount,
+                'lesson_plans_count' => $lessonPlansCount,
+                'lesson_plans_sent_count' => $lessonPlansSentCount,
             ];
         }
         
@@ -832,14 +863,18 @@ class TeachersController extends Controller
                     
                     // Get results for this subject in classes teacher teaches
                     $subclassIDs = $classSubjects->where('subjectID', $subjectID)->pluck('subclassID')->unique();
+                    $classSubjectIDs = $classSubjects->where('subjectID', $subjectID)->pluck('class_subjectID')->unique();
                     
                     $results = DB::table('results')
                         ->join('examinations', 'results.examID', '=', 'examinations.examID')
                         ->join('students', 'results.studentID', '=', 'students.studentID')
-                        ->where('results.subjectID', $subjectID)
-                        ->where('results.schoolID', $schoolID)
+                        ->join('class_subjects', 'results.class_subjectID', '=', 'class_subjects.class_subjectID')
+                        ->where('class_subjects.subjectID', $subjectID)
+                        ->where('examinations.schoolID', $schoolID)
                         ->whereIn('students.subclassID', $subclassIDs)
                         ->where('examinations.approval_status', 'Approved')
+                        ->whereNotNull('results.marks')
+                        ->where('results.status', 'allowed')
                         ->select('results.marks', 'results.grade')
                         ->get();
                     
@@ -7386,34 +7421,134 @@ class TeachersController extends Controller
                 $teacherName = trim(($lessonPlan->teacher->first_name ?? '') . ' ' . ($lessonPlan->teacher->last_name ?? ''));
             }
 
-            // Get school logo path
-            $schoolLogoPath = null;
+            // Get school logo path and convert to base64 if exists
+            $schoolLogoBase64 = null;
             if ($school && $school->school_logo) {
-                $schoolLogoPath = public_path($school->school_logo);
-                // Check if file exists
-                if (!file_exists($schoolLogoPath)) {
-                    $schoolLogoPath = null;
+                $logoPath = public_path($school->school_logo);
+                // Check if file exists and convert to base64
+                if (file_exists($logoPath)) {
+                    $imageData = file_get_contents($logoPath);
+                    // Detect mime type from file extension
+                    $extension = strtolower(pathinfo($logoPath, PATHINFO_EXTENSION));
+                    $mimeTypes = [
+                        'jpg' => 'image/jpeg',
+                        'jpeg' => 'image/jpeg',
+                        'png' => 'image/png',
+                        'gif' => 'image/gif',
+                        'webp' => 'image/webp'
+                    ];
+                    $mimeType = $mimeTypes[$extension] ?? 'image/png';
+                    $schoolLogoBase64 = 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
                 }
             }
 
+            // Convert signatures to base64 if they exist
+            $teacherSignatureBase64 = null;
+            if ($lessonPlan->teacher_signature) {
+                if (strpos($lessonPlan->teacher_signature, 'data:image') === 0) {
+                    // Already base64 encoded
+                    $teacherSignatureBase64 = $lessonPlan->teacher_signature;
+                } elseif (file_exists($lessonPlan->teacher_signature)) {
+                    // File path - convert to base64
+                    $imageData = file_get_contents($lessonPlan->teacher_signature);
+                    $extension = strtolower(pathinfo($lessonPlan->teacher_signature, PATHINFO_EXTENSION));
+                    $mimeTypes = [
+                        'jpg' => 'image/jpeg',
+                        'jpeg' => 'image/jpeg',
+                        'png' => 'image/png',
+                        'gif' => 'image/gif',
+                        'webp' => 'image/webp'
+                    ];
+                    $mimeType = $mimeTypes[$extension] ?? 'image/png';
+                    $teacherSignatureBase64 = 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+                } else {
+                    // Assume it's already a data URL
+                    $teacherSignatureBase64 = $lessonPlan->teacher_signature;
+                }
+            }
+            
+            $supervisorSignatureBase64 = null;
+            if ($lessonPlan->supervisor_signature) {
+                if (strpos($lessonPlan->supervisor_signature, 'data:image') === 0) {
+                    // Already base64 encoded
+                    $supervisorSignatureBase64 = $lessonPlan->supervisor_signature;
+                } elseif (file_exists($lessonPlan->supervisor_signature)) {
+                    // File path - convert to base64
+                    $imageData = file_get_contents($lessonPlan->supervisor_signature);
+                    $extension = strtolower(pathinfo($lessonPlan->supervisor_signature, PATHINFO_EXTENSION));
+                    $mimeTypes = [
+                        'jpg' => 'image/jpeg',
+                        'jpeg' => 'image/jpeg',
+                        'png' => 'image/png',
+                        'gif' => 'image/gif',
+                        'webp' => 'image/webp'
+                    ];
+                    $mimeType = $mimeTypes[$extension] ?? 'image/png';
+                    $supervisorSignatureBase64 = 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+                } else {
+                    // Assume it's already a data URL
+                    $supervisorSignatureBase64 = $lessonPlan->supervisor_signature;
+                }
+            }
+            
             // Prepare data for PDF
             $data = [
                 'lessonPlan' => $lessonPlan,
                 'school' => $school,
                 'schoolType' => $schoolTypeDisplay,
                 'teacherName' => $teacherName,
-                'schoolLogoPath' => $schoolLogoPath,
+                'schoolLogoBase64' => $schoolLogoBase64,
+                'teacherSignatureBase64' => $teacherSignatureBase64,
+                'supervisorSignatureBase64' => $supervisorSignatureBase64,
             ];
 
-            // Generate PDF
-            $pdf = PDF::loadView('Teacher.pdf.lesson_plan', $data);
-            $pdf->setPaper('A4', 'portrait');
-
-            $filename = 'Lesson_Plan_' . str_replace(' ', '_', $lessonPlan->subject) . '_' . Carbon::parse($lessonPlan->lesson_date)->format('Y-m-d') . '.pdf';
-
-            return $pdf->download($filename);
+            // Generate PDF - Use Dompdf directly to avoid GD extension issues
+            try {
+                // Render the view to HTML
+                $html = view('Teacher.pdf.lesson_plan', $data)->render();
+                
+                if (empty($html)) {
+                    throw new \Exception('PDF view returned empty HTML');
+                }
+                
+                // Use Dompdf directly
+                $dompdf = new Dompdf();
+                $dompdf->loadHtml($html);
+                $dompdf->setPaper('A4', 'portrait');
+                
+                // Set options to avoid GD extension requirement
+                $options = $dompdf->getOptions();
+                $options->set('enable-local-file-access', false); // Disable since we use base64
+                $options->set('isRemoteEnabled', true);
+                $options->set('isHtml5ParserEnabled', true);
+                $options->set('isPhpEnabled', false);
+                $options->set('chroot', public_path());
+                $dompdf->setOptions($options);
+                
+                // Render PDF
+                $dompdf->render();
+                
+                $subjectName = $lessonPlan->subject ? str_replace(' ', '_', $lessonPlan->subject) : 'Lesson_Plan';
+                $filename = 'Lesson_Plan_' . $subjectName . '_' . Carbon::parse($lessonPlan->lesson_date)->format('Y-m-d') . '.pdf';
+                $filename = preg_replace('/[^A-Za-z0-9_\-\.]/', '_', $filename);
+                
+                // Return PDF as download
+                return response()->streamDownload(function() use ($dompdf) {
+                    echo $dompdf->output();
+                }, $filename, [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+                ]);
+            } catch (\Exception $pdfError) {
+                Log::error('Error generating PDF: ' . $pdfError->getMessage());
+                Log::error('PDF Error Stack: ' . $pdfError->getTraceAsString());
+                
+                // Return error response
+                return redirect()->back()->with('error', 'Failed to generate PDF: ' . $pdfError->getMessage());
+            }
         } catch (\Exception $e) {
             Log::error('Error downloading lesson plan PDF: ' . $e->getMessage());
+            Log::error('Error Stack: ' . $e->getTraceAsString());
             return redirect()->back()->with('error', 'Failed to generate PDF: ' . $e->getMessage());
         }
     }
@@ -7540,5 +7675,180 @@ class TeachersController extends Controller
             'present_boys' => $presentBoys,
             'present_total' => $presentTotal,
         ];
+    }
+
+    /**
+     * Get lesson plans by filter (date range or year)
+     */
+    public function getLessonPlansByFilter(Request $request)
+    {
+        try {
+            $teacherID = Session::get('teacherID');
+            $sessionTimetableID = $request->input('session_timetableID');
+            $filterType = $request->input('filter_type');
+
+            if (!$teacherID || !$sessionTimetableID) {
+                return response()->json(['success' => false, 'error' => 'Session expired']);
+            }
+
+            $query = LessonPlan::where('session_timetableID', $sessionTimetableID)
+                ->where('teacherID', $teacherID);
+
+            if ($filterType === 'date_range') {
+                $fromDate = $request->input('from_date');
+                $toDate = $request->input('to_date');
+                
+                if (!$fromDate || !$toDate) {
+                    return response()->json(['success' => false, 'error' => 'Please provide both from and to dates']);
+                }
+                
+                $query->whereBetween('lesson_date', [$fromDate, $toDate]);
+            } else {
+                $year = $request->input('year');
+                if (!$year) {
+                    return response()->json(['success' => false, 'error' => 'Please provide a year']);
+                }
+                $query->whereYear('lesson_date', $year);
+            }
+
+            $lessonPlans = $query->orderBy('lesson_date', 'desc')->get();
+
+            return response()->json([
+                'success' => true,
+                'lesson_plans' => $lessonPlans
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting lesson plans by filter: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Get lesson plan by ID
+     */
+    public function getLessonPlanById(Request $request)
+    {
+        try {
+            $teacherID = Session::get('teacherID');
+            $lessonPlanID = $request->input('lesson_planID');
+
+            $lessonPlan = LessonPlan::where('lesson_planID', $lessonPlanID)
+                ->where('teacherID', $teacherID)
+                ->first();
+
+            if (!$lessonPlan) {
+                return response()->json(['success' => false, 'error' => 'Lesson plan not found']);
+            }
+
+            // Get teacher name
+            $teacherName = 'N/A';
+            if ($lessonPlan->teacher) {
+                $teacherName = trim(($lessonPlan->teacher->first_name ?? '') . ' ' . ($lessonPlan->teacher->last_name ?? ''));
+            }
+
+            $data = $lessonPlan->toArray();
+            $data['teacher_name'] = $teacherName;
+
+            return response()->json([
+                'success' => true,
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting lesson plan by ID: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Send lesson plan to admin
+     */
+    public function sendLessonPlanToAdmin(Request $request)
+    {
+        try {
+            $teacherID = Session::get('teacherID');
+            $lessonPlanID = $request->input('lesson_planID');
+
+            if (!$teacherID) {
+                return response()->json(['success' => false, 'error' => 'Session expired']);
+            }
+
+            $lessonPlan = LessonPlan::where('lesson_planID', $lessonPlanID)
+                ->where('teacherID', $teacherID)
+                ->first();
+
+            if (!$lessonPlan) {
+                return response()->json(['success' => false, 'error' => 'Lesson plan not found']);
+            }
+
+            if ($lessonPlan->sent_to_admin) {
+                return response()->json(['success' => false, 'error' => 'Lesson plan already sent to admin']);
+            }
+
+            $lessonPlan->update([
+                'sent_to_admin' => true,
+                'sent_at' => now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Lesson plan sent to admin successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error sending lesson plan to admin: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Download bulk lesson plans as PDF
+     */
+    public function downloadBulkLessonPlansPDF(Request $request)
+    {
+        try {
+            $teacherID = Session::get('teacherID');
+            $schoolID = Session::get('schoolID');
+            $lessonPlanIDs = $request->input('lesson_plan_ids', []);
+
+            if (!$teacherID || !$schoolID) {
+                return redirect()->back()->with('error', 'Session expired');
+            }
+
+            if (empty($lessonPlanIDs)) {
+                return redirect()->back()->with('error', 'No lesson plans selected');
+            }
+
+            $lessonPlans = LessonPlan::whereIn('lesson_planID', $lessonPlanIDs)
+                ->where('teacherID', $teacherID)
+                ->orderBy('lesson_date', 'asc')
+                ->get();
+
+            if ($lessonPlans->isEmpty()) {
+                return redirect()->back()->with('error', 'No lesson plans found');
+            }
+
+            // Get school info
+            $school = School::find($schoolID);
+            $schoolType = $school && $school->school_type ? strtolower($school->school_type) : 'primary';
+            $isPrimary = strpos($schoolType, 'primary') !== false || strpos($schoolType, 'pre') !== false;
+            $schoolTypeDisplay = $isPrimary ? 'PRE AND PRIMARY SCHOOL' : 'SECONDARY SCHOOL';
+
+            // Prepare data for PDF
+            $data = [
+                'lessonPlans' => $lessonPlans,
+                'school' => $school,
+                'schoolType' => $schoolTypeDisplay,
+            ];
+
+            // Generate PDF
+            $pdf = PDF::loadView('Teacher.pdf.bulk_lesson_plans', $data);
+            $pdf->setPaper('A4', 'portrait');
+
+            $filename = 'Lesson_Plans_Bulk_' . Carbon::now()->format('Y-m-d_His') . '.pdf';
+
+            return $pdf->download($filename);
+        } catch (\Exception $e) {
+            Log::error('Error downloading bulk lesson plans PDF: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to generate PDF: ' . $e->getMessage());
+        }
     }
 }

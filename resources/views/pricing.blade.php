@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Pricing - ShuleLink School Management System</title>
+    <title>Pricing - ShuleXpert School Management System</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <meta content="" name="keywords">
     <meta content="" name="description">
@@ -164,7 +164,7 @@
     <div class="container-fluid pricing-header wow fadeIn" data-wow-delay="0.1s">
         <div class="container text-center">
             <h1 class="display-5 mb-3">Choose Your Plan</h1>
-            <p class="fs-5 mb-0">Select the perfect ShuleLink plan for your school's needs</p>
+            <p class="fs-5 mb-0">Select the perfect ShuleXpert plan for your school's needs</p>
         </div>
     </div>
     <!-- Pricing Header End -->
@@ -300,7 +300,7 @@
         <div class="container">
             <div class="row g-5 py-5">
                 <div class="col-lg-3 col-md-6">
-                    <h4 class="text-light mb-4">ShuleLink Office</h4>
+                    <h4 class="text-light mb-4">ShuleXpert Office</h4>
                     <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>Moshi, Kilimanjaro</p>
                     <p class="mb-2"><i class="fa fa-phone-alt me-3"></i>+255757166599</p>
                     <p class="mb-2"><i class="fa fa-envelope me-3"></i>emca@emca.tech</p>
@@ -359,7 +359,7 @@
             <div class="copyright pt-5">
                 <div class="row">
                     <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
-                        &copy; <a class="fw-semi-bold" href="#!">ShuleLink</a>, All Right Reserved.
+                        &copy; <a class="fw-semi-bold" href="#!">ShuleXpert</a>, All Right Reserved.
                     </div>
                     <div class="col-md-6 text-center text-md-end">
                         <span class="footer-powered-by">Powered by EmCa Techonology</span>

@@ -164,7 +164,7 @@
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#main-menu" aria-controls="main-menu" aria-expanded="false" aria-label="Toggle navigation">
                 <i class="fa fa-bars"></i>
             </button>
-            <a class="navbar-brand" href="#">Shule Link</a>
+            <a class="navbar-brand" href="#">ShuleXpert</a>
             <a class="navbar-brand hidden" href="#">SL</a>
         </div>
 
@@ -178,7 +178,7 @@
                             : asset('images/admin.jpg');
                         $schoolName = isset($school_details) && $school_details && $school_details->school_name 
                             ? $school_details->school_name 
-                            : 'Shule Link';
+                            : 'ShuleXpert';
                     @endphp
                     <img src="{{ $schoolLogo }}" alt="School Logo" class="rounded-circle" width="80" height="80" style="object-fit: cover; border: 3px solid #940000;">
                     <p class="mt-2 mb-0 font-weight-bold" style="font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif; color: #940000;">{{ $schoolName }}</p>
@@ -206,6 +206,7 @@
                         <li><a href="{{ route('timeTable') }}" class="nav-link"><i class="fa fa-clock-o"></i> Time Tables Management</a></li>
                         <li><a href="{{ route('admin.calendar') }}" class="nav-link"><i class="fa fa-calendar"></i> Calendar Management</a></li>
                         <li><a href="{{ route('admin.schemeOfWork') }}" class="nav-link"><i class="fa fa-book"></i> Scheme of Work</a></li>
+                        <li><a href="{{ route('admin.lessonPlans') }}" class="nav-link"><i class="fa fa-file-text"></i> Lesson Plans</a></li>
                         <li><a href="{{ route('admin.academicYears') }}" class="nav-link"><i class="fa fa-calendar-check-o"></i> Academic Years</a></li>
                         <li><a href="#" class="nav-link"><i class="fa fa-lightbulb-o"></i> Suggestions Management</a></li>
                         <li><a href="#" class="nav-link"><i class="fa fa-exclamation-triangle"></i> Incidence Management</a></li>

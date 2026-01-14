@@ -2,6 +2,10 @@
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+<!-- jsPDF Library for PDF generation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- html2canvas for converting HTML to image -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
 <style>
@@ -242,22 +246,115 @@
                     <!-- Manage Tab -->
                     <div class="tab-pane fade" id="manage-lesson-plan" role="tabpanel">
                         <div id="manageTabContent">
-                            <div class="form-group">
-                                <label>Select Date</label>
-                                <input type="date" class="form-control" id="manageLessonDate" onchange="loadLessonPlanForManage()">
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h6 class="mb-3">Filter Lesson Plans to Manage</h6>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label>Filter Type</label>
+                                                <select class="form-control" id="manageFilterType" onchange="toggleManageFilterOptions()">
+                                                    <option value="single_date">Single Date</option>
+                                                    <option value="date_range">Date Range</option>
+                                                    <option value="year">By Year</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" id="manageSingleDateFilter">
+                                            <div class="form-group">
+                                                <label>Select Date</label>
+                                                <input type="date" class="form-control" id="manageLessonDate" onchange="loadLessonPlanForManage()">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" id="manageDateRangeFilter1" style="display: none;">
+                                            <div class="form-group">
+                                                <label>From Date</label>
+                                                <input type="date" class="form-control" id="manageFromDate">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" id="manageDateRangeFilter2" style="display: none;">
+                                            <div class="form-group">
+                                                <label>To Date</label>
+                                                <input type="date" class="form-control" id="manageToDate">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" id="manageYearFilter" style="display: none;">
+                                            <div class="form-group">
+                                                <label>Year</label>
+                                                <input type="number" class="form-control" id="manageYear" min="2020" max="2100" value="{{ date('Y') }}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label>&nbsp;</label>
+                                                <button class="btn btn-block" onclick="loadLessonPlansForManage()" style="background-color: #f5f5f5; color: #212529; border: 1px solid #e9ecef;">
+                                                    <i class="bi bi-search"></i> Load Lesson Plans
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div id="manageLessonPlanContent"></div>
+                            <div id="manageLessonPlanContent">
+                                <div class="text-center text-muted py-5">
+                                    <i class="bi bi-info-circle" style="font-size: 3rem;"></i>
+                                    <p class="mt-3">Please select filter options and click "Load Lesson Plans"</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     <!-- View Tab -->
                     <div class="tab-pane fade" id="view-lesson-plan" role="tabpanel">
                         <div id="viewTabContent">
-                            <div class="form-group">
-                                <label>Select Date</label>
-                                <input type="date" class="form-control" id="viewLessonDate" onchange="loadLessonPlanForView()">
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h6 class="mb-3">Filter Lesson Plans</h6>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label>Filter Type</label>
+                                                <select class="form-control" id="filterType" onchange="toggleFilterOptions()">
+                                                    <option value="date_range">Date Range</option>
+                                                    <option value="year">By Year</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" id="dateRangeFilter">
+                                            <div class="form-group">
+                                                <label>From Date</label>
+                                                <input type="date" class="form-control" id="viewFromDate">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" id="dateRangeFilter2">
+                                            <div class="form-group">
+                                                <label>To Date</label>
+                                                <input type="date" class="form-control" id="viewToDate">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" id="yearFilter" style="display: none;">
+                                            <div class="form-group">
+                                                <label>Year</label>
+                                                <input type="number" class="form-control" id="viewYear" min="2020" max="2100" value="{{ date('Y') }}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label>&nbsp;</label>
+                                                <button class="btn btn-block" onclick="loadLessonPlansByFilter()" style="background-color: #f5f5f5; color: #212529; border: 1px solid #e9ecef;">
+                                                    <i class="bi bi-search"></i> Load Lesson Plans
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div id="viewLessonPlanContent"></div>
+                            <div id="viewLessonPlanContent">
+                                <div class="text-center text-muted py-5">
+                                    <i class="bi bi-info-circle" style="font-size: 3rem;"></i>
+                                    <p class="mt-3">Please select filter options and click "Load Lesson Plans"</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -944,8 +1041,221 @@ function loadExistingLessonPlan() {
 }
 
 
+function toggleManageFilterOptions() {
+    const filterType = $('#manageFilterType').val();
+    if (filterType === 'single_date') {
+        $('#manageSingleDateFilter').show();
+        $('#manageDateRangeFilter1').hide();
+        $('#manageDateRangeFilter2').hide();
+        $('#manageYearFilter').hide();
+    } else if (filterType === 'date_range') {
+        $('#manageSingleDateFilter').hide();
+        $('#manageDateRangeFilter1').show();
+        $('#manageDateRangeFilter2').show();
+        $('#manageYearFilter').hide();
+    } else {
+        $('#manageSingleDateFilter').hide();
+        $('#manageDateRangeFilter1').hide();
+        $('#manageDateRangeFilter2').hide();
+        $('#manageYearFilter').show();
+    }
+}
+
+function loadLessonPlansForManage() {
+    const filterType = $('#manageFilterType').val();
+    let url = '{{ route("teacher.get_lesson_plans_by_filter") }}';
+    let data = {
+        session_timetableID: currentSessionData.sessionTimetableID,
+        filter_type: filterType
+    };
+    
+    if (filterType === 'single_date') {
+        const date = $('#manageLessonDate').val();
+        if (!date) {
+            Swal.fire({
+                title: 'Error!',
+                text: 'Please select a date',
+                icon: 'error',
+                confirmButtonColor: '#f5f5f5'
+            });
+            return;
+        }
+        data.from_date = date;
+        data.to_date = date;
+        data.filter_type = 'date_range';
+    } else if (filterType === 'date_range') {
+        const fromDate = $('#manageFromDate').val();
+        const toDate = $('#manageToDate').val();
+        
+        if (!fromDate || !toDate) {
+            Swal.fire({
+                title: 'Error!',
+                text: 'Please select both from and to dates',
+                icon: 'error',
+                confirmButtonColor: '#f5f5f5'
+            });
+            return;
+        }
+        
+        if (new Date(fromDate) > new Date(toDate)) {
+            Swal.fire({
+                title: 'Error!',
+                text: 'From date cannot be greater than To date',
+                icon: 'error',
+                confirmButtonColor: '#f5f5f5'
+            });
+            return;
+        }
+        
+        data.from_date = fromDate;
+        data.to_date = toDate;
+    } else {
+        const year = $('#manageYear').val();
+        if (!year) {
+            Swal.fire({
+                title: 'Error!',
+                text: 'Please enter a year',
+                icon: 'error',
+                confirmButtonColor: '#f5f5f5'
+            });
+            return;
+        }
+        data.year = year;
+    }
+    
+    $('#manageLessonPlanContent').html(`
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3 text-muted">Loading lesson plans...</p>
+        </div>
+    `);
+    
+    $.ajax({
+        url: url,
+        method: 'GET',
+        data: data,
+        success: function(response) {
+            if (response.success && response.lesson_plans && response.lesson_plans.length > 0) {
+                renderManageLessonPlansList(response.lesson_plans);
+            } else {
+                $('#manageLessonPlanContent').html(`
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> No lesson plans found for the selected filter.
+                    </div>
+                `);
+            }
+        },
+        error: function(xhr) {
+            const error = xhr.responseJSON?.error || 'Failed to load lesson plans';
+            $('#manageLessonPlanContent').html(`
+                <div class="alert alert-danger">
+                    <i class="bi bi-x-circle"></i> ${error}
+                </div>
+            `);
+        }
+    });
+}
+
+function renderManageLessonPlansList(lessonPlans) {
+    let html = `
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Found ${lessonPlans.length} Lesson Plan(s) to Manage</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Subject</th>
+                                <th>Class</th>
+                                <th>Time</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+    `;
+    
+    lessonPlans.forEach(function(plan) {
+        const dateObj = new Date(plan.lesson_date);
+        const formattedDate = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const formatTime = (timeStr) => {
+            if (!timeStr) return 'N/A';
+            const parts = timeStr.split(':');
+            const hours = parseInt(parts[0]);
+            const minutes = parts[1];
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            const displayHours = hours % 12 || 12;
+            return displayHours + ':' + minutes + ' ' + ampm;
+        };
+        
+        html += `
+            <tr>
+                <td>${formattedDate}</td>
+                <td>${plan.subject || 'N/A'}</td>
+                <td>${plan.class_name || 'N/A'}</td>
+                <td>${formatTime(plan.lesson_time_start)} - ${formatTime(plan.lesson_time_end)}</td>
+                <td>
+                    ${plan.sent_to_admin ? 
+                        '<span class="badge badge-success">Sent to Admin</span>' : 
+                        '<span class="badge badge-secondary">Not Sent</span>'
+                    }
+                </td>
+                <td>
+                    <button class="btn btn-sm" onclick="loadLessonPlanForManageByID(${plan.lesson_planID})" style="background-color: #f5f5f5; color: #212529; border: 1px solid #e9ecef;">
+                        <i class="bi bi-pencil-square"></i> Edit
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    $('#manageLessonPlanContent').html(html);
+}
+
+function loadLessonPlanForManageByID(lessonPlanID) {
+    $.ajax({
+        url: '{{ route("teacher.get_lesson_plan_by_id") }}',
+        method: 'GET',
+        data: { lesson_planID: lessonPlanID },
+        success: function(response) {
+            if (response.success) {
+                // Render form for editing
+                renderLessonPlanFormForEdit(response.data);
+            } else {
+                Swal.fire({
+                    title: 'Error!',
+                    text: response.error || 'Failed to load lesson plan',
+                    icon: 'error',
+                    confirmButtonColor: '#f5f5f5'
+                });
+            }
+        },
+        error: function() {
+            Swal.fire({
+                title: 'Error!',
+                text: 'Failed to load lesson plan',
+                icon: 'error',
+                confirmButtonColor: '#f5f5f5'
+            });
+        }
+    });
+}
+
 function loadLessonPlanForManage() {
-    // Similar to loadExistingLessonPlan but for manage tab
+    // For backward compatibility - single date selection
     const date = $('#manageLessonDate').val();
     if (!date) return;
     
@@ -1153,10 +1463,20 @@ function renderLessonPlanFormForEdit(data) {
         </div>
         
         <input type="hidden" id="edit_lesson_planID" value="${data.lesson_planID}">
+        <input type="hidden" id="edit_sent_to_admin" value="${data.sent_to_admin || false}">
         
-        <button class="btn btn-block mt-3" onclick="updateLessonPlan()" style="background-color: #f5f5f5; color: #212529; border: 1px solid #e9ecef;">
-            <i class="bi bi-save"></i> Update Changes
-        </button>
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <button class="btn btn-block" onclick="updateLessonPlan()" style="background-color: #f5f5f5; color: #212529; border: 1px solid #e9ecef;">
+                    <i class="bi bi-save"></i> Update Changes
+                </button>
+            </div>
+            <div class="col-md-6">
+                <button class="btn btn-block" onclick="sendLessonPlanToAdmin(${data.lesson_planID})" style="background-color: #940000; color: #ffffff; border: 1px solid #940000;" ${data.sent_to_admin ? 'disabled' : ''}>
+                    <i class="bi bi-send"></i> ${data.sent_to_admin ? 'Sent to Admin' : 'Send to Admin'}
+                </button>
+            </div>
+        </div>
     `;
     
     $('#manageLessonPlanContent').html(html);
@@ -1551,19 +1871,1286 @@ function renderLessonPlanView(data) {
 }
 
 function downloadLessonPlanPDF(lessonPlanID, date) {
-    if (!lessonPlanID || !date) {
+    if (!lessonPlanID) {
         Swal.fire({
             title: 'Error!',
-            text: 'Lesson plan ID or date is missing',
+            text: 'Lesson plan ID is missing',
             icon: 'error',
             confirmButtonColor: '#f5f5f5'
         });
         return;
     }
     
-    // Create download link
-    const url = '{{ route("teacher.download_lesson_plan_pdf", ":id") }}'.replace(':id', lessonPlanID);
-    window.open(url, '_blank');
+    // Check if jsPDF is available
+    if (typeof window.jspdf === 'undefined') {
+        Swal.fire({
+            title: 'Error!',
+            text: 'PDF library not loaded. Please refresh the page.',
+            icon: 'error',
+            confirmButtonColor: '#f5f5f5'
+        });
+        return;
+    }
+    
+    const { jsPDF } = window.jspdf;
+    
+    // Show loading
+    Swal.fire({
+        title: 'Generating PDF...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    // Get lesson plan data
+    $.ajax({
+        url: '{{ route("teacher.get_lesson_plan_by_id") }}',
+        method: 'GET',
+        data: { lesson_planID: lessonPlanID },
+        success: function(response) {
+            if (response.success) {
+                generatePDFFromData(response.data);
+            } else {
+                Swal.fire({
+                    title: 'Error!',
+                    text: response.error || 'Failed to load lesson plan data',
+                    icon: 'error',
+                    confirmButtonColor: '#f5f5f5'
+                });
+            }
+        },
+        error: function() {
+            Swal.fire({
+                title: 'Error!',
+                text: 'Failed to load lesson plan data',
+                icon: 'error',
+                confirmButtonColor: '#f5f5f5'
+            });
+        }
+    });
+}
+
+function generatePDFFromData(data) {
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 15;
+        let yPos = margin;
+        const lineHeight = 7;
+        const maxWidth = pageWidth - (margin * 2);
+        
+        const schoolType = '{{ $schoolType }}';
+        
+        // Helper function to format time
+        const formatTime = (timeStr) => {
+            if (!timeStr) return 'N/A';
+            const parts = timeStr.split(':');
+            const hours = parseInt(parts[0]);
+            const minutes = parts[1];
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            const displayHours = hours % 12 || 12;
+            return displayHours + ':' + minutes + ' ' + ampm;
+        };
+        
+        const startTime = formatTime(data.lesson_time_start);
+        const endTime = formatTime(data.lesson_time_end);
+        const dateObj = new Date(data.lesson_date);
+        const formattedDate = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        
+        // Helper function to add text with word wrap
+        const addWrappedText = (text, x, y, maxWidth, fontSize = 10) => {
+            doc.setFontSize(fontSize);
+            const lines = doc.splitTextToSize(text || '', maxWidth);
+            doc.text(lines, x, y);
+            return lines.length * (fontSize * 0.4);
+        };
+        
+        // Helper function to check if new page needed
+        const checkNewPage = (requiredSpace) => {
+            if (yPos + requiredSpace > pageHeight - margin) {
+                doc.addPage();
+                yPos = margin;
+                return true;
+            }
+            return false;
+        };
+        
+        // Header
+        doc.setFontSize(18);
+        doc.setFont(undefined, 'bold');
+        doc.text('LESSON PLAN', pageWidth / 2, yPos, { align: 'center' });
+        yPos += 8;
+        
+        doc.setFontSize(14);
+        doc.text(schoolType, pageWidth / 2, yPos, { align: 'center' });
+        yPos += 5;
+        
+        // Subject and Class header
+        const subjectClassText = (data.subject || '') + ' CLASS ' + (data.class_name || '') + ' ' + data.year;
+        doc.setFontSize(12);
+        doc.text(subjectClassText, pageWidth / 2, yPos, { align: 'center' });
+        yPos += 8;
+        
+        // First table - Teacher's Name, Period, Time, Date
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'normal');
+        const table1Y = yPos;
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.5);
+        
+        const cellHeight = 8;
+        const totalTableWidth = pageWidth - (margin * 2);
+        
+        // Calculate period duration from time
+        let periodMinutes = 40; // Default
+        if (data.lesson_time_start && data.lesson_time_end) {
+            const startParts = data.lesson_time_start.split(':');
+            const endParts = data.lesson_time_end.split(':');
+            const startMinutes = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
+            const endMinutes = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
+            periodMinutes = endMinutes - startMinutes;
+            if (periodMinutes < 0) periodMinutes += 24 * 60; // Handle next day
+        }
+        const periodText = periodMinutes + ' Minutes';
+        
+        // Column widths for first row: TEACHER'S NAME, PERIOD, TIME, DATE
+        const col1Width = 40; // TEACHER'S NAME label
+        const col2Width = 45; // Teacher name value
+        const col3Width = 25; // PERIOD label
+        const col4Width = 30; // Period value
+        const col5Width = 20; // TIME label
+        const col6Width = 30; // Time value
+        const col7Width = 20; // DATE label
+        const col8Width = totalTableWidth - (col1Width + col2Width + col3Width + col4Width + col5Width + col6Width + col7Width); // Date value
+        
+        let xPos = margin;
+        yPos = table1Y;
+        
+        // Row 1 - Teacher's Name, Period, Time, Date
+        doc.rect(xPos, yPos, col1Width, cellHeight);
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(8);
+        doc.text('TEACHER\'S NAME', xPos + 2, yPos + 5);
+        xPos += col1Width;
+        doc.rect(xPos, yPos, col2Width, cellHeight);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(8);
+        const teacherNameLines = doc.splitTextToSize(data.teacher_name || '', col2Width - 4);
+        doc.text(teacherNameLines, xPos + 2, yPos + 5);
+        xPos += col2Width;
+        doc.rect(xPos, yPos, col3Width, cellHeight);
+        doc.setFont(undefined, 'bold');
+        doc.text('PERIOD', xPos + 2, yPos + 5);
+        xPos += col3Width;
+        doc.rect(xPos, yPos, col4Width, cellHeight);
+        doc.setFont(undefined, 'normal');
+        doc.text(periodText, xPos + 2, yPos + 5);
+        xPos += col4Width;
+        doc.rect(xPos, yPos, col5Width, cellHeight);
+        doc.setFont(undefined, 'bold');
+        doc.text('TIME', xPos + 2, yPos + 5);
+        xPos += col5Width;
+        doc.rect(xPos, yPos, col6Width, cellHeight);
+        doc.setFont(undefined, 'normal');
+        const timeText = doc.splitTextToSize(startTime + ' - ' + endTime, col6Width - 4);
+        doc.text(timeText, xPos + 2, yPos + 5);
+        xPos += col6Width;
+        doc.rect(xPos, yPos, col7Width, cellHeight);
+        doc.setFont(undefined, 'bold');
+        doc.text('DATE', xPos + 2, yPos + 5);
+        xPos += col7Width;
+        doc.rect(xPos, yPos, col8Width, cellHeight);
+        doc.setFont(undefined, 'normal');
+        doc.text(formattedDate, xPos + 2, yPos + 5);
+        yPos += cellHeight;
+        
+        // Row 2 - Number of Pupils table
+        xPos = margin;
+        const pupilsLabelWidth = col1Width;
+        const pupilsTableWidth = totalTableWidth - pupilsLabelWidth;
+        const pupilsTableHeight = cellHeight * 2;
+        
+        doc.rect(xPos, yPos, pupilsLabelWidth, pupilsTableHeight);
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(8);
+        const pupilsLabelLines = doc.splitTextToSize('NUMBER OF PUPILS', pupilsLabelWidth - 4);
+        doc.text(pupilsLabelLines, xPos + 2, yPos + 5);
+        xPos += pupilsLabelWidth;
+        
+        // Attendance nested table
+        doc.rect(xPos, yPos, pupilsTableWidth, pupilsTableHeight);
+        
+        // Attendance table header
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(8);
+        doc.text('NUMBER OF PUPILS', xPos + pupilsTableWidth / 2, yPos + 4, { align: 'center' });
+        yPos += cellHeight;
+        
+        // Attendance sub-headers
+        const attColWidth = pupilsTableWidth / 6;
+        let attX = xPos;
+        doc.setFontSize(7);
+        doc.text('REGISTERED', attX + attColWidth * 1.5, yPos + 4, { align: 'center' });
+        doc.text('PRESENT', attX + attColWidth * 4.5, yPos + 4, { align: 'center' });
+        yPos += cellHeight;
+        
+        // Attendance labels
+        attX = xPos;
+        doc.setFontSize(7);
+        doc.text('GIRLS', attX + attColWidth * 0.5, yPos + 4, { align: 'center' });
+        doc.text('BOYS', attX + attColWidth * 1.5, yPos + 4, { align: 'center' });
+        doc.text('TOTAL', attX + attColWidth * 2.5, yPos + 4, { align: 'center' });
+        doc.text('GIRLS', attX + attColWidth * 3.5, yPos + 4, { align: 'center' });
+        doc.text('BOYS', attX + attColWidth * 4.5, yPos + 4, { align: 'center' });
+        doc.text('TOTAL', attX + attColWidth * 5.5, yPos + 4, { align: 'center' });
+        yPos += cellHeight;
+        
+        // Attendance values
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(8);
+        doc.text((data.registered_girls || 0).toString(), attX + attColWidth * 0.5, yPos + 4, { align: 'center' });
+        doc.text((data.registered_boys || 0).toString(), attX + attColWidth * 1.5, yPos + 4, { align: 'center' });
+        doc.text((data.registered_total || 0).toString(), attX + attColWidth * 2.5, yPos + 4, { align: 'center' });
+        doc.text((data.present_girls || 0).toString(), attX + attColWidth * 3.5, yPos + 4, { align: 'center' });
+        doc.text((data.present_boys || 0).toString(), attX + attColWidth * 4.5, yPos + 4, { align: 'center' });
+        doc.text((data.present_total || 0).toString(), attX + attColWidth * 5.5, yPos + 4, { align: 'center' });
+        
+        yPos = table1Y + cellHeight + pupilsTableHeight + 5;
+        
+        checkNewPage(30);
+        
+        // Competence and Activities table
+        const compTableWidth = pageWidth - (margin * 2);
+        const labelColWidth = 55; // Increased label column width
+        const valueColWidth = compTableWidth - labelColWidth; // Remaining width for value
+        
+        const competenceFields = [
+            { label: 'MAIN COMPETENCE', value: data.main_competence || '' },
+            { label: 'SPECIFIC COMPETENCE', value: data.specific_competence || '' },
+            { label: 'MAIN ACTIVITY', value: data.main_activity || '' },
+            { label: 'SPECIFIC ACTIVITY', value: data.specific_activity || '' },
+            { label: 'TEACHING MATERIAL', value: data.teaching_learning_resources || '' },
+            { label: 'REFERENCES', value: data.references || '' }
+        ];
+        
+        competenceFields.forEach(field => {
+            // Calculate required height for label
+            doc.setFont(undefined, 'bold');
+            doc.setFontSize(8);
+            const labelLines = doc.splitTextToSize(field.label, labelColWidth - 4);
+            const labelHeight = Math.max(8, labelLines.length * 4);
+            
+            // Calculate required height for value
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(8);
+            const valueLines = doc.splitTextToSize(field.value, valueColWidth - 4);
+            const valueHeight = Math.max(8, valueLines.length * 4);
+            
+            // Use the maximum height
+            const cellHeight = Math.max(labelHeight, valueHeight) + 2;
+            
+            checkNewPage(cellHeight + 3);
+            
+            xPos = margin;
+            // Label cell
+            doc.rect(xPos, yPos, labelColWidth, cellHeight);
+            doc.setFont(undefined, 'bold');
+            doc.setFontSize(8);
+            doc.text(labelLines, xPos + 2, yPos + 4);
+            
+            // Value cell
+            xPos += labelColWidth;
+            doc.rect(xPos, yPos, valueColWidth, cellHeight);
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(8);
+            doc.text(valueLines, xPos + 2, yPos + 4);
+            
+            yPos += cellHeight;
+        });
+        
+        yPos += 5;
+        checkNewPage(30);
+        
+        // Lesson Development section
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'bold');
+        doc.text('LESSON DEVELOPMENT', margin, yPos);
+        yPos += 8;
+        
+        // Lesson Development table
+        const devTableWidth = pageWidth - (margin * 2);
+        // Better column width distribution - ensure all columns fit
+        const devColWidths = [35, 22, 38, 38, 37]; // Total: 170mm (fits in A4 with margins)
+        const devHeaders = ['STAGE', 'TIME', 'TEACHING ACTIVITIES', 'LEARNING ACTIVITIES', 'ASSESSMENT'];
+        
+        // Calculate header height
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(7);
+        let maxHeaderHeight = 8;
+        devHeaders.forEach((header, idx) => {
+            const headerLines = doc.splitTextToSize(header, devColWidths[idx] - 4);
+            maxHeaderHeight = Math.max(maxHeaderHeight, headerLines.length * 3.5);
+        });
+        const headerHeight = maxHeaderHeight + 2;
+        
+        // Table header
+        xPos = margin;
+        devHeaders.forEach((header, idx) => {
+            doc.rect(xPos, yPos, devColWidths[idx], headerHeight);
+            doc.setFont(undefined, 'bold');
+            doc.setFontSize(7);
+            const headerLines = doc.splitTextToSize(header, devColWidths[idx] - 4);
+            doc.text(headerLines, xPos + 2, yPos + 4);
+            xPos += devColWidths[idx];
+        });
+        yPos += headerHeight;
+        
+        // Table rows
+        const stages = data.lesson_stages || [];
+        const stageNames = ['Introduction', 'Competence development', 'Design', 'Realization'];
+        
+        stageNames.forEach(stageName => {
+            const stage = stages.find(s => s.stage === stageName) || {};
+            
+            // Calculate required height for each cell
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(7);
+            
+            // Stage name height
+            const stageLines = doc.splitTextToSize(stageName, devColWidths[0] - 4);
+            let maxHeight = Math.max(8, stageLines.length * 3.5);
+            
+            // Time height
+            const timeLines = doc.splitTextToSize(stage.time || '', devColWidths[1] - 4);
+            maxHeight = Math.max(maxHeight, timeLines.length * 3.5);
+            
+            // Teaching activities height
+            const teachingLines = doc.splitTextToSize(stage.teaching_activities || '', devColWidths[2] - 4);
+            maxHeight = Math.max(maxHeight, teachingLines.length * 3.5);
+            
+            // Learning activities height
+            const learningLines = doc.splitTextToSize(stage.learning_activities || '', devColWidths[3] - 4);
+            maxHeight = Math.max(maxHeight, learningLines.length * 3.5);
+            
+            // Assessment height
+            const assessmentLines = doc.splitTextToSize(stage.assessment_criteria || '', devColWidths[4] - 4);
+            maxHeight = Math.max(maxHeight, assessmentLines.length * 3.5);
+            
+            const rowHeight = maxHeight + 2;
+            
+            checkNewPage(rowHeight + 3);
+            
+            xPos = margin;
+            
+            // Stage name
+            doc.rect(xPos, yPos, devColWidths[0], rowHeight);
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(7);
+            doc.text(stageLines, xPos + 2, yPos + 4);
+            xPos += devColWidths[0];
+            
+            // Time
+            doc.rect(xPos, yPos, devColWidths[1], rowHeight);
+            doc.text(timeLines, xPos + 2, yPos + 4);
+            xPos += devColWidths[1];
+            
+            // Teaching activities
+            doc.rect(xPos, yPos, devColWidths[2], rowHeight);
+            doc.text(teachingLines, xPos + 2, yPos + 4);
+            xPos += devColWidths[2];
+            
+            // Learning activities
+            doc.rect(xPos, yPos, devColWidths[3], rowHeight);
+            doc.text(learningLines, xPos + 2, yPos + 4);
+            xPos += devColWidths[3];
+            
+            // Assessment
+            doc.rect(xPos, yPos, devColWidths[4], rowHeight);
+            doc.text(assessmentLines, xPos + 2, yPos + 4);
+            
+            yPos += rowHeight;
+        });
+        
+        yPos += 5;
+        checkNewPage(40);
+        
+        // Reflection, Evaluation, Remarks (in order as per image)
+        const sections = [
+            { label: 'Reflection', value: data.reflection || '' },
+            { label: 'Evaluation', value: data.evaluation || '' },
+            { label: 'Remarks', value: data.remarks || '' }
+        ];
+        
+        sections.forEach(section => {
+            checkNewPage(20);
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'bold');
+            doc.text(section.label + ':', margin, yPos);
+            yPos += 6;
+            
+            // Draw dotted line
+            const lineLength = maxWidth;
+            const dotSpacing = 2;
+            let lineX = margin;
+            doc.setDrawColor(0, 0, 0);
+            doc.setLineWidth(0.3);
+            while (lineX < margin + lineLength) {
+                doc.line(lineX, yPos, lineX + 1, yPos);
+                lineX += dotSpacing;
+            }
+            yPos += 3;
+            
+            // Add value if exists
+            if (section.value) {
+                doc.setFont(undefined, 'normal');
+                doc.setFontSize(9);
+                const sectionLines = doc.splitTextToSize(section.value, maxWidth);
+                doc.text(sectionLines, margin, yPos);
+                yPos += sectionLines.length * 4;
+            }
+            yPos += 3;
+        });
+        
+        checkNewPage(50);
+        
+        // Signatures - Horizontal (side by side)
+        yPos += 5;
+        checkNewPage(25);
+        
+        const sigWidth = (maxWidth - 10) / 2; // Half width minus spacing
+        const sigStartY = yPos;
+        
+        // Left side - Teacher signature
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'normal');
+        doc.text('Subject teacher\'s signature', margin, yPos);
+        
+        // Draw dotted line for teacher signature
+        let sigLineX = margin + 45;
+        const sigLineLength = sigWidth - 45;
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.3);
+        while (sigLineX < margin + 45 + sigLineLength) {
+            doc.line(sigLineX, yPos, sigLineX + 1, yPos);
+            sigLineX += 2;
+        }
+        
+        // Add signature image if exists
+        if (data.teacher_signature) {
+            try {
+                doc.addImage(data.teacher_signature, 'PNG', margin + 45, yPos - 8, 30, 10);
+            } catch (e) {
+                console.error('Error adding teacher signature:', e);
+            }
+        }
+        
+        // Right side - Supervisor signature
+        const rightSigX = margin + sigWidth + 10;
+        doc.setFont(undefined, 'normal');
+        doc.text('Academic/Supervisor\'s signature', rightSigX, yPos);
+        
+        // Draw dotted line for supervisor signature
+        sigLineX = rightSigX + 45;
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.3);
+        while (sigLineX < rightSigX + 45 + sigLineLength) {
+            doc.line(sigLineX, yPos, sigLineX + 1, yPos);
+            sigLineX += 2;
+        }
+        
+        // Add signature image if exists
+        if (data.supervisor_signature) {
+            try {
+                doc.addImage(data.supervisor_signature, 'PNG', rightSigX + 45, yPos - 8, 30, 10);
+            } catch (e) {
+                console.error('Error adding supervisor signature:', e);
+            }
+        }
+        
+        yPos += 8;
+        
+        // Generate filename
+        const dateObj = new Date(data.lesson_date);
+        const formattedDate = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const subjectName = (data.subject || 'Lesson_Plan').replace(/[^A-Za-z0-9_\-]/g, '_');
+        const filename = 'Lesson_Plan_' + subjectName + '_' + formattedDate.replace(/\//g, '-') + '.pdf';
+        
+        // Save PDF
+        doc.save(filename);
+        
+        Swal.close();
+        
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        Swal.fire({
+            title: 'Error!',
+            text: 'Failed to generate PDF: ' + error.message,
+            icon: 'error',
+            confirmButtonColor: '#f5f5f5'
+        });
+    }
+}
+
+function toggleFilterOptions() {
+    const filterType = $('#filterType').val();
+    if (filterType === 'year') {
+        $('#dateRangeFilter').hide();
+        $('#dateRangeFilter2').hide();
+        $('#yearFilter').show();
+    } else {
+        $('#dateRangeFilter').show();
+        $('#dateRangeFilter2').show();
+        $('#yearFilter').hide();
+    }
+}
+
+function loadLessonPlansByFilter() {
+    const filterType = $('#filterType').val();
+    let url = '{{ route("teacher.get_lesson_plans_by_filter") }}';
+    let data = {
+        session_timetableID: currentSessionData.sessionTimetableID,
+        filter_type: filterType
+    };
+    
+    if (filterType === 'date_range') {
+        const fromDate = $('#viewFromDate').val();
+        const toDate = $('#viewToDate').val();
+        
+        if (!fromDate || !toDate) {
+            Swal.fire({
+                title: 'Error!',
+                text: 'Please select both from and to dates',
+                icon: 'error',
+                confirmButtonColor: '#f5f5f5'
+            });
+            return;
+        }
+        
+        if (new Date(fromDate) > new Date(toDate)) {
+            Swal.fire({
+                title: 'Error!',
+                text: 'From date cannot be greater than To date',
+                icon: 'error',
+                confirmButtonColor: '#f5f5f5'
+            });
+            return;
+        }
+        
+        data.from_date = fromDate;
+        data.to_date = toDate;
+    } else {
+        const year = $('#viewYear').val();
+        if (!year) {
+            Swal.fire({
+                title: 'Error!',
+                text: 'Please enter a year',
+                icon: 'error',
+                confirmButtonColor: '#f5f5f5'
+            });
+            return;
+        }
+        data.year = year;
+    }
+    
+    $('#viewLessonPlanContent').html(`
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3 text-muted">Loading lesson plans...</p>
+        </div>
+    `);
+    
+    $.ajax({
+        url: url,
+        method: 'GET',
+        data: data,
+        success: function(response) {
+            if (response.success && response.lesson_plans && response.lesson_plans.length > 0) {
+                renderLessonPlansList(response.lesson_plans);
+            } else {
+                $('#viewLessonPlanContent').html(`
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> No lesson plans found for the selected filter.
+                    </div>
+                `);
+            }
+        },
+        error: function(xhr) {
+            const error = xhr.responseJSON?.error || 'Failed to load lesson plans';
+            $('#viewLessonPlanContent').html(`
+                <div class="alert alert-danger">
+                    <i class="bi bi-x-circle"></i> ${error}
+                </div>
+            `);
+        }
+    });
+}
+
+function renderLessonPlansList(lessonPlans) {
+    let html = `
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Found ${lessonPlans.length} Lesson Plan(s)</h6>
+                <button class="btn btn-sm" onclick="downloadAllLessonPlansPDF()" style="background-color: #940000; color: #ffffff; border: 1px solid #940000;">
+                    <i class="bi bi-download"></i> Download All as PDF
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Subject</th>
+                                <th>Class</th>
+                                <th>Time</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+    `;
+    
+    lessonPlans.forEach(function(plan) {
+        const dateObj = new Date(plan.lesson_date);
+        const formattedDate = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const formatTime = (timeStr) => {
+            if (!timeStr) return 'N/A';
+            const parts = timeStr.split(':');
+            const hours = parseInt(parts[0]);
+            const minutes = parts[1];
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            const displayHours = hours % 12 || 12;
+            return displayHours + ':' + minutes + ' ' + ampm;
+        };
+        
+        html += `
+            <tr>
+                <td>${formattedDate}</td>
+                <td>${plan.subject || 'N/A'}</td>
+                <td>${plan.class_name || 'N/A'}</td>
+                <td>${formatTime(plan.lesson_time_start)} - ${formatTime(plan.lesson_time_end)}</td>
+                <td>
+                    ${plan.sent_to_admin ? 
+                        '<span class="badge badge-success">Sent to Admin</span>' : 
+                        '<span class="badge badge-secondary">Not Sent</span>'
+                    }
+                </td>
+                <td>
+                    <button class="btn btn-sm" onclick="viewSingleLessonPlan(${plan.lesson_planID})" style="background-color: #f5f5f5; color: #212529; border: 1px solid #e9ecef;">
+                        <i class="bi bi-eye"></i> View
+                    </button>
+                    <button class="btn btn-sm" onclick="downloadLessonPlanPDF(${plan.lesson_planID}, '${plan.lesson_date}')" style="background-color: #f5f5f5; color: #212529; border: 1px solid #e9ecef;">
+                        <i class="bi bi-download"></i> PDF
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Store lesson plans for bulk download
+    window.filteredLessonPlans = lessonPlans;
+    
+    $('#viewLessonPlanContent').html(html);
+}
+
+function viewSingleLessonPlan(lessonPlanID) {
+    $.ajax({
+        url: '{{ route("teacher.get_lesson_plan_by_id") }}',
+        method: 'GET',
+        data: { lesson_planID: lessonPlanID },
+        success: function(response) {
+            if (response.success) {
+                renderLessonPlanView(response.data);
+                $('#view-tab').tab('show');
+            } else {
+                Swal.fire({
+                    title: 'Error!',
+                    text: response.error || 'Failed to load lesson plan',
+                    icon: 'error',
+                    confirmButtonColor: '#f5f5f5'
+                });
+            }
+        },
+        error: function() {
+            Swal.fire({
+                title: 'Error!',
+                text: 'Failed to load lesson plan',
+                icon: 'error',
+                confirmButtonColor: '#f5f5f5'
+            });
+        }
+    });
+}
+
+function downloadAllLessonPlansPDF() {
+    if (!window.filteredLessonPlans || window.filteredLessonPlans.length === 0) {
+        Swal.fire({
+            title: 'Error!',
+            text: 'No lesson plans to download',
+            icon: 'error',
+            confirmButtonColor: '#f5f5f5'
+        });
+        return;
+    }
+    
+    // Check if jsPDF is available
+    if (typeof window.jspdf === 'undefined') {
+        Swal.fire({
+            title: 'Error!',
+            text: 'PDF library not loaded. Please refresh the page.',
+            icon: 'error',
+            confirmButtonColor: '#f5f5f5'
+        });
+        return;
+    }
+    
+    const lessonPlanIDs = window.filteredLessonPlans.map(p => p.lesson_planID);
+    
+    // Show loading
+    Swal.fire({
+        title: 'Generating PDF...',
+        text: `Processing ${lessonPlanIDs.length} lesson plan(s)...`,
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    // Load all lesson plans
+    let loadedPlans = [];
+    let loadedCount = 0;
+    
+    lessonPlanIDs.forEach(function(lessonPlanID, index) {
+        $.ajax({
+            url: '{{ route("teacher.get_lesson_plan_by_id") }}',
+            method: 'GET',
+            data: { lesson_planID: lessonPlanID },
+            success: function(response) {
+                if (response.success) {
+                    loadedPlans.push(response.data);
+                }
+                loadedCount++;
+                
+                // When all loaded, generate PDF
+                if (loadedCount === lessonPlanIDs.length) {
+                    generateBulkPDFFromData(loadedPlans);
+                }
+            },
+            error: function() {
+                loadedCount++;
+                if (loadedCount === lessonPlanIDs.length) {
+                    if (loadedPlans.length > 0) {
+                        generateBulkPDFFromData(loadedPlans);
+                    } else {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: 'Failed to load lesson plan data',
+                            icon: 'error',
+                            confirmButtonColor: '#f5f5f5'
+                        });
+                    }
+                }
+            }
+        });
+    });
+}
+
+function generateBulkPDFFromData(lessonPlansArray) {
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        
+        lessonPlansArray.forEach((data, index) => {
+            if (index > 0) {
+                doc.addPage();
+            }
+            
+            // Use the same generatePDFFromData function but pass doc and return yPos
+            generateSingleLessonPlanPage(doc, data);
+        });
+        
+        // Generate filename
+        const filename = 'Lesson_Plans_Bulk_' + new Date().toISOString().split('T')[0] + '.pdf';
+        
+        // Save PDF
+        doc.save(filename);
+        
+        Swal.close();
+        
+    } catch (error) {
+        console.error('Error generating bulk PDF:', error);
+        Swal.fire({
+            title: 'Error!',
+            text: 'Failed to generate PDF: ' + error.message,
+            icon: 'error',
+            confirmButtonColor: '#f5f5f5'
+        });
+    }
+}
+
+function generateSingleLessonPlanPage(doc, data) {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    let yPos = margin;
+    const maxWidth = pageWidth - (margin * 2);
+    
+    const schoolType = '{{ $schoolType }}';
+    
+    // Helper function to format time
+    const formatTime = (timeStr) => {
+        if (!timeStr) return 'N/A';
+        const parts = timeStr.split(':');
+        const hours = parseInt(parts[0]);
+        const minutes = parts[1];
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 || 12;
+        return displayHours + ':' + minutes + ' ' + ampm;
+    };
+    
+    const startTime = formatTime(data.lesson_time_start);
+    const endTime = formatTime(data.lesson_time_end);
+    const dateObj = new Date(data.lesson_date);
+    const formattedDate = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    
+    // Helper function to check if new page needed
+    const checkNewPage = (requiredSpace) => {
+        if (yPos + requiredSpace > pageHeight - margin) {
+            doc.addPage();
+            yPos = margin;
+            return true;
+        }
+        return false;
+    };
+    
+    // Header
+    doc.setFontSize(18);
+    doc.setFont(undefined, 'bold');
+    doc.text('LESSON PLAN', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 8;
+    
+    doc.setFontSize(14);
+    doc.text(schoolType, pageWidth / 2, yPos, { align: 'center' });
+    yPos += 5;
+    
+    // Subject and Class header
+    const subjectClassText = (data.subject || '') + ' CLASS ' + (data.class_name || '') + ' ' + data.year;
+    doc.setFontSize(12);
+    doc.text(subjectClassText, pageWidth / 2, yPos, { align: 'center' });
+    yPos += 8;
+    
+    // First table - Teacher's Name, Period, Time, Date
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    const table1Y = yPos;
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.5);
+    
+    const cellHeight = 8;
+    const totalTableWidth = pageWidth - (margin * 2);
+    
+    // Calculate period duration from time
+    let periodMinutes = 40; // Default
+    if (data.lesson_time_start && data.lesson_time_end) {
+        const startParts = data.lesson_time_start.split(':');
+        const endParts = data.lesson_time_end.split(':');
+        const startMinutes = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
+        const endMinutes = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
+        periodMinutes = endMinutes - startMinutes;
+        if (periodMinutes < 0) periodMinutes += 24 * 60; // Handle next day
+    }
+    const periodText = periodMinutes + ' Minutes';
+    
+    // Column widths for first row: TEACHER'S NAME, PERIOD, TIME, DATE
+    const col1Width = 40; // TEACHER'S NAME label
+    const col2Width = 45; // Teacher name value
+    const col3Width = 25; // PERIOD label
+    const col4Width = 30; // Period value
+    const col5Width = 20; // TIME label
+    const col6Width = 30; // Time value
+    const col7Width = 20; // DATE label
+    const col8Width = totalTableWidth - (col1Width + col2Width + col3Width + col4Width + col5Width + col6Width + col7Width); // Date value
+    
+    let xPos = margin;
+    yPos = table1Y;
+    
+    // Row 1 - Teacher's Name, Period, Time, Date
+    doc.rect(xPos, yPos, col1Width, cellHeight);
+    doc.setFont(undefined, 'bold');
+    doc.setFontSize(8);
+    doc.text('TEACHER\'S NAME', xPos + 2, yPos + 5);
+    xPos += col1Width;
+    doc.rect(xPos, yPos, col2Width, cellHeight);
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(8);
+    const teacherNameLines = doc.splitTextToSize(data.teacher_name || '', col2Width - 4);
+    doc.text(teacherNameLines, xPos + 2, yPos + 5);
+    xPos += col2Width;
+    doc.rect(xPos, yPos, col3Width, cellHeight);
+    doc.setFont(undefined, 'bold');
+    doc.text('PERIOD', xPos + 2, yPos + 5);
+    xPos += col3Width;
+    doc.rect(xPos, yPos, col4Width, cellHeight);
+    doc.setFont(undefined, 'normal');
+    doc.text(periodText, xPos + 2, yPos + 5);
+    xPos += col4Width;
+    doc.rect(xPos, yPos, col5Width, cellHeight);
+    doc.setFont(undefined, 'bold');
+    doc.text('TIME', xPos + 2, yPos + 5);
+    xPos += col5Width;
+    doc.rect(xPos, yPos, col6Width, cellHeight);
+    doc.setFont(undefined, 'normal');
+    const timeText = doc.splitTextToSize(startTime + ' - ' + endTime, col6Width - 4);
+    doc.text(timeText, xPos + 2, yPos + 5);
+    xPos += col6Width;
+    doc.rect(xPos, yPos, col7Width, cellHeight);
+    doc.setFont(undefined, 'bold');
+    doc.text('DATE', xPos + 2, yPos + 5);
+    xPos += col7Width;
+    doc.rect(xPos, yPos, col8Width, cellHeight);
+    doc.setFont(undefined, 'normal');
+    doc.text(formattedDate, xPos + 2, yPos + 5);
+    yPos += cellHeight;
+    
+    // Row 2 - Number of Pupils table
+    xPos = margin;
+    const pupilsLabelWidth = col1Width;
+    const pupilsTableWidth = totalTableWidth - pupilsLabelWidth;
+    const pupilsTableHeight = cellHeight * 2;
+    
+    doc.rect(xPos, yPos, pupilsLabelWidth, pupilsTableHeight);
+    doc.setFont(undefined, 'bold');
+    doc.setFontSize(8);
+    const pupilsLabelLines = doc.splitTextToSize('NUMBER OF PUPILS', pupilsLabelWidth - 4);
+    doc.text(pupilsLabelLines, xPos + 2, yPos + 5);
+    xPos += pupilsLabelWidth;
+    
+    // Attendance nested table
+    doc.rect(xPos, yPos, pupilsTableWidth, pupilsTableHeight);
+    
+    // Attendance table header
+    doc.setFont(undefined, 'bold');
+    doc.setFontSize(8);
+    doc.text('NUMBER OF PUPILS', xPos + pupilsTableWidth / 2, yPos + 4, { align: 'center' });
+    yPos += cellHeight;
+    
+    // Attendance sub-headers
+    const attColWidth = pupilsTableWidth / 6;
+    let attX = xPos;
+    doc.setFontSize(7);
+    doc.text('REGISTERED', attX + attColWidth * 1.5, yPos + 4, { align: 'center' });
+    doc.text('PRESENT', attX + attColWidth * 4.5, yPos + 4, { align: 'center' });
+    yPos += cellHeight;
+    
+    // Attendance labels
+    attX = xPos;
+    doc.setFontSize(7);
+    doc.text('GIRLS', attX + attColWidth * 0.5, yPos + 4, { align: 'center' });
+    doc.text('BOYS', attX + attColWidth * 1.5, yPos + 4, { align: 'center' });
+    doc.text('TOTAL', attX + attColWidth * 2.5, yPos + 4, { align: 'center' });
+    doc.text('GIRLS', attX + attColWidth * 3.5, yPos + 4, { align: 'center' });
+    doc.text('BOYS', attX + attColWidth * 4.5, yPos + 4, { align: 'center' });
+    doc.text('TOTAL', attX + attColWidth * 5.5, yPos + 4, { align: 'center' });
+    yPos += cellHeight;
+    
+    // Attendance values
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(8);
+    doc.text((data.registered_girls || 0).toString(), attX + attColWidth * 0.5, yPos + 4, { align: 'center' });
+    doc.text((data.registered_boys || 0).toString(), attX + attColWidth * 1.5, yPos + 4, { align: 'center' });
+    doc.text((data.registered_total || 0).toString(), attX + attColWidth * 2.5, yPos + 4, { align: 'center' });
+    doc.text((data.present_girls || 0).toString(), attX + attColWidth * 3.5, yPos + 4, { align: 'center' });
+    doc.text((data.present_boys || 0).toString(), attX + attColWidth * 4.5, yPos + 4, { align: 'center' });
+    doc.text((data.present_total || 0).toString(), attX + attColWidth * 5.5, yPos + 4, { align: 'center' });
+    
+    yPos = table1Y + cellHeight + pupilsTableHeight + 5;
+    
+    checkNewPage(30);
+    
+    // Competence and Activities table
+    const compTableWidth = pageWidth - (margin * 2);
+    const labelColWidth = 55;
+    const valueColWidth = compTableWidth - labelColWidth;
+    
+    const competenceFields = [
+        { label: 'MAIN COMPETENCE', value: data.main_competence || '' },
+        { label: 'SPECIFIC COMPETENCE', value: data.specific_competence || '' },
+        { label: 'MAIN ACTIVITY', value: data.main_activity || '' },
+        { label: 'SPECIFIC ACTIVITY', value: data.specific_activity || '' },
+        { label: 'TEACHING MATERIAL', value: data.teaching_learning_resources || '' },
+        { label: 'REFERENCES', value: data.references || '' }
+    ];
+    
+    competenceFields.forEach(field => {
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(8);
+        const labelLines = doc.splitTextToSize(field.label, labelColWidth - 4);
+        const labelHeight = Math.max(8, labelLines.length * 4);
+        
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(8);
+        const valueLines = doc.splitTextToSize(field.value, valueColWidth - 4);
+        const valueHeight = Math.max(8, valueLines.length * 4);
+        
+        const cellHeight = Math.max(labelHeight, valueHeight) + 2;
+        
+        checkNewPage(cellHeight + 3);
+        
+        xPos = margin;
+        doc.rect(xPos, yPos, labelColWidth, cellHeight);
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(8);
+        doc.text(labelLines, xPos + 2, yPos + 4);
+        
+        xPos += labelColWidth;
+        doc.rect(xPos, yPos, valueColWidth, cellHeight);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(8);
+        doc.text(valueLines, xPos + 2, yPos + 4);
+        
+        yPos += cellHeight;
+    });
+    
+    yPos += 5;
+    checkNewPage(30);
+    
+    // Lesson Development section
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('LESSON DEVELOPMENT', margin, yPos);
+    yPos += 8;
+    
+    // Lesson Development table
+    const devTableWidth = pageWidth - (margin * 2);
+    const devColWidths = [35, 22, 38, 38, 37];
+    const devHeaders = ['STAGE', 'TIME', 'TEACHING ACTIVITIES', 'LEARNING ACTIVITIES', 'ASSESSMENT'];
+    
+    doc.setFont(undefined, 'bold');
+    doc.setFontSize(7);
+    let maxHeaderHeight = 8;
+    devHeaders.forEach((header, idx) => {
+        const headerLines = doc.splitTextToSize(header, devColWidths[idx] - 4);
+        maxHeaderHeight = Math.max(maxHeaderHeight, headerLines.length * 3.5);
+    });
+    const headerHeight = maxHeaderHeight + 2;
+    
+    xPos = margin;
+    devHeaders.forEach((header, idx) => {
+        doc.rect(xPos, yPos, devColWidths[idx], headerHeight);
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(7);
+        const headerLines = doc.splitTextToSize(header, devColWidths[idx] - 4);
+        doc.text(headerLines, xPos + 2, yPos + 4);
+        xPos += devColWidths[idx];
+    });
+    yPos += headerHeight;
+    
+    const stages = data.lesson_stages || [];
+    const stageNames = ['Introduction', 'Competence development', 'Design', 'Realization'];
+    
+    stageNames.forEach(stageName => {
+        const stage = stages.find(s => s.stage === stageName) || {};
+        
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(7);
+        
+        const stageLines = doc.splitTextToSize(stageName, devColWidths[0] - 4);
+        let maxHeight = Math.max(8, stageLines.length * 3.5);
+        
+        const timeLines = doc.splitTextToSize(stage.time || '', devColWidths[1] - 4);
+        maxHeight = Math.max(maxHeight, timeLines.length * 3.5);
+        
+        const teachingLines = doc.splitTextToSize(stage.teaching_activities || '', devColWidths[2] - 4);
+        maxHeight = Math.max(maxHeight, teachingLines.length * 3.5);
+        
+        const learningLines = doc.splitTextToSize(stage.learning_activities || '', devColWidths[3] - 4);
+        maxHeight = Math.max(maxHeight, learningLines.length * 3.5);
+        
+        const assessmentLines = doc.splitTextToSize(stage.assessment_criteria || '', devColWidths[4] - 4);
+        maxHeight = Math.max(maxHeight, assessmentLines.length * 3.5);
+        
+        const rowHeight = maxHeight + 2;
+        
+        checkNewPage(rowHeight + 3);
+        
+        xPos = margin;
+        
+        doc.rect(xPos, yPos, devColWidths[0], rowHeight);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(7);
+        doc.text(stageLines, xPos + 2, yPos + 4);
+        xPos += devColWidths[0];
+        
+        doc.rect(xPos, yPos, devColWidths[1], rowHeight);
+        doc.text(timeLines, xPos + 2, yPos + 4);
+        xPos += devColWidths[1];
+        
+        doc.rect(xPos, yPos, devColWidths[2], rowHeight);
+        doc.text(teachingLines, xPos + 2, yPos + 4);
+        xPos += devColWidths[2];
+        
+        doc.rect(xPos, yPos, devColWidths[3], rowHeight);
+        doc.text(learningLines, xPos + 2, yPos + 4);
+        xPos += devColWidths[3];
+        
+        doc.rect(xPos, yPos, devColWidths[4], rowHeight);
+        doc.text(assessmentLines, xPos + 2, yPos + 4);
+        
+        yPos += rowHeight;
+    });
+    
+    yPos += 5;
+    checkNewPage(40);
+    
+    // Reflection, Evaluation, Remarks
+    const sections = [
+        { label: 'Reflection', value: data.reflection || '' },
+        { label: 'Evaluation', value: data.evaluation || '' },
+        { label: 'Remarks', value: data.remarks || '' }
+    ];
+    
+    sections.forEach(section => {
+        checkNewPage(20);
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.text(section.label + ':', margin, yPos);
+        yPos += 6;
+        
+        const lineLength = maxWidth;
+        const dotSpacing = 2;
+        let lineX = margin;
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.3);
+        while (lineX < margin + lineLength) {
+            doc.line(lineX, yPos, lineX + 1, yPos);
+            lineX += dotSpacing;
+        }
+        yPos += 3;
+        
+        if (section.value) {
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(9);
+            const sectionLines = doc.splitTextToSize(section.value, maxWidth);
+            doc.text(sectionLines, margin, yPos);
+            yPos += sectionLines.length * 4;
+        }
+        yPos += 3;
+    });
+    
+    checkNewPage(25);
+    
+    // Signatures - Horizontal (side by side)
+    yPos += 5;
+    
+    const sigWidth = (maxWidth - 10) / 2;
+    
+    // Left side - Teacher signature
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    doc.text('Subject teacher\'s signature', margin, yPos);
+    
+    let sigLineX = margin + 45;
+    const sigLineLength = sigWidth - 45;
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.3);
+    while (sigLineX < margin + 45 + sigLineLength) {
+        doc.line(sigLineX, yPos, sigLineX + 1, yPos);
+        sigLineX += 2;
+    }
+    
+    if (data.teacher_signature) {
+        try {
+            doc.addImage(data.teacher_signature, 'PNG', margin + 45, yPos - 8, 30, 10);
+        } catch (e) {
+            console.error('Error adding teacher signature:', e);
+        }
+    }
+    
+    // Right side - Supervisor signature
+    const rightSigX = margin + sigWidth + 10;
+    doc.setFont(undefined, 'normal');
+    doc.text('Academic/Supervisor\'s signature', rightSigX, yPos);
+    
+    sigLineX = rightSigX + 45;
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.3);
+    while (sigLineX < rightSigX + 45 + sigLineLength) {
+        doc.line(sigLineX, yPos, sigLineX + 1, yPos);
+        sigLineX += 2;
+    }
+    
+    if (data.supervisor_signature) {
+        try {
+            doc.addImage(data.supervisor_signature, 'PNG', rightSigX + 45, yPos - 8, 30, 10);
+        } catch (e) {
+            console.error('Error adding supervisor signature:', e);
+        }
+    }
+}
+
+function sendLessonPlanToAdmin(lessonPlanID) {
+    Swal.fire({
+        title: 'Send to Admin?',
+        text: 'Are you sure you want to send this lesson plan to admin for review?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#940000',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, Send',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: '{{ route("teacher.send_lesson_plan_to_admin") }}',
+                method: 'POST',
+                data: {
+                    lesson_planID: lessonPlanID,
+                    _token: $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            title: 'Success!',
+                            text: response.message || 'Lesson plan sent to admin successfully',
+                            icon: 'success',
+                            confirmButtonColor: '#940000'
+                        }).then(() => {
+                            loadLessonPlanForManage();
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: response.error || 'Failed to send lesson plan',
+                            icon: 'error',
+                            confirmButtonColor: '#940000'
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    const error = xhr.responseJSON?.error || 'Failed to send lesson plan';
+                    Swal.fire({
+                        title: 'Error!',
+                        text: error,
+                        icon: 'error',
+                        confirmButtonColor: '#940000'
+                    });
+                }
+            });
+        }
+    });
 }
 </script>
 

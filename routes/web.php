@@ -69,6 +69,10 @@ Route::get('admin/academic-years/terms', [AcademicYearsController::class, 'viewT
 Route::post('admin/academic-years/terms/close', [AcademicYearsController::class, 'closeTerm'])->name('admin.academicYears.closeTerm');
 Route::get('admin/academic-years/{academicYearID}', [AcademicYearsController::class, 'viewYear'])->name('admin.academicYears.view');
 Route::get('admin/scheme-of-work/view/{schemeOfWorkID}', [AdminController::class, 'adminViewSchemeOfWork'])->name('admin.viewSchemeOfWork');
+Route::get('admin/lesson-plans', [AdminController::class, 'adminLessonPlans'])->name('admin.lessonPlans');
+Route::get('admin/lesson-plans/get', [AdminController::class, 'getLessonPlansForAdmin'])->name('admin.get_lesson_plans');
+Route::get('admin/lesson-plan/get', [AdminController::class, 'getLessonPlanForAdmin'])->name('admin.get_lesson_plan');
+Route::post('admin/lesson-plan/sign', [AdminController::class, 'signLessonPlan'])->name('admin.sign_lesson_plan');
 Route::get('task-management', [AdminController::class, 'taskManagement'])->name('taskManagement');
 Route::get('admin/get-teacher-tasks', [AdminController::class, 'getTeacherTasks'])->name('admin.get_teacher_tasks');
 Route::post('approve-task/{taskID}', [AdminController::class, 'approveTask'])->name('approve_task');
@@ -189,6 +193,10 @@ Route::get('teacher/lesson-plan/get', [TeachersController::class, 'getLessonPlan
 Route::get('teacher/lesson-plan/check-exists', [TeachersController::class, 'checkLessonPlanExists'])->name('teacher.check_lesson_plan_exists');
 Route::get('teacher/lesson-plan/download-pdf/{lessonPlanID}', [TeachersController::class, 'downloadLessonPlanPDF'])->name('teacher.download_lesson_plan_pdf');
 Route::post('teacher/lesson-plan/update/{lessonPlanID}', [TeachersController::class, 'updateLessonPlan'])->name('teacher.update_lesson_plan');
+Route::get('teacher/lesson-plan/get-by-filter', [TeachersController::class, 'getLessonPlansByFilter'])->name('teacher.get_lesson_plans_by_filter');
+Route::get('teacher/lesson-plan/get-by-id', [TeachersController::class, 'getLessonPlanById'])->name('teacher.get_lesson_plan_by_id');
+Route::post('teacher/lesson-plan/send-to-admin', [TeachersController::class, 'sendLessonPlanToAdmin'])->name('teacher.send_lesson_plan_to_admin');
+Route::post('teacher/lesson-plan/download-bulk-pdf', [TeachersController::class, 'downloadBulkLessonPlansPDF'])->name('teacher.download_bulk_lesson_plans_pdf');
 Route::get('teacher/exam-attendance/{classSubjectID}', [TeachersController::class, 'examAttendance'])->name('teacher.exam_attendance');
 Route::get('teacher/get-terms-for-year', [TeachersController::class, 'getTermsForYear'])->name('teacher.get_terms_for_year');
 Route::get('teacher/get-exams-for-year-term', [TeachersController::class, 'getExamsForYearTerm'])->name('teacher.get_exams_for_year_term');

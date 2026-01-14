@@ -1,5 +1,5 @@
 <style>
-        /* ShuleLink Brand Colors */
+        /* ShuleXpert Brand Colors */
         :root {
             --bs-primary: #940000 !important;
             --bs-white: #ffffff !important;
@@ -92,7 +92,7 @@
             color: #780000 !important;
         }
 
-        /* All Icons - Force ShuleLink Brand Colors */
+        /* All Icons - Force ShuleXpert Brand Colors */
         i.fa, .fa, i.fas, i.far, i.fab, i.fal, i.fad {
             color: inherit;
         }
@@ -454,7 +454,7 @@
         <div class="row align-items-center h-100">
             <div class="col-lg-4 text-center text-lg-start">
                 <a href="/" style="text-decoration: none;">
-                    <h1 class="display-5 m-0" style="color: #940000 !important;">ShuleLink</h1>
+                    <h1 class="display-5 m-0" style="color: #940000 !important;">ShuleXpert</h1>
                 </a>
             </div>
             <div class="col-lg-8 d-none d-lg-block">

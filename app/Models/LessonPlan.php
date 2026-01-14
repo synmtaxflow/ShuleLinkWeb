@@ -38,6 +38,8 @@ class LessonPlan extends Model
         'teacher_signature',
         'supervisor_signature',
         'status',
+        'sent_to_admin',
+        'sent_at',
     ];
 
     protected $casts = [
@@ -52,6 +54,8 @@ class LessonPlan extends Model
         'present_boys' => 'integer',
         'present_total' => 'integer',
         'lesson_stages' => 'array',
+        'sent_to_admin' => 'boolean',
+        'sent_at' => 'datetime',
     ];
 
     // Relationships

@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>ShuleLink - School Management System</title>
+    <title>ShuleXpert - School Management System</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <meta content="" name="keywords">
     <meta content="" name="description">
@@ -1065,7 +1065,7 @@
         <div class="splash-icon">
             <i class="fa fa-graduation-cap"></i>
         </div>
-        <div class="splash-text">ShuleLink</div>
+        <div class="splash-text">ShuleXpert</div>
         <div class="splash-loader"></div>
         <div class="splash-powered">Powered by EmCa Techonology</div>
     </div>
@@ -1093,7 +1093,7 @@
                     <div class="col-lg-6">
                         <div class="carousel-text">
                             <h1 class="display-1 text-uppercase mb-3">Transform Your School Management</h1>
-                            <p class="fs-5 mb-5">ShuleLink is a comprehensive school management system designed for pre-schools, primary, secondary, and advanced schools. Manage all your operations seamlessly.</p>
+                            <p class="fs-5 mb-5">ShuleXpert is a comprehensive school management system designed for pre-schools, primary, secondary, and advanced schools. Manage all your operations seamlessly.</p>
                             <div class="d-flex flex-wrap gap-2">
                                 <a class="btn btn-primary py-3 px-4 me-3" href="{{ route('AdminDashboard') }}">Get Started</a>
                                 <a class="btn btn-secondary py-3 px-4" href="#!">Learn More</a>
@@ -1150,7 +1150,7 @@
                     <div class="col-lg-6">
                         <div class="carousel-text">
                             <h1 class="display-1 text-uppercase mb-3">Empower Your Educational Institution</h1>
-                            <p class="fs-5 mb-5">Experience the power of digital transformation in education. Join schools across Tanzania that are revolutionizing their management with ShuleLink.</p>
+                            <p class="fs-5 mb-5">Experience the power of digital transformation in education. Join schools across Tanzania that are revolutionizing their management with ShuleXpert.</p>
                             <div class="d-flex flex-wrap gap-2 mt-4">
                                 <a class="btn btn-primary py-3 px-4 me-3" href="#!">Request Demo</a>
                                 <a class="btn btn-secondary py-3 px-4" href="#!">Contact Us</a>
@@ -1227,7 +1227,7 @@
                 <div class="col-lg-6">
                     <p class="section-title bg-white text-start text-primary pe-3">About Us</p>
                     <h1 class="display-6 mb-4 wow fadeIn" data-wow-delay="0.2s">Innovative School Management Solutions</h1>
-                    <p class="mb-4 wow fadeIn" data-wow-delay="0.3s">ShuleLink revolutionizes how schools operate by providing a comprehensive management system that streamlines academic operations, communication, and administrative tasks. Join hundreds of schools already using ShuleLink to enhance their educational delivery.</p>
+                    <p class="mb-4 wow fadeIn" data-wow-delay="0.3s">ShuleXpert revolutionizes how schools operate by providing a comprehensive management system that streamlines academic operations, communication, and administrative tasks. Join hundreds of schools already using ShuleXpert to enhance their educational delivery.</p>
                     <div class="row g-4 pt-2">
                         <div class="col-sm-6 wow fadeIn" data-wow-delay="0.4s">
                             <div class="h-100">
@@ -1240,7 +1240,7 @@
                         </div>
                         <div class="col-sm-6 wow fadeIn" data-wow-delay="0.5s">
                             <div class="h-100 bg-primary p-4 text-center">
-                                <p class="fs-5 text-dark">Experience the future of school management with ShuleLink's comprehensive platform designed for Tanzanian schools.</p>
+                                <p class="fs-5 text-dark">Experience the future of school management with ShuleXpert's comprehensive platform designed for Tanzanian schools.</p>
                                 <a class="btn btn-secondary py-2 px-4" href="#!">Try Free Trial</a>
                             </div>
                         </div>
@@ -1372,8 +1372,8 @@
                 </div>
                 <div class="col-lg-6">
                     <p class="section-title bg-white text-start text-primary pe-3">Why Us!</p>
-                    <h1 class="display-6 mb-4 wow fadeIn" data-wow-delay="0.2s">Why Schools Choose ShuleLink!</h1>
-                    <p class="mb-4 wow fadeIn" data-wow-delay="0.3s">ShuleLink provides comprehensive school management solutions that streamline operations, improve communication, and enhance educational outcomes. Join hundreds of schools transforming their operations.</p>
+                    <h1 class="display-6 mb-4 wow fadeIn" data-wow-delay="0.2s">Why Schools Choose ShuleXpert!</h1>
+                    <p class="mb-4 wow fadeIn" data-wow-delay="0.3s">ShuleXpert provides comprehensive school management solutions that streamline operations, improve communication, and enhance educational outcomes. Join hundreds of schools transforming their operations.</p>
                     <p class="text-dark wow fadeIn" data-wow-delay="0.4s"><i
                             class="fa fa-check text-primary me-2"></i>Cloud-based system accessible anywhere</p>
                     <p class="text-dark wow fadeIn" data-wow-delay="0.5s"><i
@@ -1397,7 +1397,7 @@
             <div class="text-center mx-auto wow fadeIn" data-wow-delay="0.1s" style="max-width: 700px;">
                 <p class="section-title bg-white text-center text-primary px-3">Features</p>
                 <h1 class="display-6 mb-4">Powerful Features for Modern School Management</h1>
-                <p class="fs-5 mb-4">ShuleLink provides comprehensive solutions for schools, teachers, parents, and students. Powered by EmCa Technology.</p>
+                <p class="fs-5 mb-4">ShuleXpert provides comprehensive solutions for schools, teachers, parents, and students. Powered by EmCa Technology.</p>
             </div>
             <div class="row g-4">
                 <div class="col-md-6 col-lg-4 wow fadeIn" data-wow-delay="0.1s">
@@ -1408,7 +1408,7 @@
                                 <span class="badge bg-primary px-3 py-2 position-absolute top-0 end-0 m-3" style="font-size: 0.85rem;">Payments</span>
                             </div>
                             <h3 class="mb-3">Easy Fee Payment Management</h3>
-                            <p class="mb-4">ShuleLink provides easy payment of fees using control numbers through different banks or Mobile Network Operators (MNO). Parents can pay school fees conveniently from anywhere, anytime with clear fee structures and payment tracking.</p>
+                            <p class="mb-4">ShuleXpert provides easy payment of fees using control numbers through different banks or Mobile Network Operators (MNO). Parents can pay school fees conveniently from anywhere, anytime with clear fee structures and payment tracking.</p>
                             <ul class="list-unstyled mb-4">
                                 <li><i class="fa fa-check text-primary me-2"></i>Control number payment system</li>
                                 <li><i class="fa fa-check text-primary me-2"></i>Multiple payment channels (Banks & MNO)</li>
@@ -1464,7 +1464,7 @@
                 <div class="row justify-content-center">
                     <div class="col-lg-8 py-5 text-center">
                         <h1 class="display-6 wow fadeIn" data-wow-delay="0.3s">Transform Your School Operations Today!</h1>
-                        <p class="fs-5 mb-4 wow fadeIn" data-wow-delay="0.5s">Join hundreds of schools already using ShuleLink to streamline their operations, enhance communication, and improve educational outcomes. Get started with a free trial today!</p>
+                        <p class="fs-5 mb-4 wow fadeIn" data-wow-delay="0.5s">Join hundreds of schools already using ShuleXpert to streamline their operations, enhance communication, and improve educational outcomes. Get started with a free trial today!</p>
                         <div class="d-flex flex-wrap justify-content-center gap-2 wow fadeIn" data-wow-delay="0.7s">
                             <a class="btn btn-primary py-3 px-4 me-3" href="#!">Get Started</a>
                             <a class="btn btn-secondary py-3 px-4" href="#!">Contact Us</a>
@@ -1483,14 +1483,14 @@
             <div class="text-center mx-auto wow fadeIn" data-wow-delay="0.1s" style="max-width: 700px;">
                 <p class="section-title bg-white text-center text-primary px-3">Features</p>
                 <h1 class="display-6 mb-4">More Powerful Features</h1>
-                <p class="fs-5 mb-4">Discover additional capabilities that make ShuleLink the complete school management solution. Powered by EmCa Technology.</p>
+                <p class="fs-5 mb-4">Discover additional capabilities that make ShuleXpert the complete school management solution. Powered by EmCa Technology.</p>
             </div>
             <div class="row g-4">
                 <div class="col-md-6 col-lg-4 wow fadeIn" data-wow-delay="0.1s">
                     <div class="event-item h-100 p-4">
-                        <img class="img-fluid w-100 mb-4 rounded" src="{{ asset('images/S1.jpg') }}" alt="ShuleLink Mobile App" style="height: 220px; object-fit: cover;">
-                        <h3 class="mb-3">ShuleLink Mobile App & Real-time Alerts</h3>
-                        <p class="mb-4">Access ShuleLink on the go with our mobile applications available for iOS and Android. Teachers and parents can stay connected with real-time session alerts and instant notifications delivered directly to their mobile devices.</p>
+                        <img class="img-fluid w-100 mb-4 rounded" src="{{ asset('images/S1.jpg') }}" alt="ShuleXpert Mobile App" style="height: 220px; object-fit: cover;">
+                        <h3 class="mb-3">ShuleXpert Mobile App & Real-time Alerts</h3>
+                        <p class="mb-4">Access ShuleXpert on the go with our mobile applications available for iOS and Android. Teachers and parents can stay connected with real-time session alerts and instant notifications delivered directly to their mobile devices.</p>
                         <div class="bg-light p-4 rounded">
                             <p class="mb-2"><i class="fa fa-mobile-alt text-primary me-2"></i><strong>Mobile App:</strong> iOS and Android apps for teachers and parents</p>
                             <p class="mb-2"><i class="fa fa-bell text-primary me-2"></i><strong>Real-time Alerts:</strong> Session notifications to teachers via mobile app</p>
@@ -1535,7 +1535,7 @@
                 <div class="col-lg-7 donate-text bg-light py-5 wow fadeIn" data-wow-delay="0.1s">
                     <div class="d-flex flex-column justify-content-center h-100 p-5 wow fadeIn" data-wow-delay="0.3s">
                         <h1 class="display-6 mb-4">Ready to Transform Your School Management?</h1>
-                        <p class="fs-5 mb-0">Experience the power of ShuleLink with our comprehensive school management platform. Streamline operations, enhance communication, and improve educational outcomes.</p>
+                        <p class="fs-5 mb-0">Experience the power of ShuleXpert with our comprehensive school management platform. Streamline operations, enhance communication, and improve educational outcomes.</p>
                     </div>
                 </div>
                 <div class="col-lg-5 donate-form bg-primary py-5 text-center wow fadeIn" data-wow-delay="0.5s">
@@ -1651,8 +1651,8 @@
             <div class="row g-5">
                 <div class="col-md-12 col-lg-4 col-xl-3 wow fadeIn" data-wow-delay="0.1s">
                     <div class="testimonial-title">
-                        <h1 class="display-6 mb-4">What Our Users Say About ShuleLink</h1>
-                        <p class="fs-5 mb-0">Discover how ShuleLink is transforming school management and improving communication between schools, teachers, and parents across Tanzania.</p>
+                        <h1 class="display-6 mb-4">What Our Users Say About ShuleXpert</h1>
+                        <p class="fs-5 mb-0">Discover how ShuleXpert is transforming school management and improving communication between schools, teachers, and parents across Tanzania.</p>
                     </div>
                 </div>
                 <div class="col-md-12 col-lg-8 col-xl-9">
@@ -1675,7 +1675,7 @@
                                             <i class="fa fa-star text-primary"></i>
                                             <i class="fa fa-star text-primary"></i>
                                         </div>
-                                        <p class="fs-5 mb-4">ShuleLink has revolutionized how we manage our school operations. The biometric attendance system saves us hours of manual work, and parents love receiving instant SMS notifications about their children's performance and attendance. It's truly transformed our school management!</p>
+                                        <p class="fs-5 mb-4">ShuleXpert has revolutionized how we manage our school operations. The biometric attendance system saves us hours of manual work, and parents love receiving instant SMS notifications about their children's performance and attendance. It's truly transformed our school management!</p>
                                         <div class="d-flex align-items-center">
                                             <div class="btn-lg-square bg-light text-secondary flex-shrink-0" style="background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important;">
                                                 <i class="fa fa-quote-right fa-2x text-white"></i>
@@ -1707,7 +1707,7 @@
                                             <i class="fa fa-star text-primary"></i>
                                             <i class="fa fa-star text-primary"></i>
                                         </div>
-                                        <p class="fs-5 mb-4">As a teacher, ShuleLink has made my work so much easier. I can record results, track attendance, and communicate with parents instantly. The mobile app keeps me updated with real-time alerts about my sessions. It's an essential tool for modern teaching!</p>
+                                        <p class="fs-5 mb-4">As a teacher, ShuleXpert has made my work so much easier. I can record results, track attendance, and communicate with parents instantly. The mobile app keeps me updated with real-time alerts about my sessions. It's an essential tool for modern teaching!</p>
                                         <div class="d-flex align-items-center">
                                             <div class="btn-lg-square bg-light text-secondary flex-shrink-0" style="background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important;">
                                                 <i class="fa fa-quote-right fa-2x text-white"></i>
@@ -1739,7 +1739,7 @@
                                             <i class="fa fa-star text-primary"></i>
                                             <i class="fa fa-star text-primary"></i>
                                         </div>
-                                        <p class="fs-5 mb-4">I love how ShuleLink keeps me connected with my child's education. I receive SMS notifications for results, attendance, and school events. The fee payment system is so convenient - I can pay from anywhere using my mobile money. It gives me peace of mind knowing I'm always informed!</p>
+                                        <p class="fs-5 mb-4">I love how ShuleXpert keeps me connected with my child's education. I receive SMS notifications for results, attendance, and school events. The fee payment system is so convenient - I can pay from anywhere using my mobile money. It gives me peace of mind knowing I'm always informed!</p>
                                         <div class="d-flex align-items-center">
                                             <div class="btn-lg-square bg-light text-secondary flex-shrink-0" style="background: linear-gradient(135deg, #ed9999 0%, #940000 100%) !important;">
                                                 <i class="fa fa-quote-right fa-2x text-white"></i>
@@ -1766,7 +1766,7 @@
         <div class="container">
             <div class="row g-5 py-5">
                 <div class="col-lg-3 col-md-6">
-                    <h4 class="text-light mb-4">ShuleLink Office</h4>
+                    <h4 class="text-light mb-4">ShuleXpert Office</h4>
                     <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>Moshi, Kilimanjaro</p>
                     <p class="mb-2"><i class="fa fa-phone-alt me-3"></i>+255757166599</p>
                     <p class="mb-2"><i class="fa fa-envelope me-3"></i>emca@emca.tech</p>
@@ -1780,7 +1780,7 @@
                 </div>
                 <div class="col-lg-3 col-md-6">
                     <h4 class="text-light mb-4">Quick Links</h4>
-                    <a class="btn btn-link" href="#!">About ShuleLink</a>
+                    <a class="btn btn-link" href="#!">About ShuleXpert</a>
                     <a class="btn btn-link" href="#!">Contact Us</a>
                     <a class="btn btn-link" href="#!">Our Services</a>
                     <a class="btn btn-link" href="#!">Pricing</a>
@@ -1825,7 +1825,7 @@
             <div class="copyright pt-5">
                 <div class="row">
                     <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
-                        &copy; <a class="fw-semi-bold" href="#!">ShuleLink</a>, All Right Reserved.
+                        &copy; <a class="fw-semi-bold" href="#!">ShuleXpert</a>, All Right Reserved.
                     </div>
                     <div class="col-md-6 text-center text-md-end">
                         <span class="footer-powered-by">Powered by EmCa Techonology</span>

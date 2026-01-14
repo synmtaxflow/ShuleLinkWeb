@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Apply - ShuleLink School Management System</title>
+    <title>Apply - ShuleXpert School Management System</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <meta content="" name="keywords">
     <meta content="" name="description">
@@ -154,7 +154,7 @@
             <div class="splash-icon">
                 <i class="fa fa-graduation-cap"></i>
             </div>
-            <div class="splash-text">Welcome to ShuleLink<br>Online Application System</div>
+            <div class="splash-text">Welcome to ShuleXpert<br>Online Application System</div>
             <div class="splash-loader"></div>
             <div class="splash-powered">Powered by EmCa Techonology</div>
         </div>

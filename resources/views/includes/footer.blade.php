@@ -280,7 +280,7 @@
 <footer class="site-footer">
   <div class="container">
     <p class="mb-1">
-      &copy; 2025 <strong>ShuleLink</strong>. All Rights Reserved.
+      &copy; 2025 <strong>ShuleXpert</strong>. All Rights Reserved.
     </p>
     <p class="small mb-0">
       Designed by <a href="#">Emca Techonology
