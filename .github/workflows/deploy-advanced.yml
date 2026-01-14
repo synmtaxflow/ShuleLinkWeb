@@ -43,7 +43,7 @@ jobs:
         key: ${{ secrets.CPANEL_SSH_KEY }}
         port: ${{ secrets.CPANEL_SSH_PORT || 22 }}
         source: "deploy.tar.gz"
-        target: "/home/shulexpert/repositories/shuleXpert"
+        target: "~/repositories/ShuleXpert"
         
     - name: Extract and deploy on server
       uses: appleboy/ssh-action@master
@@ -53,7 +53,7 @@ jobs:
         key: ${{ secrets.CPANEL_SSH_KEY }}
         port: ${{ secrets.CPANEL_SSH_PORT || 22 }}
         script: |
-          cd /home/shulexpert/repositories/shuleXpert
+          cd ~/repositories/ShuleXpert
           
           # Backup current .env file if exists
           if [ -f .env ]; then

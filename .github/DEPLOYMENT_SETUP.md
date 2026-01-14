@@ -60,7 +60,7 @@ Add secrets zifuatazo:
 
 Hakikisha path kwenye server ni sahihi. Kwenye workflow file, path ni:
 ```
-/home/shulexpert/repositories/shuleXpert
+~/repositories/ShuleXpert
 ```
 
 Badilisha kama inahitajika kwa server yako.
@@ -115,7 +115,7 @@ Kama GitHub Actions haifanyi kazi, unaweza ku-deploy manually:
 
 ```bash
 # Kwenye server
-cd /home/shulexpert/repositories/shuleXpert
+cd ~/repositories/ShuleXpert
 git pull origin main
 composer install --no-dev --optimize-autoloader
 php artisan config:cache
