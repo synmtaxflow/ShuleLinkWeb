@@ -842,6 +842,9 @@ function loadResultsForExam(classSubjectID, examID) {
 
 // Edit Results
 function editResults(classSubjectID) {
+    // Clear exam data cache when opening modal
+    window.examDataCache = {};
+    
     // First check if there are any examinations with enter_result = true
     $.ajax({
         url: '/get_examinations_for_subject/' + classSubjectID,
@@ -890,15 +893,21 @@ function editResults(classSubjectID) {
                                             <option value="">Select Examination</option>
                             `;
 
+                            // Store exam data globally for use in handleExamSelection
+                            window.examDataCache = window.examDataCache || {};
+                            
                             if (examsResponse.success && examsResponse.examinations) {
                                 examsResponse.examinations.forEach(function(exam) {
                                     // Only show examinations where enter_result is true
                                     if (exam.enter_result === true || exam.enter_result === 1) {
+                                        // Store exam data in cache
+                                        window.examDataCache[exam.examID] = exam;
+                                        
                                         const statusText = exam.status === 'awaiting_results' ? ' (Awaiting Results)' :
                                                           exam.status === 'ongoing' ? ' (Ongoing)' : ' (Results Available)';
                                         const termClosedText = exam.is_term_closed ? ' (Term Closed - Not Editable)' : '';
                                         const disabledAttr = exam.is_term_closed ? 'disabled style="background-color: #f0f0f0; color: #999;"' : '';
-                                        html += `<option value="${exam.examID}" data-status="${exam.status}" data-term-closed="${exam.is_term_closed}" ${disabledAttr}>${exam.exam_name} (${exam.year})${statusText}${termClosedText}</option>`;
+                                        html += `<option value="${exam.examID}" data-status="${exam.status}" data-term-closed="${exam.is_term_closed}" data-enter-result="${exam.enter_result}" ${disabledAttr}>${exam.exam_name} (${exam.year})${statusText}${termClosedText}</option>`;
                                     }
                                 });
                             }
@@ -1082,6 +1091,9 @@ function addResults(classSubjectID, isEdit = false) {
     $('#addEditResultsModal').modal('show');
     $('#addEditResultsModalBody').html('<div class="text-center"><div class="spinner-border text-primary-custom" role="status"></div></div>');
 
+    // Clear exam data cache when opening modal
+    window.examDataCache = {};
+
     // Get students and examinations for this subject
     $.ajax({
         url: '/get_subject_students/' + classSubjectID,
@@ -1100,15 +1112,21 @@ function addResults(classSubjectID, isEdit = false) {
                                     <option value="">Select Examination</option>
                     `;
 
+                    // Store exam data globally for use in handleExamSelection
+                    window.examDataCache = window.examDataCache || {};
+                    
                     if (examsResponse.success && examsResponse.examinations) {
                         examsResponse.examinations.forEach(function(exam) {
                             // Only show examinations where enter_result is true
                             if (exam.enter_result === true || exam.enter_result === 1) {
+                                // Store exam data in cache
+                                window.examDataCache[exam.examID] = exam;
+                                
                                 const statusText = exam.status === 'awaiting_results' ? ' (Awaiting Results)' :
                                                   exam.status === 'ongoing' ? ' (Ongoing)' : ' (Results Available)';
                                 const termClosedText = exam.is_term_closed ? ' (Term Closed - Not Editable)' : '';
                                 const disabledAttr = exam.is_term_closed ? 'disabled style="background-color: #f0f0f0; color: #999;"' : '';
-                                html += `<option value="${exam.examID}" data-status="${exam.status}" data-term-closed="${exam.is_term_closed}" ${disabledAttr}>${exam.exam_name} (${exam.year})${statusText}${termClosedText}</option>`;
+                                html += `<option value="${exam.examID}" data-status="${exam.status}" data-term-closed="${exam.is_term_closed}" data-enter-result="${exam.enter_result}" ${disabledAttr}>${exam.exam_name} (${exam.year})${statusText}${termClosedText}</option>`;
                             }
                         });
                     }
@@ -1393,46 +1411,49 @@ function handleExamSelection(classSubjectID, examID) {
         return;
     }
 
-    // Check ONLY enter_result status - no other logic
-    $.ajax({
-        url: `/get_exam/${examID}`,
-        method: 'GET',
-        success: function(response) {
-            if (response.success && response.exam) {
-                // Check ONLY enter_result
-                const enterResult = response.exam.enter_result === true || response.exam.enter_result === 1;
-                
-                if (!enterResult) {
-                    // Disable form inputs
-                    disableResultsForm();
-                    $('#downloadExcelBtn').prop('disabled', true);
-                    $('#uploadExcelBtn').prop('disabled', true);
-                    showResultsStatusError('You are not allowed to enter results for this examination. Result entry has been disabled.');
-                    return;
-                }
-
-                // If enter_result is true, enable form - no other checks
-                enableResultsForm();
-                $('#downloadExcelBtn').prop('disabled', false);
-                $('#uploadExcelBtn').prop('disabled', false);
-                $('.results-status-error').remove();
-                
-                // Load existing results after enabling form
-                loadExistingResults(classSubjectID, examID);
-            } else {
-                disableResultsForm();
-                $('#downloadExcelBtn').prop('disabled', true);
-                $('#uploadExcelBtn').prop('disabled', true);
-                showResultsStatusError('Failed to load examination details.');
-            }
-        },
-        error: function(xhr) {
+    // Use cached exam data instead of making API call
+    const examData = window.examDataCache && window.examDataCache[examID];
+    
+    if (examData) {
+        // Check ONLY enter_result status - no other logic
+        const enterResult = examData.enter_result === true || examData.enter_result === 1;
+        
+        if (!enterResult) {
+            // Disable form inputs
             disableResultsForm();
             $('#downloadExcelBtn').prop('disabled', true);
             $('#uploadExcelBtn').prop('disabled', true);
-            showResultsStatusError('Failed to check examination status.');
+            showResultsStatusError('You are not allowed to enter results for this examination. Result entry has been disabled.');
+            return;
         }
-    });
+
+        // If enter_result is true, enable form - no other checks
+        enableResultsForm();
+        $('#downloadExcelBtn').prop('disabled', false);
+        $('#uploadExcelBtn').prop('disabled', false);
+        $('.results-status-error').remove();
+        
+        // Load existing results after enabling form
+        loadExistingResults(classSubjectID, examID);
+    } else {
+        // Fallback: try to get exam data from option attributes
+        const selectedOption = $(`#exam_id option[value="${examID}"]`);
+        const enterResult = selectedOption.data('enter-result') === true || selectedOption.data('enter-result') === 1;
+        
+        if (!enterResult) {
+            disableResultsForm();
+            $('#downloadExcelBtn').prop('disabled', true);
+            $('#uploadExcelBtn').prop('disabled', true);
+            showResultsStatusError('You are not allowed to enter results for this examination. Result entry has been disabled.');
+            return;
+        }
+
+        enableResultsForm();
+        $('#downloadExcelBtn').prop('disabled', false);
+        $('#uploadExcelBtn').prop('disabled', false);
+        $('.results-status-error').remove();
+        loadExistingResults(classSubjectID, examID);
+    }
 }
 
 // Helper function to disable form inputs

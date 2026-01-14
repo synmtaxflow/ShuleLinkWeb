@@ -69,4 +69,21 @@ Route::get('/attendance/teachers-fingerprint-local', [AttendanceApiController::c
 // Get teacher fingerprint attendance from local database
 Route::get('/attendance/teachers-fingerprint', [AttendanceApiController::class, 'getTeacherFingerprintAttendance'])->name('api.attendance.teachers_fingerprint');
 
+// Teacher Dashboard endpoint
+Route::get('/teacher/dashboard', [\App\Http\Controllers\TeachersController::class, 'getTeacherDashboardAPI'])->name('api.teacher.dashboard');
+
+// Teacher Profile endpoints
+Route::get('/teacher/profile', [\App\Http\Controllers\TeachersController::class, 'getTeacherProfileAPI'])->name('api.teacher.profile');
+Route::post('/teacher/profile/update', [\App\Http\Controllers\TeachersController::class, 'updateTeacherProfileAPI'])->name('api.teacher.profile.update');
+Route::post('/teacher/password/change', [\App\Http\Controllers\TeachersController::class, 'changeTeacherPasswordAPI'])->name('api.teacher.password.change');
+
+// Teacher Subjects endpoints
+Route::get('/teacher/subjects', [\App\Http\Controllers\TeachersController::class, 'getTeacherSubjectsAPI'])->name('api.teacher.subjects');
+Route::get('/teacher/subjects/{classSubjectID}/students', [\App\Http\Controllers\TeachersController::class, 'getSubjectStudentsAPI'])->name('api.teacher.subjects.students');
+Route::get('/teacher/subjects/{classSubjectID}/examinations', [\App\Http\Controllers\TeachersController::class, 'getExaminationsForSubjectAPI'])->name('api.teacher.subjects.examinations');
+Route::get('/teacher/subjects/{classSubjectID}/results', [\App\Http\Controllers\TeachersController::class, 'getSubjectResultsAPI'])->name('api.teacher.subjects.results');
+Route::get('/teacher/subjects/{classSubjectID}/results/{examID}', [\App\Http\Controllers\TeachersController::class, 'getSubjectResultsAPI'])->name('api.teacher.subjects.results.by_exam');
+Route::post('/teacher/subjects/results/save', [\App\Http\Controllers\TeachersController::class, 'saveSubjectResultsAPI'])->name('api.teacher.subjects.results.save');
+Route::post('/teacher/subjects/results/upload-excel', [\App\Http\Controllers\TeachersController::class, 'uploadExcelResultsAPI'])->name('api.teacher.subjects.results.upload_excel');
+
 

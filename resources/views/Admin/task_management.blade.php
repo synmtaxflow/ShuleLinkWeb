@@ -294,6 +294,11 @@ function displayTasks(tasks) {
 }
 
 function approveTask(taskID) {
+    // Prevent multiple clicks
+    if ($('#taskActionModal').hasClass('show')) {
+        return;
+    }
+    
     // Wait for jQuery and Bootstrap to be available
     function executeWhenReady() {
         if (typeof jQuery === 'undefined' || typeof $ === 'undefined' || typeof $.fn.modal === 'undefined') {
@@ -310,12 +315,26 @@ function approveTask(taskID) {
         $('#admin_comment').attr('required', false);
         $('#admin_comment').attr('placeholder', 'Add an optional comment...');
         $('#admin_comment').val('');
-        $('#taskActionModal').modal('show');
+        
+        // Ensure button is enabled
+        $('#taskActionSubmitBtn').prop('disabled', false).removeAttr('disabled');
+        
+        // Show modal with proper settings
+        $('#taskActionModal').modal({
+            backdrop: true,
+            keyboard: true,
+            show: true
+        });
     }
     executeWhenReady();
 }
 
 function rejectTask(taskID) {
+    // Prevent multiple clicks
+    if ($('#taskActionModal').hasClass('show')) {
+        return;
+    }
+    
     // Wait for jQuery and Bootstrap to be available
     function executeWhenReady() {
         if (typeof jQuery === 'undefined' || typeof $ === 'undefined' || typeof $.fn.modal === 'undefined') {
@@ -332,7 +351,16 @@ function rejectTask(taskID) {
         $('#admin_comment').attr('required', true);
         $('#admin_comment').attr('placeholder', 'Enter reason for rejection...');
         $('#admin_comment').val('');
-        $('#taskActionModal').modal('show');
+        
+        // Ensure button is enabled
+        $('#taskActionSubmitBtn').prop('disabled', false).removeAttr('disabled');
+        
+        // Show modal with proper settings
+        $('#taskActionModal').modal({
+            backdrop: true,
+            keyboard: true,
+            show: true
+        });
     }
     executeWhenReady();
 }
@@ -346,12 +374,19 @@ function resetFilters() {
 
 $('#taskActionForm').on('submit', function(e) {
     e.preventDefault();
+    e.stopPropagation();
+    
+    // Disable button to prevent double submission
+    const submitBtn = $('#taskActionSubmitBtn');
+    const originalText = submitBtn.html();
+    submitBtn.prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> Processing...');
     
     const taskID = $('#task_action_id').val();
     const actionType = $('#task_action_type').val();
     const comment = $('#admin_comment').val().trim();
     
     if (actionType === 'reject' && !comment) {
+        submitBtn.prop('disabled', false).html(originalText);
         Swal.fire({
             title: 'Error!',
             text: 'Reason is required for rejection',
@@ -383,9 +418,12 @@ $('#taskActionForm').on('submit', function(e) {
                     confirmButtonColor: '#940000'
                 }).then(() => {
                     $('#taskActionModal').modal('hide');
+                    // Re-enable button after modal closes
+                    submitBtn.prop('disabled', false).html(originalText);
                     loadTasks();
                 });
             } else {
+                submitBtn.prop('disabled', false).html(originalText);
                 Swal.fire({
                     title: 'Error!',
                     text: response.error || 'Failed to process task',
@@ -395,6 +433,7 @@ $('#taskActionForm').on('submit', function(e) {
             }
         },
         error: function(xhr) {
+            submitBtn.prop('disabled', false).html(originalText);
             const error = xhr.responseJSON?.error || 'Failed to process task';
             Swal.fire({
                 title: 'Error!',
@@ -404,6 +443,17 @@ $('#taskActionForm').on('submit', function(e) {
             });
         }
     });
+});
+
+// Ensure buttons are enabled when modal is shown
+$('#taskActionModal').on('shown.bs.modal', function() {
+    $('#taskActionSubmitBtn').prop('disabled', false).removeAttr('disabled');
+});
+
+// Re-enable buttons when modal is hidden
+$('#taskActionModal').on('hidden.bs.modal', function() {
+    $('#taskActionSubmitBtn').prop('disabled', false).removeAttr('disabled');
+    $('#admin_comment').val('');
 });
 
 // Load tasks on page load

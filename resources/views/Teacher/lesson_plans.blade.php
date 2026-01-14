@@ -261,10 +261,10 @@
                                             </div>
                                         </div>
                                         <div class="col-md-4" id="manageSingleDateFilter">
-                                            <div class="form-group">
-                                                <label>Select Date</label>
-                                                <input type="date" class="form-control" id="manageLessonDate" onchange="loadLessonPlanForManage()">
-                                            </div>
+                            <div class="form-group">
+                                <label>Select Date</label>
+                                <input type="date" class="form-control" id="manageLessonDate" onchange="loadLessonPlanForManage()">
+                            </div>
                                         </div>
                                         <div class="col-md-4" id="manageDateRangeFilter1" style="display: none;">
                                             <div class="form-group">
@@ -312,20 +312,20 @@
                                     <h6 class="mb-3">Filter Lesson Plans</h6>
                                     <div class="row">
                                         <div class="col-md-4">
-                                            <div class="form-group">
+                            <div class="form-group">
                                                 <label>Filter Type</label>
                                                 <select class="form-control" id="filterType" onchange="toggleFilterOptions()">
                                                     <option value="date_range">Date Range</option>
                                                     <option value="year">By Year</option>
                                                 </select>
-                                            </div>
-                                        </div>
+                            </div>
+                        </div>
                                         <div class="col-md-4" id="dateRangeFilter">
                                             <div class="form-group">
                                                 <label>From Date</label>
                                                 <input type="date" class="form-control" id="viewFromDate">
-                                            </div>
-                                        </div>
+                    </div>
+                </div>
                                         <div class="col-md-4" id="dateRangeFilter2">
                                             <div class="form-group">
                                                 <label>To Date</label>
@@ -370,18 +370,10 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-let currentSessionData = {
-    sessionTimetableID: null,
-    day: null,
-    startTime: null,
-    endTime: null,
-    subjectName: null,
-    className: null
-};
-
-// Load sessions by subject
+// Make sure functions are globally accessible
 function loadSessionsBySubject() {
     const subjectID = $('#subjectSelector').val();
+    console.log('Loading sessions for subjectID:', subjectID);
     
     if (!subjectID) {
         $('#sessionsList').html(`
@@ -409,13 +401,34 @@ function loadSessionsBySubject() {
         data: {
             subjectID: subjectID
         },
+        dataType: 'json',
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+            'Accept': 'application/json'
+        },
         success: function(response) {
-            if (response.success && response.sessions.length > 0) {
+            console.log('Sessions response:', response);
+            
+            if (!response) {
+                $('#sessionsList').html(`
+                    <div class="text-center text-danger py-5">
+                        <i class="bi bi-x-circle" style="font-size: 3rem;"></i>
+                        <p class="mt-3">Invalid response from server</p>
+                    </div>
+                `);
+                return;
+            }
+            
+            if (response.success && response.sessions && Array.isArray(response.sessions) && response.sessions.length > 0) {
                 let html = '<div class="row">';
                 
                 response.sessions.forEach(function(session) {
                     const startTime = formatTime(session.start_time);
                     const endTime = formatTime(session.end_time);
+                    const subjectName = session.subject_name || 'N/A';
+                    const className = session.class_name || 'N/A';
+                    const subclassName = session.subclass_name || '';
+                    const day = session.day || 'N/A';
                     
                     html += `
                         <div class="col-md-6 col-lg-4 mb-3">
@@ -426,20 +439,20 @@ function loadSessionsBySubject() {
                                     </span>
                                 </div>
                                 <h6 class="mb-2" style="font-weight: bold;">
-                                    <i class="bi bi-book text-primary-custom"></i> ${session.subject_name}
+                                    <i class="bi bi-book text-primary-custom"></i> ${subjectName}
                                 </h6>
                                 <p class="mb-2 text-muted">
-                                    <i class="bi bi-people"></i> ${session.class_name} - ${session.subclass_name}
+                                    <i class="bi bi-people"></i> ${className}${subclassName ? ' - ' + subclassName : ''}
                                 </p>
                                 <p class="mb-2 text-muted">
-                                    <i class="bi bi-calendar"></i> ${session.day}
+                                    <i class="bi bi-calendar"></i> ${day}
                                 </p>
                                 <p class="mb-2 text-muted small" id="sessionDates_${session.session_timetableID}">
                                     <i class="bi bi-calendar3"></i> <span class="text-info">Loading dates...</span>
                                 </p>
                                 <button 
                                     class="btn btn-session-action btn-sm btn-block" 
-                                    onclick="openLessonPlanModal(${session.session_timetableID}, '${session.day}', '${session.start_time}', '${session.end_time}', '${session.subject_name}', '${session.class_name}')"
+                                    onclick="openLessonPlanModal(${session.session_timetableID}, '${day}', '${session.start_time}', '${session.end_time}', '${subjectName.replace(/'/g, "\\'")}', '${className.replace(/'/g, "\\'")}')"
                                 >
                                     <i class="bi bi-journal-text"></i> My Lesson Plan
                                 </button>
@@ -453,23 +466,30 @@ function loadSessionsBySubject() {
                 
                 // Load dates for each session
                 response.sessions.forEach(function(session) {
+                    if (session.session_timetableID) {
                     loadSessionDates(session.session_timetableID);
+                    }
                 });
             } else {
+                const errorMsg = response.error || response.message || 'No session available for this subject';
                 $('#sessionsList').html(`
                     <div class="text-center text-muted py-5">
                         <i class="bi bi-exclamation-circle" style="font-size: 3rem;"></i>
-                        <p class="mt-3">${response.error || 'No session available for this subject'}</p>
+                        <p class="mt-3">${errorMsg}</p>
                     </div>
                 `);
             }
         },
         error: function(xhr) {
-            const error = xhr.responseJSON?.error || 'Failed to load sessions';
+            console.error('Error loading sessions:', xhr);
+            console.error('Response:', xhr.responseJSON);
+            console.error('Status:', xhr.status);
+            const error = xhr.responseJSON?.error || xhr.responseJSON?.message || 'Failed to load sessions';
             $('#sessionsList').html(`
                 <div class="text-center text-danger py-5">
                     <i class="bi bi-x-circle" style="font-size: 3rem;"></i>
                     <p class="mt-3">${error}</p>
+                    <p class="mt-2 small text-muted">Status: ${xhr.status}</p>
                 </div>
             `);
         }
@@ -1468,8 +1488,8 @@ function renderLessonPlanFormForEdit(data) {
         <div class="row mt-3">
             <div class="col-md-6">
                 <button class="btn btn-block" onclick="updateLessonPlan()" style="background-color: #f5f5f5; color: #212529; border: 1px solid #e9ecef;">
-                    <i class="bi bi-save"></i> Update Changes
-                </button>
+            <i class="bi bi-save"></i> Update Changes
+        </button>
             </div>
             <div class="col-md-6">
                 <button class="btn btn-block" onclick="sendLessonPlanToAdmin(${data.lesson_planID})" style="background-color: #940000; color: #ffffff; border: 1px solid #940000;" ${data.sent_to_admin ? 'disabled' : ''}>
@@ -1988,144 +2008,176 @@ function generatePDFFromData(data) {
         doc.text(schoolType, pageWidth / 2, yPos, { align: 'center' });
         yPos += 5;
         
-        // Subject and Class header
-        const subjectClassText = (data.subject || '') + ' CLASS ' + (data.class_name || '') + ' ' + data.year;
-        doc.setFontSize(12);
-        doc.text(subjectClassText, pageWidth / 2, yPos, { align: 'center' });
-        yPos += 8;
+        // Calculate table width first
+        const totalTableWidth = pageWidth - (margin * 2);
+        const cellHeight = 8;
         
-        // First table - Teacher's Name, Period, Time, Date
+        // First table - Restructured like the image
         doc.setFontSize(9);
         doc.setFont(undefined, 'normal');
         const table1Y = yPos;
-        doc.setDrawColor(0, 0, 0);
-        doc.setLineWidth(0.5);
+        // Set border color and width for all table borders
+        doc.setDrawColor(0, 0, 0); // Black borders
+        doc.setLineWidth(0.5); // Ensure borders are visible
         
-        const cellHeight = 8;
-        const totalTableWidth = pageWidth - (margin * 2);
-        
-        // Calculate period duration from time
-        let periodMinutes = 40; // Default
-        if (data.lesson_time_start && data.lesson_time_end) {
-            const startParts = data.lesson_time_start.split(':');
-            const endParts = data.lesson_time_end.split(':');
-            const startMinutes = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
-            const endMinutes = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
-            periodMinutes = endMinutes - startMinutes;
-            if (periodMinutes < 0) periodMinutes += 24 * 60; // Handle next day
-        }
-        const periodText = periodMinutes + ' Minutes';
-        
-        // Column widths for first row: TEACHER'S NAME, PERIOD, TIME, DATE
-        const col1Width = 40; // TEACHER'S NAME label
-        const col2Width = 45; // Teacher name value
-        const col3Width = 25; // PERIOD label
-        const col4Width = 30; // Period value
-        const col5Width = 20; // TIME label
-        const col6Width = 30; // Time value
-        const col7Width = 20; // DATE label
-        const col8Width = totalTableWidth - (col1Width + col2Width + col3Width + col4Width + col5Width + col6Width + col7Width); // Date value
+        // Column widths: Left column (TEACHER'S NAME, TIME, DATE) and Right column (NUMBER OF PUPILS)
+        const leftColWidth = Math.floor(totalTableWidth * 0.25); // 25% for labels
+        const rightColWidth = totalTableWidth - leftColWidth; // 75% for NUMBER OF PUPILS section
         
         let xPos = margin;
         yPos = table1Y;
         
-        // Row 1 - Teacher's Name, Period, Time, Date
-        doc.rect(xPos, yPos, col1Width, cellHeight);
-        doc.setFont(undefined, 'bold');
-        doc.setFontSize(8);
-        doc.text('TEACHER\'S NAME', xPos + 2, yPos + 5);
-        xPos += col1Width;
-        doc.rect(xPos, yPos, col2Width, cellHeight);
-        doc.setFont(undefined, 'normal');
-        doc.setFontSize(8);
-        const teacherNameLines = doc.splitTextToSize(data.teacher_name || '', col2Width - 4);
-        doc.text(teacherNameLines, xPos + 2, yPos + 5);
-        xPos += col2Width;
-        doc.rect(xPos, yPos, col3Width, cellHeight);
-        doc.setFont(undefined, 'bold');
-        doc.text('PERIOD', xPos + 2, yPos + 5);
-        xPos += col3Width;
-        doc.rect(xPos, yPos, col4Width, cellHeight);
-        doc.setFont(undefined, 'normal');
-        doc.text(periodText, xPos + 2, yPos + 5);
-        xPos += col4Width;
-        doc.rect(xPos, yPos, col5Width, cellHeight);
-        doc.setFont(undefined, 'bold');
-        doc.text('TIME', xPos + 2, yPos + 5);
-        xPos += col5Width;
-        doc.rect(xPos, yPos, col6Width, cellHeight);
-        doc.setFont(undefined, 'normal');
-        const timeText = doc.splitTextToSize(startTime + ' - ' + endTime, col6Width - 4);
-        doc.text(timeText, xPos + 2, yPos + 5);
-        xPos += col6Width;
-        doc.rect(xPos, yPos, col7Width, cellHeight);
-        doc.setFont(undefined, 'bold');
-        doc.text('DATE', xPos + 2, yPos + 5);
-        xPos += col7Width;
-        doc.rect(xPos, yPos, col8Width, cellHeight);
-        doc.setFont(undefined, 'normal');
-        doc.text(formattedDate, xPos + 2, yPos + 5);
-        yPos += cellHeight;
+        // Row 0: SUBJECT, CLASS, YEAR (inside table as first row)
+        const subjectText = 'SUBJECT: ' + (data.subject || '');
+        const classText = 'CLASS: ' + (data.class_name || '');
+        const yearText = 'YEAR: ' + (data.year || '');
         
-        // Row 2 - Number of Pupils table
+        // Calculate column widths for SUBJECT, CLASS, YEAR row
+        const subjectColWidth = Math.floor(totalTableWidth * 0.35);
+        const classColWidth = Math.floor(totalTableWidth * 0.30);
+        const yearColWidth = totalTableWidth - subjectColWidth - classColWidth;
+        
+        // Draw SUBJECT cell
+        doc.rect(xPos, yPos, subjectColWidth, cellHeight);
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(8);
+        const subjectLines = doc.splitTextToSize(subjectText, subjectColWidth - 4);
+        doc.text(subjectLines, xPos + 2, yPos + 5);
+        xPos += subjectColWidth;
+        
+        // Draw CLASS cell
+        doc.rect(xPos, yPos, classColWidth, cellHeight);
+        const classLines = doc.splitTextToSize(classText, classColWidth - 4);
+        doc.text(classLines, xPos + 2, yPos + 5);
+        xPos += classColWidth;
+        
+        // Draw YEAR cell (spans remaining width including NUMBER OF PUPILS area)
+        doc.rect(xPos, yPos, yearColWidth, cellHeight);
+        const yearLines = doc.splitTextToSize(yearText, yearColWidth - 4);
+        doc.text(yearLines, xPos + 2, yPos + 5);
+        
+        yPos += cellHeight;
         xPos = margin;
-        const pupilsLabelWidth = col1Width;
-        const pupilsTableWidth = totalTableWidth - pupilsLabelWidth;
-        const pupilsTableHeight = cellHeight * 2;
         
-        doc.rect(xPos, yPos, pupilsLabelWidth, pupilsTableHeight);
+        // Row 1: TEACHER'S NAME (left, vertical span) + NUMBER OF PUPILS section (right)
+        const teacherRowHeight = cellHeight * 3; // Spans 3 rows
+        
+        // Left: TEACHER'S NAME (vertical span)
+        doc.rect(xPos, yPos, leftColWidth, teacherRowHeight);
         doc.setFont(undefined, 'bold');
         doc.setFontSize(8);
-        const pupilsLabelLines = doc.splitTextToSize('NUMBER OF PUPILS', pupilsLabelWidth - 4);
-        doc.text(pupilsLabelLines, xPos + 2, yPos + 5);
-        xPos += pupilsLabelWidth;
+        const teacherLabelLines = doc.splitTextToSize('TEACHER\'S NAME', leftColWidth - 4);
+        doc.text(teacherLabelLines, xPos + 2, yPos + teacherRowHeight / 2, { align: 'left', baseline: 'middle' });
         
-        // Attendance nested table
-        doc.rect(xPos, yPos, pupilsTableWidth, pupilsTableHeight);
-        
-        // Attendance table header
-        doc.setFont(undefined, 'bold');
-        doc.setFontSize(8);
-        doc.text('NUMBER OF PUPILS', xPos + pupilsTableWidth / 2, yPos + 4, { align: 'center' });
-        yPos += cellHeight;
-        
-        // Attendance sub-headers
-        const attColWidth = pupilsTableWidth / 6;
+        // Right: NUMBER OF PUPILS section with proper borders
+        xPos += leftColWidth;
+        const attColWidth = rightColWidth / 6;
         let attX = xPos;
-        doc.setFontSize(7);
-        doc.text('REGISTERED', attX + attColWidth * 1.5, yPos + 4, { align: 'center' });
-        doc.text('PRESENT', attX + attColWidth * 4.5, yPos + 4, { align: 'center' });
-        yPos += cellHeight;
+        let currentY = yPos;
         
-        // Attendance labels
-        attX = xPos;
-        doc.setFontSize(7);
-        doc.text('GIRLS', attX + attColWidth * 0.5, yPos + 4, { align: 'center' });
-        doc.text('BOYS', attX + attColWidth * 1.5, yPos + 4, { align: 'center' });
-        doc.text('TOTAL', attX + attColWidth * 2.5, yPos + 4, { align: 'center' });
-        doc.text('GIRLS', attX + attColWidth * 3.5, yPos + 4, { align: 'center' });
-        doc.text('BOYS', attX + attColWidth * 4.5, yPos + 4, { align: 'center' });
-        doc.text('TOTAL', attX + attColWidth * 5.5, yPos + 4, { align: 'center' });
-        yPos += cellHeight;
+        // Row 1: NUMBER OF PUPILS header (spans all 6 columns)
+        doc.rect(attX, currentY, rightColWidth, cellHeight);
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(8);
+        doc.text('NUMBER OF PUPILS', attX + rightColWidth / 2, currentY + 5, { align: 'center' });
+        currentY += cellHeight;
         
-        // Attendance values
+        // Row 2: REGISTERED and PRESENT sub-headers
+        // REGISTERED spans 3 columns
+        doc.rect(attX, currentY, attColWidth * 3, cellHeight);
+        doc.setFontSize(7);
+        doc.text('REGISTERED', attX + (attColWidth * 1.5), currentY + 4, { align: 'center' });
+        // PRESENT spans 3 columns
+        doc.rect(attX + (attColWidth * 3), currentY, attColWidth * 3, cellHeight);
+        doc.text('PRESENT', attX + (attColWidth * 4.5), currentY + 4, { align: 'center' });
+        currentY += cellHeight;
+        
+        // Row 3: GIRLS, BOYS, TOTAL labels (6 separate cells)
+        for (let i = 0; i < 6; i++) {
+            doc.rect(attX + (attColWidth * i), currentY, attColWidth, cellHeight);
+        }
+        doc.setFontSize(7);
+        doc.text('GIRLS', attX + attColWidth * 0.5, currentY + 4, { align: 'center' });
+        doc.text('BOYS', attX + attColWidth * 1.5, currentY + 4, { align: 'center' });
+        doc.text('TOTAL', attX + attColWidth * 2.5, currentY + 4, { align: 'center' });
+        doc.text('GIRLS', attX + attColWidth * 3.5, currentY + 4, { align: 'center' });
+        doc.text('BOYS', attX + attColWidth * 4.5, currentY + 4, { align: 'center' });
+        doc.text('TOTAL', attX + attColWidth * 5.5, currentY + 4, { align: 'center' });
+        currentY += cellHeight;
+        
+        // Row 4: Attendance values (6 separate cells)
+        for (let i = 0; i < 6; i++) {
+            doc.rect(attX + (attColWidth * i), currentY, attColWidth, cellHeight);
+        }
         doc.setFont(undefined, 'normal');
         doc.setFontSize(8);
-        doc.text((data.registered_girls || 0).toString(), attX + attColWidth * 0.5, yPos + 4, { align: 'center' });
-        doc.text((data.registered_boys || 0).toString(), attX + attColWidth * 1.5, yPos + 4, { align: 'center' });
-        doc.text((data.registered_total || 0).toString(), attX + attColWidth * 2.5, yPos + 4, { align: 'center' });
-        doc.text((data.present_girls || 0).toString(), attX + attColWidth * 3.5, yPos + 4, { align: 'center' });
-        doc.text((data.present_boys || 0).toString(), attX + attColWidth * 4.5, yPos + 4, { align: 'center' });
-        doc.text((data.present_total || 0).toString(), attX + attColWidth * 5.5, yPos + 4, { align: 'center' });
+        doc.text((data.registered_girls || 0).toString(), attX + attColWidth * 0.5, currentY + 4, { align: 'center' });
+        doc.text((data.registered_boys || 0).toString(), attX + attColWidth * 1.5, currentY + 4, { align: 'center' });
+        doc.text((data.registered_total || 0).toString(), attX + attColWidth * 2.5, currentY + 4, { align: 'center' });
+        doc.text((data.present_girls || 0).toString(), attX + attColWidth * 3.5, currentY + 4, { align: 'center' });
+        doc.text((data.present_boys || 0).toString(), attX + attColWidth * 4.5, currentY + 4, { align: 'center' });
+        doc.text((data.present_total || 0).toString(), attX + attColWidth * 5.5, currentY + 4, { align: 'center' });
         
-        yPos = table1Y + cellHeight + pupilsTableHeight + 5;
+        // Row 2: TIME (left) + value in first cell only, then attendance cells
+        yPos = table1Y + cellHeight + teacherRowHeight;
+        xPos = margin;
+        // Left: TIME label with border
+        doc.rect(xPos, yPos, leftColWidth, cellHeight);
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(8);
+        doc.text('TIME', xPos + 2, yPos + 5);
+        
+        // Right side - TIME value in first cell only, then empty cells for attendance
+        xPos += leftColWidth;
+        // Reuse attColWidth from above (already calculated in NUMBER OF PUPILS section)
+        
+        // First cell: TIME value
+        doc.rect(xPos, yPos, attColWidth, cellHeight);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(7); // Smaller font to prevent overlap
+        const timeText = doc.splitTextToSize(startTime + ' - ' + endTime, attColWidth - 4);
+        doc.text(timeText, xPos + 2, yPos + 5);
+        xPos += attColWidth;
+        
+        // Remaining 5 cells: Empty (for attendance columns)
+        for (let i = 0; i < 5; i++) {
+            doc.rect(xPos + (attColWidth * i), yPos, attColWidth, cellHeight);
+        }
+        
+        // Row 3: DATE (left) + value in first cell only, then empty cells
+        yPos += cellHeight;
+        xPos = margin;
+        // Left: DATE label with border
+        doc.rect(xPos, yPos, leftColWidth, cellHeight);
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(8);
+        doc.text('DATE', xPos + 2, yPos + 5);
+        
+        // Right side - DATE value in first cell only, then empty cells
+        xPos += leftColWidth;
+        
+        // First cell: DATE value
+        doc.rect(xPos, yPos, attColWidth, cellHeight);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(8);
+        doc.text(formattedDate, xPos + 2, yPos + 5);
+        xPos += attColWidth;
+        
+        // Remaining 5 cells: Empty
+        for (let i = 0; i < 5; i++) {
+            doc.rect(xPos + (attColWidth * i), yPos, attColWidth, cellHeight);
+        }
+        
+        yPos += cellHeight + 5;
         
         checkNewPage(30);
         
-        // Competence and Activities table
+        // Competence and Activities table - Full width with balanced columns
         const compTableWidth = pageWidth - (margin * 2);
-        const labelColWidth = 55; // Increased label column width
-        const valueColWidth = compTableWidth - labelColWidth; // Remaining width for value
+        // Label column should be 25-30% of total width (narrower for labels)
+        const labelColWidth = Math.floor(compTableWidth * 0.28);
+        // Value column takes remaining 72% (wider for content)
+        const valueColWidth = compTableWidth - labelColWidth;
         
         const competenceFields = [
             { label: 'MAIN COMPETENCE', value: data.main_competence || '' },
@@ -2180,10 +2232,16 @@ function generatePDFFromData(data) {
         doc.text('LESSON DEVELOPMENT', margin, yPos);
         yPos += 8;
         
-        // Lesson Development table
+        // Lesson Development table - Full width with balanced columns
         const devTableWidth = pageWidth - (margin * 2);
-        // Better column width distribution - ensure all columns fit
-        const devColWidths = [35, 22, 38, 38, 37]; // Total: 170mm (fits in A4 with margins)
+        // Calculate proportional widths: STAGE (18%), TIME (12%), TEACHING (23%), LEARNING (23%), ASSESSMENT (24%)
+        const devColWidths = [
+            Math.floor(devTableWidth * 0.18), // STAGE
+            Math.floor(devTableWidth * 0.12), // TIME
+            Math.floor(devTableWidth * 0.23), // TEACHING ACTIVITIES
+            Math.floor(devTableWidth * 0.23), // LEARNING ACTIVITIES
+            devTableWidth - Math.floor(devTableWidth * 0.18) - Math.floor(devTableWidth * 0.12) - Math.floor(devTableWidth * 0.23) - Math.floor(devTableWidth * 0.23) // ASSESSMENT (remaining)
+        ];
         const devHeaders = ['STAGE', 'TIME', 'TEACHING ACTIVITIES', 'LEARNING ACTIVITIES', 'ASSESSMENT'];
         
         // Calculate header height
@@ -2372,9 +2430,7 @@ function generatePDFFromData(data) {
         
         yPos += 8;
         
-        // Generate filename
-        const dateObj = new Date(data.lesson_date);
-        const formattedDate = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        // Generate filename (reuse formattedDate from above)
         const subjectName = (data.subject || 'Lesson_Plan').replace(/[^A-Za-z0-9_\-]/g, '_');
         const filename = 'Lesson_Plan_' + subjectName + '_' + formattedDate.replace(/\//g, '-') + '.pdf';
         
@@ -2746,143 +2802,176 @@ function generateSingleLessonPlanPage(doc, data) {
     doc.text(schoolType, pageWidth / 2, yPos, { align: 'center' });
     yPos += 5;
     
-    // Subject and Class header
-    const subjectClassText = (data.subject || '') + ' CLASS ' + (data.class_name || '') + ' ' + data.year;
-    doc.setFontSize(12);
-    doc.text(subjectClassText, pageWidth / 2, yPos, { align: 'center' });
-    yPos += 8;
+    // Calculate table width first
+    const totalTableWidth = pageWidth - (margin * 2);
+    const cellHeight = 8;
     
-    // First table - Teacher's Name, Period, Time, Date
+    // First table - Restructured like the image
     doc.setFontSize(9);
     doc.setFont(undefined, 'normal');
     const table1Y = yPos;
-    doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.5);
+    // Set border color and width for all table borders
+    doc.setDrawColor(0, 0, 0); // Black borders
+    doc.setLineWidth(0.5); // Ensure borders are visible
     
-    const cellHeight = 8;
-    const totalTableWidth = pageWidth - (margin * 2);
-    
-    // Calculate period duration from time
-    let periodMinutes = 40; // Default
-    if (data.lesson_time_start && data.lesson_time_end) {
-        const startParts = data.lesson_time_start.split(':');
-        const endParts = data.lesson_time_end.split(':');
-        const startMinutes = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
-        const endMinutes = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
-        periodMinutes = endMinutes - startMinutes;
-        if (periodMinutes < 0) periodMinutes += 24 * 60; // Handle next day
-    }
-    const periodText = periodMinutes + ' Minutes';
-    
-    // Column widths for first row: TEACHER'S NAME, PERIOD, TIME, DATE
-    const col1Width = 40; // TEACHER'S NAME label
-    const col2Width = 45; // Teacher name value
-    const col3Width = 25; // PERIOD label
-    const col4Width = 30; // Period value
-    const col5Width = 20; // TIME label
-    const col6Width = 30; // Time value
-    const col7Width = 20; // DATE label
-    const col8Width = totalTableWidth - (col1Width + col2Width + col3Width + col4Width + col5Width + col6Width + col7Width); // Date value
+    // Column widths: Left column (TEACHER'S NAME, TIME, DATE) and Right column (NUMBER OF PUPILS)
+    const leftColWidth = Math.floor(totalTableWidth * 0.25); // 25% for labels
+    const rightColWidth = totalTableWidth - leftColWidth; // 75% for NUMBER OF PUPILS section
     
     let xPos = margin;
     yPos = table1Y;
     
-    // Row 1 - Teacher's Name, Period, Time, Date
-    doc.rect(xPos, yPos, col1Width, cellHeight);
-    doc.setFont(undefined, 'bold');
-    doc.setFontSize(8);
-    doc.text('TEACHER\'S NAME', xPos + 2, yPos + 5);
-    xPos += col1Width;
-    doc.rect(xPos, yPos, col2Width, cellHeight);
-    doc.setFont(undefined, 'normal');
-    doc.setFontSize(8);
-    const teacherNameLines = doc.splitTextToSize(data.teacher_name || '', col2Width - 4);
-    doc.text(teacherNameLines, xPos + 2, yPos + 5);
-    xPos += col2Width;
-    doc.rect(xPos, yPos, col3Width, cellHeight);
-    doc.setFont(undefined, 'bold');
-    doc.text('PERIOD', xPos + 2, yPos + 5);
-    xPos += col3Width;
-    doc.rect(xPos, yPos, col4Width, cellHeight);
-    doc.setFont(undefined, 'normal');
-    doc.text(periodText, xPos + 2, yPos + 5);
-    xPos += col4Width;
-    doc.rect(xPos, yPos, col5Width, cellHeight);
-    doc.setFont(undefined, 'bold');
-    doc.text('TIME', xPos + 2, yPos + 5);
-    xPos += col5Width;
-    doc.rect(xPos, yPos, col6Width, cellHeight);
-    doc.setFont(undefined, 'normal');
-    const timeText = doc.splitTextToSize(startTime + ' - ' + endTime, col6Width - 4);
-    doc.text(timeText, xPos + 2, yPos + 5);
-    xPos += col6Width;
-    doc.rect(xPos, yPos, col7Width, cellHeight);
-    doc.setFont(undefined, 'bold');
-    doc.text('DATE', xPos + 2, yPos + 5);
-    xPos += col7Width;
-    doc.rect(xPos, yPos, col8Width, cellHeight);
-    doc.setFont(undefined, 'normal');
-    doc.text(formattedDate, xPos + 2, yPos + 5);
-    yPos += cellHeight;
+    // Row 0: SUBJECT, CLASS, YEAR (inside table as first row)
+    const subjectText = 'SUBJECT: ' + (data.subject || '');
+    const classText = 'CLASS: ' + (data.class_name || '');
+    const yearText = 'YEAR: ' + (data.year || '');
     
-    // Row 2 - Number of Pupils table
+    // Calculate column widths for SUBJECT, CLASS, YEAR row
+    const subjectColWidth = Math.floor(totalTableWidth * 0.35);
+    const classColWidth = Math.floor(totalTableWidth * 0.30);
+    const yearColWidth = totalTableWidth - subjectColWidth - classColWidth;
+    
+    // Draw SUBJECT cell
+    doc.rect(xPos, yPos, subjectColWidth, cellHeight);
+    doc.setFont(undefined, 'bold');
+    doc.setFontSize(8);
+    const subjectLines = doc.splitTextToSize(subjectText, subjectColWidth - 4);
+    doc.text(subjectLines, xPos + 2, yPos + 5);
+    xPos += subjectColWidth;
+    
+    // Draw CLASS cell
+    doc.rect(xPos, yPos, classColWidth, cellHeight);
+    const classLines = doc.splitTextToSize(classText, classColWidth - 4);
+    doc.text(classLines, xPos + 2, yPos + 5);
+    xPos += classColWidth;
+    
+    // Draw YEAR cell (spans remaining width including NUMBER OF PUPILS area)
+    doc.rect(xPos, yPos, yearColWidth, cellHeight);
+    const yearLines = doc.splitTextToSize(yearText, yearColWidth - 4);
+    doc.text(yearLines, xPos + 2, yPos + 5);
+    
+    yPos += cellHeight;
     xPos = margin;
-    const pupilsLabelWidth = col1Width;
-    const pupilsTableWidth = totalTableWidth - pupilsLabelWidth;
-    const pupilsTableHeight = cellHeight * 2;
     
-    doc.rect(xPos, yPos, pupilsLabelWidth, pupilsTableHeight);
+    // Row 1: TEACHER'S NAME (left, vertical span) + NUMBER OF PUPILS section (right)
+    const teacherRowHeight = cellHeight * 3; // Spans 3 rows
+    
+    // Left: TEACHER'S NAME (vertical span)
+    doc.rect(xPos, yPos, leftColWidth, teacherRowHeight);
     doc.setFont(undefined, 'bold');
     doc.setFontSize(8);
-    const pupilsLabelLines = doc.splitTextToSize('NUMBER OF PUPILS', pupilsLabelWidth - 4);
-    doc.text(pupilsLabelLines, xPos + 2, yPos + 5);
-    xPos += pupilsLabelWidth;
+    const teacherLabelLines = doc.splitTextToSize('TEACHER\'S NAME', leftColWidth - 4);
+    doc.text(teacherLabelLines, xPos + 2, yPos + teacherRowHeight / 2, { align: 'left', baseline: 'middle' });
     
-    // Attendance nested table
-    doc.rect(xPos, yPos, pupilsTableWidth, pupilsTableHeight);
-    
-    // Attendance table header
-    doc.setFont(undefined, 'bold');
-    doc.setFontSize(8);
-    doc.text('NUMBER OF PUPILS', xPos + pupilsTableWidth / 2, yPos + 4, { align: 'center' });
-    yPos += cellHeight;
-    
-    // Attendance sub-headers
-    const attColWidth = pupilsTableWidth / 6;
+    // Right: NUMBER OF PUPILS section with proper borders
+    xPos += leftColWidth;
+    // Calculate attendance column width (used throughout the table)
+    const attColWidth = rightColWidth / 6;
     let attX = xPos;
-    doc.setFontSize(7);
-    doc.text('REGISTERED', attX + attColWidth * 1.5, yPos + 4, { align: 'center' });
-    doc.text('PRESENT', attX + attColWidth * 4.5, yPos + 4, { align: 'center' });
-    yPos += cellHeight;
+    let currentY = yPos;
     
-    // Attendance labels
-    attX = xPos;
-    doc.setFontSize(7);
-    doc.text('GIRLS', attX + attColWidth * 0.5, yPos + 4, { align: 'center' });
-    doc.text('BOYS', attX + attColWidth * 1.5, yPos + 4, { align: 'center' });
-    doc.text('TOTAL', attX + attColWidth * 2.5, yPos + 4, { align: 'center' });
-    doc.text('GIRLS', attX + attColWidth * 3.5, yPos + 4, { align: 'center' });
-    doc.text('BOYS', attX + attColWidth * 4.5, yPos + 4, { align: 'center' });
-    doc.text('TOTAL', attX + attColWidth * 5.5, yPos + 4, { align: 'center' });
-    yPos += cellHeight;
+    // Row 1: NUMBER OF PUPILS header (spans all 6 columns)
+    doc.rect(attX, currentY, rightColWidth, cellHeight);
+    doc.setFont(undefined, 'bold');
+    doc.setFontSize(8);
+    doc.text('NUMBER OF PUPILS', attX + rightColWidth / 2, currentY + 5, { align: 'center' });
+    currentY += cellHeight;
     
-    // Attendance values
+    // Row 2: REGISTERED and PRESENT sub-headers
+    // REGISTERED spans 3 columns
+    doc.rect(attX, currentY, attColWidth * 3, cellHeight);
+    doc.setFontSize(7);
+    doc.text('REGISTERED', attX + (attColWidth * 1.5), currentY + 4, { align: 'center' });
+    // PRESENT spans 3 columns
+    doc.rect(attX + (attColWidth * 3), currentY, attColWidth * 3, cellHeight);
+    doc.text('PRESENT', attX + (attColWidth * 4.5), currentY + 4, { align: 'center' });
+    currentY += cellHeight;
+    
+    // Row 3: GIRLS, BOYS, TOTAL labels (6 separate cells with borders)
+    for (let i = 0; i < 6; i++) {
+        doc.rect(attX + (attColWidth * i), currentY, attColWidth, cellHeight);
+    }
+    doc.setFontSize(7);
+    doc.text('GIRLS', attX + attColWidth * 0.5, currentY + 4, { align: 'center' });
+    doc.text('BOYS', attX + attColWidth * 1.5, currentY + 4, { align: 'center' });
+    doc.text('TOTAL', attX + attColWidth * 2.5, currentY + 4, { align: 'center' });
+    doc.text('GIRLS', attX + attColWidth * 3.5, currentY + 4, { align: 'center' });
+    doc.text('BOYS', attX + attColWidth * 4.5, currentY + 4, { align: 'center' });
+    doc.text('TOTAL', attX + attColWidth * 5.5, currentY + 4, { align: 'center' });
+    currentY += cellHeight;
+    
+    // Row 4: Attendance values (6 separate cells with borders)
+    for (let i = 0; i < 6; i++) {
+        doc.rect(attX + (attColWidth * i), currentY, attColWidth, cellHeight);
+    }
     doc.setFont(undefined, 'normal');
     doc.setFontSize(8);
-    doc.text((data.registered_girls || 0).toString(), attX + attColWidth * 0.5, yPos + 4, { align: 'center' });
-    doc.text((data.registered_boys || 0).toString(), attX + attColWidth * 1.5, yPos + 4, { align: 'center' });
-    doc.text((data.registered_total || 0).toString(), attX + attColWidth * 2.5, yPos + 4, { align: 'center' });
-    doc.text((data.present_girls || 0).toString(), attX + attColWidth * 3.5, yPos + 4, { align: 'center' });
-    doc.text((data.present_boys || 0).toString(), attX + attColWidth * 4.5, yPos + 4, { align: 'center' });
-    doc.text((data.present_total || 0).toString(), attX + attColWidth * 5.5, yPos + 4, { align: 'center' });
+    doc.text((data.registered_girls || 0).toString(), attX + attColWidth * 0.5, currentY + 4, { align: 'center' });
+    doc.text((data.registered_boys || 0).toString(), attX + attColWidth * 1.5, currentY + 4, { align: 'center' });
+    doc.text((data.registered_total || 0).toString(), attX + attColWidth * 2.5, currentY + 4, { align: 'center' });
+    doc.text((data.present_girls || 0).toString(), attX + attColWidth * 3.5, currentY + 4, { align: 'center' });
+    doc.text((data.present_boys || 0).toString(), attX + attColWidth * 4.5, currentY + 4, { align: 'center' });
+    doc.text((data.present_total || 0).toString(), attX + attColWidth * 5.5, currentY + 4, { align: 'center' });
     
-    yPos = table1Y + cellHeight + pupilsTableHeight + 5;
+    // Row 2: TIME (left) + value in first cell only, then attendance cells
+    yPos = table1Y + cellHeight + teacherRowHeight;
+    xPos = margin;
+    // Left: TIME label with border
+    doc.rect(xPos, yPos, leftColWidth, cellHeight);
+    doc.setFont(undefined, 'bold');
+    doc.setFontSize(8);
+    doc.text('TIME', xPos + 2, yPos + 5);
+    
+        // Right side - TIME value in first cell only, then empty cells for attendance
+        xPos += leftColWidth;
+        // Reuse attColWidth from above (already calculated in NUMBER OF PUPILS section at line 2074)
+        
+        // First cell: TIME value
+        doc.rect(xPos, yPos, attColWidth, cellHeight);
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(7); // Smaller font to prevent overlap
+    const timeText = doc.splitTextToSize(startTime + ' - ' + endTime, attColWidth - 4);
+    doc.text(timeText, xPos + 2, yPos + 5);
+    xPos += attColWidth;
+    
+    // Remaining 5 cells: Empty (for attendance columns)
+    for (let i = 0; i < 5; i++) {
+        doc.rect(xPos + (attColWidth * i), yPos, attColWidth, cellHeight);
+    }
+    
+    // Row 3: DATE (left) + value in first cell only, then empty cells
+    yPos += cellHeight;
+    xPos = margin;
+    // Left: DATE label with border
+    doc.rect(xPos, yPos, leftColWidth, cellHeight);
+    doc.setFont(undefined, 'bold');
+    doc.setFontSize(8);
+    doc.text('DATE', xPos + 2, yPos + 5);
+    
+    // Right side - DATE value in first cell only, then empty cells
+    xPos += leftColWidth;
+    
+    // First cell: DATE value
+    doc.rect(xPos, yPos, attColWidth, cellHeight);
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(8);
+    doc.text(formattedDate, xPos + 2, yPos + 5);
+    xPos += attColWidth;
+    
+    // Remaining 5 cells: Empty
+    for (let i = 0; i < 5; i++) {
+        doc.rect(xPos + (attColWidth * i), yPos, attColWidth, cellHeight);
+    }
+    
+    yPos += cellHeight + 5;
     
     checkNewPage(30);
     
-    // Competence and Activities table
+    // Competence and Activities table - Full width with balanced columns
     const compTableWidth = pageWidth - (margin * 2);
-    const labelColWidth = 55;
+    // Label column should be 25-30% of total width (narrower for labels)
+    const labelColWidth = Math.floor(compTableWidth * 0.28);
+    // Value column takes remaining 72% (wider for content)
     const valueColWidth = compTableWidth - labelColWidth;
     
     const competenceFields = [
@@ -2933,9 +3022,16 @@ function generateSingleLessonPlanPage(doc, data) {
     doc.text('LESSON DEVELOPMENT', margin, yPos);
     yPos += 8;
     
-    // Lesson Development table
+    // Lesson Development table - Full width with balanced columns
     const devTableWidth = pageWidth - (margin * 2);
-    const devColWidths = [35, 22, 38, 38, 37];
+    // Calculate proportional widths: STAGE (18%), TIME (12%), TEACHING (23%), LEARNING (23%), ASSESSMENT (24%)
+    const devColWidths = [
+        Math.floor(devTableWidth * 0.18), // STAGE
+        Math.floor(devTableWidth * 0.12), // TIME
+        Math.floor(devTableWidth * 0.23), // TEACHING ACTIVITIES
+        Math.floor(devTableWidth * 0.23), // LEARNING ACTIVITIES
+        devTableWidth - Math.floor(devTableWidth * 0.18) - Math.floor(devTableWidth * 0.12) - Math.floor(devTableWidth * 0.23) - Math.floor(devTableWidth * 0.23) // ASSESSMENT (remaining)
+    ];
     const devHeaders = ['STAGE', 'TIME', 'TEACHING ACTIVITIES', 'LEARNING ACTIVITIES', 'ASSESSMENT'];
     
     doc.setFont(undefined, 'bold');

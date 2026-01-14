@@ -73,6 +73,7 @@ Route::get('admin/lesson-plans', [AdminController::class, 'adminLessonPlans'])->
 Route::get('admin/lesson-plans/get', [AdminController::class, 'getLessonPlansForAdmin'])->name('admin.get_lesson_plans');
 Route::get('admin/lesson-plan/get', [AdminController::class, 'getLessonPlanForAdmin'])->name('admin.get_lesson_plan');
 Route::post('admin/lesson-plan/sign', [AdminController::class, 'signLessonPlan'])->name('admin.sign_lesson_plan');
+Route::post('admin/lesson-plan/remove-signature', [AdminController::class, 'removeLessonPlanSignature'])->name('admin.remove_lesson_plan_signature');
 Route::get('task-management', [AdminController::class, 'taskManagement'])->name('taskManagement');
 Route::get('admin/get-teacher-tasks', [AdminController::class, 'getTeacherTasks'])->name('admin.get_teacher_tasks');
 Route::post('approve-task/{taskID}', [AdminController::class, 'approveTask'])->name('approve_task');

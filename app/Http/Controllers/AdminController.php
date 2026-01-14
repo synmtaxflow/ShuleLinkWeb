@@ -852,4 +852,44 @@ class AdminController extends Controller
             return response()->json(['success' => false, 'error' => $e->getMessage()]);
         }
     }
+
+    /**
+     * Remove supervisor signature from lesson plan
+     */
+    public function removeLessonPlanSignature(Request $request)
+    {
+        try {
+            $schoolID = Session::get('schoolID');
+            $lessonPlanID = $request->input('lesson_planID');
+
+            if (!$schoolID) {
+                return response()->json(['success' => false, 'error' => 'Session expired']);
+            }
+
+            $lessonPlan = LessonPlan::where('lesson_planID', $lessonPlanID)
+                ->where('schoolID', $schoolID)
+                ->where('sent_to_admin', true)
+                ->first();
+
+            if (!$lessonPlan) {
+                return response()->json(['success' => false, 'error' => 'Lesson plan not found']);
+            }
+
+            if (!$lessonPlan->supervisor_signature) {
+                return response()->json(['success' => false, 'error' => 'No signature found to remove']);
+            }
+
+            $lessonPlan->update([
+                'supervisor_signature' => null
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Signature removed successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error removing lesson plan signature: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
 }

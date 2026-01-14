@@ -38,6 +38,8 @@ use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Hash;
+use App\Models\User;
 // PhpSpreadsheet will be used with fully qualified names if available
 
 class TeachersController extends Controller
@@ -792,6 +794,1317 @@ class TeachersController extends Controller
         $teacherNotifications = $notifications;
         
         return view('Teacher.dashboard', compact('rejectionNotifications', 'pendingApprovals', 'specialRoleApprovals', 'waitingApprovals', 'approvalChainExams', 'superviseExamCount', 'hasAssignedClass', 'dashboardStats', 'notifications', 'graphData', 'teacherNotifications', 'managementPermissions'));
+    }
+
+    /**
+     * Get teacher dashboard data for API (Flutter app)
+     */
+    public function getTeacherDashboardAPI(Request $request)
+    {
+        try {
+            $teacherID = Session::get('teacherID');
+            $schoolID = Session::get('schoolID');
+
+            if (!$teacherID || !$schoolID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Please login first.'
+                ], 401);
+            }
+
+            // Get dashboard statistics
+            $dashboardStats = [];
+            $definition = DB::table('session_timetable_definitions')
+                ->where('schoolID', $schoolID)
+                ->first();
+            
+            // Count subjects teaching
+            $subjectsCount = ClassSubject::where('teacherID', $teacherID)
+                ->where('status', 'Active')
+                ->whereHas('subject', function($query) {
+                    $query->where('status', 'Active');
+                })
+                ->distinct('subjectID')
+                ->count('subjectID');
+            
+            // Count classes teaching
+            $classesCount = ClassSubject::where('teacherID', $teacherID)
+                ->where('status', 'Active')
+                ->distinct('subclassID')
+                ->count('subclassID');
+            
+            // Count sessions per week
+            $sessionsPerWeek = 0;
+            if ($definition) {
+                $sessionsPerWeek = ClassSessionTimetable::where('teacherID', $teacherID)
+                    ->where('definitionID', $definition->definitionID)
+                    ->count();
+            }
+            
+            // Get teaching subjects list
+            $teachingSubjects = ClassSubject::where('teacherID', $teacherID)
+                ->where('status', 'Active')
+                ->with(['subject' => function($query) {
+                    $query->where('status', 'Active');
+                }])
+                ->get()
+                ->pluck('subject.subject_name')
+                ->filter()
+                ->unique()
+                ->values()
+                ->toArray();
+            
+            // Get notifications
+            $notifications = collect();
+            
+            // Get pending approvals
+            $pendingApprovals = DB::table('exam_approvals')
+                ->where('teacherID', $teacherID)
+                ->where('status', 'pending')
+                ->count();
+            
+            // Get supervise exam count
+            $superviseExamCount = DB::table('exam_hall_supervisors')
+                ->join('examinations', 'exam_hall_supervisors.examID', '=', 'examinations.examID')
+                ->where('exam_hall_supervisors.teacherID', $teacherID)
+                ->where('examinations.end_date', '>=', now()->toDateString())
+                ->where('examinations.approval_status', 'Approved')
+                ->distinct('examinations.examID')
+                ->count('examinations.examID');
+            
+            // Get lesson plans count
+            $currentYear = Carbon::now()->year;
+            $lessonPlansCount = LessonPlan::where('teacherID', $teacherID)
+                ->whereYear('lesson_date', $currentYear)
+                ->count();
+            
+            $lessonPlansSentCount = LessonPlan::where('teacherID', $teacherID)
+                ->where('sent_to_admin', true)
+                ->whereYear('lesson_date', $currentYear)
+                ->count();
+            
+            $dashboardStats = [
+                'subjects_count' => $subjectsCount,
+                'classes_count' => $classesCount,
+                'sessions_per_week' => $sessionsPerWeek,
+                'teaching_subjects' => $teachingSubjects,
+                'pending_approvals_count' => $pendingApprovals,
+                'supervise_exams_count' => $superviseExamCount,
+                'lesson_plans_count' => $lessonPlansCount,
+                'lesson_plans_sent_count' => $lessonPlansSentCount,
+            ];
+            
+            // Get menu items
+            $menuItems = $this->getTeacherMenuItems($teacherID);
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'dashboard_stats' => $dashboardStats,
+                    'notifications' => $notifications->take(10)->values()->toArray(),
+                    'menu_items' => $menuItems,
+                ],
+                'message' => 'Dashboard data retrieved successfully'
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error getting teacher dashboard API: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve dashboard data',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get teacher menu items for API
+     */
+    private function getTeacherMenuItems($teacherID)
+    {
+        $menuItems = [
+            [
+                'id' => 'dashboard',
+                'name' => 'Dashboard',
+                'icon' => 'fa-building',
+                'route' => 'teachersDashboard',
+                'type' => 'main'
+            ],
+            [
+                'id' => 'my_sessions',
+                'name' => 'My Sessions',
+                'icon' => 'fa-clock-o',
+                'route' => 'teacher.mySessions',
+                'type' => 'main'
+            ],
+            [
+                'id' => 'my_tasks',
+                'name' => 'My Tasks',
+                'icon' => 'fa-tasks',
+                'route' => 'teacher.myTasks',
+                'type' => 'main'
+            ],
+            [
+                'id' => 'my_subjects',
+                'name' => 'My Subjects',
+                'icon' => 'fa-book',
+                'route' => 'teacherSubjects',
+                'type' => 'main'
+            ],
+            [
+                'id' => 'scheme_of_work',
+                'name' => 'Scheme of Work',
+                'icon' => 'fa-file-text-o',
+                'route' => 'teacher.schemeOfWork',
+                'type' => 'main'
+            ],
+            [
+                'id' => 'lesson_plans',
+                'name' => 'Lesson Plans',
+                'icon' => 'fa-book',
+                'route' => 'teacher.lessonPlans',
+                'type' => 'main'
+            ],
+            [
+                'id' => 'calendar',
+                'name' => 'Calendar',
+                'icon' => 'fa-calendar',
+                'route' => 'teacher.calendar',
+                'type' => 'main'
+            ],
+            [
+                'id' => 'supervise_exams',
+                'name' => 'My Supervise Exams',
+                'icon' => 'fa-graduation-cap',
+                'route' => 'supervise_exams',
+                'type' => 'main'
+            ],
+            [
+                'id' => 'exam_papers',
+                'name' => 'My Exam Papers',
+                'icon' => 'fa-file-text',
+                'route' => 'exam_paper',
+                'type' => 'main'
+            ],
+        ];
+        
+        // Check if teacher has assigned class
+        $hasAssignedClass = DB::table('class_teachers')
+            ->where('teacherID', $teacherID)
+            ->exists();
+        
+        if ($hasAssignedClass) {
+            $menuItems[] = [
+                'id' => 'my_class',
+                'name' => 'My Class',
+                'icon' => 'fa-users',
+                'route' => 'AdmitedClasses',
+                'type' => 'main'
+            ];
+        }
+        
+        // Get management permissions
+        $teacherRoles = DB::table('role_user')
+            ->where('teacher_id', $teacherID)
+            ->pluck('role_id')
+            ->toArray();
+        
+        $managementMenuItems = [];
+        if (!empty($teacherRoles)) {
+            $permissionsData = DB::table('permissions')
+                ->whereIn('role_id', $teacherRoles)
+                ->select('name', 'permission_category')
+                ->get();
+            
+            $teacherPermissionsByCategory = $permissionsData->groupBy('permission_category')
+                ->map(function($perms) {
+                    return $perms->pluck('name')->unique()->values();
+                });
+            
+            $categoryRoutes = [
+                'examination' => ['id' => 'examination_management', 'name' => 'Examination Management', 'icon' => 'fa-pencil-square-o', 'route' => 'manageExamination'],
+                'classes' => ['id' => 'classes_management', 'name' => 'Classes Management', 'icon' => 'fa-users', 'route' => 'manageClasses'],
+                'subject' => ['id' => 'subject_management', 'name' => 'Subject Management', 'icon' => 'fa-bookmark', 'route' => 'manageSubjects'],
+                'result' => ['id' => 'result_management', 'name' => 'Result Management', 'icon' => 'fa-trophy', 'route' => 'manageResults'],
+                'attendance' => ['id' => 'attendance_management', 'name' => 'Attendance Management', 'icon' => 'fa-check-square-o', 'route' => 'manageAttendance'],
+                'student' => ['id' => 'student_management', 'name' => 'Student Management', 'icon' => 'fa-user', 'route' => 'manage_student'],
+                'parent' => ['id' => 'parent_management', 'name' => 'Parent Management', 'icon' => 'fa-user-plus', 'route' => 'manage_parents'],
+                'timetable' => ['id' => 'timetable_management', 'name' => 'Timetable Management', 'icon' => 'fa-clock-o', 'route' => 'timeTable'],
+                'fees' => ['id' => 'fees_management', 'name' => 'Fees Management', 'icon' => 'fa-money', 'route' => 'manage_fees'],
+                'accommodation' => ['id' => 'accommodation_management', 'name' => 'Accommodation Management', 'icon' => 'fa-bed', 'route' => 'manage_accomodation'],
+                'library' => ['id' => 'library_management', 'name' => 'Library Management', 'icon' => 'fa-book', 'route' => 'manage_library'],
+                'calendar' => ['id' => 'calendar_management', 'name' => 'Calendar Management', 'icon' => 'fa-calendar', 'route' => 'admin.calendar'],
+                'fingerprint' => ['id' => 'fingerprint_settings', 'name' => 'Fingerprint Settings', 'icon' => 'fa-fingerprint', 'route' => 'fingerprint_device_settings'],
+                'task' => ['id' => 'task_management', 'name' => 'Task Management', 'icon' => 'fa-tasks', 'route' => 'taskManagement'],
+                'sms' => ['id' => 'sms_notification', 'name' => 'SMS Information', 'icon' => 'fa-envelope', 'route' => 'sms_notification'],
+            ];
+            
+            foreach ($categoryRoutes as $category => $config) {
+                if ($teacherPermissionsByCategory->has($category) && $teacherPermissionsByCategory->get($category)->count() > 0) {
+                    $managementMenuItems[] = array_merge($config, ['type' => 'management']);
+                }
+            }
+        }
+        
+        return [
+            'main_menu' => $menuItems,
+            'management_menu' => $managementMenuItems
+        ];
+    }
+
+    /**
+     * Get teacher profile for API
+     */
+    public function getTeacherProfileAPI(Request $request)
+    {
+        try {
+            $teacherID = Session::get('teacherID');
+            $schoolID = Session::get('schoolID');
+
+            if (!$teacherID || !$schoolID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Please login first.'
+                ], 401);
+            }
+
+            $teacher = Teacher::where('id', $teacherID)
+                ->where('schoolID', $schoolID)
+                ->first();
+
+            if (!$teacher) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Teacher not found'
+                ], 404);
+            }
+
+            // Get user account info
+            $user = User::where('name', $teacher->employee_number)->first();
+
+            $profileData = [
+                'id' => $teacher->id,
+                'school_id' => $teacher->schoolID,
+                'first_name' => $teacher->first_name,
+                'middle_name' => $teacher->middle_name,
+                'last_name' => $teacher->last_name,
+                'full_name' => trim(($teacher->first_name ?? '') . ' ' . ($teacher->middle_name ?? '') . ' ' . ($teacher->last_name ?? '')),
+                'gender' => $teacher->gender,
+                'national_id' => $teacher->national_id,
+                'employee_number' => $teacher->employee_number,
+                'email' => $teacher->email,
+                'phone_number' => $teacher->phone_number,
+                'qualification' => $teacher->qualification,
+                'specialization' => $teacher->specialization,
+                'experience' => $teacher->experience,
+                'date_of_birth' => $teacher->date_of_birth ? $teacher->date_of_birth->format('Y-m-d') : null,
+                'date_hired' => $teacher->date_hired ? $teacher->date_hired->format('Y-m-d') : null,
+                'address' => $teacher->address,
+                'position' => $teacher->position,
+                'status' => $teacher->status,
+                'image' => $teacher->image ? asset('userImages/' . $teacher->image) : ($teacher->gender == 'Female' ? asset('images/female.png') : asset('images/male.png')),
+                'username' => $user ? $user->name : $teacher->employee_number,
+                'has_password' => $user ? true : false,
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $profileData,
+                'message' => 'Profile retrieved successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error getting teacher profile API: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve profile',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update teacher profile for API
+     */
+    public function updateTeacherProfileAPI(Request $request)
+    {
+        try {
+            $teacherID = Session::get('teacherID');
+            $schoolID = Session::get('schoolID');
+
+            if (!$teacherID || !$schoolID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Please login first.'
+                ], 401);
+            }
+
+            $teacher = Teacher::where('id', $teacherID)
+                ->where('schoolID', $schoolID)
+                ->first();
+
+            if (!$teacher) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Teacher not found'
+                ], 404);
+            }
+
+            // Validation rules
+            $validator = Validator::make($request->all(), [
+                'first_name' => 'sometimes|required|string|max:255',
+                'last_name' => 'sometimes|required|string|max:255',
+                'middle_name' => 'nullable|string|max:255',
+                'gender' => 'sometimes|required|in:Male,Female',
+                'email' => 'sometimes|required|email|unique:teachers,email,' . $teacherID,
+                'phone_number' => [
+                    'sometimes',
+                    'required',
+                    'unique:teachers,phone_number,' . $teacherID,
+                    'regex:/^255\d{9}$/'
+                ],
+                'qualification' => 'nullable|string|max:255',
+                'specialization' => 'nullable|string|max:255',
+                'experience' => 'nullable|string|max:255',
+                'date_of_birth' => 'nullable|date',
+                'address' => 'nullable|string|max:500',
+                'position' => 'nullable|string|max:255',
+                'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            ], [
+                'phone_number.regex' => 'Phone number must have 12 digits: start with 255 followed by 9 digits (e.g., 255614863345)',
+                'email.unique' => 'This email is already taken by another teacher.',
+                'phone_number.unique' => 'This phone number is already taken by another teacher.',
+                'image.max' => 'Image must not exceed 2MB.',
+                'image.mimes' => 'Only JPG and PNG formats are allowed.',
+            ]);
+
+            if ($validator->fails()) {
+                $errors = [];
+                foreach ($validator->errors()->toArray() as $field => $messages) {
+                    $errors[$field] = $messages[0];
+                }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $errors
+                ], 422);
+            }
+
+            // Store original email before update
+            $oldEmail = $teacher->email;
+
+            // Handle Image Upload - only if new image is provided
+            $imageName = $teacher->image; // Keep existing image by default
+            if ($request->hasFile('image')) {
+                $uploadPath = public_path('userImages');
+                if (!file_exists($uploadPath)) {
+                    mkdir($uploadPath, 0755, true);
+                }
+
+                // Delete old image if exists
+                if ($teacher->image && file_exists($uploadPath . '/' . $teacher->image)) {
+                    unlink($uploadPath . '/' . $teacher->image);
+                }
+
+                $imageName = time() . '_' . $request->file('image')->getClientOriginalName();
+                $request->file('image')->move($uploadPath, $imageName);
+            }
+
+            // Update teacher with only provided fields
+            $updateData = [];
+            $allowedFields = [
+                'first_name', 'middle_name', 'last_name', 'gender', 'email',
+                'phone_number', 'qualification', 'specialization', 'experience',
+                'date_of_birth', 'address', 'position'
+            ];
+
+            foreach ($allowedFields as $field) {
+                if ($request->has($field)) {
+                    $updateData[$field] = $request->input($field);
+                }
+            }
+
+            if ($request->hasFile('image')) {
+                $updateData['image'] = $imageName;
+            }
+
+            $teacher->update($updateData);
+
+            // Update user account if email changed
+            if ($request->has('email') && $oldEmail != $request->email) {
+                $user = User::where('email', $oldEmail)->first();
+                if ($user) {
+                    $user->update([
+                        'email' => $request->email,
+                    ]);
+                }
+            }
+
+            // Reload teacher to get updated data
+            $teacher->refresh();
+
+            $profileData = [
+                'id' => $teacher->id,
+                'first_name' => $teacher->first_name,
+                'middle_name' => $teacher->middle_name,
+                'last_name' => $teacher->last_name,
+                'full_name' => trim(($teacher->first_name ?? '') . ' ' . ($teacher->middle_name ?? '') . ' ' . ($teacher->last_name ?? '')),
+                'gender' => $teacher->gender,
+                'email' => $teacher->email,
+                'phone_number' => $teacher->phone_number,
+                'qualification' => $teacher->qualification,
+                'specialization' => $teacher->specialization,
+                'experience' => $teacher->experience,
+                'date_of_birth' => $teacher->date_of_birth ? $teacher->date_of_birth->format('Y-m-d') : null,
+                'address' => $teacher->address,
+                'position' => $teacher->position,
+                'image' => $teacher->image ? asset('userImages/' . $teacher->image) : ($teacher->gender == 'Female' ? asset('images/female.png') : asset('images/male.png')),
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $profileData,
+                'message' => 'Profile updated successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error updating teacher profile API: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update profile',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Change teacher password for API
+     */
+    public function changeTeacherPasswordAPI(Request $request)
+    {
+        try {
+            $teacherID = Session::get('teacherID');
+            $schoolID = Session::get('schoolID');
+
+            if (!$teacherID || !$schoolID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Please login first.'
+                ], 401);
+            }
+
+            $teacher = Teacher::where('id', $teacherID)
+                ->where('schoolID', $schoolID)
+                ->first();
+
+            if (!$teacher) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Teacher not found'
+                ], 404);
+            }
+
+            // Validation rules
+            $validator = Validator::make($request->all(), [
+                'current_password' => 'required|string',
+                'new_password' => 'required|string|min:6',
+                'confirm_password' => 'required|string|same:new_password',
+            ], [
+                'current_password.required' => 'Current password is required',
+                'new_password.required' => 'New password is required',
+                'new_password.min' => 'New password must be at least 6 characters',
+                'confirm_password.required' => 'Password confirmation is required',
+                'confirm_password.same' => 'Password confirmation does not match new password',
+            ]);
+
+            if ($validator->fails()) {
+                $errors = [];
+                foreach ($validator->errors()->toArray() as $field => $messages) {
+                    $errors[$field] = $messages[0];
+                }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $errors
+                ], 422);
+            }
+
+            // Get user account
+            $user = User::where('name', $teacher->employee_number)->first();
+
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User account not found'
+                ], 404);
+            }
+
+            // Verify current password
+            if (!Hash::check($request->current_password, $user->password)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Current password is incorrect',
+                    'errors' => ['current_password' => 'Current password is incorrect']
+                ], 422);
+            }
+
+            // Check if new password is same as current
+            if (Hash::check($request->new_password, $user->password)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'New password must be different from current password',
+                    'errors' => ['new_password' => 'New password must be different from current password']
+                ], 422);
+            }
+
+            // Update password
+            $user->update([
+                'password' => Hash::make($request->new_password)
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Password changed successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error changing teacher password API: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to change password',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get teacher subjects for API (Flutter app)
+     */
+    public function getTeacherSubjectsAPI(Request $request)
+    {
+        try {
+            $teacherID = Session::get('teacherID');
+            $schoolID = Session::get('schoolID');
+
+            if (!$teacherID || !$schoolID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Please login first.'
+                ], 401);
+            }
+
+            // Get all class subjects assigned to this teacher with statistics
+            $classSubjects = ClassSubject::with(['subject' => function($query) {
+                    $query->where('status', 'Active');
+                }, 'class', 'subclass.class'])
+                ->where('teacherID', $teacherID)
+                ->where('status', 'Active')
+                ->whereHas('subject', function($query) {
+                    $query->where('status', 'Active');
+                })
+                ->get()
+                ->filter(function($classSubject) {
+                    return $classSubject->subject && $classSubject->subject->status === 'Active';
+                })
+                ->map(function($classSubject) {
+                    // Get total students for this class subject
+                    $subclassID = $classSubject->subclassID;
+                    $classID = $classSubject->classID;
+
+                    $studentCount = 0;
+                    if ($subclassID) {
+                        $studentCount = Student::where('subclassID', $subclassID)
+                            ->where('status', 'Active')
+                            ->count();
+                    } else {
+                        $subclassIds = DB::table('subclasses')
+                            ->where('classID', $classID)
+                            ->pluck('subclassID')
+                            ->toArray();
+                        
+                        if (!empty($subclassIds)) {
+                            $studentCount = Student::whereIn('subclassID', $subclassIds)
+                                ->where('status', 'Active')
+                                ->count();
+                        }
+                    }
+
+                    $className = 'N/A';
+                    if ($classSubject->subclass) {
+                        $className = ($classSubject->subclass->class->class_name ?? '') . ' - ' . ($classSubject->subclass->subclass_name ?? '');
+                    } elseif ($classSubject->class) {
+                        $className = ($classSubject->class->class_name ?? '') . ' - All Subclasses';
+                    }
+
+                    return [
+                        'class_subject_id' => $classSubject->class_subjectID,
+                        'subject_id' => $classSubject->subjectID,
+                        'subject_name' => $classSubject->subject->subject_name ?? 'N/A',
+                        'subject_code' => $classSubject->subject->subject_code ?? '',
+                        'class_id' => $classID,
+                        'subclass_id' => $subclassID,
+                        'class_name' => $className,
+                        'total_students' => $studentCount,
+                    ];
+                })
+                ->values();
+
+            return response()->json([
+                'success' => true,
+                'data' => $classSubjects,
+                'message' => 'Subjects retrieved successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error getting teacher subjects API: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve subjects',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get subject students for API
+     */
+    public function getSubjectStudentsAPI($classSubjectID)
+    {
+        try {
+            $teacherID = Session::get('teacherID');
+            $schoolID = Session::get('schoolID');
+
+            if (!$teacherID || !$schoolID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Please login first.'
+                ], 401);
+            }
+
+            // Verify teacher owns this class subject
+            $classSubject = ClassSubject::where('class_subjectID', $classSubjectID)
+                ->where('teacherID', $teacherID)
+                ->where('status', 'Active')
+                ->whereHas('subject', function($query) {
+                    $query->where('status', 'Active');
+                })
+                ->first();
+
+            if (!$classSubject) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Class subject not found or unauthorized access.'
+                ], 404);
+            }
+
+            // Get students based on subclass or class
+            $subclassID = $classSubject->subclassID;
+            $classID = $classSubject->classID;
+
+            if ($subclassID) {
+                $students = Student::with(['subclass.class', 'parent'])
+                    ->where('subclassID', $subclassID)
+                    ->where('status', 'Active')
+                    ->get();
+            } else {
+                $subclassIds = DB::table('subclasses')
+                    ->where('classID', $classID)
+                    ->pluck('subclassID')
+                    ->toArray();
+                
+                $students = Student::with(['subclass.class', 'parent'])
+                    ->whereIn('subclassID', $subclassIds)
+                    ->where('status', 'Active')
+                    ->get();
+            }
+
+            $formattedStudents = $students->map(function($student) {
+                $baseUrl = asset('');
+                $photoUrl = $student->photo 
+                    ? $baseUrl . 'userImages/' . $student->photo
+                    : ($student->gender === 'Female' 
+                        ? $baseUrl . 'images/female.png' 
+                        : $baseUrl . 'images/male.png');
+
+                return [
+                    'student_id' => $student->studentID,
+                    'admission_number' => $student->admission_number,
+                    'first_name' => $student->first_name,
+                    'middle_name' => $student->middle_name,
+                    'last_name' => $student->last_name,
+                    'full_name' => trim(($student->first_name ?? '') . ' ' . ($student->middle_name ?? '') . ' ' . ($student->last_name ?? '')),
+                    'gender' => $student->gender,
+                    'date_of_birth' => $student->date_of_birth ? $student->date_of_birth->format('Y-m-d') : null,
+                    'photo' => $photoUrl,
+                    'subclass_id' => $student->subclassID,
+                    'subclass_name' => $student->subclass ? $student->subclass->subclass_name : null,
+                    'class_name' => $student->subclass && $student->subclass->class ? $student->subclass->class->class_name : null,
+                    'has_health_condition' => ($student->is_disabled == 1) || ($student->has_epilepsy == 1) || ($student->has_allergies == 1),
+                    'is_disabled' => $student->is_disabled == 1,
+                    'has_epilepsy' => $student->has_epilepsy == 1,
+                    'has_allergies' => $student->has_allergies == 1,
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'class_subject' => [
+                        'class_subject_id' => $classSubject->class_subjectID,
+                        'subject_id' => $classSubject->subjectID,
+                        'subject_name' => $classSubject->subject->subject_name ?? 'N/A',
+                        'subject_code' => $classSubject->subject->subject_code ?? '',
+                    ],
+                    'students' => $formattedStudents,
+                    'total_students' => $formattedStudents->count()
+                ],
+                'message' => 'Students retrieved successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error getting subject students API: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve students',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get examinations for subject for API
+     */
+    public function getExaminationsForSubjectAPI($classSubjectID)
+    {
+        try {
+            $teacherID = Session::get('teacherID');
+            $schoolID = Session::get('schoolID');
+
+            if (!$teacherID || !$schoolID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Please login first.'
+                ], 401);
+            }
+
+            // Verify teacher owns this class subject
+            $classSubject = ClassSubject::where('class_subjectID', $classSubjectID)
+                ->where('teacherID', $teacherID)
+                ->where('status', 'Active')
+                ->whereHas('subject', function($query) {
+                    $query->where('status', 'Active');
+                })
+                ->first();
+
+            if (!$classSubject) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Class subject not found or unauthorized access.'
+                ], 404);
+            }
+
+            // Get examinations where enter_result = true only
+            $examinations = Examination::where('schoolID', $schoolID)
+                ->where('enter_result', true)
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function($exam) use ($schoolID) {
+                    // Check if term is closed
+                    $isTermClosed = false;
+                    if ($exam->term && $exam->year) {
+                        $termNumber = null;
+                        if ($exam->term === 'first_term' || $exam->term === '1') {
+                            $termNumber = 1;
+                        } elseif ($exam->term === 'second_term' || $exam->term === '2') {
+                            $termNumber = 2;
+                        }
+                        
+                        if ($termNumber) {
+                            $term = DB::table('terms')
+                                ->where('schoolID', $schoolID)
+                                ->where('year', $exam->year)
+                                ->where('term_number', $termNumber)
+                                ->where('status', 'Closed')
+                                ->first();
+                            $isTermClosed = $term ? true : false;
+                        }
+                    }
+
+                    return [
+                        'exam_id' => $exam->examID,
+                        'exam_name' => $exam->exam_name,
+                        'year' => $exam->year,
+                        'status' => $exam->status,
+                        'start_date' => $exam->start_date ? $exam->start_date->format('Y-m-d') : null,
+                        'end_date' => $exam->end_date ? $exam->end_date->format('Y-m-d') : null,
+                        'enter_result' => $exam->enter_result,
+                        'exam_category' => $exam->exam_category,
+                        'term' => $exam->term,
+                        'is_term_closed' => $isTermClosed,
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'class_subject' => [
+                        'class_subject_id' => $classSubject->class_subjectID,
+                        'subject_id' => $classSubject->subjectID,
+                        'subject_name' => $classSubject->subject->subject_name ?? 'N/A',
+                    ],
+                    'examinations' => $examinations
+                ],
+                'message' => 'Examinations retrieved successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error getting examinations for subject API: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve examinations',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get subject results for API
+     */
+    public function getSubjectResultsAPI($classSubjectID, $examID = null)
+    {
+        try {
+            $teacherID = Session::get('teacherID');
+            $schoolID = Session::get('schoolID');
+
+            if (!$teacherID || !$schoolID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Please login first.'
+                ], 401);
+            }
+
+            // Verify teacher owns this class subject
+            $classSubject = ClassSubject::with(['subject' => function($query) {
+                    $query->where('status', 'Active');
+                }, 'class', 'subclass'])
+                ->where('class_subjectID', $classSubjectID)
+                ->where('teacherID', $teacherID)
+                ->where('status', 'Active')
+                ->whereHas('subject', function($query) {
+                    $query->where('status', 'Active');
+                })
+                ->first();
+
+            if (!$classSubject) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Class subject not found or unauthorized access.'
+                ], 404);
+            }
+
+            $query = Result::with(['student', 'examination'])
+                ->where('class_subjectID', $classSubjectID);
+
+            if ($examID) {
+                $query->where('examID', $examID);
+            }
+
+            $results = $query->get();
+
+            $baseUrl = asset('');
+            $formattedResults = $results->map(function($result) use ($baseUrl) {
+                $student = $result->student ?? null;
+                $photoUrl = $student && $student->photo 
+                    ? $baseUrl . 'userImages/' . $student->photo
+                    : ($student && $student->gender === 'Female' 
+                        ? $baseUrl . 'images/female.png' 
+                        : $baseUrl . 'images/male.png');
+
+                return [
+                    'result_id' => $result->resultID,
+                    'student_id' => $result->studentID,
+                    'student_name' => $student ? trim(($student->first_name ?? '') . ' ' . ($student->middle_name ?? '') . ' ' . ($student->last_name ?? '')) : 'N/A',
+                    'admission_number' => $student ? $student->admission_number : 'N/A',
+                    'photo' => $photoUrl,
+                    'exam_id' => $result->examID,
+                    'exam_name' => $result->examination ? $result->examination->exam_name : 'N/A',
+                    'marks' => $result->marks,
+                    'grade' => $result->grade,
+                    'remark' => $result->remark,
+                    'has_health_condition' => $student ? (($student->is_disabled == 1) || ($student->has_epilepsy == 1) || ($student->has_allergies == 1)) : false,
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'class_subject' => [
+                        'class_subject_id' => $classSubject->class_subjectID,
+                        'subject_id' => $classSubject->subjectID,
+                        'subject_name' => $classSubject->subject->subject_name ?? 'N/A',
+                    ],
+                    'results' => $formattedResults,
+                    'total_results' => $formattedResults->count()
+                ],
+                'message' => 'Results retrieved successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error getting subject results API: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve results',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Save subject results for API
+     */
+    public function saveSubjectResultsAPI(Request $request)
+    {
+        try {
+            $teacherID = Session::get('teacherID');
+            $schoolID = Session::get('schoolID');
+
+            if (!$teacherID || !$schoolID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Please login first.'
+                ], 401);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'class_subject_id' => 'required|exists:class_subjects,class_subjectID',
+                'exam_id' => 'required|exists:examinations,examID',
+                'results' => 'required|array',
+                'results.*.student_id' => 'required|exists:students,studentID',
+                'results.*.marks' => 'nullable|numeric|min:0|max:100',
+                'results.*.grade' => 'nullable|string|max:10',
+                'results.*.remark' => 'nullable|string|max:255',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            // Verify teacher owns this class subject
+            $classSubject = ClassSubject::where('class_subjectID', $request->class_subject_id)
+                ->where('teacherID', $teacherID)
+                ->where('status', 'Active')
+                ->whereHas('subject', function($query) {
+                    $query->where('status', 'Active');
+                })
+                ->first();
+
+            if (!$classSubject) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Class subject not found or unauthorized access.'
+                ], 404);
+            }
+
+            // Check if enter_result is enabled
+            $examination = Examination::find($request->exam_id);
+            if (!$examination) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Examination not found.'
+                ], 404);
+            }
+
+            if (!$examination->enter_result) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You are not allowed to enter results for this examination. Result entry has been disabled.'
+                ], 403);
+            }
+
+            // Check if term is closed
+            if ($examination->term && $examination->year) {
+                $termNumber = null;
+                if ($examination->term === 'first_term' || $examination->term === '1') {
+                    $termNumber = 1;
+                } elseif ($examination->term === 'second_term' || $examination->term === '2') {
+                    $termNumber = 2;
+                }
+                
+                if ($termNumber) {
+                    $term = DB::table('terms')
+                        ->where('schoolID', $schoolID)
+                        ->where('year', $examination->year)
+                        ->where('term_number', $termNumber)
+                        ->where('status', 'Closed')
+                        ->first();
+
+                    if ($term) {
+                        // Check if this is an edit operation
+                        $isEdit = false;
+                        foreach ($request->results as $resultData) {
+                            $existingResult = Result::where('studentID', $resultData['student_id'])
+                                ->where('examID', $request->exam_id)
+                                ->where('class_subjectID', $request->class_subject_id)
+                                ->first();
+                            if ($existingResult) {
+                                $isEdit = true;
+                                break;
+                            }
+                        }
+
+                        if ($isEdit) {
+                            return response()->json([
+                                'success' => false,
+                                'message' => 'You are not allowed to edit results for this term. The term has been closed.'
+                            ], 403);
+                        }
+                    }
+                }
+            }
+
+            DB::beginTransaction();
+
+            $savedCount = 0;
+            foreach ($request->results as $resultData) {
+                $result = Result::where('studentID', $resultData['student_id'])
+                    ->where('examID', $request->exam_id)
+                    ->where('class_subjectID', $request->class_subject_id)
+                    ->first();
+
+                if ($result) {
+                    $result->update([
+                        'marks' => $resultData['marks'] ?? $result->marks,
+                        'grade' => $resultData['grade'] ?? $result->grade,
+                        'remark' => $resultData['remark'] ?? $result->remark,
+                    ]);
+                } else {
+                    $student = Student::find($resultData['student_id']);
+                    if ($student) {
+                        Result::create([
+                            'studentID' => $resultData['student_id'],
+                            'examID' => $request->exam_id,
+                            'class_subjectID' => $request->class_subject_id,
+                            'subclassID' => $student->subclassID,
+                            'marks' => $resultData['marks'] ?? null,
+                            'grade' => $resultData['grade'] ?? null,
+                            'remark' => $resultData['remark'] ?? null,
+                        ]);
+                    }
+                }
+                $savedCount++;
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully saved {$savedCount} result(s)!",
+                'data' => [
+                    'saved_count' => $savedCount
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error saving subject results API: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to save results',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Upload Excel results for API
+     */
+    public function uploadExcelResultsAPI(Request $request)
+    {
+        try {
+            $teacherID = Session::get('teacherID');
+            $schoolID = Session::get('schoolID');
+
+            if (!$teacherID || !$schoolID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Please login first.'
+                ], 401);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'class_subject_id' => 'required|exists:class_subjects,class_subjectID',
+                'exam_id' => 'required|exists:examinations,examID',
+                'excel_file' => 'required|mimes:xlsx,xls|max:10240'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            // Verify teacher owns this class subject
+            $classSubject = ClassSubject::where('class_subjectID', $request->class_subject_id)
+                ->where('teacherID', $teacherID)
+                ->where('status', 'Active')
+                ->whereHas('subject', function($query) {
+                    $query->where('status', 'Active');
+                })
+                ->first();
+
+            if (!$classSubject) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Class subject not found or unauthorized access.'
+                ], 404);
+            }
+
+            // Check examination
+            $examination = Examination::find($request->exam_id);
+            if (!$examination) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Examination not found.'
+                ], 404);
+            }
+
+            if ($examination->status !== 'awaiting_results') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You are not allowed to perform this action. Wait for Academic Permission.'
+                ], 403);
+            }
+
+            // Check if PhpSpreadsheet is available
+            if (!class_exists('\PhpOffice\PhpSpreadsheet\IOFactory')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'PhpSpreadsheet library is not installed.'
+                ], 500);
+            }
+
+            // Load Excel file
+            $file = $request->file('excel_file');
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file->getRealPath());
+            $worksheet = $spreadsheet->getActiveSheet();
+            $highestRow = $worksheet->getHighestRow();
+
+            $results = [];
+            $errors = [];
+            $successCount = 0;
+
+            // Get school type for grade calculation
+            $school = School::find($schoolID);
+            $schoolType = $school ? $school->school_type : 'Secondary';
+
+            // Start from row 2 (skip header)
+            for ($row = 2; $row <= $highestRow; $row++) {
+                $studentID = $worksheet->getCell('A' . $row)->getValue();
+                $marks = $worksheet->getCell('D' . $row)->getValue();
+                $grade = $worksheet->getCell('E' . $row)->getValue();
+                $remark = $worksheet->getCell('F' . $row)->getValue();
+
+                // Skip empty rows
+                if (empty($studentID)) {
+                    continue;
+                }
+
+                // Validate student exists
+                $student = Student::find($studentID);
+                if (!$student) {
+                    $errors[] = "Row $row: Student ID $studentID not found.";
+                    continue;
+                }
+
+                // Validate marks
+                if ($marks !== null && $marks !== '') {
+                    $marks = (float)$marks;
+                    if ($marks < 0 || $marks > 100) {
+                        $errors[] = "Row $row: Marks must be between 0 and 100.";
+                        continue;
+                    }
+
+                    // Calculate grade if not provided
+                    if (empty($grade) || is_numeric($grade)) {
+                        $grade = $this->calculateGrade($marks, $schoolType);
+                    }
+                } else {
+                    $marks = null;
+                    $grade = null;
+                }
+
+                $results[] = [
+                    'studentID' => $studentID,
+                    'marks' => $marks,
+                    'grade' => $grade,
+                    'remark' => $remark ?: null,
+                ];
+            }
+
+            if (empty($results)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No valid results found in the Excel file.'
+                ], 422);
+            }
+
+            DB::beginTransaction();
+
+            foreach ($results as $resultData) {
+                $result = Result::where('studentID', $resultData['studentID'])
+                    ->where('examID', $request->exam_id)
+                    ->where('class_subjectID', $request->class_subject_id)
+                    ->first();
+
+                if ($result) {
+                    $result->update([
+                        'marks' => $resultData['marks'],
+                        'grade' => $resultData['grade'],
+                        'remark' => $resultData['remark'],
+                    ]);
+                } else {
+                    $student = Student::find($resultData['studentID']);
+                    if ($student) {
+                        Result::create([
+                            'studentID' => $resultData['studentID'],
+                            'examID' => $request->exam_id,
+                            'class_subjectID' => $request->class_subject_id,
+                            'subclassID' => $student->subclassID,
+                            'marks' => $resultData['marks'],
+                            'grade' => $resultData['grade'],
+                            'remark' => $resultData['remark'],
+                        ]);
+                    }
+                }
+                $successCount++;
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully uploaded {$successCount} result(s)!",
+                'data' => [
+                    'saved_count' => $successCount,
+                    'errors' => $errors
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error uploading Excel results API: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to upload Excel results',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
     
     /**
@@ -7139,32 +8452,57 @@ class TeachersController extends Controller
             $schoolID = Session::get('schoolID');
             $subjectID = $request->input('subjectID');
 
+            Log::info('Getting sessions by subject', [
+                'teacherID' => $teacherID,
+                'schoolID' => $schoolID,
+                'subjectID' => $subjectID
+            ]);
+
             if (!$teacherID || !$schoolID || !$subjectID) {
+                Log::warning('Missing required parameters', [
+                    'teacherID' => $teacherID,
+                    'schoolID' => $schoolID,
+                    'subjectID' => $subjectID
+                ]);
                 return response()->json(['success' => false, 'error' => 'Missing required parameters']);
             }
 
-            // Get active session timetable definition
+            // Get session timetable definition (get the most recent one for the school)
             $definition = DB::table('session_timetable_definitions')
                 ->where('schoolID', $schoolID)
+                ->orderBy('created_at', 'desc')
                 ->first();
 
             if (!$definition) {
+                Log::warning('No timetable definition found', ['schoolID' => $schoolID]);
                 return response()->json(['success' => false, 'error' => 'No timetable definition found']);
             }
 
             // Get all sessions for this teacher and subject
+            // Check both through classSubject relationship and direct subjectID
             $sessions = ClassSessionTimetable::with(['subclass.class', 'subject', 'classSubject.subject'])
                 ->where('teacherID', $teacherID)
                 ->where('definitionID', $definition->definitionID)
                 ->where(function($query) use ($subjectID) {
+                    // Check through classSubject relationship
                     $query->whereHas('classSubject', function($q) use ($subjectID) {
                         $q->where('subjectID', $subjectID);
                     })
+                    // Or check direct subjectID field
                     ->orWhere('subjectID', $subjectID);
                 })
                 ->orderByRaw("FIELD(day, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday')")
                 ->orderBy('start_time')
                 ->get();
+
+            Log::info('Query executed', [
+                'sessions_count' => $sessions->count(),
+                'subjectID' => $subjectID,
+                'definitionID' => $definition->definitionID,
+                'teacherID' => $teacherID
+            ]);
+
+            Log::info('Sessions found', ['count' => $sessions->count()]);
 
             if ($sessions->isEmpty()) {
                 return response()->json([
@@ -7186,25 +8524,47 @@ class TeachersController extends Controller
                     $subjectName .= ' (Prepo)';
                 }
 
+                $className = '';
+                $subclassName = '';
+                if($session->subclass) {
+                    if($session->subclass->class) {
+                        $className = $session->subclass->class->class_name ?? '';
+                    }
+                    $subclassName = $session->subclass->subclass_name ?? '';
+                }
+
                 return [
                     'session_timetableID' => $session->session_timetableID,
-                    'day' => $session->day,
-                    'start_time' => $session->start_time,
-                    'end_time' => $session->end_time,
+                    'day' => $session->day ?? 'N/A',
+                    'start_time' => $session->start_time ?? '',
+                    'end_time' => $session->end_time ?? '',
                     'subject_name' => $subjectName,
-                    'class_name' => $session->subclass->class->class_name ?? '',
-                    'subclass_name' => $session->subclass->subclass_name ?? '',
+                    'class_name' => $className,
+                    'subclass_name' => $subclassName,
                     'is_prepo' => $session->is_prepo ?? false,
                 ];
             });
 
+            Log::info('Returning formatted sessions', ['count' => $formattedSessions->count()]);
+            
             return response()->json([
                 'success' => true,
-                'sessions' => $formattedSessions
+                'sessions' => $formattedSessions->toArray(),
+                'count' => $formattedSessions->count()
             ]);
         } catch (\Exception $e) {
-            Log::error('Error getting sessions by subject: ' . $e->getMessage());
-            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+            Log::error('Error getting sessions by subject', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'teacherID' => Session::get('teacherID'),
+                'schoolID' => Session::get('schoolID'),
+                'subjectID' => $request->input('subjectID')
+            ]);
+            return response()->json([
+                'success' => false, 
+                'error' => 'Failed to load sessions: ' . $e->getMessage(),
+                'message' => 'An error occurred while loading sessions. Please try again.'
+            ]);
         }
     }
 

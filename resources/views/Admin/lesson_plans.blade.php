@@ -51,6 +51,15 @@
         background-color: white;
         width: 100%;
         max-width: 400px;
+        touch-action: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+    }
+    
+    .signature-canvas:focus {
+        outline: none;
     }
     
     .signature-preview {
@@ -58,6 +67,32 @@
         border-radius: 4px;
         max-width: 100%;
         height: auto;
+    }
+    
+    /* Fix modal backdrop issues */
+    .modal-backdrop {
+        z-index: 1040 !important;
+    }
+    
+    .modal {
+        z-index: 1050 !important;
+    }
+    
+    /* Ensure modal content is clickable */
+    .modal-content {
+        pointer-events: auto !important;
+    }
+    
+    /* Prevent backdrop from blocking clicks */
+    .modal-backdrop.show {
+        opacity: 0.5;
+        pointer-events: auto;
+    }
+    
+    /* Ensure body doesn't get stuck */
+    body.modal-open {
+        overflow: hidden;
+        padding-right: 0 !important;
     }
 </style>
 
@@ -125,15 +160,15 @@
 </div>
 
 <!-- Lesson Plan View Modal -->
-<div class="modal fade" id="lessonPlanModal" tabindex="-1" role="dialog" style="z-index: 1050;">
+<div class="modal fade" id="lessonPlanModal" tabindex="-1" role="dialog" data-backdrop="true" data-keyboard="true">
     <div class="modal-dialog modal-xl" role="document" style="max-width: 95%;">
         <div class="modal-content" style="border-radius: 0;">
             <div class="modal-header" style="background-color: #940000; color: white; border-radius: 0;">
                 <h5 class="modal-title">
                     <i class="fa fa-file-text"></i> Lesson Plan Details
                 </h5>
-                <button type="button" class="close" data-dismiss="modal" style="color: white;">
-                    <span>&times;</span>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: white;">
+                    <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body" id="lessonPlanModalContent">
@@ -150,6 +185,7 @@
 
 <script>
 let supervisorSignaturePad = null;
+let currentLessonPlanID = null;
 
 function loadLessonPlans() {
     const subjectID = $('#subjectFilter').val();
@@ -278,6 +314,17 @@ function renderLessonPlansList(lessonPlans, subjectName, className) {
 }
 
 function viewLessonPlan(lessonPlanID) {
+    // Prevent multiple clicks
+    if ($('#lessonPlanModal').hasClass('show')) {
+        return;
+    }
+    
+    // Store current lesson plan ID
+    currentLessonPlanID = lessonPlanID;
+    
+    // Reset signature pad
+    supervisorSignaturePad = null;
+    
     $.ajax({
         url: '{{ route("admin.get_lesson_plan") }}',
         method: 'GET',
@@ -285,7 +332,18 @@ function viewLessonPlan(lessonPlanID) {
         success: function(response) {
             if (response.success) {
                 renderLessonPlanView(response.data);
-                $('#lessonPlanModal').modal('show');
+                
+                // Clean up any existing backdrops first
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open');
+                $('body').css('padding-right', '');
+                
+                // Show modal with proper settings
+                $('#lessonPlanModal').modal({
+                    backdrop: true,
+                    keyboard: true,
+                    show: true
+                });
             } else {
                 Swal.fire({
                     title: 'Error!',
@@ -476,13 +534,18 @@ function renderLessonPlanView(data) {
                     </div>
                     ${data.supervisor_signature ? 
                         `<img src="${data.supervisor_signature}" class="signature-preview" style="max-width: 100%;">` :
-                        `<div>
-                            <canvas id="supervisorSignatureCanvas" class="signature-canvas" width="400" height="150"></canvas>
-                            <div class="mt-2">
+                        `<div style="width: 100%;">
+                            <div style="border: 2px solid #212529; border-radius: 4px; padding: 10px; background-color: white;">
+                                <canvas id="supervisorSignatureCanvas" class="signature-canvas" style="width: 100%; max-width: 400px; height: 150px; display: block; margin: 0 auto; cursor: crosshair;"></canvas>
+                            </div>
+                            <div class="mt-2 text-center">
                                 <button type="button" class="btn btn-sm btn-secondary" onclick="clearSupervisorSignature()" style="border-radius: 0;">
-                                    <i class="fa fa-eraser"></i> Clear
+                                    <i class="fa fa-eraser"></i> Clear Signature
                                 </button>
                             </div>
+                            <small class="text-muted d-block text-center mt-1">
+                                <i class="fa fa-info-circle"></i> Draw your signature above
+                            </small>
                         </div>`
                     }
                 </div>
@@ -498,46 +561,127 @@ function renderLessonPlanView(data) {
     
     $('#lessonPlanModalContent').html(html);
     
-    // Initialize signature pad if not signed
-    if (!data.supervisor_signature) {
-        setTimeout(function() {
-            initializeSupervisorSignaturePad();
-        }, 100);
-    }
+    // Signature pad will be initialized automatically when modal is shown
+    // via the 'shown.bs.modal' event handler below
 }
 
 function initializeSupervisorSignaturePad() {
     const canvas = document.getElementById('supervisorSignatureCanvas');
-    if (canvas) {
-        supervisorSignaturePad = new SignaturePad(canvas, {
-            backgroundColor: 'rgb(255, 255, 255)',
-            penColor: 'rgb(0, 0, 0)',
-            minWidth: 1,
-            maxWidth: 3,
-        });
-        
-        // Handle resize
-        function resizeCanvas() {
-            const ratio = Math.max(window.devicePixelRatio || 1, 1);
-            const width = canvas.offsetWidth;
-            const height = canvas.offsetHeight;
-            canvas.width = width * ratio;
-            canvas.height = height * ratio;
-            canvas.getContext('2d').scale(ratio, ratio);
-            if (supervisorSignaturePad) {
-                supervisorSignaturePad.clear();
-            }
-        }
-        
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
+    if (!canvas) {
+        console.error('Signature canvas not found');
+        return;
     }
+    
+    // Clear any existing signature pad
+    if (supervisorSignaturePad) {
+        supervisorSignaturePad.clear();
+        supervisorSignaturePad.off();
+    }
+    
+    // Get canvas dimensions
+    const rect = canvas.getBoundingClientRect();
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    
+    // Set canvas size
+    canvas.width = rect.width * ratio;
+    canvas.height = 150 * ratio; // Fixed height
+    
+    // Scale context
+    const ctx = canvas.getContext('2d');
+    ctx.scale(ratio, ratio);
+    
+    // Initialize SignaturePad
+    supervisorSignaturePad = new SignaturePad(canvas, {
+        backgroundColor: 'rgb(255, 255, 255)',
+        penColor: 'rgb(0, 0, 0)',
+        minWidth: 1,
+        maxWidth: 3,
+        throttle: 16,
+    });
+    
+    // Handle resize
+    function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        canvas.width = rect.width * ratio;
+        canvas.height = 150 * ratio;
+        canvas.getContext('2d').scale(ratio, ratio);
+        
+        // Redraw signature if it exists
+        if (supervisorSignaturePad && !supervisorSignaturePad.isEmpty()) {
+            supervisorSignaturePad.fromDataURL(supervisorSignaturePad.toDataURL());
+        }
+    }
+    
+    // Remove existing resize listener if any
+    window.removeEventListener('resize', resizeCanvas);
+    window.addEventListener('resize', resizeCanvas);
+    
+    console.log('Signature pad initialized successfully');
 }
 
 function clearSupervisorSignature() {
     if (supervisorSignaturePad) {
         supervisorSignaturePad.clear();
     }
+}
+
+function removeSignature(lessonPlanID) {
+    Swal.fire({
+        title: 'Remove Signature?',
+        text: 'Are you sure you want to remove your signature? You will be able to sign again later.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, Remove It',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: '{{ route("admin.remove_lesson_plan_signature") }}',
+                method: 'POST',
+                data: {
+                    lesson_planID: lessonPlanID,
+                    _token: $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            title: 'Success!',
+                            text: response.message || 'Signature removed successfully',
+                            icon: 'success',
+                            confirmButtonColor: '#940000'
+                        }).then(() => {
+                            // Reload the lesson plan view to show signature pad
+                            if (currentLessonPlanID) {
+                                viewLessonPlan(currentLessonPlanID);
+                            } else {
+                                // If currentLessonPlanID is not set, reload from the button's onclick
+                                viewLessonPlan(lessonPlanID);
+                            }
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: response.error || 'Failed to remove signature',
+                            icon: 'error',
+                            confirmButtonColor: '#940000'
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    const error = xhr.responseJSON?.error || 'Failed to remove signature';
+                    Swal.fire({
+                        title: 'Error!',
+                        text: error,
+                        icon: 'error',
+                        confirmButtonColor: '#940000'
+                    });
+                }
+            });
+        }
+    });
 }
 
 function signLessonPlan(lessonPlanID) {
@@ -561,7 +705,9 @@ function signLessonPlan(lessonPlanID) {
         confirmButtonColor: '#940000',
         cancelButtonColor: '#6c757d',
         confirmButtonText: 'Yes, Sign',
-        cancelButtonText: 'Cancel'
+        cancelButtonText: 'Cancel',
+        allowOutsideClick: true,
+        allowEscapeKey: true
     }).then((result) => {
         if (result.isConfirmed) {
             $.ajax({
@@ -580,7 +726,16 @@ function signLessonPlan(lessonPlanID) {
                             icon: 'success',
                             confirmButtonColor: '#940000'
                         }).then(() => {
+                            // Properly close modal and clean up
                             $('#lessonPlanModal').modal('hide');
+                            
+                            // Clean up backdrop after modal closes
+                            setTimeout(function() {
+                                $('.modal-backdrop').remove();
+                                $('body').removeClass('modal-open');
+                                $('body').css('padding-right', '');
+                            }, 300);
+                            
                             loadLessonPlans();
                         });
                     } else {
@@ -605,4 +760,42 @@ function signLessonPlan(lessonPlanID) {
         }
     });
 }
+
+// Initialize signature pad when modal is shown
+$('#lessonPlanModal').on('shown.bs.modal', function() {
+    // Check if signature canvas exists and is not signed
+    const canvas = document.getElementById('supervisorSignatureCanvas');
+    if (canvas && !supervisorSignaturePad) {
+        setTimeout(function() {
+            initializeSupervisorSignaturePad();
+        }, 300);
+    }
+});
+
+// Clean up modal backdrop when modal is hidden
+$('#lessonPlanModal').on('hidden.bs.modal', function() {
+    // Remove any lingering backdrops
+    $('.modal-backdrop').remove();
+    $('body').removeClass('modal-open');
+    $('body').css('padding-right', '');
+    $('body').css('overflow', '');
+    
+    // Reset signature pad
+    if (supervisorSignaturePad) {
+        supervisorSignaturePad.clear();
+        supervisorSignaturePad = null;
+    }
+});
+
+// Ensure modal is properly closed when clicking backdrop
+$('#lessonPlanModal').on('click', function(e) {
+    if ($(e.target).hasClass('modal') || $(e.target).hasClass('modal-dialog')) {
+        $('#lessonPlanModal').modal('hide');
+    }
+});
+
+// Ensure buttons inside modal are clickable
+$(document).on('click', '#lessonPlanModal button, #lessonPlanModal a', function(e) {
+    e.stopPropagation();
+});
 </script>

@@ -56,17 +56,34 @@
             border-collapse: collapse;
             margin-bottom: 10px;
             font-size: 10px;
+            table-layout: fixed; /* Ensure consistent column widths */
         }
         
         table td, table th {
             border: 1px solid #212529;
             padding: 4px 5px;
             text-align: left;
+            word-wrap: break-word; /* Allow text wrapping */
+            overflow-wrap: break-word; /* Additional wrapping support */
         }
         
         table th {
             background-color: #f5f5f5;
             font-weight: bold;
+        }
+        
+        /* Column width for competence table - label column narrower, content wider */
+        table:not(.nested-table) th:first-child {
+            width: 28%; /* Label column ~28% */
+        }
+        
+        table:not(.nested-table) td:first-of-type {
+            width: 28%; /* Label column ~28% */
+        }
+        
+        table:not(.nested-table) th:not(:first-child),
+        table:not(.nested-table) td:not(:first-of-type) {
+            width: auto; /* Content columns take remaining space */
         }
         
         table tbody tr:nth-child(even) {
@@ -151,19 +168,19 @@
         <div class="school-type">{{ $schoolType }}</div>
     </div>
     
-    <table>
+    <table style="table-layout: auto;">
         <tr>
-            <th>SUBJECT:</th>
-            <td class="swahili-text">{{ $lessonPlan->subject ?? 'N/A' }}</td>
-            <th>CLASS:</th>
-            <td class="swahili-text">{{ $lessonPlan->class_name ?? 'N/A' }}</td>
-            <th>YEAR:</th>
-            <td>{{ $lessonPlan->year ?? date('Y') }}</td>
+            <th style="width: 12%;">SUBJECT:</th>
+            <td class="swahili-text" style="width: 20%;">{{ $lessonPlan->subject ?? 'N/A' }}</td>
+            <th style="width: 10%;">CLASS:</th>
+            <td class="swahili-text" style="width: 15%;">{{ $lessonPlan->class_name ?? 'N/A' }}</td>
+            <th style="width: 8%;">YEAR:</th>
+            <td style="width: 35%;">{{ $lessonPlan->year ?? date('Y') }}</td>
         </tr>
         <tr>
-            <th>TEACHER'S NAME</th>
-            <td colspan="2" class="swahili-text">{{ $teacherName }}</td>
-            <td colspan="3">
+            <th style="width: 12%;">TEACHER'S NAME</th>
+            <td colspan="2" class="swahili-text" style="width: 28%;">{{ $teacherName }}</td>
+            <td colspan="3" style="width: 60%;">
                 <table class="nested-table">
                     <tr>
                         <th colspan="3">NUMBER OF PUPILS</th>
@@ -192,8 +209,8 @@
             </td>
         </tr>
         <tr>
-            <th>TIME</th>
-            <td>
+            <th style="width: 8%;">TIME</th>
+            <td style="width: 20%;">
                 @php
                     $startTime = $lessonPlan->lesson_time_start;
                     $endTime = $lessonPlan->lesson_time_end;
@@ -220,8 +237,8 @@
                 @endphp
                 {{ $startTimeFormatted }} - {{ $endTimeFormatted }}
             </td>
-            <th>DATE</th>
-            <td colspan="3">
+            <th style="width: 8%;">DATE</th>
+            <td colspan="3" style="width: 64%;">
                 @php
                     $date = $lessonPlan->lesson_date;
                     if ($date instanceof \Carbon\Carbon) {
@@ -237,28 +254,28 @@
     
     <table>
         <tr>
-            <th>MAIN COMPETENCE</th>
-            <td class="swahili-text">{{ $lessonPlan->main_competence ?? '' }}</td>
+            <th style="width: 28%;">MAIN COMPETENCE</th>
+            <td class="swahili-text" style="width: 72%;">{{ $lessonPlan->main_competence ?? '' }}</td>
         </tr>
         <tr>
-            <th>SPECIFIC COMPETENCE</th>
-            <td class="swahili-text">{{ $lessonPlan->specific_competence ?? '' }}</td>
+            <th style="width: 28%;">SPECIFIC COMPETENCE</th>
+            <td class="swahili-text" style="width: 72%;">{{ $lessonPlan->specific_competence ?? '' }}</td>
         </tr>
         <tr>
-            <th>MAIN ACTIVITY</th>
-            <td class="swahili-text">{{ $lessonPlan->main_activity ?? '' }}</td>
+            <th style="width: 28%;">MAIN ACTIVITY</th>
+            <td class="swahili-text" style="width: 72%;">{{ $lessonPlan->main_activity ?? '' }}</td>
         </tr>
         <tr>
-            <th>SPECIFIC ACTIVITY</th>
-            <td class="swahili-text">{{ $lessonPlan->specific_activity ?? '' }}</td>
+            <th style="width: 28%;">SPECIFIC ACTIVITY</th>
+            <td class="swahili-text" style="width: 72%;">{{ $lessonPlan->specific_activity ?? '' }}</td>
         </tr>
         <tr>
-            <th>TEACHING & LEARNING RESOURCES</th>
-            <td class="swahili-text">{{ $lessonPlan->teaching_learning_resources ?? '' }}</td>
+            <th style="width: 28%;">TEACHING & LEARNING RESOURCES</th>
+            <td class="swahili-text" style="width: 72%;">{{ $lessonPlan->teaching_learning_resources ?? '' }}</td>
         </tr>
         <tr>
-            <th>REFERENCES</th>
-            <td class="swahili-text">{{ $lessonPlan->references ?? '' }}</td>
+            <th style="width: 28%;">REFERENCES</th>
+            <td class="swahili-text" style="width: 72%;">{{ $lessonPlan->references ?? '' }}</td>
         </tr>
     </table>
     
