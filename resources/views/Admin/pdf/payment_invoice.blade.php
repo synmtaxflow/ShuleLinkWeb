@@ -576,7 +576,7 @@
             Generated on: {{ \Carbon\Carbon::now()->format('d F Y, h:i A') }}
         </div>
         <div style="margin-top: 5px; color: #940000; font-weight: bold;">
-            Powered by EmCa Technology
+            Powered by: EmCa Technologies LTD
         </div>
     </div>
 </body>

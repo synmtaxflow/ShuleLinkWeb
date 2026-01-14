@@ -1067,7 +1067,7 @@
         </div>
         <div class="splash-text">ShuleXpert</div>
         <div class="splash-loader"></div>
-        <div class="splash-powered">Powered by EmCa Techonology</div>
+        <div class="splash-powered">Powered by: EmCa Technologies LTD</div>
     </div>
 </div>
 
@@ -1221,7 +1221,7 @@
             <div class="row g-5 align-items-center">
                 <div class="col-lg-6 wow fadeIn" data-wow-delay="0.2s">
                     <div class="about-img">
-                        <img class="img-fluid w-100" src="{{ asset('images/c1.webp') }}" alt="Image">
+                        <img class="img-fluid w-100" src="{{ asset('images/pp.jpg') }}" alt="Image">
                     </div>
                 </div>
                 <div class="col-lg-6">
@@ -1397,7 +1397,7 @@
             <div class="text-center mx-auto wow fadeIn" data-wow-delay="0.1s" style="max-width: 700px;">
                 <p class="section-title bg-white text-center text-primary px-3">Features</p>
                 <h1 class="display-6 mb-4">Powerful Features for Modern School Management</h1>
-                <p class="fs-5 mb-4">ShuleXpert provides comprehensive solutions for schools, teachers, parents, and students. Powered by EmCa Technology.</p>
+                <p class="fs-5 mb-4">ShuleXpert provides comprehensive solutions for schools, teachers, parents, and students. Powered by: EmCa Technologies LTD.</p>
             </div>
             <div class="row g-4">
                 <div class="col-md-6 col-lg-4 wow fadeIn" data-wow-delay="0.1s">
@@ -1483,7 +1483,7 @@
             <div class="text-center mx-auto wow fadeIn" data-wow-delay="0.1s" style="max-width: 700px;">
                 <p class="section-title bg-white text-center text-primary px-3">Features</p>
                 <h1 class="display-6 mb-4">More Powerful Features</h1>
-                <p class="fs-5 mb-4">Discover additional capabilities that make ShuleXpert the complete school management solution. Powered by EmCa Technology.</p>
+                <p class="fs-5 mb-4">Discover additional capabilities that make ShuleXpert the complete school management solution. Powered by: EmCa Technologies LTD.</p>
             </div>
             <div class="row g-4">
                 <div class="col-md-6 col-lg-4 wow fadeIn" data-wow-delay="0.1s">
@@ -1770,7 +1770,7 @@
                     <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>Moshi, Kilimanjaro</p>
                     <p class="mb-2"><i class="fa fa-phone-alt me-3"></i>+255757166599</p>
                     <p class="mb-2"><i class="fa fa-envelope me-3"></i>emca@emca.tech</p>
-                    <p class="mb-3 mt-3"><span class="footer-powered-by">Powered by EmCa Techonology</span></p>
+                    <p class="mb-3 mt-3"><span class="footer-powered-by">Powered by: EmCa Technologies LTD</span></p>
                     <div class="d-flex pt-3">
                         <a class="btn btn-square btn-primary me-2" href="#!"><i class="fab fa-x-twitter"></i></a>
                         <a class="btn btn-square btn-primary me-2" href="#!"><i class="fab fa-facebook-f"></i></a>
@@ -1785,7 +1785,7 @@
                     <a class="btn btn-link" href="#!">Our Services</a>
                     <a class="btn btn-link" href="#!">Pricing</a>
                     <a class="btn btn-link" href="#!">Documentation</a>
-                    <p class="mb-0 mt-3"><span class="footer-powered-by">Powered by EmCa Techonology</span></p>
+                    <p class="mb-0 mt-3"><span class="footer-powered-by">Powered by: EmCa Technologies LTD</span></p>
                 </div>
                 <div class="col-lg-3 col-md-6">
                     <h4 class="text-light mb-4">Business Hours</h4>
@@ -1795,7 +1795,7 @@
                     <h6 class="text-light">09:00 am - 12:00 pm</h6>
                     <p class="mb-1">Sunday</p>
                     <h6 class="text-light">Closed</h6>
-                    <p class="mb-0 mt-3"><span class="footer-powered-by">Powered by EmCa Techonology</span></p>
+                    <p class="mb-0 mt-3"><span class="footer-powered-by">Powered by: EmCa Technologies LTD</span></p>
                 </div>
                 <div class="col-lg-3 col-md-6">
                     <h4 class="text-light mb-4">Gallery</h4>
@@ -1819,7 +1819,7 @@
                             <img class="img-fluid w-100" src="{{ asset('images/biometric.jpg') }}" alt="Biometric" style="height: 80px; object-fit: cover; border-radius: 4px;">
                         </div>
                     </div>
-                    <p class="mb-0 mt-3"><span class="footer-powered-by">Powered by EmCa Techonology</span></p>
+                    <p class="mb-0 mt-3"><span class="footer-powered-by">Powered by: EmCa Technologies LTD</span></p>
                 </div>
             </div>
             <div class="copyright pt-5">
@@ -1828,7 +1828,7 @@
                         &copy; <a class="fw-semi-bold" href="#!">ShuleXpert</a>, All Right Reserved.
                     </div>
                     <div class="col-md-6 text-center text-md-end">
-                        <span class="footer-powered-by">Powered by EmCa Techonology</span>
+                        <span class="footer-powered-by">Powered by: EmCa Technologies LTD</span>
                     </div>
                 </div>
             </div>

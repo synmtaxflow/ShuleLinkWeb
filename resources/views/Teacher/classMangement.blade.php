@@ -6013,7 +6013,7 @@
                         doc.text('Generated on: ' + new Date().toLocaleDateString('en-GB') + ' ' + new Date().toLocaleTimeString('en-GB'), pageWidth / 2, pageHeight - 10, { align: 'center' });
                         doc.setFont('helvetica', 'bold');
                         doc.setTextColor(148, 0, 0); // #940000
-                        doc.text('Powered by EmCa Technology', pageWidth / 2, pageHeight - 5, { align: 'center' });
+                        doc.text('Powered by: EmCa Technologies LTD', pageWidth / 2, pageHeight - 5, { align: 'center' });
                     }
 
                     // Save PDF
@@ -6198,7 +6198,7 @@
                         doc.setFontSize(8);
                         doc.setFont('helvetica', 'italic');
                         doc.setTextColor(100, 100, 100);
-                        doc.text('shuleLink powered by emcaTechnology', pageWidth / 2, pageHeight - 10, { align: 'center' });
+                        doc.text('Powered by: EmCa Technologies LTD', pageWidth / 2, pageHeight - 10, { align: 'center' });
                         doc.text('Generated on: ' + new Date().toLocaleDateString('en-GB') + ' ' + new Date().toLocaleTimeString('en-GB'), pageWidth / 2, pageHeight - 5, { align: 'center' });
                     }
 
@@ -8247,7 +8247,7 @@
                             // Footer on each page
                             var pageHeight = doc.internal.pageSize.getHeight();
                             doc.setFontSize(9);
-                            doc.text('shuleLink powered by emcaTechnology', centerX, pageHeight - 8, { align: 'center' });
+                            doc.text('Powered by: EmCa Technologies LTD', centerX, pageHeight - 8, { align: 'center' });
                         }
                     });
 
@@ -8280,7 +8280,7 @@
                             // Footer on each page
                             var pageHeight = doc.internal.pageSize.getHeight();
                             doc.setFontSize(9);
-                            doc.text('shuleLink powered by emcaTechnology', centerX, pageHeight - 8, { align: 'center' });
+                            doc.text('Powered by: EmCa Technologies LTD', centerX, pageHeight - 8, { align: 'center' });
                         }
                     });
                 } else {
@@ -8312,7 +8312,7 @@
                         // Footer on each page
                         var pageHeight = doc.internal.pageSize.getHeight();
                         doc.setFontSize(9);
-                        doc.text('shuleLink powered by emcaTechnology', centerX, pageHeight - 8, { align: 'center' });
+                        doc.text('Powered by: EmCa Technologies LTD', centerX, pageHeight - 8, { align: 'center' });
                     }
                 });
                 }
@@ -9768,11 +9768,11 @@
                             // Page number
                             doc.text('Page ' + pageNumber + ' of ' + totalPages, pageWidth - tableMargin.right - 5, pageHeight - 10, { align: 'right' });
                             
-                            // Powered by emca technology
+                            // Powered by: EmCa Technologies LTD
                             doc.setFontSize(8);
                             doc.setTextColor(148, 0, 0); // #940000
                             doc.setFont('helvetica', 'bold');
-                            doc.text('powered by emca technology', centerX, footerY, { align: 'center' });
+                            doc.text('Powered by: EmCa Technologies LTD', centerX, footerY, { align: 'center' });
                         }
                     });
                 } else {

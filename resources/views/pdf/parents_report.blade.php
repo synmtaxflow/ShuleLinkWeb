@@ -120,7 +120,7 @@
     </table>
 
     <div class="footer">
-        <p>shuleLink powered by emcaTechnology</p>
+        <p>Powered by: EmCa Technologies LTD</p>
         <p>Generated on: {{ date('d/m/Y H:i:s') }}</p>
     </div>
 </body>

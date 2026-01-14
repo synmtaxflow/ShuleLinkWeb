@@ -164,7 +164,7 @@
     </table>
 
     <div class="footer">
-        <p style="margin: 0; font-weight: bold;">shuleLink powered by emcaTechnology</p>
+        <p style="margin: 0; font-weight: bold;">Powered by: EmCa Technologies LTD</p>
         <p style="margin: 5px 0 0 0;">Generated on {{ date('d/m/Y H:i:s') }}</p>
     </div>
 </body>

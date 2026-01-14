@@ -233,7 +233,7 @@
     </table>
 
     <div class="footer">
-        <p style="margin: 0; font-weight: bold;">shuleLink powered by emcaTechnology</p>
+        <p style="margin: 0; font-weight: bold;">Powered by: EmCa Technologies LTD</p>
     </div>
 </body>
 </html>

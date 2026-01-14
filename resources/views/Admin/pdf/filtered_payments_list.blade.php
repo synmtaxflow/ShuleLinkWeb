@@ -222,7 +222,7 @@
     @endforeach
 
     <div style="margin-top: 30px; padding-top: 15px; border-top: 2px solid #dee2e6; text-align: center; font-size: 8px; color: #6c757d;">
-        Generated on: {{ date('d/m/Y H:i:s') }} | Powered by EmCa Technology
+        Generated on: {{ date('d/m/Y H:i:s') }} | Powered by: EmCa Technologies LTD
     </div>
 </body>
 </html>

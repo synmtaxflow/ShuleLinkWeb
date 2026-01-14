@@ -156,7 +156,7 @@
             </div>
             <div class="splash-text">Welcome to ShuleXpert<br>Online Application System</div>
             <div class="splash-loader"></div>
-            <div class="splash-powered">Powered by EmCa Techonology</div>
+            <div class="splash-powered">Powered by: EmCa Technologies LTD</div>
         </div>
     </div>
 

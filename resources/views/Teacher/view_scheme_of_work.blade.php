@@ -366,7 +366,7 @@
                 objectivesTitle: 'Objectives of Primary Education The objectives of Primary Education',
                 areTo: 'are to:',
                 schemeOfWorkTable: 'Scheme of Work Table',
-                poweredBy: 'Powered by EMCA Technology',
+                poweredBy: 'Powered by: EmCa Technologies LTD',
                 mainCompetence: 'Main Competence',
                 specificCompetences: 'Specific Competences',
                 learningActivities: 'Learning Activities',
@@ -403,7 +403,7 @@
                 objectivesTitle: 'Malengo ya Elimu ya Msingi Malengo ya Elimu ya Msingi',
                 areTo: 'ni:',
                 schemeOfWorkTable: 'Jedwali la Ratiba ya Kazi',
-                poweredBy: 'Inaendeshwa na EMCA Technology',
+                poweredBy: 'Inaendeshwa na: EmCa Technologies LTD',
                 mainCompetence: 'Uwezo Mkuu',
                 specificCompetences: 'Uwezo Maalum',
                 learningActivities: 'Shughuli za Kujifunza',
@@ -1016,7 +1016,7 @@
                             }
                         },
                         didDrawPage: function(data) {
-                            // Add footer - Powered by EMCA Technology (moved up to avoid cutoff when printing)
+                            // Add footer - Powered by: EmCa Technologies LTD (moved up to avoid cutoff when printing)
                             doc.setFontSize(12);
                             doc.setTextColor(148, 0, 0); // #940000
                             doc.setFont('helvetica', 'italic');

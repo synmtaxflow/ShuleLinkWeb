@@ -4051,11 +4051,11 @@ $(document).ready(function() {
             doc.setTextColor(128, 128, 128);
             doc.text('Generated on ' + new Date().toLocaleString(), pageWidth / 2, pageHeight - 25, { align: 'center' });
             
-            // shuleLink powered by emca technology
+            // Powered by: EmCa Technologies LTD
             doc.setFontSize(8);
             doc.setTextColor(148, 0, 0);
             doc.setFont('helvetica', 'bold');
-            doc.text('shuleLink powered by emca technology', pageWidth / 2, pageHeight - 20, { align: 'center' });
+            doc.text('Powered by: EmCa Technologies LTD', pageWidth / 2, pageHeight - 20, { align: 'center' });
             
             // Headmaster's Sign (Blue ink)
             doc.setDrawColor(0, 0, 255); // Blue color
@@ -4769,11 +4769,11 @@ $(document).ready(function() {
                 doc.setTextColor(128, 128, 128);
                 doc.text('Generated on ' + new Date().toLocaleString(), pageWidth / 2, dateY, { align: 'center' });
                 
-                // shuleLink powered by emca technology
+                // Powered by: EmCa Technologies LTD
                 doc.setFontSize(8);
                 doc.setTextColor(148, 0, 0);
                 doc.setFont('helvetica', 'bold');
-                doc.text('shuleLink powered by emca technology', pageWidth / 2, footerY, { align: 'center' });
+                doc.text('Powered by: EmCa Technologies LTD', pageWidth / 2, footerY, { align: 'center' });
             }
             
             // Generate filename
@@ -5019,11 +5019,11 @@ $(document).ready(function() {
             doc.setTextColor(128, 128, 128);
             doc.text('Generated on ' + new Date().toLocaleString(), pageWidth / 2, pageHeight - 15, { align: 'center' });
             
-            // shuleLink powered by emca technology
+            // Powered by: EmCa Technologies LTD
             doc.setFontSize(8);
             doc.setTextColor(148, 0, 0);
             doc.setFont('helvetica', 'bold');
-            doc.text('shuleLink powered by emca technology', pageWidth / 2, pageHeight - 10, { align: 'center' });
+            doc.text('Powered by: EmCa Technologies LTD', pageWidth / 2, pageHeight - 10, { align: 'center' });
         }
 
         // Generate filename from filtering description
@@ -5388,11 +5388,11 @@ $(document).ready(function() {
                 doc.setTextColor(128, 128, 128);
                 doc.text('Generated on ' + new Date().toLocaleString(), pageWidth / 2, pageHeight - 25, { align: 'center' });
                 
-                // shuleLink powered by emca technology
+                // Powered by: EmCa Technologies LTD
                 doc.setFontSize(8);
                 doc.setTextColor(148, 0, 0);
                 doc.setFont('helvetica', 'bold');
-                doc.text('shuleLink powered by emca technology', pageWidth / 2, pageHeight - 20, { align: 'center' });
+                doc.text('Powered by: EmCa Technologies LTD', pageWidth / 2, pageHeight - 20, { align: 'center' });
                 
                 // Headmaster's Sign (Blue ink)
                 doc.setDrawColor(0, 0, 255); // Blue color
@@ -5688,11 +5688,11 @@ $(document).ready(function() {
                 doc.setTextColor(128, 128, 128);
                 doc.text('Generated on ' + new Date().toLocaleString(), pageWidth / 2, pageHeight - 25, { align: 'center' });
                 
-                // shuleLink powered by emca technology
+                // Powered by: EmCa Technologies LTD
                 doc.setFontSize(8);
                 doc.setTextColor(148, 0, 0);
                 doc.setFont('helvetica', 'bold');
-                doc.text('shuleLink powered by emca technology', pageWidth / 2, pageHeight - 20, { align: 'center' });
+                doc.text('Powered by: EmCa Technologies LTD', pageWidth / 2, pageHeight - 20, { align: 'center' });
                 
                 // Headmaster's Sign (Blue ink)
                 doc.setDrawColor(0, 0, 255); // Blue color

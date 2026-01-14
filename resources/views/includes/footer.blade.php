@@ -283,7 +283,7 @@
       &copy; 2025 <strong>ShuleXpert</strong>. All Rights Reserved.
     </p>
     <p class="small mb-0">
-      Designed by <a href="#">Emca Techonology
+      Powered by: <a href="#">EmCa Technologies LTD
       </a> |
       <a href="mailto:support@yoursite.com">Contact Support</a>
     </p>

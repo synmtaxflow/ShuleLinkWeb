@@ -1669,7 +1669,7 @@
                     // Footer on each page
                     const pageHeight = doc.internal.pageSize.getHeight();
                     doc.setFontSize(9);
-                    doc.text('shuleLink powered by emcaTechnology', centerX, pageHeight - 8, { align: 'center' });
+                    doc.text('Powered by: EmCa Technologies LTD', centerX, pageHeight - 8, { align: 'center' });
                 }
             });
 
@@ -2800,7 +2800,7 @@
                         // Footer on each page
                         var pageHeight = doc.internal.pageSize.getHeight();
                         doc.setFontSize(9);
-                        doc.text('shuleLink powered by emcaTechnology', centerX, pageHeight - 8, { align: 'center' });
+                        doc.text('Powered by: EmCa Technologies LTD', centerX, pageHeight - 8, { align: 'center' });
                     }
                 });
                 
@@ -2925,7 +2925,7 @@
                     // Footer on each page
                     var pageHeight = doc.internal.pageSize.getHeight();
                     doc.setFontSize(9);
-                    doc.text('shuleLink powered by emcaTechnology', centerX, pageHeight - 8, { align: 'center' });
+                    doc.text('Powered by: EmCa Technologies LTD', centerX, pageHeight - 8, { align: 'center' });
                 }
             });
 
@@ -3254,7 +3254,7 @@
                     // Footer on each page
                     var pageHeight = doc.internal.pageSize.getHeight();
                     doc.setFontSize(9);
-                    doc.text('shuleLink powered by emcaTechnology', centerX, pageHeight - 8, { align: 'center' });
+                    doc.text('Powered by: EmCa Technologies LTD', centerX, pageHeight - 8, { align: 'center' });
                 }
             });
 

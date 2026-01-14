@@ -1680,7 +1680,7 @@
                         doc.text('Generated on: ' + new Date().toLocaleDateString('en-GB') + ' ' + new Date().toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'}), pageWidth / 2, pageHeight - 10, { align: 'center' });
                         doc.setFont('helvetica', 'bold');
                         doc.setTextColor(148, 0, 0);
-                        doc.text('Powered by EmCa Technology', pageWidth / 2, pageHeight - 5, { align: 'center' });
+                        doc.text('Powered by: EmCa Technologies LTD', pageWidth / 2, pageHeight - 5, { align: 'center' });
                     }
                     
                     // Save PDF
@@ -1700,7 +1700,7 @@
                         doc.text('Generated on: ' + new Date().toLocaleDateString('en-GB') + ' ' + new Date().toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'}), pageWidth / 2, pageHeight - 10, { align: 'center' });
                         doc.setFont('helvetica', 'bold');
                         doc.setTextColor(148, 0, 0);
-                        doc.text('Powered by EmCa Technology', pageWidth / 2, pageHeight - 5, { align: 'center' });
+                        doc.text('Powered by: EmCa Technologies LTD', pageWidth / 2, pageHeight - 5, { align: 'center' });
                     }
                     
                     // Save PDF

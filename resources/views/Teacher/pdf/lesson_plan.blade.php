@@ -342,7 +342,7 @@
     </div>
     
     <div class="footer">
-        Powered by EMCATECHONOLOGY
+        Powered by: EmCa Technologies LTD
     </div>
 </body>
 </html>

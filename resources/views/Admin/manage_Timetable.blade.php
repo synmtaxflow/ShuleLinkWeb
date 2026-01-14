@@ -1587,7 +1587,7 @@ $(document).ready(function() {
                     doc.text('Generated on ' + new Date().toLocaleString(), centerX, pageHeight - 10, { align: 'center' });
                     doc.setTextColor(148, 0, 0);
                     doc.setFont('helvetica', 'bold');
-                    doc.text('shuleLink powered by emcaTechnology', centerX, pageHeight - 5, { align: 'center' });
+                    doc.text('Powered by: EmCa Technologies LTD', centerX, pageHeight - 5, { align: 'center' });
                 }
             });
             

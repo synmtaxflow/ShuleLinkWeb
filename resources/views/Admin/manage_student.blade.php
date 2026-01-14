@@ -4325,7 +4325,7 @@ Would you like to try direct registration anyway, or use the manual method?`;
             doc.setPage(i);
             doc.setFontSize(8);
             doc.setTextColor(128, 128, 128);
-            doc.text('Powered by EMCA Technology', 105, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
+            doc.text('Powered by: EmCa Technologies LTD', 105, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
         }
         
         // Save
@@ -4517,7 +4517,7 @@ Would you like to try direct registration anyway, or use the manual method?`;
                 doc.setPage(i);
                 doc.setFontSize(8);
                 doc.setTextColor(128, 128, 128);
-                doc.text('Powered by EMCA Technology', 105, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
+                doc.text('Powered by: EmCa Technologies LTD', 105, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
             }
             
             // Save
