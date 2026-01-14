@@ -1,0 +1,63 @@
+name: Deploy to CPanel Server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, xml, bcmath, pdo, pdo_mysql
+        
+    - name: Deploy to CPanel Server
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.CPANEL_HOST }}
+        username: ${{ secrets.CPANEL_USERNAME }}
+        key: ${{ secrets.CPANEL_SSH_KEY }}
+        port: ${{ secrets.CPANEL_SSH_PORT || 22 }}
+        source: "."
+        target: "/home/shulexpert/repositories/shuleXpert"
+        strip_components: 0
+        exclude: |
+          .git
+          .github
+          node_modules
+          storage/logs/*
+          .env
+          
+    - name: Run deployment commands on server
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.CPANEL_HOST }}
+        username: ${{ secrets.CPANEL_USERNAME }}
+        key: ${{ secrets.CPANEL_SSH_KEY }}
+        port: ${{ secrets.CPANEL_SSH_PORT || 22 }}
+        script: |
+          cd /home/shulexpert/repositories/shuleXpert
+          
+          # Install/update composer dependencies
+          composer install --no-dev --optimize-autoloader --no-interaction
+          
+          # Run database migrations (optional - uncomment if needed)
+          # php artisan migrate --force
+          
+          # Clear & cache Laravel config/routes/views
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+          
+          # Clear application cache
+          php artisan cache:clear
+          
+          echo "Deployment complete!"

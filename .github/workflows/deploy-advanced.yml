@@ -1,0 +1,96 @@
+name: Deploy to CPanel Server (Advanced)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, xml, bcmath, pdo, pdo_mysql
+        
+    - name: Create deployment package
+      run: |
+        # Create a deployment package excluding unnecessary files
+        tar --exclude='.git' \
+            --exclude='.github' \
+            --exclude='node_modules' \
+            --exclude='storage/logs/*' \
+            --exclude='.env' \
+            --exclude='.env.example' \
+            --exclude='tests' \
+            --exclude='.editorconfig' \
+            --exclude='.gitignore' \
+            --exclude='.gitattributes' \
+            -czf deploy.tar.gz .
+            
+    - name: Upload deployment package to server
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.CPANEL_HOST }}
+        username: ${{ secrets.CPANEL_USERNAME }}
+        key: ${{ secrets.CPANEL_SSH_KEY }}
+        port: ${{ secrets.CPANEL_SSH_PORT || 22 }}
+        source: "deploy.tar.gz"
+        target: "/home/shulexpert/repositories/shuleXpert"
+        
+    - name: Extract and deploy on server
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.CPANEL_HOST }}
+        username: ${{ secrets.CPANEL_USERNAME }}
+        key: ${{ secrets.CPANEL_SSH_KEY }}
+        port: ${{ secrets.CPANEL_SSH_PORT || 22 }}
+        script: |
+          cd /home/shulexpert/repositories/shuleXpert
+          
+          # Backup current .env file if exists
+          if [ -f .env ]; then
+            cp .env .env.backup.$(date +%Y%m%d_%H%M%S)
+          fi
+          
+          # Extract deployment package
+          tar -xzf deploy.tar.gz
+          rm deploy.tar.gz
+          
+          # Restore .env file if backup exists
+          if [ -f .env.backup.* ]; then
+            LATEST_BACKUP=$(ls -t .env.backup.* | head -1)
+            cp "$LATEST_BACKUP" .env
+          fi
+          
+          # Set proper permissions
+          chmod -R 755 storage bootstrap/cache
+          chown -R ${{ secrets.CPANEL_USERNAME }}:${{ secrets.CPANEL_USERNAME }} storage bootstrap/cache
+          
+          # Install/update composer dependencies
+          composer install --no-dev --optimize-autoloader --no-interaction
+          
+          # Run database migrations (optional - uncomment if needed)
+          # php artisan migrate --force
+          
+          # Clear & cache Laravel config/routes/views
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+          
+          # Clear application cache
+          php artisan cache:clear
+          
+          # Restart services if needed (uncomment if using supervisor/queue workers)
+          # sudo supervisorctl restart all
+          
+          echo "✅ Deployment complete!"
+          echo "📅 Deployed at: $(date)"
+          echo "🔗 Repository: https://github.com/synmtaxflow/ShuleLinkWeb.git"
