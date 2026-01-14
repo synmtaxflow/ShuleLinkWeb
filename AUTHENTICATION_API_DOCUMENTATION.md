@@ -6,7 +6,9 @@ http://192.168.100.104:8003/api
 ```
 
 ## Overview
-This API uses Laravel session-based authentication. After successful login, a session cookie is returned which must be included in all subsequent API requests.
+This API uses **stateless authentication**. After successful login, the API returns user data (ID, user_type, schoolID, etc.) which must be stored by the client application and sent with subsequent API requests as headers or parameters.
+
+**Important:** This API does NOT use session-based authentication. The client app is responsible for storing and managing user authentication data.
 
 ---
 
@@ -16,7 +18,7 @@ This API uses Laravel session-based authentication. After successful login, a se
 
 **Endpoint:** `POST /login`
 
-**Description:** Authenticates a user (Admin, Teacher, or Parent) and creates a session. Returns user data and session cookie information.
+**Description:** Authenticates a user (Admin, Teacher, or Parent) and returns user data including IDs and user type. The client app must store this data and use it for subsequent API requests.
 
 **Authentication:** Not required
 
@@ -41,7 +43,9 @@ Accept: application/json
 | `username` | string | Yes | Username (employee_number for Teacher, registration_number for Admin, phone for Parent) |
 | `password` | string | Yes | User password |
 
-**Response Format (200 OK):**
+**Success Response (200 OK):**
+
+**For Teacher:**
 ```json
 {
     "success": true,
@@ -63,20 +67,54 @@ Accept: application/json
             "full_name": "John Doe"
         },
         "teacher_roles": ["Class Teacher", "Subject Teacher"]
-    },
-    "session": {
-        "cookie_name": "laravel_session",
-        "session_id": "abc123def456ghi789...",
-        "cookie_value": "abc123def456ghi789...",
-        "cookie_header": "laravel_session=abc123def456ghi789..."
     }
 }
 ```
 
-**Response Headers:**
-The response will include a `Set-Cookie` header with the session cookie:
+**For Admin:**
+```json
+{
+    "success": true,
+    "message": "Login successful",
+    "data": {
+        "user": {
+            "id": 123,
+            "name": "SCH001",
+            "email": "admin@example.com",
+            "user_type": "Admin"
+        },
+        "schoolID": 4,
+        "school": {
+            "schoolID": 4,
+            "school_name": "Example School",
+            "registration_number": "SCH001"
+        }
+    }
+}
 ```
-Set-Cookie: laravel_session=abc123def456ghi789...; path=/; httponly; samesite=lax
+
+**For Parent:**
+```json
+{
+    "success": true,
+    "message": "Login successful",
+    "data": {
+        "user": {
+            "id": 123,
+            "name": "255614863345",
+            "email": "parent@example.com",
+            "user_type": "parent"
+        },
+        "parentID": 789,
+        "schoolID": 4,
+        "parent": {
+            "parentID": 789,
+            "phone": "255614863345",
+            "first_name": "Jane",
+            "last_name": "Doe"
+        }
+    }
+}
 ```
 
 **Error Response (401 Unauthorized):**
@@ -107,20 +145,34 @@ Set-Cookie: laravel_session=abc123def456ghi789...; path=/; httponly; samesite=la
 }
 ```
 
+**Error Response (404 Not Found):**
+```json
+{
+    "success": false,
+    "message": "Teacher record not found."
+}
+```
+or
+```json
+{
+    "success": false,
+    "message": "School not found for this admin account."
+}
+```
+
 ---
 
 ### 2. Logout
 
 **Endpoint:** `POST /logout`
 
-**Description:** Logs out the current user and invalidates the session.
+**Description:** Logs out the current user. This endpoint simply returns a success message. The client app should clear stored user data locally.
 
-**Authentication:** Required (Session-based)
+**Authentication:** Not required (stateless)
 
 **Request Headers:**
 ```
 Accept: application/json
-Cookie: laravel_session=<session_token>
 ```
 
 **Response Format (200 OK):**
@@ -131,6 +183,8 @@ Cookie: laravel_session=<session_token>
 }
 ```
 
+**Note:** The client app should clear all stored authentication data (user ID, schoolID, teacherID, etc.) after calling this endpoint.
+
 ---
 
 ## User Types and Login Details
@@ -138,56 +192,83 @@ Cookie: laravel_session=<session_token>
 ### Admin Login
 - **Username:** School registration number
 - **Password:** Admin account password
-- **Session Data Set:**
-  - `schoolID`
-  - `user_type` = "Admin"
-  - `userID`
-  - `user_name`
-  - `user_email`
+- **Response Data:**
+  - `data.user.id` - User ID
+  - `data.user.user_type` - "Admin"
+  - `data.schoolID` - School ID
+  - `data.school` - School details object
 
 ### Teacher Login
 - **Username:** Employee number (e.g., "EMP001")
 - **Password:** Teacher account password
-- **Session Data Set:**
-  - `schoolID`
-  - `teacherID`
-  - `user_type` = "Teacher"
-  - `userID`
-  - `user_name`
-  - `user_email`
-  - `teacher_name`
-  - `teacher_roles` (if Spatie permissions are installed)
+- **Response Data:**
+  - `data.user.id` - User ID
+  - `data.user.user_type` - "Teacher"
+  - `data.schoolID` - School ID
+  - `data.teacherID` - Teacher ID
+  - `data.teacher` - Teacher details object
+  - `data.teacher_roles` - Array of teacher roles (if Spatie permissions are installed)
 
 ### Parent Login
 - **Username:** Phone number (e.g., "255614863345")
 - **Password:** Parent account password
-- **Session Data Set:**
-  - `parentID`
-  - `schoolID`
-  - `user_type` = "parent"
+- **Response Data:**
+  - `data.user.id` - User ID
+  - `data.user.user_type` - "parent"
+  - `data.parentID` - Parent ID
+  - `data.schoolID` - School ID
+  - `data.parent` - Parent details object
 
 ---
 
-## How to Use Session Cookie
+## How to Use Authentication Data
 
 ### Step 1: Login
 Make a POST request to `/api/login` with username and password.
 
-### Step 2: Extract Session Cookie
-The response will include:
-1. **Set-Cookie Header:** Automatically set by the browser
-2. **Session Information in JSON:** For manual cookie handling
+### Step 2: Store Authentication Data
+Extract and store the following data from the response:
+- `data.user.id` - User ID
+- `data.user.user_type` - User type (Admin/Teacher/parent)
+- `data.schoolID` - School ID
+- `data.teacherID` - Teacher ID (for teachers only)
+- `data.parentID` - Parent ID (for parents only)
 
-### Step 3: Use Session Cookie in Subsequent Requests
-Include the session cookie in all API requests:
+**Storage Options:**
+- SharedPreferences (Android)
+- UserDefaults (iOS)
+- AsyncStorage (React Native)
+- LocalStorage (Web)
+- Secure Storage (for sensitive data)
 
-**Option 1: Automatic (Browser/HTTP Client)**
-Most HTTP clients automatically handle cookies from `Set-Cookie` headers.
+### Step 3: Use Authentication Data in Subsequent Requests
+Include the stored data in all API requests. Different APIs may require different parameters:
 
-**Option 2: Manual Cookie Header**
+**Option 1: Request Headers**
 ```
-Cookie: laravel_session=<session_id>
+user_id: 123
+user_type: Teacher
+schoolID: 4
+teacherID: 456
 ```
+
+**Option 2: Request Parameters (Query or Body)**
+```
+?user_id=123&user_type=Teacher&schoolID=4&teacherID=456
+```
+
+**Option 3: Request Body (for POST/PUT requests)**
+```json
+{
+    "user_id": 123,
+    "user_type": "Teacher",
+    "schoolID": 4,
+    "teacherID": 456,
+    "other_data": "..."
+}
+```
+
+**Note:** Check individual API documentation to see which method and parameters are required.
 
 ---
 
@@ -198,74 +279,96 @@ Cookie: laravel_session=<session_id>
 ```dart
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:cookie_jar/cookie_jar.dart';
-import 'package:dio/dio.dart';
-import 'package:dio_cookie_manager/dio_cookie_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthAPI {
   final String baseUrl = 'http://192.168.100.104:8003/api';
-  String? sessionCookie;
+  Map<String, dynamic>? authData;
   
   // Login
   Future<Map<String, dynamic>> login(String username, String password) async {
     try {
-      final dio = Dio();
-      final cookieJar = CookieJar();
-      dio.interceptors.add(CookieManager(cookieJar));
-      
-      final response = await dio.post(
-        '$baseUrl/login',
-        data: {
+      final response = await http.post(
+        Uri.parse('$baseUrl/login'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: json.encode({
           'username': username,
           'password': password,
-        },
-        options: Options(
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-        ),
+        }),
       );
       
       if (response.statusCode == 200) {
-        final data = response.data;
+        final data = json.decode(response.body);
         
-        // Extract session cookie from cookies
-        final cookies = cookieJar.loadForRequest(Uri.parse(baseUrl));
-        for (var cookie in cookies) {
-          if (cookie.name == 'laravel_session') {
-            sessionCookie = cookie.value;
-            break;
-          }
+        if (data['success'] == true) {
+          // Store authentication data
+          authData = data['data'];
+          await _saveAuthData(authData!);
+          
+          return data;
+        } else {
+          throw Exception(data['message'] ?? 'Login failed');
         }
-        
-        // Or extract from response data
-        if (data['session'] != null) {
-          sessionCookie = data['session']['cookie_value'];
-        }
-        
-        return data;
       } else {
-        throw Exception('Login failed: ${response.statusCode}');
+        final error = json.decode(response.body);
+        throw Exception(error['message'] ?? 'Login failed');
       }
     } catch (e) {
       throw Exception('Error during login: $e');
     }
   }
   
+  // Save auth data to SharedPreferences
+  Future<void> _saveAuthData(Map<String, dynamic> data) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('user_id', data['user']['id']);
+    await prefs.setString('user_type', data['user']['user_type']);
+    await prefs.setInt('schoolID', data['schoolID']);
+    
+    if (data['teacherID'] != null) {
+      await prefs.setInt('teacherID', data['teacherID']);
+    }
+    if (data['parentID'] != null) {
+      await prefs.setInt('parentID', data['parentID']);
+    }
+  }
+  
+  // Get auth headers for API requests
+  Future<Map<String, String>> getAuthHeaders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final headers = <String, String>{
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    };
+    
+    final userId = prefs.getInt('user_id');
+    final userType = prefs.getString('user_type');
+    final schoolID = prefs.getInt('schoolID');
+    
+    if (userId != null) headers['user_id'] = userId.toString();
+    if (userType != null) headers['user_type'] = userType;
+    if (schoolID != null) headers['schoolID'] = schoolID.toString();
+    
+    final teacherID = prefs.getInt('teacherID');
+    if (teacherID != null) headers['teacherID'] = teacherID.toString();
+    
+    final parentID = prefs.getInt('parentID');
+    if (parentID != null) headers['parentID'] = parentID.toString();
+    
+    return headers;
+  }
+  
   // Make authenticated request
   Future<Map<String, dynamic>> getAuthenticatedData(String endpoint) async {
-    if (sessionCookie == null) {
-      throw Exception('Not logged in. Please login first.');
-    }
+    final headers = await getAuthHeaders();
     
     try {
       final response = await http.get(
         Uri.parse('$baseUrl$endpoint'),
-        headers: {
-          'Accept': 'application/json',
-          'Cookie': 'laravel_session=$sessionCookie',
-        },
+        headers: headers,
       );
       
       if (response.statusCode == 200) {
@@ -280,21 +383,29 @@ class AuthAPI {
   
   // Logout
   Future<void> logout() async {
-    if (sessionCookie == null) return;
-    
     try {
       await http.post(
         Uri.parse('$baseUrl/logout'),
-        headers: {
-          'Accept': 'application/json',
-          'Cookie': 'laravel_session=$sessionCookie',
-        },
+        headers: {'Accept': 'application/json'},
       );
-      
-      sessionCookie = null;
     } catch (e) {
       // Ignore errors on logout
+    } finally {
+      // Clear stored auth data
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('user_id');
+      await prefs.remove('user_type');
+      await prefs.remove('schoolID');
+      await prefs.remove('teacherID');
+      await prefs.remove('parentID');
+      authData = null;
     }
+  }
+  
+  // Check if user is logged in
+  Future<bool> isLoggedIn() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('user_id') != null;
   }
 }
 ```
@@ -302,10 +413,12 @@ class AuthAPI {
 ### JavaScript/React Native Example
 
 ```javascript
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 class AuthAPI {
   constructor() {
     this.baseUrl = 'http://192.168.100.104:8003/api';
-    this.sessionCookie = null;
+    this.authData = null;
   }
   
   // Login
@@ -317,7 +430,6 @@ class AuthAPI {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        credentials: 'include', // Important: Include cookies
         body: JSON.stringify({
           username: username,
           password: password,
@@ -327,21 +439,15 @@ class AuthAPI {
       if (response.ok) {
         const data = await response.json();
         
-        // Extract session cookie from Set-Cookie header
-        const setCookieHeader = response.headers.get('Set-Cookie');
-        if (setCookieHeader) {
-          const match = setCookieHeader.match(/laravel_session=([^;]+)/);
-          if (match) {
-            this.sessionCookie = match[1];
-          }
+        if (data.success) {
+          // Store authentication data
+          this.authData = data.data;
+          await this.saveAuthData(data.data);
+          
+          return data;
+        } else {
+          throw new Error(data.message || 'Login failed');
         }
-        
-        // Or extract from response data
-        if (data.session) {
-          this.sessionCookie = data.session.cookie_value;
-        }
-        
-        return data;
       } else {
         const error = await response.json();
         throw new Error(error.message || 'Login failed');
@@ -351,20 +457,56 @@ class AuthAPI {
     }
   }
   
+  // Save auth data to AsyncStorage
+  async saveAuthData(data) {
+    try {
+      await AsyncStorage.setItem('user_id', data.user.id.toString());
+      await AsyncStorage.setItem('user_type', data.user.user_type);
+      await AsyncStorage.setItem('schoolID', data.schoolID.toString());
+      
+      if (data.teacherID) {
+        await AsyncStorage.setItem('teacherID', data.teacherID.toString());
+      }
+      if (data.parentID) {
+        await AsyncStorage.setItem('parentID', data.parentID.toString());
+      }
+    } catch (error) {
+      console.error('Error saving auth data:', error);
+    }
+  }
+  
+  // Get auth headers for API requests
+  async getAuthHeaders() {
+    const headers = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    };
+    
+    const userId = await AsyncStorage.getItem('user_id');
+    const userType = await AsyncStorage.getItem('user_type');
+    const schoolID = await AsyncStorage.getItem('schoolID');
+    
+    if (userId) headers['user_id'] = userId;
+    if (userType) headers['user_type'] = userType;
+    if (schoolID) headers['schoolID'] = schoolID;
+    
+    const teacherID = await AsyncStorage.getItem('teacherID');
+    if (teacherID) headers['teacherID'] = teacherID;
+    
+    const parentID = await AsyncStorage.getItem('parentID');
+    if (parentID) headers['parentID'] = parentID;
+    
+    return headers;
+  }
+  
   // Make authenticated request
   async getAuthenticatedData(endpoint) {
-    if (!this.sessionCookie) {
-      throw new Error('Not logged in. Please login first.');
-    }
+    const headers = await this.getAuthHeaders();
     
     try {
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Cookie': `laravel_session=${this.sessionCookie}`,
-        },
-        credentials: 'include',
+        headers: headers,
       });
       
       if (response.ok) {
@@ -379,22 +521,32 @@ class AuthAPI {
   
   // Logout
   async logout() {
-    if (!this.sessionCookie) return;
-    
     try {
       await fetch(`${this.baseUrl}/logout`, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
-          'Cookie': `laravel_session=${this.sessionCookie}`,
         },
-        credentials: 'include',
       });
-      
-      this.sessionCookie = null;
     } catch (error) {
       // Ignore errors on logout
+    } finally {
+      // Clear stored auth data
+      await AsyncStorage.multiRemove([
+        'user_id',
+        'user_type',
+        'schoolID',
+        'teacherID',
+        'parentID'
+      ]);
+      this.authData = null;
     }
+  }
+  
+  // Check if user is logged in
+  async isLoggedIn() {
+    const userId = await AsyncStorage.getItem('user_id');
+    return userId !== null;
   }
 }
 ```
@@ -409,86 +561,91 @@ curl -X POST "http://192.168.100.104:8003/api/login" \
   -d '{
     "username": "EMP001",
     "password": "password123"
-  }' \
-  -c cookies.txt \
-  -v
+  }'
 ```
 
-**Using Session Cookie:**
+**Using Authentication Data in Headers:**
 ```bash
-# Extract session cookie from cookies.txt or response
-# Then use it in subsequent requests:
-
 curl -X GET "http://192.168.100.104:8003/api/teacher/dashboard" \
   -H "Accept: application/json" \
-  -H "Cookie: laravel_session=YOUR_SESSION_ID" \
-  -b cookies.txt
+  -H "user_id: 123" \
+  -H "user_type: Teacher" \
+  -H "schoolID: 4" \
+  -H "teacherID: 456"
 ```
 
-**Login and Save Cookie:**
+**Using Authentication Data in Query Parameters:**
 ```bash
-# Login and save cookie to file
-curl -X POST "http://192.168.100.104:8003/api/login" \
-  -H "Content-Type: application/json" \
-  -d '{"username":"EMP001","password":"password123"}' \
-  -c cookies.txt
-
-# Use saved cookie for authenticated requests
-curl -X GET "http://192.168.100.104:8003/api/teacher/dashboard" \
-  -b cookies.txt
+curl -X GET "http://192.168.100.104:8003/api/teacher/dashboard?user_id=123&user_type=Teacher&schoolID=4&teacherID=456" \
+  -H "Accept: application/json"
 ```
 
 ---
 
-## Session Management
+## Authentication Data Structure
 
-### Session Configuration
+### Response Data Fields
 
-Sessions are configured in `config/session.php`:
-
-- **Driver:** Database (default)
-- **Lifetime:** 120 minutes (2 hours)
-- **Cookie Name:** `laravel_session`
-- **Path:** `/`
-- **HttpOnly:** `true` (cookie not accessible via JavaScript)
-- **SameSite:** `lax`
-
-### Session Data Structure
-
-After login, the following session data is stored:
+After successful login, the following data is returned in `data` object:
 
 **For Teacher:**
-```php
-[
-    'schoolID' => 4,
-    'teacherID' => 456,
-    'user_type' => 'Teacher',
-    'userID' => 123,
-    'user_name' => 'EMP001',
-    'user_email' => 'teacher@example.com',
-    'teacher_name' => 'John Doe',
-    'teacher_roles' => ['Class Teacher', 'Subject Teacher'] // if Spatie installed
-]
+```json
+{
+    "user": {
+        "id": 123,              // User ID - REQUIRED for all requests
+        "name": "EMP001",
+        "email": "teacher@example.com",
+        "user_type": "Teacher"  // REQUIRED for all requests
+    },
+    "schoolID": 4,              // REQUIRED for all requests
+    "teacherID": 456,           // REQUIRED for teacher-specific requests
+    "teacher": {
+        "id": 456,
+        "first_name": "John",
+        "last_name": "Doe",
+        "employee_number": "EMP001",
+        "full_name": "John Doe"
+    },
+    "teacher_roles": ["Class Teacher", "Subject Teacher"]  // Optional
+}
 ```
 
 **For Admin:**
-```php
-[
-    'schoolID' => 4,
-    'user_type' => 'Admin',
-    'userID' => 123,
-    'user_name' => 'SCH001',
-    'user_email' => 'admin@example.com'
-]
+```json
+{
+    "user": {
+        "id": 123,              // User ID - REQUIRED for all requests
+        "name": "SCH001",
+        "email": "admin@example.com",
+        "user_type": "Admin"    // REQUIRED for all requests
+    },
+    "schoolID": 4,              // REQUIRED for all requests
+    "school": {
+        "schoolID": 4,
+        "school_name": "Example School",
+        "registration_number": "SCH001"
+    }
+}
 ```
 
 **For Parent:**
-```php
-[
-    'parentID' => 789,
-    'schoolID' => 4,
-    'user_type' => 'parent'
-]
+```json
+{
+    "user": {
+        "id": 123,              // User ID - REQUIRED for all requests
+        "name": "255614863345",
+        "email": "parent@example.com",
+        "user_type": "parent"   // REQUIRED for all requests
+    },
+    "parentID": 789,             // REQUIRED for parent-specific requests
+    "schoolID": 4,               // REQUIRED for all requests
+    "parent": {
+        "parentID": 789,
+        "phone": "255614863345",
+        "first_name": "Jane",
+        "last_name": "Doe"
+    }
+}
 ```
 
 ---
@@ -497,13 +654,16 @@ After login, the following session data is stored:
 
 1. **Rate Limiting:** Login attempts are rate-limited to 5 attempts per IP address. After 5 failed attempts, the IP is locked for 60 seconds.
 
-2. **Session Regeneration:** Session ID is regenerated after successful login for security.
+2. **Password Hashing:** Passwords are hashed using bcrypt before storage.
 
-3. **HttpOnly Cookies:** Session cookies are marked as HttpOnly, preventing JavaScript access (XSS protection).
+3. **Secure Storage:** Store authentication data securely on the client:
+   - Use secure storage mechanisms (Keychain on iOS, Keystore on Android)
+   - Never store passwords
+   - Clear data on logout
 
-4. **Password Hashing:** Passwords are hashed using bcrypt before storage.
+4. **HTTPS:** In production, always use HTTPS to encrypt data in transit.
 
-5. **Session Lifetime:** Sessions expire after 120 minutes of inactivity.
+5. **Token Expiry:** Consider implementing token-based authentication with expiry for enhanced security.
 
 ---
 
@@ -545,35 +705,43 @@ After login, the following session data is stored:
    }
    ```
 
-2. **Server validates and creates session**
+2. **Server validates credentials**
    - Validates username and password
-   - Creates session in database
-   - Sets session data
-   - Regenerates session ID
+   - Checks rate limiting
+   - Retrieves user and related data
 
-3. **Server returns response with session info**
+3. **Server returns response with user data**
    ```json
    {
        "success": true,
        "message": "Login successful",
-       "data": {...},
-       "session": {
-           "cookie_name": "laravel_session",
-           "session_id": "abc123...",
-           "cookie_value": "abc123...",
-           "cookie_header": "laravel_session=abc123..."
+       "data": {
+           "user": {
+               "id": 123,
+               "name": "EMP001",
+               "email": "teacher@example.com",
+               "user_type": "Teacher"
+           },
+           "schoolID": 4,
+           "teacherID": 456,
+           "teacher": {...}
        }
    }
    ```
 
-4. **Client stores session cookie**
-   - Extract from `Set-Cookie` header (automatic)
-   - Or extract from response JSON (manual)
+4. **Client stores authentication data**
+   - Extract `data.user.id`, `data.user.user_type`, `data.schoolID`, etc.
+   - Store in secure local storage
+   - Use for subsequent API requests
 
-5. **Client uses session cookie in subsequent requests**
+5. **Client uses authentication data in subsequent requests**
    ```
    GET /api/teacher/dashboard
-   Cookie: laravel_session=abc123...
+   Headers:
+     user_id: 123
+     user_type: Teacher
+     schoolID: 4
+     teacherID: 456
    ```
 
 ---
@@ -596,29 +764,34 @@ After login, the following session data is stored:
 
 2. **Check Response:**
    - Status: 200 OK
-   - Response body contains session information
-   - Cookies tab shows `laravel_session` cookie
+   - Response body contains user data
+   - Extract and note: `user.id`, `user.user_type`, `schoolID`, `teacherID` (if teacher)
 
-3. **Use Cookie in Next Request:**
-   - Postman automatically includes cookies from previous requests
-   - Or manually add header:
+3. **Use Authentication Data in Next Request:**
+   - Add headers to subsequent requests:
      ```
-     Cookie: laravel_session=<session_id>
+     user_id: 123
+     user_type: Teacher
+     schoolID: 4
+     teacherID: 456
      ```
+   - Or add as query parameters or in request body (check API documentation)
 
 ---
 
 ## Notes
 
-1. **Session Persistence:** Sessions are stored in the database. Ensure the `sessions` table exists and is properly configured.
+1. **No Session Management:** This API does not use server-side sessions. All authentication data must be managed by the client application.
 
-2. **Cookie Domain:** By default, cookies are set for the current domain. For cross-domain requests, you may need to configure CORS and cookie settings.
+2. **Data Persistence:** The client app should persist authentication data to allow users to stay logged in across app restarts.
 
-3. **Session Expiry:** Sessions expire after 120 minutes of inactivity. Users need to login again after expiry.
+3. **Logout:** Logout simply returns a success message. The client app must clear all stored authentication data.
 
-4. **Multiple Devices:** Each device/browser gets its own session. Logging in from multiple devices creates separate sessions.
+4. **Multiple Devices:** Each device maintains its own authentication state. There is no server-side session to invalidate.
 
-5. **Logout:** Logout invalidates the session. The session cookie should be cleared on the client side.
+5. **API Requirements:** Different API endpoints may require different authentication parameters. Always check the specific API documentation for required headers/parameters.
+
+6. **Data Validation:** Always validate that required authentication data exists before making API requests.
 
 ---
 
@@ -626,4 +799,4 @@ After login, the following session data is stored:
 
 For issues or questions regarding authentication, please contact the development team.
 
-**Last Updated:** January 2024
+**Last Updated:** January 2025
