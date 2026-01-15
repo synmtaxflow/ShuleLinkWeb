@@ -1465,14 +1465,38 @@ class TeachersController extends Controller
     public function getTeacherSubjectsAPI(Request $request)
     {
         try {
-            $teacherID = Session::get('teacherID');
-            $schoolID = Session::get('schoolID');
+            // Get authentication data from headers (stateless authentication)
+            $teacherID = $request->header('teacherID') ?? $request->input('teacherID');
+            $schoolID = $request->header('schoolID') ?? $request->input('schoolID');
+            $userID = $request->header('user_id') ?? $request->input('user_id');
+            $userType = $request->header('user_type') ?? $request->input('user_type');
 
-            if (!$teacherID || !$schoolID) {
+            // Validate required parameters
+            if (!$teacherID || !$schoolID || !$userID || !$userType) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Unauthorized. Please login first.'
+                    'message' => 'Unauthorized. Missing required authentication parameters. Please provide: user_id, user_type, schoolID, and teacherID in headers or request body.'
                 ], 401);
+            }
+
+            // Validate user type
+            if ($userType !== 'Teacher') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Invalid user type. This endpoint is for Teachers only.'
+                ], 403);
+            }
+
+            // Verify teacher exists and belongs to the school
+            $teacher = Teacher::where('id', $teacherID)
+                ->where('schoolID', $schoolID)
+                ->first();
+
+            if (!$teacher) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Teacher not found or does not belong to the specified school.'
+                ], 404);
             }
 
             // Get all class subjects assigned to this teacher with statistics
@@ -1550,17 +1574,41 @@ class TeachersController extends Controller
     /**
      * Get subject students for API
      */
-    public function getSubjectStudentsAPI($classSubjectID)
+    public function getSubjectStudentsAPI(Request $request, $classSubjectID)
     {
         try {
-            $teacherID = Session::get('teacherID');
-            $schoolID = Session::get('schoolID');
+            // Get authentication data from headers (stateless authentication)
+            $teacherID = $request->header('teacherID') ?? $request->input('teacherID');
+            $schoolID = $request->header('schoolID') ?? $request->input('schoolID');
+            $userID = $request->header('user_id') ?? $request->input('user_id');
+            $userType = $request->header('user_type') ?? $request->input('user_type');
 
-            if (!$teacherID || !$schoolID) {
+            // Validate required parameters
+            if (!$teacherID || !$schoolID || !$userID || !$userType) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Unauthorized. Please login first.'
+                    'message' => 'Unauthorized. Missing required authentication parameters. Please provide: user_id, user_type, schoolID, and teacherID in headers or request body.'
                 ], 401);
+            }
+
+            // Validate user type
+            if ($userType !== 'Teacher') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Invalid user type. This endpoint is for Teachers only.'
+                ], 403);
+            }
+
+            // Verify teacher exists and belongs to the school
+            $teacher = Teacher::where('id', $teacherID)
+                ->where('schoolID', $schoolID)
+                ->first();
+
+            if (!$teacher) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Teacher not found or does not belong to the specified school.'
+                ], 404);
             }
 
             // Verify teacher owns this class subject
@@ -1656,17 +1704,41 @@ class TeachersController extends Controller
     /**
      * Get examinations for subject for API
      */
-    public function getExaminationsForSubjectAPI($classSubjectID)
+    public function getExaminationsForSubjectAPI(Request $request, $classSubjectID)
     {
         try {
-            $teacherID = Session::get('teacherID');
-            $schoolID = Session::get('schoolID');
+            // Get authentication data from headers (stateless authentication)
+            $teacherID = $request->header('teacherID') ?? $request->input('teacherID');
+            $schoolID = $request->header('schoolID') ?? $request->input('schoolID');
+            $userID = $request->header('user_id') ?? $request->input('user_id');
+            $userType = $request->header('user_type') ?? $request->input('user_type');
 
-            if (!$teacherID || !$schoolID) {
+            // Validate required parameters
+            if (!$teacherID || !$schoolID || !$userID || !$userType) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Unauthorized. Please login first.'
+                    'message' => 'Unauthorized. Missing required authentication parameters. Please provide: user_id, user_type, schoolID, and teacherID in headers or request body.'
                 ], 401);
+            }
+
+            // Validate user type
+            if ($userType !== 'Teacher') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Invalid user type. This endpoint is for Teachers only.'
+                ], 403);
+            }
+
+            // Verify teacher exists and belongs to the school
+            $teacher = Teacher::where('id', $teacherID)
+                ->where('schoolID', $schoolID)
+                ->first();
+
+            if (!$teacher) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Teacher not found or does not belong to the specified school.'
+                ], 404);
             }
 
             // Verify teacher owns this class subject
@@ -1752,17 +1824,41 @@ class TeachersController extends Controller
     /**
      * Get subject results for API
      */
-    public function getSubjectResultsAPI($classSubjectID, $examID = null)
+    public function getSubjectResultsAPI(Request $request, $classSubjectID, $examID = null)
     {
         try {
-            $teacherID = Session::get('teacherID');
-            $schoolID = Session::get('schoolID');
+            // Get authentication data from headers (stateless authentication)
+            $teacherID = $request->header('teacherID') ?? $request->input('teacherID');
+            $schoolID = $request->header('schoolID') ?? $request->input('schoolID');
+            $userID = $request->header('user_id') ?? $request->input('user_id');
+            $userType = $request->header('user_type') ?? $request->input('user_type');
 
-            if (!$teacherID || !$schoolID) {
+            // Validate required parameters
+            if (!$teacherID || !$schoolID || !$userID || !$userType) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Unauthorized. Please login first.'
+                    'message' => 'Unauthorized. Missing required authentication parameters. Please provide: user_id, user_type, schoolID, and teacherID in headers or request body.'
                 ], 401);
+            }
+
+            // Validate user type
+            if ($userType !== 'Teacher') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Invalid user type. This endpoint is for Teachers only.'
+                ], 403);
+            }
+
+            // Verify teacher exists and belongs to the school
+            $teacher = Teacher::where('id', $teacherID)
+                ->where('schoolID', $schoolID)
+                ->first();
+
+            if (!$teacher) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Teacher not found or does not belong to the specified school.'
+                ], 404);
             }
 
             // Verify teacher owns this class subject
@@ -1847,14 +1943,38 @@ class TeachersController extends Controller
     public function saveSubjectResultsAPI(Request $request)
     {
         try {
-            $teacherID = Session::get('teacherID');
-            $schoolID = Session::get('schoolID');
+            // Get authentication data from headers (stateless authentication)
+            $teacherID = $request->header('teacherID') ?? $request->input('teacherID');
+            $schoolID = $request->header('schoolID') ?? $request->input('schoolID');
+            $userID = $request->header('user_id') ?? $request->input('user_id');
+            $userType = $request->header('user_type') ?? $request->input('user_type');
 
-            if (!$teacherID || !$schoolID) {
+            // Validate required parameters
+            if (!$teacherID || !$schoolID || !$userID || !$userType) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Unauthorized. Please login first.'
+                    'message' => 'Unauthorized. Missing required authentication parameters. Please provide: user_id, user_type, schoolID, and teacherID in headers or request body.'
                 ], 401);
+            }
+
+            // Validate user type
+            if ($userType !== 'Teacher') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Invalid user type. This endpoint is for Teachers only.'
+                ], 403);
+            }
+
+            // Verify teacher exists and belongs to the school
+            $teacher = Teacher::where('id', $teacherID)
+                ->where('schoolID', $schoolID)
+                ->first();
+
+            if (!$teacher) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Teacher not found or does not belong to the specified school.'
+                ], 404);
             }
 
             $validator = Validator::make($request->all(), [
@@ -2007,14 +2127,38 @@ class TeachersController extends Controller
     public function uploadExcelResultsAPI(Request $request)
     {
         try {
-            $teacherID = Session::get('teacherID');
-            $schoolID = Session::get('schoolID');
+            // Get authentication data from headers (stateless authentication)
+            $teacherID = $request->header('teacherID') ?? $request->input('teacherID');
+            $schoolID = $request->header('schoolID') ?? $request->input('schoolID');
+            $userID = $request->header('user_id') ?? $request->input('user_id');
+            $userType = $request->header('user_type') ?? $request->input('user_type');
 
-            if (!$teacherID || !$schoolID) {
+            // Validate required parameters
+            if (!$teacherID || !$schoolID || !$userID || !$userType) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Unauthorized. Please login first.'
+                    'message' => 'Unauthorized. Missing required authentication parameters. Please provide: user_id, user_type, schoolID, and teacherID in headers or request body.'
                 ], 401);
+            }
+
+            // Validate user type
+            if ($userType !== 'Teacher') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Invalid user type. This endpoint is for Teachers only.'
+                ], 403);
+            }
+
+            // Verify teacher exists and belongs to the school
+            $teacher = Teacher::where('id', $teacherID)
+                ->where('schoolID', $schoolID)
+                ->first();
+
+            if (!$teacher) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Teacher not found or does not belong to the specified school.'
+                ], 404);
             }
 
             $validator = Validator::make($request->all(), [
@@ -3779,7 +3923,7 @@ class TeachersController extends Controller
             // Check if term is closed - prevent editing results for closed terms
             if ($examination->term && $examination->year) {
                 $term = DB::table('terms')
-                    ->where('schoolID', Session::get('schoolID'))
+                    ->where('schoolID', $schoolID)
                     ->where('year', $examination->year)
                     ->where('term_number', $examination->term)
                     ->where('status', 'Closed')
@@ -3853,6 +3997,216 @@ class TeachersController extends Controller
             DB::rollBack();
             return response()->json([
                 'error' => 'An error occurred: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Download Excel template for API
+     */
+    public function downloadExcelTemplateAPI(Request $request, $classSubjectID, $examID)
+    {
+        try {
+            // Get authentication data from headers (stateless authentication)
+            $teacherID = $request->header('teacherID') ?? $request->input('teacherID');
+            $schoolID = $request->header('schoolID') ?? $request->input('schoolID');
+            $userID = $request->header('user_id') ?? $request->input('user_id');
+            $userType = $request->header('user_type') ?? $request->input('user_type');
+
+            // Validate required parameters
+            if (!$teacherID || !$schoolID || !$userID || !$userType) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Missing required authentication parameters. Please provide: user_id, user_type, schoolID, and teacherID in headers or request body.'
+                ], 401);
+            }
+
+            // Validate user type
+            if ($userType !== 'Teacher') {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Invalid user type. This endpoint is for Teachers only.'
+                ], 403);
+            }
+
+            // Verify teacher exists and belongs to the school
+            $teacher = Teacher::where('id', $teacherID)
+                ->where('schoolID', $schoolID)
+                ->first();
+
+            if (!$teacher) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Teacher not found or does not belong to the specified school.'
+                ], 404);
+            }
+
+            // Verify teacher owns this class subject
+            $classSubject = ClassSubject::with(['subject' => function($query) {
+                    $query->where('status', 'Active');
+                }, 'class', 'subclass'])
+                ->where('class_subjectID', $classSubjectID)
+                ->where('teacherID', $teacherID)
+                ->where('status', 'Active')
+                ->whereHas('subject', function($query) {
+                    $query->where('status', 'Active');
+                })
+                ->first();
+
+            if (!$classSubject) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Class subject not found or unauthorized access.'
+                ], 404);
+            }
+
+            // Get examination
+            $examination = Examination::find($examID);
+            if (!$examination || $examination->schoolID != $schoolID) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Examination not found or unauthorized access.'
+                ], 404);
+            }
+
+            // Check examination status
+            if ($examination->status !== 'awaiting_results') {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'You are not allowed to perform this action. Wait for Academic Permission.'
+                ], 403);
+            }
+
+            // Get students for this class subject
+            $subclassID = $classSubject->subclassID;
+            $classID = $classSubject->classID;
+
+            if ($subclassID) {
+                $students = Student::where('subclassID', $subclassID)
+                    ->where('status', 'Active')
+                    ->orderBy('admission_number')
+                    ->get();
+            } else {
+                $subclassIds = DB::table('subclasses')
+                    ->where('classID', $classID)
+                    ->pluck('subclassID')
+                    ->toArray();
+                
+                $students = Student::whereIn('subclassID', $subclassIds)
+                    ->where('status', 'Active')
+                    ->orderBy('admission_number')
+                    ->get();
+            }
+
+            // Get school type for grading
+            $school = School::find($schoolID);
+            $schoolType = $school ? $school->school_type : 'Secondary';
+
+            // Check if PhpSpreadsheet is available
+            if (!class_exists('\PhpOffice\PhpSpreadsheet\Spreadsheet')) {
+                // Fallback to CSV if PhpSpreadsheet is not installed
+                return $this->downloadCsvTemplate($classSubjectID, $examID, $students, $schoolType, $classSubject, $examination);
+            }
+
+            // Create spreadsheet using PhpSpreadsheet
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('Results Template');
+            
+            // Enable calculation
+            $spreadsheet->getCalculationEngine()->setCalculationCacheEnabled(true);
+
+            // Headers
+            $sheet->setCellValue('A1', 'Student ID');
+            $sheet->setCellValue('B1', 'Admission Number');
+            $sheet->setCellValue('C1', 'Student Name');
+            $sheet->setCellValue('D1', 'Marks');
+            $sheet->setCellValue('E1', 'Grade');
+            $sheet->setCellValue('F1', 'Remark');
+
+            // Style headers
+            $headerStyle = [
+                'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                'fill' => [
+                    'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => '940000']
+                ],
+                'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER]
+            ];
+            $sheet->getStyle('A1:F1')->applyFromArray($headerStyle);
+
+            // Set column widths
+            $sheet->getColumnDimension('A')->setWidth(12);
+            $sheet->getColumnDimension('B')->setWidth(18);
+            $sheet->getColumnDimension('C')->setWidth(30);
+            $sheet->getColumnDimension('D')->setWidth(12);
+            $sheet->getColumnDimension('E')->setWidth(12);
+            $sheet->getColumnDimension('F')->setWidth(30);
+
+            // Add students data
+            $row = 2;
+            foreach ($students as $student) {
+                $sheet->setCellValue('A' . $row, $student->studentID);
+                $sheet->setCellValue('B' . $row, $student->admission_number);
+                $sheet->setCellValue('C' . $row, trim($student->first_name . ' ' . ($student->middle_name ?? '') . ' ' . $student->last_name));
+                
+                // Get existing result if any
+                $existingResult = Result::where('studentID', $student->studentID)
+                    ->where('examID', $examID)
+                    ->where('class_subjectID', $classSubjectID)
+                    ->first();
+                
+                // Always add formulas, even if existing result exists (formulas will override if marks are entered)
+                // Add formula for Grade (Column E) based on Marks (Column D)
+                if ($schoolType === 'Primary') {
+                    // Primary: Division One (75-100), Division Two (50-74), Division Three (30-49), Division Four (0-29), Division Zero (null)
+                    $gradeFormula = 'IF(D' . $row . '="","",IF(D' . $row . '>=75,"Division One",IF(D' . $row . '>=50,"Division Two",IF(D' . $row . '>=30,"Division Three",IF(D' . $row . '>=0,"Division Four","Division Zero")))))';
+                    $sheet->setCellValueExplicit('E' . $row, $gradeFormula, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_FORMULA);
+                    
+                    // Add formula for Remark (Column F) for Primary
+                    $remarkFormula = 'IF(D' . $row . '="","",IF(D' . $row . '>=75,"Excellent",IF(D' . $row . '>=50,"Very Good",IF(D' . $row . '>=30,"Good",IF(D' . $row . '>=0,"Pass","Fail")))))';
+                    $sheet->setCellValueExplicit('F' . $row, $remarkFormula, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_FORMULA);
+                } else {
+                    // Secondary: A (75-100), B (65-74), C (45-64), D (30-44), F (0-29)
+                    $gradeFormula = 'IF(D' . $row . '>=75,"A",IF(D' . $row . '>=65,"B",IF(D' . $row . '>=45,"C",IF(D' . $row . '>=30,"D","F"))))';
+                    $sheet->setCellValueExplicit('E' . $row, $gradeFormula, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_FORMULA);
+                    
+                    // Add formula for Remark (Column F) for Secondary
+                    $remarkFormula = 'IF(E' . $row . '="A","excellent",IF(E' . $row . '="B","very good",IF(E' . $row . '="C","good",IF(E' . $row . '="D","good","fail"))))';
+                    $sheet->setCellValueExplicit('F' . $row, $remarkFormula, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_FORMULA);
+                }
+                
+                // If existing result exists, populate marks (formulas will auto-calculate grade and remark)
+                if ($existingResult && $existingResult->marks !== null) {
+                    $sheet->setCellValue('D' . $row, $existingResult->marks);
+                }
+                
+                $row++;
+            }
+
+            // Recalculate formulas before saving
+            $spreadsheet->getActiveSheet()->getCellCollection()->clear();
+            $spreadsheet->getCalculationEngine()->clearCalculationCache();
+            
+            // Create writer
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            $writer->setPreCalculateFormulas(false); // Let Excel calculate formulas
+            
+            // Set headers for download
+            $filename = 'Results_Template_' . $classSubject->subject->subject_name . '_' . $examination->exam_name . '_' . date('Y-m-d') . '.xlsx';
+            
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            header('Content-Disposition: attachment;filename="' . $filename . '"');
+            header('Cache-Control: max-age=0');
+
+            $writer->save('php://output');
+            exit;
+
+        } catch (\Exception $e) {
+            Log::error('Error downloading Excel template API: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to download Excel template: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -7217,6 +7571,62 @@ class TeachersController extends Controller
         }
     }
 
+    public function getExamAttendanceDataAPI(Request $request, $classSubjectID)
+    {
+        try {
+            // Get authentication data from headers (stateless authentication)
+            $teacherID = $request->header('teacherID') ?? $request->input('teacherID');
+            $schoolID = $request->header('schoolID') ?? $request->input('schoolID');
+            $userID = $request->header('user_id') ?? $request->input('user_id');
+            $userType = $request->header('user_type') ?? $request->input('user_type');
+            
+            $examID = $request->input('examID');
+            $subjectID = $request->input('subjectID');
+
+            // Validate required parameters
+            if (!$teacherID || !$schoolID || !$userID || !$userType) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Missing required authentication parameters. Please provide: user_id, user_type, schoolID, and teacherID in headers or request body.'
+                ], 401);
+            }
+
+            // Validate user type
+            if ($userType !== 'Teacher') {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Invalid user type. This endpoint is for Teachers only.'
+                ], 403);
+            }
+
+            // Verify teacher exists and belongs to the school
+            $teacher = Teacher::where('id', $teacherID)
+                ->where('schoolID', $schoolID)
+                ->first();
+
+            if (!$teacher) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Teacher not found or does not belong to the specified school.'
+                ], 404);
+            }
+
+            if (!$examID || !$subjectID) {
+                return response()->json(['success' => false, 'error' => 'Missing required parameters: examID and subjectID are required']);
+            }
+            
+            // Call existing method with classSubjectID
+            $request->merge(['classSubjectID' => $classSubjectID]);
+            return $this->getExamAttendanceData($request);
+        } catch (\Exception $e) {
+            Log::error('Error getting exam attendance data API: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to retrieve exam attendance data: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function getExamAttendanceData(Request $request)
     {
         try {
@@ -7785,6 +8195,63 @@ class TeachersController extends Controller
     /**
      * Get session attendance data filtered by date or month
      */
+    public function getSessionAttendanceDataAPI(Request $request, $classSubjectID)
+    {
+        try {
+            // Get authentication data from headers (stateless authentication)
+            $teacherID = $request->header('teacherID') ?? $request->input('teacherID');
+            $schoolID = $request->header('schoolID') ?? $request->input('schoolID');
+            $userID = $request->header('user_id') ?? $request->input('user_id');
+            $userType = $request->header('user_type') ?? $request->input('user_type');
+            
+            $attendanceDate = $request->input('attendance_date');
+            $filterType = $request->input('filter_type', 'date'); // 'date' or 'month'
+            $month = $request->input('month'); // Format: YYYY-MM
+
+            // Validate required parameters
+            if (!$teacherID || !$schoolID || !$userID || !$userType) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Missing required authentication parameters. Please provide: user_id, user_type, schoolID, and teacherID in headers or request body.'
+                ], 401);
+            }
+
+            // Validate user type
+            if ($userType !== 'Teacher') {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Invalid user type. This endpoint is for Teachers only.'
+                ], 403);
+            }
+
+            // Verify teacher exists and belongs to the school
+            $teacher = Teacher::where('id', $teacherID)
+                ->where('schoolID', $schoolID)
+                ->first();
+
+            if (!$teacher) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Teacher not found or does not belong to the specified school.'
+                ], 404);
+            }
+
+            if (!$classSubjectID) {
+                return response()->json(['success' => false, 'error' => 'Class subject ID is required']);
+            }
+            
+            // Call existing method with classSubjectID
+            $request->merge(['classSubjectID' => $classSubjectID]);
+            return $this->getSessionAttendanceData($request);
+        } catch (\Exception $e) {
+            Log::error('Error getting session attendance data API: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to retrieve session attendance data: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function getSessionAttendanceData(Request $request)
     {
         try {

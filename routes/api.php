@@ -85,5 +85,12 @@ Route::get('/teacher/subjects/{classSubjectID}/results', [\App\Http\Controllers\
 Route::get('/teacher/subjects/{classSubjectID}/results/{examID}', [\App\Http\Controllers\TeachersController::class, 'getSubjectResultsAPI'])->name('api.teacher.subjects.results.by_exam');
 Route::post('/teacher/subjects/results/save', [\App\Http\Controllers\TeachersController::class, 'saveSubjectResultsAPI'])->name('api.teacher.subjects.results.save');
 Route::post('/teacher/subjects/results/upload-excel', [\App\Http\Controllers\TeachersController::class, 'uploadExcelResultsAPI'])->name('api.teacher.subjects.results.upload_excel');
+Route::get('/teacher/subjects/{classSubjectID}/results/{examID}/download-excel-template', [\App\Http\Controllers\TeachersController::class, 'downloadExcelTemplateAPI'])->name('api.teacher.subjects.results.download_excel_template');
+
+// Teacher Session Attendance endpoints
+Route::get('/teacher/subjects/{classSubjectID}/session-attendance', [\App\Http\Controllers\TeachersController::class, 'getSessionAttendanceDataAPI'])->name('api.teacher.subjects.session_attendance');
+
+// Teacher Exam Attendance endpoints
+Route::get('/teacher/subjects/{classSubjectID}/exam-attendance', [\App\Http\Controllers\TeachersController::class, 'getExamAttendanceDataAPI'])->name('api.teacher.subjects.exam_attendance');
 
 
