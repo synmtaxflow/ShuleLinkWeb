@@ -802,14 +802,38 @@ class TeachersController extends Controller
     public function getTeacherDashboardAPI(Request $request)
     {
         try {
-            $teacherID = Session::get('teacherID');
-            $schoolID = Session::get('schoolID');
+            // Get authentication data from headers (stateless authentication)
+            $teacherID = $request->header('teacherID') ?? $request->input('teacherID');
+            $schoolID = $request->header('schoolID') ?? $request->input('schoolID');
+            $userID = $request->header('user_id') ?? $request->input('user_id');
+            $userType = $request->header('user_type') ?? $request->input('user_type');
 
-            if (!$teacherID || !$schoolID) {
+            // Validate required parameters
+            if (!$teacherID || !$schoolID || !$userID || !$userType) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Unauthorized. Please login first.'
+                    'message' => 'Unauthorized. Missing required authentication parameters. Please provide: user_id, user_type, schoolID, and teacherID in headers or request body.'
                 ], 401);
+            }
+
+            // Validate user type
+            if ($userType !== 'Teacher') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Invalid user type. This endpoint is for Teachers only.'
+                ], 403);
+            }
+
+            // Verify teacher exists and belongs to the school
+            $teacher = Teacher::where('id', $teacherID)
+                ->where('schoolID', $schoolID)
+                ->first();
+
+            if (!$teacher) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Teacher not found or does not belong to the specified school.'
+                ], 404);
             }
 
             // Get dashboard statistics
@@ -857,11 +881,63 @@ class TeachersController extends Controller
             // Get notifications
             $notifications = collect();
             
-            // Get pending approvals
-            $pendingApprovals = DB::table('exam_approvals')
+            // Get pending approvals count
+            // This includes regular role approvals, class teacher approvals, and coordinator approvals
+            $pendingApprovalsCount = 0;
+            
+            // Get teacher's roles
+            $teacherRoles = DB::table('role_user')
+                ->where('teacher_id', $teacherID)
+                ->pluck('role_id')
+                ->toArray();
+            
+            // Get teacher's subclasses (for class_teacher role)
+            $teacherSubclasses = DB::table('subclasses')
                 ->where('teacherID', $teacherID)
-                ->where('status', 'pending')
-                ->count();
+                ->pluck('subclassID')
+                ->toArray();
+            
+            // Get teacher's main classes as coordinator
+            $teacherMainClasses = DB::table('classes')
+                ->where('teacherID', $teacherID)
+                ->where('schoolID', $schoolID)
+                ->pluck('classID')
+                ->toArray();
+            
+            // Count regular role approvals
+            if (!empty($teacherRoles)) {
+                $regularApprovals = DB::table('result_approvals')
+                    ->whereIn('role_id', $teacherRoles)
+                    ->where('status', 'pending')
+                    ->count();
+                $pendingApprovalsCount += $regularApprovals;
+            }
+            
+            // Count class teacher approvals
+            if (!empty($teacherSubclasses)) {
+                $classTeacherApprovals = DB::table('result_approvals')
+                    ->join('class_teacher_approvals', 'result_approvals.result_approvalID', '=', 'class_teacher_approvals.result_approvalID')
+                    ->where('result_approvals.special_role_type', 'class_teacher')
+                    ->whereIn('class_teacher_approvals.subclassID', $teacherSubclasses)
+                    ->where('class_teacher_approvals.status', 'pending')
+                    ->distinct('result_approvals.result_approvalID')
+                    ->count('result_approvals.result_approvalID');
+                $pendingApprovalsCount += $classTeacherApprovals;
+            }
+            
+            // Count coordinator approvals
+            if (!empty($teacherMainClasses)) {
+                $coordinatorApprovals = DB::table('result_approvals')
+                    ->join('coordinator_approvals', 'result_approvals.result_approvalID', '=', 'coordinator_approvals.result_approvalID')
+                    ->where('result_approvals.special_role_type', 'coordinator')
+                    ->whereIn('coordinator_approvals.mainclassID', $teacherMainClasses)
+                    ->where('coordinator_approvals.status', 'pending')
+                    ->distinct('result_approvals.result_approvalID')
+                    ->count('result_approvals.result_approvalID');
+                $pendingApprovalsCount += $coordinatorApprovals;
+            }
+            
+            $pendingApprovals = $pendingApprovalsCount;
             
             // Get supervise exam count
             $superviseExamCount = DB::table('exam_hall_supervisors')
@@ -988,10 +1064,16 @@ class TeachersController extends Controller
             ],
         ];
         
-        // Check if teacher has assigned class
-        $hasAssignedClass = DB::table('class_teachers')
+        // Check if teacher has assigned class (either as subclass teacher or main class coordinator)
+        $teacherSubclasses = DB::table('subclasses')
             ->where('teacherID', $teacherID)
             ->exists();
+        
+        $hasAssignedClass = $teacherSubclasses || 
+            DB::table('classes')
+                ->where('teacherID', $teacherID)
+                ->where('schoolID', $schoolID)
+                ->exists();
         
         if ($hasAssignedClass) {
             $menuItems[] = [
