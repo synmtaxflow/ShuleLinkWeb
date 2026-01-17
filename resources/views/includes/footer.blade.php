@@ -16,10 +16,38 @@
     font-size: 13px;
     padding: 8px 0;
     margin: 0;
-    z-index: 10000 !important; /* Higher z-index to be above widgets/charts */
+    z-index: 1030 !important; /* Below modals but above content */
     float: left;
     box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
     pointer-events: auto;
+  }
+  
+  /* Ensure modals are always above footer */
+  .modal {
+    z-index: 1050 !important; /* Bootstrap default but ensure it's higher than footer */
+  }
+  
+  .modal-backdrop {
+    z-index: 1040 !important; /* Bootstrap default - below modal but above footer */
+  }
+  
+  /* Ensure modal dialogs are above footer */
+  .modal-dialog {
+    z-index: 1050 !important;
+  }
+  
+  /* Ensure modal content is above footer */
+  .modal-content {
+    z-index: 1051 !important;
+  }
+  
+  /* SweetAlert2 modals should also be above footer */
+  .swal2-container {
+    z-index: 1055 !important;
+  }
+  
+  .swal2-popup {
+    z-index: 1056 !important;
   }
   
   /* Ensure widgets/charts don't overlap footer */
@@ -75,7 +103,7 @@
     .site-footer {
       left: 0;
       width: 100%;
-      z-index: 1000;
+      z-index: 1030;
     }
 
     .open .site-footer {
