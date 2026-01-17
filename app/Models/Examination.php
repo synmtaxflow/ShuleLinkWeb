@@ -55,4 +55,9 @@ class Examination extends Model
     {
         return $this->hasMany(ResultApproval::class, 'examID', 'examID')->orderBy('approval_order');
     }
+
+    public function examPapers()
+    {
+        return $this->hasMany(ExamPaper::class, 'examID', 'examID');
+    }
 }

@@ -672,6 +672,204 @@ class AdminController extends Controller
     }
 
     /**
+     * Manage Other Staff
+     */
+    public function manageOtherStaff()
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        // TODO: Implement other staff management functionality
+        // For now, return a placeholder view
+        return view('Admin.manage_other_staff', compact('schoolID'));
+    }
+
+    /**
+     * Manage Revenue
+     */
+    public function manageRevenue()
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        // TODO: Implement revenue management functionality
+        // For now, return a placeholder view
+        return view('Admin.manage_revenue', compact('schoolID'));
+    }
+
+    /**
+     * Manage Expenses
+     */
+    public function manageExpenses()
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        // TODO: Implement expenses management functionality
+        // For now, return a placeholder view
+        return view('Admin.manage_expenses', compact('schoolID'));
+    }
+
+    /**
+     * School Resources Management Methods
+     */
+    public function manageIncomingResources()
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        return view('Admin.manage_incoming_resources', compact('schoolID'));
+    }
+
+    public function manageOutgoingResources()
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        return view('Admin.manage_outgoing_resources', compact('schoolID'));
+    }
+
+    public function manageBuildingsInfrastructure()
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        return view('Admin.manage_buildings_infrastructure', compact('schoolID'));
+    }
+
+    public function manageDesks()
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        return view('Admin.manage_desks', compact('schoolID'));
+    }
+
+    public function manageChairs()
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        return view('Admin.manage_chairs', compact('schoolID'));
+    }
+
+    public function manageChalk()
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        return view('Admin.manage_chalk', compact('schoolID'));
+    }
+
+    public function manageBooks()
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        return view('Admin.manage_books', compact('schoolID'));
+    }
+
+    public function manageTeachingAids()
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        return view('Admin.manage_teaching_aids', compact('schoolID'));
+    }
+
+    public function inventoryList()
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        return view('Admin.inventory_list', compact('schoolID'));
+    }
+
+    public function manageDamagedLostItems()
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        return view('Admin.manage_damaged_lost_items', compact('schoolID'));
+    }
+
+    public function resourceReport()
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        return view('Admin.resource_report', compact('schoolID'));
+    }
+
+    public function usageReport()
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        return view('Admin.usage_report', compact('schoolID'));
+    }
+
+    /**
      * Get lesson plans sent to admin by subject and class
      */
     public function getLessonPlansForAdmin(Request $request)

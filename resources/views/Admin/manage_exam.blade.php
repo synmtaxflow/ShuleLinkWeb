@@ -567,7 +567,6 @@
                         <select class="form-control" id="student_shifting_status" name="student_shifting_status">
                             <option value="none">None - No shifting allowed</option>
                             <option value="internal">Internal - Allow shifting within same class level (e.g., Form Four A to Form Four B)</option>
-                            <option value="external">External - Allow shifting to different class level (e.g., Form Three B to Form Four A)</option>
                         </select>
                         <small class="form-text text-muted">
                             <i class="bi bi-info-circle"></i> This status determines the type of student shifting allowed for this examination. Only available for School Exams.
@@ -876,7 +875,6 @@
                         <select class="form-control" id="edit_student_shifting_status" name="student_shifting_status">
                             <option value="none">None - No shifting allowed</option>
                             <option value="internal">Internal - Allow shifting within same class level (e.g., Form Four A to Form Four B)</option>
-                            <option value="external">External - Allow shifting to different class level (e.g., Form Three B to Form Four A)</option>
                         </select>
                         <small class="form-text text-muted">
                             <i class="bi bi-info-circle"></i> Only available for School Exams and Tests.
@@ -941,7 +939,13 @@ $(document).ready(function() {
     });
 
     // Initialize Bootstrap dropdowns manually to ensure they work
+    // Only handle dropdowns in the main content area, not sidebar navigation
     $(document).on('click', '[data-toggle="dropdown"]', function(e) {
+        // Skip if this is a sidebar navigation dropdown (they use collapse, not dropdown)
+        if ($(this).closest('#left-panel, .sidebar-links-container, .dropdown-nav-item').length > 0) {
+            return; // Let sidebar dropdowns be handled by Admin_nav.blade.php
+        }
+        
         e.preventDefault();
         e.stopPropagation();
 
@@ -949,9 +953,9 @@ $(document).ready(function() {
         const $menu = $dropdown.find('.dropdown-menu');
         const isOpen = $menu.hasClass('show');
 
-        // Close all other dropdowns
-        $('.dropdown-menu').not($menu).removeClass('show');
-        $('[data-toggle="dropdown"]').not(this).attr('aria-expanded', 'false');
+        // Close all other dropdowns (only in content area, not sidebar)
+        $('.dropdown-menu').not($menu).not('#left-panel .dropdown-menu, .sidebar-links-container .dropdown-menu').removeClass('show');
+        $('[data-toggle="dropdown"]').not(this).not('#left-panel [data-toggle="dropdown"], .sidebar-links-container [data-toggle="dropdown"]').attr('aria-expanded', 'false');
 
         // Toggle current dropdown
         if (!isOpen) {
@@ -976,16 +980,21 @@ $(document).ready(function() {
         }, 100);
     });
 
-    // Close dropdown when clicking outside
+    // Close dropdown when clicking outside (only for content area dropdowns, not sidebar)
     $(document).on('click', function(e) {
+        // Don't close sidebar dropdowns
+        if ($(e.target).closest('#left-panel, .sidebar-links-container, .dropdown-nav-item').length > 0) {
+            return;
+        }
+        
         if (!$(e.target).closest('.dropdown').length) {
-            $('.dropdown-menu').removeClass('show');
-            $('[data-toggle="dropdown"]').attr('aria-expanded', 'false');
+            $('.dropdown-menu').not('#left-panel .dropdown-menu, .sidebar-links-container .dropdown-menu').removeClass('show');
+            $('[data-toggle="dropdown"]').not('#left-panel [data-toggle="dropdown"], .sidebar-links-container [data-toggle="dropdown"]').attr('aria-expanded', 'false');
         }
     });
 
-    // Prevent dropdown from closing when clicking inside menu items
-    $('.dropdown-menu').on('click', function(e) {
+    // Prevent dropdown from closing when clicking inside menu items (only for content area dropdowns)
+    $('.dropdown-menu').not('#left-panel .dropdown-menu, .sidebar-links-container .dropdown-menu').on('click', function(e) {
         e.stopPropagation();
     });
 
@@ -4173,7 +4182,7 @@ function loadExamPapers(examID, search = '', status = '') {
                                 <div class="card-header bg-primary-custom text-white">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <h5 class="mb-0">
-                                            <i class="bi bi-folder"></i> ${group.displayName}
+                                            <i class="bi bi-folder"></i> ${group.className} ${group.subclassName}
                                         </h5>
                                         <button class="btn btn-sm btn-light toggle-subclass-btn" data-subclass-id="${subclassID}">
                                             <i class="bi bi-chevron-down"></i> View Papers
@@ -4222,7 +4231,9 @@ function loadExamPapers(examID, search = '', status = '') {
                         // Display papers for this subclass
                         group.papers.forEach(function(paper) {
                             const subjectName = paper.class_subject?.subject?.subject_name || 'N/A';
-                        const teacherName = paper.teacher ? (paper.teacher.first_name + ' ' + paper.teacher.last_name) : 'N/A';
+                            const teacherName = paper.teacher ? (paper.teacher.first_name + ' ' + paper.teacher.last_name) : 'N/A';
+                            const className = paper.class_subject?.class?.class_name || 'N/A';
+                            const subclassName = paper.class_subject?.subclass?.subclass_name || 'N/A';
 
                         let statusBadge = '';
                         if (paper.status === 'wait_approval') {
@@ -4242,6 +4253,8 @@ function loadExamPapers(examID, search = '', status = '') {
                                                 <i class="bi bi-file-earmark-text"></i> ${subjectName}
                                             </h5>
                                             <p class="mb-2">
+                                                <strong>Class:</strong> ${className}<br>
+                                                <strong>Subclass:</strong> ${subclassName}<br>
                                                 <strong>Teacher:</strong> ${teacherName}<br>
                                                 <strong>Type:</strong> <span class="badge badge-info">${paper.upload_type === 'upload' ? 'File Upload' : 'Created'}</span><br>
                                                 <strong>Status:</strong> ${statusBadge}
@@ -4272,6 +4285,9 @@ function loadExamPapers(examID, search = '', status = '') {
                                                 <a href="/download_exam_paper/${paper.exam_paperID}" class="btn btn-sm btn-primary-custom mb-2" title="Download">
                                                     <i class="bi bi-download"></i> Download
                                                 </a><br>
+                                                <button class="btn btn-sm btn-success print-exam-paper-btn mb-2" data-paper-id="${paper.exam_paperID}" data-class-name="${className}" data-subclass-name="${subclassName}" title="Print Exam Paper">
+                                                    <i class="bi bi-printer"></i> Print
+                                                </button><br>
                                             ` : ''}
                                             ${paper.status === 'wait_approval' ? `
                                                 <div class="approve-reject-actions" data-paper-id="${paper.exam_paperID}">
@@ -4568,6 +4584,36 @@ $(document).on('click', '.toggle-subclass-btn', function() {
         icon.removeClass('bi-chevron-down').addClass('bi-chevron-up');
         $(this).html('<i class="bi bi-chevron-up"></i> Hide Papers');
     }
+});
+
+// Print exam paper with class name and subclass name
+$(document).on('click', '.print-exam-paper-btn', function() {
+    const paperID = $(this).data('paper-id');
+    const className = $(this).data('class-name') || 'N/A';
+    const subclassName = $(this).data('subclass-name') || 'N/A';
+    
+    const downloadUrl = '/download_exam_paper/' + paperID;
+    const printWindow = window.open(downloadUrl, '_blank');
+    
+    printWindow.onload = function() {
+        // Add class name and subclass name to print
+        const printContent = `
+            <div style="position: fixed; top: 0; left: 0; width: 100%; background: #fff; padding: 10px; border-bottom: 2px solid #940000; text-align: center; z-index: 9999;">
+                <strong>Class:</strong> ${className} | <strong>Subclass:</strong> ${subclassName}
+            </div>
+        `;
+        
+        // Try to inject header into the print window
+        setTimeout(function() {
+            try {
+                printWindow.print();
+            } catch (e) {
+                console.error('Print error:', e);
+                // Fallback: just open print dialog
+                printWindow.print();
+            }
+        }, 1000);
+    };
 });
 
 // View exam paper

@@ -309,6 +309,27 @@ Route::get('get_eligible_subclasses_for_transfer/{studentID}', [ManageClassessCo
 
 // Parent Routes
 Route::get('manage_parents', [ManageParentsController::class, 'manage_parents'])->name('manage_parents');
+
+// Other Staff Routes
+Route::get('manage_other_staff', [AdminController::class, 'manageOtherStaff'])->name('manage_other_staff');
+
+// Revenue and Expenses Routes
+Route::get('manage_revenue', [AdminController::class, 'manageRevenue'])->name('manage_revenue');
+Route::get('manage_expenses', [AdminController::class, 'manageExpenses'])->name('manage_expenses');
+
+// School Resources Routes
+Route::get('manage_incoming_resources', [AdminController::class, 'manageIncomingResources'])->name('manage_incoming_resources');
+Route::get('manage_outgoing_resources', [AdminController::class, 'manageOutgoingResources'])->name('manage_outgoing_resources');
+Route::get('manage_buildings_infrastructure', [AdminController::class, 'manageBuildingsInfrastructure'])->name('manage_buildings_infrastructure');
+Route::get('manage_desks', [AdminController::class, 'manageDesks'])->name('manage_desks');
+Route::get('manage_chairs', [AdminController::class, 'manageChairs'])->name('manage_chairs');
+Route::get('manage_chalk', [AdminController::class, 'manageChalk'])->name('manage_chalk');
+Route::get('manage_books', [AdminController::class, 'manageBooks'])->name('manage_books');
+Route::get('manage_teaching_aids', [AdminController::class, 'manageTeachingAids'])->name('manage_teaching_aids');
+Route::get('inventory_list', [AdminController::class, 'inventoryList'])->name('inventory_list');
+Route::get('manage_damaged_lost_items', [AdminController::class, 'manageDamagedLostItems'])->name('manage_damaged_lost_items');
+Route::get('resource_report', [AdminController::class, 'resourceReport'])->name('resource_report');
+Route::get('usage_report', [AdminController::class, 'usageReport'])->name('usage_report');
 Route::post('save_parent', [ManageParentsController::class, 'save_parent'])->name('save_parent');
 Route::get('get_parents', [ManageParentsController::class, 'get_parents'])->name('get_parents');
 Route::get('get_parent/{parentID}', [ManageParentsController::class, 'get_parent'])->name('get_parent');
@@ -357,6 +378,8 @@ Route::get('get_my_exam_papers', [ManageExaminationController::class, 'getMyExam
 Route::get('download_exam_paper/{examPaperID}', [ManageExaminationController::class, 'downloadExamPaper'])->name('download_exam_paper');
 Route::delete('delete_exam_paper/{examPaperID}', [ManageExaminationController::class, 'deleteExamPaper'])->name('delete_exam_paper');
 Route::get('supervise_exams', [ManageExaminationController::class, 'supervise_exams'])->name('supervise_exams');
+Route::get('admin/printing-unit', [ManageExaminationController::class, 'printingUnit'])->name('admin.printing_unit');
+Route::get('admin/printing-unit/filter', [ManageExaminationController::class, 'filterPrintingUnit'])->name('admin.printing_unit.filter');
 // Attendance Routes
 Route::post('save_attendance', [ManageClassessController::class, 'saveAttendance'])->name('save_attendance');
 Route::get('get_attendance', [ManageClassessController::class, 'getAttendance'])->name('get_attendance');

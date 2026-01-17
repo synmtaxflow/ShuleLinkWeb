@@ -5501,4 +5501,393 @@ class ManageExaminationController extends Controller
 
         return response()->json(['success' => 'Student moved to target hall']);
     }
+
+    /**
+     * Printing Unit - View approved exam papers with filters
+     */
+    public function printingUnit(Request $request)
+    {
+        try {
+            $schoolID = Session::get('schoolID');
+            $userType = Session::get('user_type');
+
+            if (!$schoolID || $userType !== 'Admin') {
+                return redirect()->route('login')->with('error', 'Access denied');
+            }
+
+            // Get filter parameters
+            $academicYear = $request->input('academic_year');
+            $term = $request->input('term');
+            $examID = $request->input('examID');
+            $classID = $request->input('classID');
+            $subclassID = $request->input('subclassID');
+
+            // Get all academic years from examinations
+            $academicYears = Examination::where('schoolID', $schoolID)
+                ->distinct()
+                ->orderBy('year', 'desc')
+                ->pluck('year')
+                ->toArray();
+
+            // Get all terms from examinations
+            $terms = Examination::where('schoolID', $schoolID)
+                ->whereNotNull('term')
+                ->distinct()
+                ->orderBy('term', 'asc')
+                ->pluck('term')
+                ->toArray();
+
+            // Base query for examinations with approved exam papers
+            $examinationsQuery = Examination::where('schoolID', $schoolID)
+                ->whereHas('examPapers', function($query) {
+                    $query->where('status', 'approved');
+                })
+                ->with([
+                    'examPapers' => function($query) {
+                        $query->where('status', 'approved')
+                            ->with([
+                                'classSubject.subject',
+                                'classSubject.class',
+                                'classSubject.subclass',
+                                'teacher'
+                            ]);
+                    }
+                ]);
+
+            // Apply filters - order matters: apply all filters before getting results
+            if ($academicYear) {
+                $examinationsQuery->where('year', $academicYear);
+            }
+
+            if ($term) {
+                // Handle term filtering - ensure it matches exactly (case-sensitive for enum)
+                $examinationsQuery->where('term', $term);
+            }
+
+            if ($examID) {
+                $examinationsQuery->where('examID', $examID);
+            }
+
+            $examinations = $examinationsQuery->orderBy('year', 'desc')
+                ->orderBy('start_date', 'desc')
+                ->get();
+            
+            // Debug: Log query results if needed
+            if (config('app.debug')) {
+                \Log::info('Printing Unit Filter Results', [
+                    'academic_year' => $academicYear,
+                    'term' => $term,
+                    'examID' => $examID,
+                    'examinations_count' => $examinations->count(),
+                    'exam_ids' => $examinations->pluck('examID')->toArray(),
+                ]);
+            }
+
+            // Get examinations for dropdown (filtered by academic year and term if provided)
+            $examsForDropdown = Examination::where('schoolID', $schoolID)
+                ->whereHas('examPapers', function($query) {
+                    $query->where('status', 'approved');
+                });
+
+            if ($academicYear) {
+                $examsForDropdown->where('year', $academicYear);
+            }
+
+            if ($term) {
+                $examsForDropdown->where('term', $term);
+            }
+
+            $examsForDropdown = $examsForDropdown->orderBy('year', 'desc')
+                ->orderBy('start_date', 'desc')
+                ->get(['examID', 'exam_name', 'year', 'term', 'start_date', 'end_date']);
+
+            // Get all classes for filter
+            $classes = ClassModel::where('schoolID', $schoolID)
+                ->where('status', 'Active')
+                ->orderBy('class_name')
+                ->get(['classID', 'class_name']);
+
+            // Get subclasses for filter (filtered by classID if provided)
+            $subclassesQuery = Subclass::with('class')
+                ->whereHas('class', function($query) use ($schoolID) {
+                    $query->where('schoolID', $schoolID);
+                })
+                ->where('status', 'Active');
+            
+            if ($classID) {
+                $subclassesQuery->where('classID', $classID);
+            }
+            
+            $subclasses = $subclassesQuery
+                ->orderBy('classID')
+                ->orderBy('subclass_name')
+                ->get()
+                ->map(function($subclass) {
+                    return (object) [
+                        'subclassID' => $subclass->subclassID,
+                        'subclass_name' => $subclass->subclass_name,
+                        'classID' => $subclass->classID,
+                        'class_name' => $subclass->class ? $subclass->class->class_name : 'N/A'
+                    ];
+                });
+
+            // Group examinations by class/subclass instead of by examination
+            $groupedByClass = [];
+            
+            foreach ($examinations as $exam) {
+                foreach ($exam->examPapers as $paper) {
+                    $classSubject = $paper->classSubject ?? null;
+                    if (!$classSubject) continue;
+                    
+                    $class = $classSubject->class ?? null;
+                    $subclass = $classSubject->subclass ?? null;
+                    
+                    if (!$class || !$subclass) continue;
+                    
+                    $classIDKey = $class->classID ?? 'no_class';
+                    $subclassIDKey = $subclass->subclassID ?? 'no_subclass';
+                    $key = $classIDKey . '_' . $subclassIDKey;
+                    
+                    // Apply class/subclass filters
+                    if ($classID && $class->classID != $classID) continue;
+                    if ($subclassID && $subclass->subclassID != $subclassID) continue;
+                    
+                    if (!isset($groupedByClass[$key])) {
+                        $groupedByClass[$key] = [
+                            'classID' => $class->classID,
+                            'className' => $class->class_name,
+                            'subclassID' => $subclass->subclassID,
+                            'subclassName' => $subclass->subclass_name,
+                            'papers' => []
+                        ];
+                    }
+                    
+                    // Add paper with exam info
+                    $groupedByClass[$key]['papers'][] = [
+                        'paper' => $paper,
+                        'exam' => $exam
+                    ];
+                }
+            }
+
+            return view('Admin.printing_unit', [
+                'academicYears' => $academicYears,
+                'terms' => $terms,
+                'examsForDropdown' => $examsForDropdown,
+                'classes' => $classes,
+                'subclasses' => $subclasses,
+                'groupedByClass' => $groupedByClass,
+                'selectedAcademicYear' => $academicYear,
+                'selectedTerm' => $term,
+                'selectedExamID' => $examID,
+                'selectedClassID' => $classID,
+                'selectedSubclassID' => $subclassID,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error loading printing unit: ' . $e->getMessage());
+            return redirect()->route('manageExamination')->with('error', 'Error loading printing unit: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * AJAX Filter endpoint for Printing Unit
+     */
+    public function filterPrintingUnit(Request $request)
+    {
+        try {
+            $schoolID = Session::get('schoolID');
+            $userType = Session::get('user_type');
+
+            if (!$schoolID || $userType !== 'Admin') {
+                return response()->json(['success' => false, 'error' => 'Access denied'], 403);
+            }
+
+            // Check if only loading subclasses
+            if ($request->input('load_subclasses_only')) {
+                $subclassesQuery = Subclass::with('class')
+                    ->whereHas('class', function($query) use ($schoolID) {
+                        $query->where('schoolID', $schoolID);
+                    })
+                    ->where('status', 'Active');
+                
+                $subclasses = $subclassesQuery
+                    ->orderBy('classID')
+                    ->orderBy('subclass_name')
+                    ->get()
+                    ->map(function($subclass) {
+                        return [
+                            'subclassID' => $subclass->subclassID,
+                            'subclass_name' => $subclass->subclass_name,
+                            'classID' => $subclass->classID,
+                            'class_name' => $subclass->class ? $subclass->class->class_name : 'N/A'
+                        ];
+                    });
+                
+                return response()->json([
+                    'success' => true,
+                    'subclasses' => $subclasses
+                ]);
+            }
+
+            // Get filter parameters (convert to appropriate types)
+            $academicYear = $request->input('academic_year');
+            $term = $request->input('term');
+            $examID = $request->input('examID') ? (int)$request->input('examID') : null;
+            $classID = $request->input('classID') ? (int)$request->input('classID') : null;
+            $subclassID = $request->input('subclassID') ? (int)$request->input('subclassID') : null;
+
+            // Base query for examinations with approved exam papers
+            $examinationsQuery = Examination::where('schoolID', $schoolID)
+                ->whereHas('examPapers', function($query) {
+                    $query->where('status', 'approved');
+                })
+                ->with([
+                    'examPapers' => function($query) {
+                        $query->where('status', 'approved')
+                            ->with([
+                                'classSubject.subject',
+                                'classSubject.class',
+                                'classSubject.subclass',
+                                'teacher'
+                            ]);
+                    }
+                ]);
+
+            // Apply filters
+            if ($academicYear) {
+                $examinationsQuery->where('year', $academicYear);
+            }
+
+            if ($term) {
+                $examinationsQuery->where('term', $term);
+            }
+
+            if ($examID) {
+                $examinationsQuery->where('examID', $examID);
+            }
+
+            $examinations = $examinationsQuery->orderBy('year', 'desc')
+                ->orderBy('start_date', 'desc')
+                ->get();
+
+            // Get examinations for dropdown (filtered by academic year and term if provided)
+            $examsForDropdown = Examination::where('schoolID', $schoolID)
+                ->whereHas('examPapers', function($query) {
+                    $query->where('status', 'approved');
+                });
+
+            if ($academicYear) {
+                $examsForDropdown->where('year', $academicYear);
+            }
+
+            if ($term) {
+                $examsForDropdown->where('term', $term);
+            }
+
+            $examsForDropdown = $examsForDropdown->orderBy('year', 'desc')
+                ->orderBy('start_date', 'desc')
+                ->get(['examID', 'exam_name', 'year', 'term', 'start_date', 'end_date']);
+
+            // Get subclasses for filter (filtered by classID if provided)
+            $subclassesQuery = Subclass::with('class')
+                ->whereHas('class', function($query) use ($schoolID) {
+                    $query->where('schoolID', $schoolID);
+                })
+                ->where('status', 'Active');
+            
+            if ($classID) {
+                $subclassesQuery->where('classID', $classID);
+            }
+            
+            $subclasses = $subclassesQuery
+                ->orderBy('classID')
+                ->orderBy('subclass_name')
+                ->get()
+                ->map(function($subclass) {
+                    return [
+                        'subclassID' => $subclass->subclassID,
+                        'subclass_name' => $subclass->subclass_name,
+                        'classID' => $subclass->classID,
+                        'class_name' => $subclass->class ? $subclass->class->class_name : 'N/A'
+                    ];
+                });
+
+            // Group examinations by class/subclass
+            $groupedByClass = [];
+            
+            foreach ($examinations as $exam) {
+                foreach ($exam->examPapers as $paper) {
+                    $classSubject = $paper->classSubject ?? null;
+                    if (!$classSubject) continue;
+                    
+                    $class = $classSubject->class ?? null;
+                    $subclass = $classSubject->subclass ?? null;
+                    
+                    if (!$class || !$subclass) continue;
+                    
+                    $classIDKey = $class->classID ?? 'no_class';
+                    $subclassIDKey = $subclass->subclassID ?? 'no_subclass';
+                    $key = $classIDKey . '_' . $subclassIDKey;
+                    
+                    // Apply class/subclass filters (use strict comparison with type casting)
+                    if ($classID && (int)$class->classID !== (int)$classID) continue;
+                    if ($subclassID && (int)$subclass->subclassID !== (int)$subclassID) continue;
+                    
+                    if (!isset($groupedByClass[$key])) {
+                        $groupedByClass[$key] = [
+                            'classID' => $class->classID,
+                            'className' => $class->class_name,
+                            'subclassID' => $subclass->subclassID,
+                            'subclassName' => $subclass->subclass_name,
+                            'exam_name' => $exam->exam_name ?? 'N/A',
+                            'start_date' => $exam->start_date ? \Carbon\Carbon::parse($exam->start_date)->format('Y-m-d') : null,
+                            'end_date' => $exam->end_date ? \Carbon\Carbon::parse($exam->end_date)->format('Y-m-d') : null,
+                            'papers' => []
+                        ];
+                    }
+                    
+                    // Add paper with exam info (convert to array for JSON)
+                    $groupedByClass[$key]['papers'][] = [
+                        'paper' => [
+                            'exam_paperID' => $paper->exam_paperID,
+                            'class_subject' => [
+                                'subject' => [
+                                    'subject_name' => $paper->classSubject->subject->subject_name ?? 'N/A'
+                                ]
+                            ],
+                            'teacher' => $paper->teacher ? [
+                                'first_name' => $paper->teacher->first_name ?? '',
+                                'last_name' => $paper->teacher->last_name ?? '',
+                                'phone_number' => $paper->teacher->phone_number ?? null,
+                                'phone' => $paper->teacher->phone ?? null
+                            ] : null
+                        ],
+                        'exam' => [
+                            'examID' => $exam->examID,
+                            'exam_name' => $exam->exam_name,
+                            'start_date' => $exam->start_date ? \Carbon\Carbon::parse($exam->start_date)->format('Y-m-d') : null,
+                            'end_date' => $exam->end_date ? \Carbon\Carbon::parse($exam->end_date)->format('Y-m-d') : null
+                        ]
+                    ];
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'groupedByClass' => $groupedByClass,
+                'examsForDropdown' => $examsForDropdown->map(function($exam) {
+                    return [
+                        'examID' => $exam->examID,
+                        'exam_name' => $exam->exam_name
+                    ];
+                }),
+                'subclasses' => $subclasses
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error filtering printing unit: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => 'Error filtering data: ' . $e->getMessage()], 500);
+        }
+    }
 }
