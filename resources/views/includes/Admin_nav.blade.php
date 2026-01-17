@@ -420,44 +420,7 @@
                             <ul id="schoolResources" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
                                 <li><a href="{{ route('manage_incoming_resources') }}" class="nav-link"><i class="fa fa-arrow-circle-down"></i> Incoming Resources</a></li>
                                 <li><a href="{{ route('manage_outgoing_resources') }}" class="nav-link"><i class="fa fa-arrow-circle-up"></i> Outgoing Resources</a></li>
-                                <li><a href="{{ route('manage_buildings_infrastructure') }}" class="nav-link"><i class="fa fa-building"></i> Buildings & Infrastructure</a></li>
-                                
-                                <!-- Furniture Submenu -->
-                                <li class="dropdown-nav-item">
-                                    <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#furnitureSubmenu" aria-expanded="false">
-                                        <i class="fa fa-couch"></i> Furniture <i class="fa fa-chevron-down float-right"></i>
-                                    </a>
-                                    <ul id="furnitureSubmenu" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
-                                        <li><a href="{{ route('manage_desks') }}" class="nav-link"><i class="fa fa-square"></i> Desks (Meza)</a></li>
-                                        <li><a href="{{ route('manage_chairs') }}" class="nav-link"><i class="fa fa-square"></i> Chairs (Viti)</a></li>
-                                    </ul>
-                                </li>
-                                
-                                <!-- Teaching Materials Submenu -->
-                                <li class="dropdown-nav-item">
-                                    <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#teachingMaterialsSubmenu" aria-expanded="false">
-                                        <i class="fa fa-graduation-cap"></i> Teaching Materials <i class="fa fa-chevron-down float-right"></i>
-                                    </a>
-                                    <ul id="teachingMaterialsSubmenu" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
-                                        <li><a href="{{ route('manage_chalk') }}" class="nav-link"><i class="fa fa-pencil"></i> Chalk</a></li>
-                                        <li><a href="{{ route('manage_books') }}" class="nav-link"><i class="fa fa-book"></i> Books</a></li>
-                                        <li><a href="{{ route('manage_teaching_aids') }}" class="nav-link"><i class="fa fa-tools"></i> Teaching Aids</a></li>
-                                    </ul>
-                                </li>
-                                
-                                <li><a href="{{ route('inventory_list') }}" class="nav-link"><i class="fa fa-list"></i> Inventory List</a></li>
                                 <li><a href="{{ route('manage_damaged_lost_items') }}" class="nav-link"><i class="fa fa-exclamation-triangle"></i> Damaged / Lost Items</a></li>
-                                
-                                <!-- Reports Submenu -->
-                                <li class="dropdown-nav-item">
-                                    <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#reportsSubmenu" aria-expanded="false">
-                                        <i class="fa fa-file-text"></i> Reports <i class="fa fa-chevron-down float-right"></i>
-                                    </a>
-                                    <ul id="reportsSubmenu" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
-                                        <li><a href="{{ route('resource_report') }}" class="nav-link"><i class="fa fa-bar-chart"></i> Resource Report</a></li>
-                                        <li><a href="{{ route('usage_report') }}" class="nav-link"><i class="fa fa-line-chart"></i> Usage Report</a></li>
-                                    </ul>
-                                </li>
                             </ul>
                         </li>
                     </ul>
