@@ -8803,25 +8803,31 @@ class TeachersController extends Controller
             $registeredBoys = $students->where('gender', 'Male')->count();
             $registeredTotal = $students->count();
 
-            // Get attendance records for this date
+            // Get attendance records for this date from student_session_attendance table
             $attendanceRecords = StudentSessionAttendance::where('session_timetableID', $sessionTimetableID)
                 ->where('attendance_date', $date)
                 ->get();
 
-            // Count present students
+            // Count present students (include 'present', 'late', and 'excused' as they all attended)
+            // Only exclude 'absent' status
             $presentGirls = 0;
             $presentBoys = 0;
             $presentTotal = 0;
 
             foreach ($attendanceRecords as $record) {
                 $student = $students->where('studentID', $record->studentID)->first();
-                if ($student && $record->status === 'Present') {
-                    if ($student->gender === 'Female') {
-                        $presentGirls++;
-                    } else {
-                        $presentBoys++;
+                if ($student) {
+                    // Convert status to lowercase for comparison (database stores lowercase)
+                    $status = strtolower($record->status ?? '');
+                    // Count as present if status is 'present', 'late', or 'excused' (not 'absent')
+                    if (in_array($status, ['present', 'late', 'excused'])) {
+                        if ($student->gender === 'Female') {
+                            $presentGirls++;
+                        } else {
+                            $presentBoys++;
+                        }
+                        $presentTotal++;
                     }
-                    $presentTotal++;
                 }
             }
 
@@ -9556,6 +9562,7 @@ class TeachersController extends Controller
         $registeredBoys = $students->where('gender', 'Male')->count();
         $registeredTotal = $students->count();
 
+        // Get attendance records from student_session_attendance table
         $attendanceRecords = StudentSessionAttendance::where('session_timetableID', $sessionTimetableID)
             ->where('attendance_date', $date)
             ->get();
@@ -9566,13 +9573,18 @@ class TeachersController extends Controller
 
         foreach ($attendanceRecords as $record) {
             $student = $students->where('studentID', $record->studentID)->first();
-            if ($student && $record->status === 'Present') {
-                if ($student->gender === 'Female') {
-                    $presentGirls++;
-                } else {
-                    $presentBoys++;
+            if ($student) {
+                // Convert status to lowercase for comparison (database stores lowercase)
+                $status = strtolower($record->status ?? '');
+                // Count as present if status is 'present', 'late', or 'excused' (not 'absent')
+                if (in_array($status, ['present', 'late', 'excused'])) {
+                    if ($student->gender === 'Female') {
+                        $presentGirls++;
+                    } else {
+                        $presentBoys++;
+                    }
+                    $presentTotal++;
                 }
-                $presentTotal++;
             }
         }
 
