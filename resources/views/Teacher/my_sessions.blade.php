@@ -1,3 +1,4 @@
+
 @include('includes.teacher_nav')
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -261,7 +262,7 @@
                                         @endphp
                                         
                                         <div class="col-md-6 col-lg-4 mb-3">
-                                            <div class="session-card {{ $isSessionTime ? 'active' : '' }} {{ !$canInteract ? 'disabled' : '' }}">
+                                            <div class="session-card {{ $isSessionTime ? 'active' : '' }}">
                                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                                     <div>
                                                         <span class="time-badge">
@@ -302,12 +303,11 @@
                                                     {{ $session->subclass->class->class_name ?? '' }} - {{ $session->subclass->subclass_name ?? '' }}
                                                 </p>
                                                 
-                                                <div class="mt-3" style="display: flex; flex-direction: column; gap: 8px;">
+                                                <div class="mt-3" style="display: flex; flex-direction: row; gap: 8px; flex-wrap: wrap;">
                                                     <button 
                                                         class="btn btn-session-action btn-sm" 
                                                         onclick="collectAttendance({{ $session->session_timetableID }}, '{{ $dayDate->format('Y-m-d') }}')"
-                                                        {{ !$canInteract ? 'disabled' : '' }}
-                                                        style="width: 100%;"
+                                                        style="flex: 1; min-width: 120px;"
                                                     >
                                                         <i class="bi bi-clipboard-check"></i> Collect Attendance
                                                     </button>
@@ -315,14 +315,31 @@
                                                     @php
                                                         $startTimeStr = $session->start_time ? (\Carbon\Carbon::parse($session->start_time)->format('H:i:s')) : '00:00:00';
                                                         $endTimeStr = $session->end_time ? (\Carbon\Carbon::parse($session->end_time)->format('H:i:s')) : '00:00:00';
+                                                        $subjectName = 'N/A';
+                                                        if($session->classSubject && $session->classSubject->subject && $session->classSubject->subject->subject_name) {
+                                                            $subjectName = $session->classSubject->subject->subject_name;
+                                                        } elseif($session->subject && $session->subject->subject_name) {
+                                                            $subjectName = $session->subject->subject_name;
+                                                        }
+                                                        if($session->is_prepo) {
+                                                            $subjectName .= ' (Prepo)';
+                                                        }
+                                                        $className = ($session->subclass->class->class_name ?? '') . ' - ' . ($session->subclass->subclass_name ?? '');
                                                     @endphp
                                                     <button 
                                                         class="btn btn-session-action btn-sm" 
                                                         onclick="assignTask({{ $session->session_timetableID }}, '{{ $dayDate->format('Y-m-d') }}', '{{ $startTimeStr }}', '{{ $endTimeStr }}')"
-                                                        {{ !$canInteract ? 'disabled' : '' }}
-                                                        style="width: 100%;"
+                                                        style="flex: 1; min-width: 120px;"
                                                     >
                                                         <i class="bi bi-journal-plus"></i> Assign Task
+                                                    </button>
+                                                    
+                                                    <button 
+                                                        class="btn btn-session-action btn-sm" 
+                                                        onclick="openLessonPlan({{ $session->session_timetableID }}, '{{ $session->day }}', '{{ $startTimeStr }}', '{{ $endTimeStr }}', '{{ addslashes($subjectName) }}', '{{ addslashes($className) }}', '{{ $dayDate->format('Y-m-d') }}')"
+                                                        style="flex: 1; min-width: 120px;"
+                                                    >
+                                                        <i class="bi bi-journal-text"></i> Lesson Plan
                                                     </button>
                                                 </div>
                                                 
@@ -980,6 +997,22 @@ window.assignTask = function(sessionTimetableID, date, startTime, endTime) {
     
     // Start checking for jQuery
     executeWhenJQueryReady();
+};
+
+window.openLessonPlan = function(sessionTimetableID, day, startTime, endTime, subjectName, className, date) {
+    // Navigate to lesson plans page with session details as URL parameters
+    const params = new URLSearchParams({
+        session_timetableID: sessionTimetableID,
+        day: day,
+        start_time: startTime,
+        end_time: endTime,
+        subject_name: subjectName,
+        class_name: className,
+        date: date,
+        auto_open: 'true'
+    });
+    
+    window.location.href = '{{ route("teacher.lessonPlans") }}?' + params.toString();
 };
 
 // Initialize jQuery-dependent code when ready

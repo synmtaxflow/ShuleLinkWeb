@@ -234,11 +234,15 @@
                                 <!-- Lesson Plan Form will be loaded here -->
                             </div>
                             <div id="useExistingForm" style="display: none;">
-                                <div class="form-group">
-                                    <label>Select Date</label>
-                                    <input type="date" class="form-control" id="existingLessonDate" onchange="loadExistingLessonPlan()">
+                                <div id="existingLessonPlansList">
+                                    <div class="text-center py-3">
+                                        <div class="spinner-border text-primary-custom" role="status">
+                                            <span class="sr-only">Loading...</span>
+                                        </div>
+                                        <p class="mt-2">Loading existing lesson plans...</p>
+                                    </div>
                                 </div>
-                                <div id="existingLessonPlanContent"></div>
+                                <div id="existingLessonPlanContent" style="display: none;"></div>
                             </div>
                         </div>
                     </div>
@@ -549,20 +553,30 @@ function loadSessionDates(sessionTimetableID) {
     });
 }
 
-function openLessonPlanModal(sessionTimetableID, day, startTime, endTime, subjectName, className) {
+function openLessonPlanModal(sessionTimetableID, day, startTime, endTime, subjectName, className, date, autoOpenCreate) {
     currentSessionData = {
         sessionTimetableID: sessionTimetableID,
         day: day,
         startTime: startTime,
         endTime: endTime,
         subjectName: subjectName,
-        className: className
+        className: className,
+        date: date || null
     };
     
     $('#lessonPlanModal').modal('show');
     $('#create-tab').tab('show');
-    $('#createNewForm').hide();
-    $('#useExistingForm').hide();
+    
+    if (autoOpenCreate && date) {
+        // Auto-open create form with session details
+        $('#createNewForm').show();
+        $('#useExistingForm').hide();
+        // Load form directly with date
+        loadCreateNewFormDirectly(date);
+    } else {
+        $('#createNewForm').hide();
+        $('#useExistingForm').hide();
+    }
 }
 
 function showCreateNewForm() {
@@ -574,53 +588,287 @@ function showCreateNewForm() {
 function showUseExistingForm() {
     $('#createNewForm').hide();
     $('#useExistingForm').show();
+    $('#existingLessonPlanContent').hide();
+    $('#existingLessonPlansList').show();
     
-    // Show date picker to check if lesson plan exists
+    // Load all existing lesson plans for this session
+    loadAllExistingLessonPlans();
+}
+
+function loadAllExistingLessonPlans() {
+    if (!currentSessionData || !currentSessionData.sessionTimetableID) {
+        $('#existingLessonPlansList').html('<div class="alert alert-warning">No session selected</div>');
+        return;
+    }
+    
+    // Get lesson plans for the last 2 years to show recent ones
+    const currentYear = new Date().getFullYear();
+    const lastYear = currentYear - 1;
+    
+    $.ajax({
+        url: '{{ route("teacher.get_lesson_plans_by_filter") }}',
+        method: 'GET',
+        data: {
+            session_timetableID: currentSessionData.sessionTimetableID,
+            filter_type: 'year',
+            year: currentYear
+        },
+        success: function(response) {
+            if (response.success && response.lesson_plans && response.lesson_plans.length > 0) {
+                displayExistingLessonPlansList(response.lesson_plans);
+            } else {
+                // Try last year if current year has no plans
+                $.ajax({
+                    url: '{{ route("teacher.get_lesson_plans_by_filter") }}',
+                    method: 'GET',
+                    data: {
+                        session_timetableID: currentSessionData.sessionTimetableID,
+                        filter_type: 'year',
+                        year: lastYear
+                    },
+                    success: function(response2) {
+                        if (response2.success && response2.lesson_plans && response2.lesson_plans.length > 0) {
+                            displayExistingLessonPlansList(response2.lesson_plans);
+                        } else {
+                            $('#existingLessonPlansList').html(`
+                                <div class="alert alert-info text-center">
+                                    <i class="bi bi-info-circle" style="font-size: 2rem;"></i>
+                                    <p class="mt-2">No existing lesson plans found for this subject.</p>
+                                    <p>Please create a new lesson plan.</p>
+                                </div>
+                            `);
+                        }
+                    },
+                    error: function() {
+                        $('#existingLessonPlansList').html('<div class="alert alert-danger">Failed to load lesson plans</div>');
+                    }
+                });
+            }
+        },
+        error: function() {
+            $('#existingLessonPlansList').html('<div class="alert alert-danger">Failed to load lesson plans</div>');
+        }
+    });
+}
+
+function displayExistingLessonPlansList(lessonPlans) {
+    let html = '<div class="mb-3"><h6>Select a lesson plan to use:</h6></div>';
+    html += '<div class="table-responsive" style="max-height: 400px; overflow-y: auto;">';
+    html += '<table class="table table-hover table-bordered">';
+    html += '<thead class="thead-light" style="position: sticky; top: 0; background: white; z-index: 10;">';
+    html += '<tr>';
+    html += '<th>Date</th>';
+    html += '<th>Subject</th>';
+    html += '<th>Class</th>';
+    html += '<th>Time</th>';
+    html += '<th>Action</th>';
+    html += '</tr>';
+    html += '</thead>';
+    html += '<tbody>';
+    
+    lessonPlans.forEach(function(plan) {
+        const planDate = new Date(plan.lesson_date);
+        const formattedDate = planDate.toLocaleDateString('en-GB', { 
+            day: '2-digit', 
+            month: 'short', 
+            year: 'numeric' 
+        });
+        
+        const formatTime = (timeStr) => {
+            if (!timeStr) return 'N/A';
+            try {
+                const parts = timeStr.split(':');
+                const hours = parseInt(parts[0]);
+                const minutes = parts[1] || '00';
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                const displayHours = hours % 12 || 12;
+                return displayHours + ':' + minutes + ' ' + ampm;
+            } catch (e) {
+                return timeStr;
+            }
+        };
+        
+        const startTime = formatTime(plan.lesson_time_start);
+        const endTime = formatTime(plan.lesson_time_end);
+        
+        html += '<tr>';
+        html += '<td>' + formattedDate + '</td>';
+        html += '<td>' + (plan.subject || 'N/A') + '</td>';
+        html += '<td>' + (plan.class_name || 'N/A') + '</td>';
+        html += '<td>' + startTime + ' - ' + endTime + '</td>';
+        html += '<td>';
+        html += '<button class="btn btn-sm btn-primary-custom" onclick="useExistingLessonPlan(' + plan.lesson_planID + ')">';
+        html += '<i class="bi bi-check-circle"></i> Use This';
+        html += '</button>';
+        html += '</td>';
+        html += '</tr>';
+    });
+    
+    html += '</tbody>';
+    html += '</table>';
+    html += '</div>';
+    
+    $('#existingLessonPlansList').html(html);
+}
+
+function useExistingLessonPlan(lessonPlanID) {
+    // Load the lesson plan data
+    $.ajax({
+        url: '{{ route("teacher.get_lesson_plan_by_id") }}',
+        method: 'GET',
+        data: {
+            lesson_planID: lessonPlanID
+        },
+        success: function(response) {
+            if (response.success && response.data) {
+                // Show form to select new date and time
+                showDateTimePickerForExistingPlan(response.data);
+            } else {
+                Swal.fire({
+                    title: 'Error!',
+                    text: response.error || 'Failed to load lesson plan',
+                    icon: 'error',
+                    confirmButtonColor: '#f5f5f5'
+                });
+            }
+        },
+        error: function() {
+            Swal.fire({
+                title: 'Error!',
+                text: 'Failed to load lesson plan',
+                icon: 'error',
+                confirmButtonColor: '#f5f5f5'
+            });
+        }
+    });
+}
+
+function showDateTimePickerForExistingPlan(lessonPlan) {
+    const formatTime = (timeStr) => {
+        if (!timeStr) return '';
+        try {
+            const parts = timeStr.split(':');
+            const hours = parts[0].padStart(2, '0');
+            const minutes = parts[1] || '00';
+            return hours + ':' + minutes;
+        } catch (e) {
+            return '';
+        }
+    };
+    
+    const currentDate = new Date().toISOString().split('T')[0];
+    const currentStartTime = currentSessionData.startTime || formatTime(lessonPlan.lesson_time_start);
+    const currentEndTime = currentSessionData.endTime || formatTime(lessonPlan.lesson_time_end);
+    
     Swal.fire({
-        title: 'Select Date to View Lesson Plan',
-        html: '<input type="date" id="swal-existing-date" class="swal2-input" value="' + new Date().toISOString().split('T')[0] + '">',
+        title: 'Select New Date and Time',
+        html: `
+            <div class="form-group text-left">
+                <label>Date:</label>
+                <input type="date" id="swal-new-date" class="form-control" value="${currentDate}" required>
+            </div>
+            <div class="form-group text-left">
+                <label>Start Time:</label>
+                <input type="time" id="swal-new-start-time" class="form-control" value="${currentStartTime}" required>
+            </div>
+            <div class="form-group text-left">
+                <label>End Time:</label>
+                <input type="time" id="swal-new-end-time" class="form-control" value="${currentEndTime}" required>
+            </div>
+        `,
         showCancelButton: true,
-        confirmButtonColor: '#f5f5f5',
+        confirmButtonColor: '#940000',
         cancelButtonColor: '#6c757d',
         confirmButtonText: 'Continue',
         cancelButtonText: 'Cancel',
+        width: '500px',
         preConfirm: () => {
-            return document.getElementById('swal-existing-date').value;
+            const date = document.getElementById('swal-new-date').value;
+            const startTime = document.getElementById('swal-new-start-time').value;
+            const endTime = document.getElementById('swal-new-end-time').value;
+            
+            if (!date || !startTime || !endTime) {
+                Swal.showValidationMessage('Please fill all fields');
+                return false;
+            }
+            
+            return {
+                date: date,
+                startTime: startTime,
+                endTime: endTime
+            };
         }
     }).then((result) => {
         if (result.isConfirmed && result.value) {
-            const sessionDate = result.value;
-            
-            // Check if lesson plan exists
-            $.ajax({
-                url: '{{ route("teacher.check_lesson_plan_exists") }}',
-                method: 'GET',
-                data: {
-                    session_timetableID: currentSessionData.sessionTimetableID,
-                    date: sessionDate
-                },
-                success: function(checkResponse) {
-                    if (checkResponse.success && checkResponse.exists) {
-                        // Load existing lesson plan
-                        loadExistingLessonPlanByDate(sessionDate);
-                    } else {
-                        Swal.fire({
-                            title: 'Not Found!',
-                            text: 'No lesson plan exists for this date. Please create a new one.',
-                            icon: 'info',
-                            confirmButtonColor: '#f5f5f5',
-                            confirmButtonText: 'OK'
-                        });
+            // Load attendance stats for the new date
+            loadExistingLessonPlanWithNewDateTime(lessonPlan, result.value.date, result.value.startTime, result.value.endTime);
+        }
+    });
+}
+
+function loadExistingLessonPlanWithNewDateTime(lessonPlan, newDate, newStartTime, newEndTime) {
+    // First get attendance stats for the new date
+    $.ajax({
+        url: '{{ route("teacher.get_session_attendance_stats") }}',
+        method: 'GET',
+        data: {
+            session_timetableID: currentSessionData.sessionTimetableID,
+            date: newDate
+        },
+        success: function(response) {
+            if (response.success) {
+                // Convert time format from HH:MM to HH:MM:SS if needed
+                const formatTimeForDisplay = (timeStr) => {
+                    if (!timeStr) return '';
+                    const parts = timeStr.split(':');
+                    if (parts.length === 2) {
+                        return timeStr + ':00';
                     }
-                },
-                error: function() {
-                    Swal.fire({
-                        title: 'Error!',
-                        text: 'Failed to check lesson plan',
-                        icon: 'error',
-                        confirmButtonColor: '#f5f5f5'
-                    });
-                }
+                    return timeStr;
+                };
+                
+                // Merge lesson plan data with attendance stats and new date/time
+                const mergedData = {
+                    ...response.data,
+                    // Override time with new time
+                    start_time: formatTimeForDisplay(newStartTime),
+                    end_time: formatTimeForDisplay(newEndTime),
+                    // Use lesson plan content if available
+                    main_competence: lessonPlan.main_competence || response.data.main_competence || '',
+                    specific_competence: lessonPlan.specific_competence || response.data.specific_competence || '',
+                    main_activity: lessonPlan.main_activity || response.data.main_activity || '',
+                    specific_activity: lessonPlan.specific_activity || response.data.specific_activity || '',
+                    teaching_learning_resources: lessonPlan.teaching_learning_resources || response.data.teaching_learning_resources || '',
+                    references: lessonPlan.references || response.data.references || '',
+                    remarks: lessonPlan.remarks || response.data.remarks || '',
+                    reflection: lessonPlan.reflection || response.data.reflection || '',
+                    evaluation: lessonPlan.evaluation || response.data.evaluation || '',
+                    // Handle lesson stages (JSON array)
+                    stages: lessonPlan.lesson_stages || response.data.lesson_stages || []
+                };
+                
+                // Render form with merged data
+                renderLessonPlanForm(mergedData, newDate);
+                
+                // Hide existing plans list and show form
+                $('#existingLessonPlansList').hide();
+                $('#existingLessonPlanContent').hide();
+                $('#createNewForm').show();
+            } else {
+                Swal.fire({
+                    title: 'Error!',
+                    text: response.error || 'Failed to load attendance statistics',
+                    icon: 'error',
+                    confirmButtonColor: '#f5f5f5'
+                });
+            }
+        },
+        error: function() {
+            Swal.fire({
+                title: 'Error!',
+                text: 'Failed to load attendance statistics',
+                icon: 'error',
+                confirmButtonColor: '#f5f5f5'
             });
         }
     });
@@ -752,6 +1000,122 @@ function loadCreateNewForm() {
                                 confirmButtonColor: '#f5f5f5'
                             });
                         }
+                    });
+                }
+            });
+        }
+    });
+}
+
+function loadCreateNewFormDirectly(date) {
+    // Load create form directly with the provided date, bypassing date picker
+    if (!date) {
+        console.error('Date is required for loadCreateNewFormDirectly');
+        return;
+    }
+    
+    // First check if lesson plan already exists
+    $.ajax({
+        url: '{{ route("teacher.check_lesson_plan_exists") }}',
+        method: 'GET',
+        data: {
+            session_timetableID: currentSessionData.sessionTimetableID,
+            date: date
+        },
+        success: function(checkResponse) {
+            if (checkResponse.success && checkResponse.exists) {
+                Swal.fire({
+                    title: 'Already Exists!',
+                    text: 'Lesson plan already exists for this date. Please use "Manage Lesson Plan" tab to edit or "Use Existing Lesson Plan" to view.',
+                    icon: 'warning',
+                    confirmButtonColor: '#f5f5f5',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+            
+            // If doesn't exist, proceed to get attendance stats
+            $.ajax({
+                url: '{{ route("teacher.get_session_attendance_stats") }}',
+                method: 'GET',
+                data: {
+                    session_timetableID: currentSessionData.sessionTimetableID,
+                    date: date
+                },
+                success: function(response) {
+                    if (response.success) {
+                        renderLessonPlanForm(response.data, date);
+                    } else {
+                        let errorMessage = response.error || 'Failed to load attendance statistics';
+                        let icon = 'error';
+                        
+                        // Check date status
+                        if (response.date_status === 'weekend') {
+                            icon = 'info';
+                        } else if (response.date_status === 'holiday') {
+                            icon = 'warning';
+                        } else if (response.date_status === 'no_session') {
+                            icon = 'info';
+                        }
+                        
+                        Swal.fire({
+                            title: icon === 'error' ? 'Error!' : 'Notice',
+                            text: errorMessage,
+                            icon: icon,
+                            confirmButtonColor: '#f5f5f5',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                },
+                error: function() {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Failed to load attendance statistics',
+                        icon: 'error',
+                        confirmButtonColor: '#f5f5f5'
+                    });
+                }
+            });
+        },
+        error: function() {
+            // If check fails, proceed anyway
+            $.ajax({
+                url: '{{ route("teacher.get_session_attendance_stats") }}',
+                method: 'GET',
+                data: {
+                    session_timetableID: currentSessionData.sessionTimetableID,
+                    date: date
+                },
+                success: function(response) {
+                    if (response.success) {
+                        renderLessonPlanForm(response.data, date);
+                    } else {
+                        let errorMessage = response.error || 'Failed to load attendance statistics';
+                        let icon = 'error';
+                        
+                        if (response.date_status === 'weekend') {
+                            icon = 'info';
+                        } else if (response.date_status === 'holiday') {
+                            icon = 'warning';
+                        } else if (response.date_status === 'no_session') {
+                            icon = 'info';
+                        }
+                        
+                        Swal.fire({
+                            title: icon === 'error' ? 'Error!' : 'Notice',
+                            text: errorMessage,
+                            icon: icon,
+                            confirmButtonColor: '#f5f5f5',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                },
+                error: function() {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Failed to load attendance statistics',
+                        icon: 'error',
+                        confirmButtonColor: '#f5f5f5'
                     });
                 }
             });
@@ -958,6 +1322,56 @@ function renderLessonPlanForm(attendanceData, date) {
     `;
     
     $('#createNewForm').html(html);
+    
+    // Populate fields from attendanceData if available (for using existing lesson plan)
+    if (attendanceData.main_competence) {
+        $('#main_competence').val(attendanceData.main_competence);
+    }
+    if (attendanceData.specific_competence) {
+        $('#specific_competence').val(attendanceData.specific_competence);
+    }
+    if (attendanceData.main_activity) {
+        $('#main_activity').val(attendanceData.main_activity);
+    }
+    if (attendanceData.specific_activity) {
+        $('#specific_activity').val(attendanceData.specific_activity);
+    }
+    if (attendanceData.teaching_learning_resources || attendanceData.teaching_aids) {
+        $('#teaching_learning_resources').val(attendanceData.teaching_learning_resources || attendanceData.teaching_aids);
+    }
+    if (attendanceData.references) {
+        $('#references').val(attendanceData.references);
+    }
+    if (attendanceData.remarks) {
+        $('#remarks').val(attendanceData.remarks);
+    }
+    if (attendanceData.reflection) {
+        $('#reflection').val(attendanceData.reflection);
+    }
+    if (attendanceData.evaluation) {
+        $('#evaluation').val(attendanceData.evaluation);
+    }
+    
+    // Populate lesson stages if available
+    if (attendanceData.stages && Array.isArray(attendanceData.stages)) {
+        attendanceData.stages.forEach(function(stage, index) {
+            const rows = $('#lessonStagesTable tr');
+            if (rows.length > index) {
+                const row = $(rows[index]);
+                // Handle different stage field names
+                if (stage.time) row.find('.stage-time').val(stage.time);
+                if (stage.teaching_activities || stage.teaching) {
+                    row.find('.stage-teaching').val(stage.teaching_activities || stage.teaching);
+                }
+                if (stage.learning_activities || stage.learning) {
+                    row.find('.stage-learning').val(stage.learning_activities || stage.learning);
+                }
+                if (stage.assessment_criteria || stage.assessment) {
+                    row.find('.stage-assessment').val(stage.assessment_criteria || stage.assessment);
+                }
+            }
+        });
+    }
     
     // Initialize signature pad after a short delay to ensure canvas is rendered
     setTimeout(function() {
@@ -3248,5 +3662,41 @@ function sendLessonPlanToAdmin(lessonPlanID) {
         }
     });
 }
+
+// Auto-open lesson plan modal with session details from URL parameters
+$(document).ready(function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const autoOpen = urlParams.get('auto_open');
+    
+    if (autoOpen === 'true') {
+        const sessionTimetableID = urlParams.get('session_timetableID');
+        const day = urlParams.get('day');
+        const startTime = urlParams.get('start_time');
+        const endTime = urlParams.get('end_time');
+        const subjectName = urlParams.get('subject_name');
+        const className = urlParams.get('class_name');
+        const date = urlParams.get('date');
+        
+        if (sessionTimetableID && day && startTime && endTime && subjectName && className && date) {
+            // Wait a bit for modal to be ready
+            setTimeout(function() {
+                openLessonPlanModal(
+                    sessionTimetableID,
+                    day,
+                    startTime,
+                    endTime,
+                    subjectName,
+                    className,
+                    date,
+                    true // autoOpenCreate
+                );
+                
+                // Clean up URL parameters
+                const newUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, newUrl);
+            }, 500);
+        }
+    }
+});
 </script>
 

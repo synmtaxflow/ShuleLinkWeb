@@ -11,7 +11,7 @@
                     <i class="bi bi-arrow-left"></i> Back to Dashboard
                 </a>
             </div>
-            
+         
             <div class="approval-chain-container">
                 @foreach($chain as $index => $step)
                     <div class="approval-step mb-4">
