@@ -16,10 +16,33 @@
     font-size: 13px;
     padding: 8px 0;
     margin: 0;
-    z-index: 999;
+    z-index: 10000 !important; /* Higher z-index to be above widgets/charts */
     float: left;
     box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
     pointer-events: auto;
+  }
+  
+  /* Ensure widgets/charts don't overlap footer */
+  canvas,
+  .flot-container,
+  .chart-container,
+  [id*="chart"],
+  [id*="Chart"],
+  [id*="graph"],
+  [id*="Graph"],
+  .widget,
+  .chart-wrapper {
+    position: relative !important;
+    z-index: 1 !important;
+    margin-bottom: 60px !important; /* Add space at bottom for footer */
+  }
+  
+  /* Ensure content containers have padding bottom to avoid footer overlap */
+  .right-panel,
+  .content-wrapper,
+  .main-content,
+  .container-fluid {
+    padding-bottom: 60px !important;
   }
 
   /* Ensure footer is below sidebar - sidebar should be above */

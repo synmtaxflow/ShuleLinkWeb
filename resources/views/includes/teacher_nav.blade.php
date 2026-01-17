@@ -135,22 +135,110 @@
     color: #940000 !important;
 }
 
-/* Overflow scroll kwa sidebar links container - scrollbar hidden */
+/* Overflow scroll kwa sidebar links container - with visible scrollbar */
 .sidebar-links-container {
     overflow-y: auto !important;
     overflow-x: hidden !important;
     max-height: calc(100vh - 200px) !important;
-    scrollbar-width: none !important; /* Firefox */
-    -ms-overflow-style: none !important; /* IE and Edge */
     width: 100% !important;
+    /* Show scrollbar */
+    scrollbar-width: thin !important; /* Firefox */
+    scrollbar-color: #940000 #f0f0f0 !important; /* Firefox */
+    -ms-overflow-style: scrollbar !important; /* IE and Edge */
 }
 
+/* Custom scrollbar styling for WebKit browsers (Chrome, Safari, Opera) */
 .sidebar-links-container::-webkit-scrollbar {
-    display: none !important; /* Chrome, Safari, Opera */
+    width: 8px !important;
+    display: block !important;
+}
+
+.sidebar-links-container::-webkit-scrollbar-track {
+    background: #f0f0f0 !important;
+    border-radius: 4px !important;
+}
+
+.sidebar-links-container::-webkit-scrollbar-thumb {
+    background: #940000 !important;
+    border-radius: 4px !important;
+}
+
+.sidebar-links-container::-webkit-scrollbar-thumb:hover {
+    background: #7a0000 !important;
 }
 
 .sidebar-links-container ul {
     width: 100% !important;
+}
+
+/* Dropdown menu items styling */
+.dropdown-nav-item {
+    position: relative;
+}
+
+.dropdown-nav-item .dropdown-toggle {
+    cursor: pointer;
+    position: relative;
+}
+
+.dropdown-nav-item .dropdown-toggle i.fa-chevron-down {
+    transition: transform 0.3s ease;
+    font-size: 0.75rem;
+    margin-top: 3px;
+}
+
+.dropdown-nav-item .dropdown-toggle[aria-expanded="true"] i.fa-chevron-down {
+    transform: rotate(180deg);
+}
+
+.dropdown-nav-item .submenu {
+    background-color: #f8f9fa !important;
+    border-left: 2px solid #940000;
+    margin-left: 10px;
+}
+
+.dropdown-nav-item .submenu li {
+    border-bottom: none !important;
+}
+
+.dropdown-nav-item .submenu li a {
+    padding-left: 15px !important;
+    font-size: 0.9rem;
+    color: #940000 !important;
+}
+
+.dropdown-nav-item .submenu li a:hover {
+    background-color: #e9ecef !important;
+    padding-left: 20px !important;
+}
+
+.dropdown-nav-item .submenu li a i {
+    margin-right: 8px;
+    font-size: 0.85rem;
+}
+
+/* Ensure sidebar itself can scroll if needed */
+#left-panel {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    max-height: 100vh !important;
+}
+
+#left-panel::-webkit-scrollbar {
+    width: 8px !important;
+}
+
+#left-panel::-webkit-scrollbar-track {
+    background: #f0f0f0 !important;
+}
+
+#left-panel::-webkit-scrollbar-thumb {
+    background: #940000 !important;
+    border-radius: 4px !important;
+}
+
+#left-panel::-webkit-scrollbar-thumb:hover {
+    background: #7a0000 !important;
 }
 </style>
 </head>
@@ -202,19 +290,55 @@
                 <li class="sidebar-links-container">
                     <ul style="list-style: none; padding: 0; margin: 0; font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif;">
                         <li><a href="{{ route('teachersDashboard') }}" class="nav-link"><i class="fa fa-building"></i> Dashboard</a></li>
-                        <li><a href="{{ route('teacher.mySessions') }}" class="nav-link"><i class="fa fa-clock-o"></i> My Sessions</a></li>
-                        <li><a href="{{ route('teacher.myTasks') }}" class="nav-link"><i class="fa fa-tasks"></i> My Tasks</a></li>
-                        <li><a href="{{ route('teacherSubjects') }}" class="nav-link"><i class="fa fa-book"></i> My Subjects</a></li>
-                        <li><a href="{{ route('teacher.schemeOfWork') }}" class="nav-link"><i class="fa fa-file-text-o"></i> Scheme of Work</a></li>
-                        <li><a href="{{ route('teacher.lessonPlans') }}" class="nav-link"><i class="fa fa-book"></i> Lesson Plans</a></li>
-                        <li><a href="{{ route('teacher.calendar') }}" class="nav-link"><i class="fa fa-calendar"></i> Calendar</a></li>
-                        @if (isset($hasAssignedClass) && $hasAssignedClass)
-                        <li><a href="{{ route('AdmitedClasses') }}" class="nav-link"><i class="fa fa-users"></i> My Class</a></li>
-                        @endif
-                        <li><a href="{{ route('supervise_exams') }}" class="nav-link"><i class="fa fa-graduation-cap"></i> My Supervise Exams</a></li>
-                        <li><a href="{{ route('exam_paper') }}" class="nav-link"><i class="fa fa-file-text"></i> My Exam Papers</a></li>
-                        <li><a href="#" class="nav-link"><i class="fa fa-calculator"></i> My Salary</a></li>
-                        <li><a href="#" class="nav-link"><i class="fa fa-table"></i> My TimeTable</a></li>
+                        
+                        <!-- Teaching Activities -->
+                        <li class="dropdown-nav-item">
+                            <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#teachingActivities" aria-expanded="false">
+                                <i class="fa fa-book"></i> Teaching Activities <i class="fa fa-chevron-down float-right"></i>
+                            </a>
+                            <ul id="teachingActivities" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
+                                <li><a href="{{ route('teacher.mySessions') }}" class="nav-link"><i class="fa fa-clock-o"></i> My Sessions</a></li>
+                                <li><a href="{{ route('teacher.myTasks') }}" class="nav-link"><i class="fa fa-tasks"></i> My Tasks</a></li>
+                                <li><a href="{{ route('teacherSubjects') }}" class="nav-link"><i class="fa fa-book"></i> My Subjects</a></li>
+                                <li><a href="{{ route('teacher.schemeOfWork') }}" class="nav-link"><i class="fa fa-file-text-o"></i> Scheme of Work</a></li>
+                                <li><a href="{{ route('teacher.lessonPlans') }}" class="nav-link"><i class="fa fa-book"></i> Lesson Plans</a></li>
+                                <li><a href="{{ route('teacher.calendar') }}" class="nav-link"><i class="fa fa-calendar"></i> Calendar</a></li>
+                            </ul>
+                        </li>
+                        
+                        <!-- Exams -->
+                        <li class="dropdown-nav-item">
+                            <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#exams" aria-expanded="false">
+                                <i class="fa fa-graduation-cap"></i> Exams <i class="fa fa-chevron-down float-right"></i>
+                            </a>
+                            <ul id="exams" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
+                                <li><a href="{{ route('supervise_exams') }}" class="nav-link"><i class="fa fa-graduation-cap"></i> My Supervise Exams</a></li>
+                                <li><a href="{{ route('exam_paper') }}" class="nav-link"><i class="fa fa-file-text"></i> My Exam Papers</a></li>
+                            </ul>
+                        </li>
+                        
+                        <!-- My Class & Schedule -->
+                        <li class="dropdown-nav-item">
+                            <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#classSchedule" aria-expanded="false">
+                                <i class="fa fa-users"></i> My Class & Schedule <i class="fa fa-chevron-down float-right"></i>
+                            </a>
+                            <ul id="classSchedule" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
+                                @if (isset($hasAssignedClass) && $hasAssignedClass)
+                                <li><a href="{{ route('AdmitedClasses') }}" class="nav-link"><i class="fa fa-users"></i> My Class</a></li>
+                                @endif
+                                <li><a href="#" class="nav-link"><i class="fa fa-table"></i> My TimeTable</a></li>
+                            </ul>
+                        </li>
+                        
+                        <!-- Personal -->
+                        <li class="dropdown-nav-item">
+                            <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#personal" aria-expanded="false">
+                                <i class="fa fa-user"></i> Personal <i class="fa fa-chevron-down float-right"></i>
+                            </a>
+                            <ul id="personal" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
+                                <li><a href="#" class="nav-link"><i class="fa fa-calculator"></i> My Salary</a></li>
+                            </ul>
+                        </li>
 
                         @php
                             // Check permission categories - New format: category_action (e.g. examination_create, examination_update, etc.)
@@ -318,68 +442,74 @@
                             }
                         @endphp
 
-                        @if($hasExaminationPermission)
-                            <li><a href="{{ route('manageExamination') }}" class="nav-link"><i class="fa fa-pencil-square-o"></i> Examination Management</a></li>
-                        @endif
+                        <!-- Management (Permission-based) -->
+                        @if($hasExaminationPermission || $hasSubjectPermission || $hasClassesPermission || $hasResultPermission || $hasAttendancePermission || $hasStudentPermission || $hasTimetablePermission || $hasFeesPermission || $hasAccommodationPermission || $hasLibraryPermission || $hasCalendarPermission || $hasFingerprintPermission || $hasTaskPermission || $hasSmsPermission || $hasTeacherPermission)
+                        <li class="dropdown-nav-item">
+                            <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#management" aria-expanded="false">
+                                <i class="fa fa-cogs"></i> Management <i class="fa fa-chevron-down float-right"></i>
+                            </a>
+                            <ul id="management" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
+                                @if($hasExaminationPermission)
+                                    <li><a href="{{ route('manageExamination') }}" class="nav-link"><i class="fa fa-pencil-square-o"></i> Examinations</a></li>
+                                @endif
 
-                        @if($hasSubjectPermission)
-                            <li><a href="{{ route('manageSubjects') }}" class="nav-link"><i class="fa fa-bookmark"></i> Subject Management</a></li>
-                        @endif
+                                @if($hasSubjectPermission)
+                                    <li><a href="{{ route('manageSubjects') }}" class="nav-link"><i class="fa fa-bookmark"></i> Subjects</a></li>
+                                @endif
 
-                        @if($hasClassesPermission)
-                            <li><a href="{{ route('manageClasses') }}" class="nav-link"><i class="fa fa-users"></i> Classes Management</a></li>
-                        @endif
+                                @if($hasClassesPermission)
+                                    <li><a href="{{ route('manageClasses') }}" class="nav-link"><i class="fa fa-users"></i> Classes</a></li>
+                                @endif
 
-                        @if($hasResultPermission)
-                            <li><a href="{{ route('manageResults') }}" class="nav-link"><i class="fa fa-trophy"></i> Result Management</a></li>
-                        @endif
+                                @if($hasResultPermission)
+                                    <li><a href="{{ route('manageResults') }}" class="nav-link"><i class="fa fa-trophy"></i> Results</a></li>
+                                @endif
 
-                        @if($hasAttendancePermission)
-                            <li><a href="{{ route('manageAttendance') }}" class="nav-link"><i class="fa fa-check-square-o"></i> Attendance Management</a></li>
-                        @endif
+                                @if($hasAttendancePermission)
+                                    <li><a href="{{ route('manageAttendance') }}" class="nav-link"><i class="fa fa-check-square-o"></i> Attendance</a></li>
+                                @endif
 
-                        @if($hasStudentPermission)
-                            <li><a href="{{ route('manage_student') }}" class="nav-link"><i class="fa fa-user"></i> Student Management</a></li>
-                        @endif
+                                @if($hasStudentPermission)
+                                    <li><a href="{{ route('manage_student') }}" class="nav-link"><i class="fa fa-user"></i> Students</a></li>
+                                @endif
 
-                        @if($hasParentPermission)
-    
-                        @endif
+                                @if($hasTimetablePermission)
+                                    <li><a href="{{ route('timeTable') }}" class="nav-link"><i class="fa fa-clock-o"></i> Timetable</a></li>
+                                @endif
 
-                        @if($hasTimetablePermission)
-                            <li><a href="{{ route('timeTable') }}" class="nav-link"><i class="fa fa-clock-o"></i> Timetable Management</a></li>
-                        @endif
+                                @if($hasFeesPermission)
+                                    <li><a href="{{ route('manage_fees') }}" class="nav-link"><i class="fa fa-money"></i> Fees</a></li>
+                                @endif
 
-                        @if($hasFeesPermission)
-                            <li><a href="{{ route('manage_fees') }}" class="nav-link"><i class="fa fa-money"></i> Fees Management</a></li>
-                        @endif
+                                @if($hasAccommodationPermission)
+                                    <li><a href="{{ route('manage_accomodation') }}" class="nav-link"><i class="fa fa-bed"></i> Accommodation</a></li>
+                                @endif
 
-                        @if($hasAccommodationPermission)
-                            <li><a href="{{ route('manage_accomodation') }}" class="nav-link"><i class="fa fa-bed"></i> Accommodation Management</a></li>
-                        @endif
+                                @if($hasLibraryPermission)
+                                    <li><a href="{{ route('manage_library') }}" class="nav-link"><i class="fa fa-book"></i> Library</a></li>
+                                @endif
 
-                        @if($hasLibraryPermission)
-                            <li><a href="{{ route('manage_library') }}" class="nav-link"><i class="fa fa-book"></i> Library Management</a></li>
-                        @endif
+                                @if($hasCalendarPermission)
+                                    <li><a href="{{ route('admin.calendar') }}" class="nav-link"><i class="fa fa-calendar"></i> Calendar</a></li>
+                                @endif
 
-                        @if($hasCalendarPermission)
-                            <li><a href="{{ route('admin.calendar') }}" class="nav-link"><i class="fa fa-calendar"></i> Calendar Management</a></li>
-                        @endif
+                                @if($hasFingerprintPermission)
+                                    <li><a href="{{ route('fingerprint_device_settings') }}" class="nav-link"><i class="fa fa-id-card"></i> Fingerprint</a></li>
+                                @endif
 
-                        @if($hasFingerprintPermission)
-                            <li><a href="{{ route('fingerprint_device_settings') }}" class="nav-link"><i class="fa fa-fingerprint"></i> Fingerprint Settings</a></li>
-                        @endif
+                                @if($hasTaskPermission)
+                                    <li><a href="{{ route('taskManagement') }}" class="nav-link"><i class="fa fa-tasks"></i> Tasks</a></li>
+                                @endif
 
-                        @if($hasTaskPermission)
-                            <li><a href="{{ route('taskManagement') }}" class="nav-link"><i class="fa fa-tasks"></i> Task Management</a></li>
-                        @endif
+                                @if($hasSmsPermission)
+                                    <li><a href="{{ route('sms_notification') }}" class="nav-link"><i class="fa fa-envelope"></i> SMS Information</a></li>
+                                @endif
 
-                        @if($hasSmsPermission)
-                            <li><a href="{{ route('sms_notification') }}" class="nav-link"><i class="fa fa-envelope"></i> SMS Information</a></li>
-                        @endif
-
-                        @if($hasTeacherPermission)
-                            <li><a href="{{ route('manageTeachers') }}" class="nav-link"><i class="fa fa-user-secret"></i> Teacher Management</a></li>
+                                @if($hasTeacherPermission)
+                                    <li><a href="{{ route('manageTeachers') }}" class="nav-link"><i class="fa fa-user-secret"></i> Teachers</a></li>
+                                @endif
+                            </ul>
+                        </li>
                         @endif
 
                     </ul>
@@ -563,8 +693,14 @@
         <!-- Header-->
 
 <script>
-// Add active state to menu items on click
-document.addEventListener('DOMContentLoaded', function() {
+// Function to initialize menu and dropdowns
+function initializeMenuDropdowns() {
+    // Wait for jQuery to be available
+    if (typeof jQuery === 'undefined') {
+        setTimeout(initializeMenuDropdowns, 100);
+        return;
+    }
+    
     // Get all sidebar menu links
     const menuLinks = document.querySelectorAll('#left-panel .nav-link');
     
@@ -575,9 +711,67 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Reset all dropdowns to closed state first
+    function resetAllDropdowns() {
+        document.querySelectorAll('.dropdown-nav-item .collapse').forEach(collapse => {
+            const $collapse = $(collapse);
+            if ($collapse.hasClass('show')) {
+                $collapse.collapse('hide');
+            }
+            const toggle = collapse.previousElementSibling;
+            if (toggle && toggle.classList.contains('dropdown-toggle')) {
+                toggle.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
+    
+    // Initialize all collapse elements
+    document.querySelectorAll('.dropdown-nav-item .collapse').forEach(collapse => {
+        // Initialize collapse if not already initialized
+        if (!$(collapse).data('bs.collapse')) {
+            $(collapse).collapse({
+                toggle: false
+            });
+        }
+    });
+    
     // Add click event listener to each link
     menuLinks.forEach(link => {
         link.addEventListener('click', function(e) {
+            // Handle dropdown toggle
+            if (this.classList.contains('dropdown-toggle')) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const targetId = this.getAttribute('data-target');
+                const target = document.querySelector(targetId);
+                
+                if (!target) return;
+                
+                const $target = $(target);
+                const isExpanded = this.getAttribute('aria-expanded') === 'true';
+                
+                // Close all other dropdowns first
+                document.querySelectorAll('.dropdown-nav-item .collapse').forEach(collapse => {
+                    const $collapse = $(collapse);
+                    if (collapse.id !== targetId.replace('#', '') && $collapse.hasClass('show')) {
+                        $collapse.collapse('hide');
+                        const otherToggle = collapse.previousElementSibling;
+                        if (otherToggle && otherToggle.classList.contains('dropdown-toggle')) {
+                            otherToggle.setAttribute('aria-expanded', 'false');
+                        }
+                    }
+                });
+                
+                // Toggle current dropdown after a small delay to ensure others are closed
+                setTimeout(() => {
+                    $target.collapse('toggle');
+                    this.setAttribute('aria-expanded', !isExpanded);
+                }, 50);
+                
+                return false;
+            }
+            
             // Don't prevent default if it's not a hash link
             if (this.getAttribute('href') !== '#') {
                 // Remove active class from all links
@@ -592,14 +786,109 @@ document.addEventListener('DOMContentLoaded', function() {
     const currentUrl = window.location.href;
     const currentPath = window.location.pathname;
     
-    menuLinks.forEach(link => {
-        const linkHref = link.getAttribute('href');
-        if (linkHref && linkHref !== '#') {
-            // Check if current URL matches the link
-            if (currentUrl.includes(linkHref) || currentPath === linkHref) {
+    // Function to check if URL matches
+    function urlMatches(linkHref, currentUrl, currentPath) {
+        if (!linkHref || linkHref === '#') return false;
+        
+        // Remove query strings and fragments for comparison
+        let linkPath = linkHref.split('?')[0].split('#')[0].replace(/\/$/, '');
+        let currentPathClean = currentPath.split('?')[0].split('#')[0].replace(/\/$/, '');
+        let currentUrlClean = currentUrl.split('?')[0].split('#')[0].replace(/\/$/, '');
+        
+        // Normalize paths
+        linkPath = linkPath.toLowerCase();
+        currentPathClean = currentPathClean.toLowerCase();
+        currentUrlClean = currentUrlClean.toLowerCase();
+        
+        // Check exact match
+        if (currentPathClean === linkPath || currentUrlClean === linkPath) {
+            return true;
+        }
+        
+        // Check if current URL/path ends with link path
+        if (currentPathClean.endsWith(linkPath) || currentUrlClean.endsWith(linkPath)) {
+            return true;
+        }
+        
+        // Check if current URL/path contains link path
+        if (linkPath && (currentPathClean.includes(linkPath) || currentUrlClean.includes(linkPath))) {
+            return true;
+        }
+        
+        return false;
+    }
+    
+    // First reset all dropdowns
+    resetAllDropdowns();
+    
+    // Then set active link and expand parent dropdown if needed
+    setTimeout(() => {
+        let activeLinkFound = false;
+        
+        menuLinks.forEach(link => {
+            const linkHref = link.getAttribute('href');
+            if (urlMatches(linkHref, currentUrl, currentPath)) {
                 link.classList.add('menu-active');
+                activeLinkFound = true;
+                
+                // If link is in a submenu, expand the parent dropdown and make it active
+                const submenu = link.closest('.submenu');
+                if (submenu) {
+                    const $submenu = $(submenu);
+                    const parentLi = submenu.closest('li.dropdown-nav-item');
+                    if (parentLi) {
+                        const dropdownToggle = parentLi.querySelector('.dropdown-toggle');
+                        if (dropdownToggle) {
+                            $submenu.collapse('show');
+                            dropdownToggle.setAttribute('aria-expanded', 'true');
+                            dropdownToggle.classList.add('menu-active');
+                        }
+                    }
+                }
             }
+        });
+        
+        // Ensure all parent dropdowns of active links are open and highlighted
+        if (activeLinkFound) {
+            document.querySelectorAll('#left-panel .nav-link.menu-active').forEach(activeLink => {
+                const submenu = activeLink.closest('.submenu');
+                if (submenu) {
+                    const parentLi = submenu.closest('li.dropdown-nav-item');
+                    if (parentLi) {
+                        const dropdownToggle = parentLi.querySelector('.dropdown-toggle');
+                        if (dropdownToggle && !dropdownToggle.classList.contains('menu-active')) {
+                            dropdownToggle.classList.add('menu-active');
+                        }
+                    }
+                }
+            });
+        }
+    }, 300);
+    
+    // Initialize Bootstrap collapse events for dropdowns
+    $('.dropdown-nav-item .collapse').off('show.bs.collapse hide.bs.collapse').on('show.bs.collapse', function() {
+        const toggle = $(this).prev('.dropdown-toggle');
+        if (toggle.length) {
+            toggle.attr('aria-expanded', 'true');
+        }
+    }).on('hide.bs.collapse', function() {
+        const toggle = $(this).prev('.dropdown-toggle');
+        if (toggle.length) {
+            toggle.attr('aria-expanded', 'false');
         }
     });
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', initializeMenuDropdowns);
+
+// Also re-initialize when page is shown (for back/forward navigation)
+window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {
+        initializeMenuDropdowns();
+    }
 });
+
+// Re-initialize after a short delay to ensure everything is loaded
+setTimeout(initializeMenuDropdowns, 500);
 </script>
