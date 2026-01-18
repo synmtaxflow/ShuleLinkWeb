@@ -573,6 +573,12 @@ function initializeMenuDropdowns() {
         return;
     }
     
+    // Wait for Bootstrap collapse plugin to be available
+    if (typeof jQuery.fn.collapse === 'undefined') {
+        setTimeout(initializeMenuDropdowns, 100);
+        return;
+    }
+    
     // Get all sidebar menu links
     const menuLinks = document.querySelectorAll('#left-panel .nav-link');
     
@@ -587,7 +593,7 @@ function initializeMenuDropdowns() {
     function resetAllDropdowns() {
         document.querySelectorAll('.dropdown-nav-item .collapse').forEach(collapse => {
             const $collapse = $(collapse);
-            if ($collapse.hasClass('show')) {
+            if ($collapse.hasClass('show') && typeof $collapse.collapse === 'function') {
                 $collapse.collapse('hide');
             }
             const toggle = collapse.previousElementSibling;
@@ -597,13 +603,25 @@ function initializeMenuDropdowns() {
         });
     }
     
-    // Initialize all collapse elements
+    // Initialize all collapse elements and close them by default
     document.querySelectorAll('.dropdown-nav-item .collapse').forEach(collapse => {
-        // Initialize collapse if not already initialized
-        if (!$(collapse).data('bs.collapse')) {
-            $(collapse).collapse({
+        // Initialize collapse if not already initialized and if collapse function is available
+        const $collapse = $(collapse);
+        if (!$collapse.data('bs.collapse') && typeof $collapse.collapse === 'function') {
+            $collapse.collapse({
                 toggle: false
             });
+        }
+        // Ensure all dropdowns are closed on page load
+        if ($collapse.hasClass('show')) {
+            if (typeof $collapse.collapse === 'function') {
+                $collapse.collapse('hide');
+            }
+        }
+        // Set aria-expanded to false
+        const toggle = collapse.previousElementSibling;
+        if (toggle && toggle.classList.contains('dropdown-toggle')) {
+            toggle.setAttribute('aria-expanded', 'false');
         }
     });
     
@@ -632,13 +650,15 @@ function initializeMenuDropdowns() {
                 // Toggle current dropdown
                 if (isExpanded) {
                     // Close current dropdown
-                    $target.collapse('hide');
+                    if (typeof $target.collapse === 'function') {
+                        $target.collapse('hide');
+                    }
                     this.setAttribute('aria-expanded', 'false');
                 } else {
                     // Close all other dropdowns first
                     document.querySelectorAll('.dropdown-nav-item .collapse').forEach(collapse => {
                         const $collapse = $(collapse);
-                        if (collapse.id !== targetId.replace('#', '') && $collapse.hasClass('show')) {
+                        if (collapse.id !== targetId.replace('#', '') && $collapse.hasClass('show') && typeof $collapse.collapse === 'function') {
                             $collapse.collapse('hide');
                             const otherToggle = collapse.previousElementSibling;
                             if (otherToggle && otherToggle.classList.contains('dropdown-toggle')) {
@@ -649,7 +669,9 @@ function initializeMenuDropdowns() {
                     
                     // Open current dropdown after a small delay to ensure others are closed
                     setTimeout(() => {
-                        $target.collapse('show');
+                        if (typeof $target.collapse === 'function') {
+                            $target.collapse('show');
+                        }
                         this.setAttribute('aria-expanded', 'true');
                     }, 50);
                 }
@@ -703,10 +725,24 @@ function initializeMenuDropdowns() {
         return false;
     }
     
-    // First reset all dropdowns
+    // First reset all dropdowns - close ALL dropdowns
     resetAllDropdowns();
     
-    // Then set active link and expand parent dropdown if needed
+    // Force close all dropdowns again after a delay
+    setTimeout(() => {
+        document.querySelectorAll('.dropdown-nav-item .collapse').forEach(collapse => {
+            const $collapse = $(collapse);
+            if (typeof $collapse.collapse === 'function') {
+                $collapse.removeClass('show').collapse('hide');
+            }
+            const toggle = collapse.previousElementSibling;
+            if (toggle && toggle.classList.contains('dropdown-toggle')) {
+                toggle.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }, 100);
+    
+    // Then set active link and expand ONLY the parent dropdown of active link
     setTimeout(() => {
         let activeLinkFound = false;
         
@@ -726,7 +762,9 @@ function initializeMenuDropdowns() {
                         const dropdownToggle = parentLi.querySelector('.dropdown-toggle');
                         if (dropdownToggle) {
                             // Show the dropdown
-                            $submenu.collapse('show');
+                            if (typeof $submenu.collapse === 'function') {
+                                $submenu.collapse('show');
+                            }
                             dropdownToggle.setAttribute('aria-expanded', 'true');
                             
                             // Add active class to parent toggle
@@ -736,7 +774,9 @@ function initializeMenuDropdowns() {
                         // Fallback to previous method
                         const dropdownToggle = submenu.previousElementSibling;
                         if (dropdownToggle && dropdownToggle.classList.contains('dropdown-toggle')) {
-                            $submenu.collapse('show');
+                            if (typeof $submenu.collapse === 'function') {
+                                $submenu.collapse('show');
+                            }
                             dropdownToggle.setAttribute('aria-expanded', 'true');
                             dropdownToggle.classList.add('menu-active');
                         }
@@ -746,36 +786,66 @@ function initializeMenuDropdowns() {
         });
         
         // If no active link found, check if we need to highlight parent menu
+        // BUT ONLY expand ONE dropdown - the one containing the active link
         if (!activeLinkFound) {
             // Check if any route path matches partially (for nested routes)
             menuLinks.forEach(link => {
                 const linkHref = link.getAttribute('href');
                 if (linkHref && linkHref !== '#') {
                     const linkPath = linkHref.split('?')[0].split('#')[0];
-                    if (currentPath.includes(linkPath) || currentUrl.includes(linkPath)) {
-                        link.classList.add('menu-active');
-                        activeLinkFound = true;
-                        
-                        // Expand parent dropdown and make it active
-                        const submenu = link.closest('.submenu');
-                        if (submenu) {
-                            const $submenu = $(submenu);
-                            const parentLi = submenu.closest('li.dropdown-nav-item');
-                            if (parentLi) {
-                                const dropdownToggle = parentLi.querySelector('.dropdown-toggle');
-                                if (dropdownToggle) {
-                                    $submenu.collapse('show');
-                                    dropdownToggle.setAttribute('aria-expanded', 'true');
-                                    dropdownToggle.classList.add('menu-active');
-                                }
-                            } else {
-                                const dropdownToggle = submenu.previousElementSibling;
-                                if (dropdownToggle && dropdownToggle.classList.contains('dropdown-toggle')) {
-                                    $submenu.collapse('show');
-                                    dropdownToggle.setAttribute('aria-expanded', 'true');
-                                    dropdownToggle.classList.add('menu-active');
+                    // Only match if path is significant (not just "/")
+                    if (linkPath && linkPath !== '/' && linkPath.length > 1) {
+                        if (currentPath.includes(linkPath) || currentUrl.includes(linkPath)) {
+                            link.classList.add('menu-active');
+                            activeLinkFound = true;
+                            
+                            // Expand ONLY the parent dropdown of this active link
+                            const submenu = link.closest('.submenu');
+                            if (submenu) {
+                                const $submenu = $(submenu);
+                                const parentLi = submenu.closest('li.dropdown-nav-item');
+                                if (parentLi) {
+                                    const dropdownToggle = parentLi.querySelector('.dropdown-toggle');
+                                    if (dropdownToggle) {
+                                        // Close all other dropdowns first
+                                        document.querySelectorAll('.dropdown-nav-item .collapse').forEach(c => {
+                                            if (c !== submenu) {
+                                                const $c = $(c);
+                                                if (typeof $c.collapse === 'function') {
+                                                    $c.removeClass('show').collapse('hide');
+                                                }
+                                            }
+                                        });
+                                        // Then open only this one
+                                        if (typeof $submenu.collapse === 'function') {
+                                            $submenu.collapse('show');
+                                        }
+                                        dropdownToggle.setAttribute('aria-expanded', 'true');
+                                        dropdownToggle.classList.add('menu-active');
+                                    }
+                                } else {
+                                    const dropdownToggle = submenu.previousElementSibling;
+                                    if (dropdownToggle && dropdownToggle.classList.contains('dropdown-toggle')) {
+                                        // Close all other dropdowns first
+                                        document.querySelectorAll('.dropdown-nav-item .collapse').forEach(c => {
+                                            if (c !== submenu) {
+                                                const $c = $(c);
+                                                if (typeof $c.collapse === 'function') {
+                                                    $c.removeClass('show').collapse('hide');
+                                                }
+                                            }
+                                        });
+                                        // Then open only this one
+                                        if (typeof $submenu.collapse === 'function') {
+                                            $submenu.collapse('show');
+                                        }
+                                        dropdownToggle.setAttribute('aria-expanded', 'true');
+                                        dropdownToggle.classList.add('menu-active');
+                                    }
                                 }
                             }
+                            // Stop after finding first match
+                            return false;
                         }
                     }
                 }

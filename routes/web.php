@@ -11,6 +11,7 @@ use App\Http\Controllers\ManageStudentController;
 use App\Http\Controllers\ManageSubjectController;
 use App\Http\Controllers\AttendanceApiController;
 use App\Http\Controllers\ManageTeachersController;
+use App\Http\Controllers\ManageOtherStaffController;
 use App\Http\Controllers\SchoolController;
 use App\Http\Controllers\TeachersController;
 use App\Http\Controllers\FeesController;
@@ -311,7 +312,22 @@ Route::get('get_eligible_subclasses_for_transfer/{studentID}', [ManageClassessCo
 Route::get('manage_parents', [ManageParentsController::class, 'manage_parents'])->name('manage_parents');
 
 // Other Staff Routes
-Route::get('manage_other_staff', [AdminController::class, 'manageOtherStaff'])->name('manage_other_staff');
+Route::get('manage_other_staff', [ManageOtherStaffController::class, 'manageOtherStaff'])->name('manage_other_staff');
+Route::post('save_other_staff', [ManageOtherStaffController::class, 'save_other_staff'])->name('save_other_staff');
+Route::get('get_other_staff/{id}', [ManageOtherStaffController::class, 'get_other_staff'])->name('get_other_staff');
+Route::post('update_other_staff', [ManageOtherStaffController::class, 'update_other_staff'])->name('update_other_staff');
+Route::delete('delete_other_staff/{id}', [ManageOtherStaffController::class, 'delete_other_staff'])->name('delete_other_staff');
+Route::post('send_staff_to_fingerprint', [ManageOtherStaffController::class, 'send_staff_to_fingerprint'])->name('send_staff_to_fingerprint');
+
+// Staff Profession Routes
+Route::post('save_staff_profession', [ManageOtherStaffController::class, 'save_staff_profession'])->name('save_staff_profession');
+Route::get('get_staff_profession/{id}', [ManageOtherStaffController::class, 'get_staff_profession'])->name('get_staff_profession');
+Route::post('update_staff_profession', [ManageOtherStaffController::class, 'update_staff_profession'])->name('update_staff_profession');
+Route::delete('delete_staff_profession/{id}', [ManageOtherStaffController::class, 'delete_staff_profession'])->name('delete_staff_profession');
+Route::get('get_staff_profession_with_permissions/{id}', [ManageOtherStaffController::class, 'get_staff_profession_with_permissions'])->name('get_staff_profession_with_permissions');
+
+// Staff Permissions/Duties Routes
+Route::post('save_staff_permissions', [ManageOtherStaffController::class, 'save_staff_permissions'])->name('save_staff_permissions');
 
 // Revenue and Expenses Routes
 Route::get('manage_revenue', [AdminController::class, 'manageRevenue'])->name('manage_revenue');

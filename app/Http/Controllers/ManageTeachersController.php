@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Session;
 use App\Models\Teacher;
 use App\Models\School;
 use App\Models\User;
+use App\Services\ZKTecoService;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -498,6 +499,7 @@ class ManageTeachersController extends Controller
                 'unique:teachers,phone_number',
                 'regex:/^255\d{9}$/'
             ],
+            'bank_account_number' => 'nullable|string|max:255',
             'image'           => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ], [
             'phone_number.regex' => 'Phone number must have 12 digits: start with 255 followed by 9 digits (e.g., 255614863345)',
@@ -559,34 +561,35 @@ class ManageTeachersController extends Controller
             'address'       => $request->address ?? null,
             'email'         => $request->email,
             'phone_number'  => $request->phone_number,
+            'bank_account_number' => $request->bank_account_number ?? null,
             'position'      => $request->position ?? null,
             'status'        => $request->status ?? 'Active',
             'fingerprint_id' => $fingerprintId, // Also store in fingerprint_id column (as string)
         ]);
 
-        // Send teacher to biometric device via API
+        // Send teacher to biometric device directly (not via API)
         try {
-            Log::info("Biometric API: Attempting to register teacher - Fingerprint ID: {$fingerprintId}, Name: {$request->first_name}");
+            Log::info("ZKTeco Direct: Attempting to register teacher - Fingerprint ID: {$fingerprintId}, Name: {$request->first_name}");
             
             // Use first_name only for device (as per user requirement)
             $teacherName = strtoupper($request->first_name); // Convert to uppercase
             
-            $apiResult = $this->registerTeacherToBiometricDevice($fingerprintId, $teacherName);
+            $apiResult = $this->registerTeacherToBiometricDeviceDirect($fingerprintId, $teacherName);
             
             if ($apiResult['success']) {
                 $enrollId = $apiResult['data']['enroll_id'] ?? $fingerprintId;
                 $deviceRegisteredAt = $apiResult['data']['device_registered_at'] ?? null;
                 
-                Log::info("Biometric API: Teacher registered successfully - Fingerprint ID: {$fingerprintId}, Enroll ID: {$enrollId}");
+                Log::info("ZKTeco Direct: Teacher registered successfully - Fingerprint ID: {$fingerprintId}, Enroll ID: {$enrollId}");
             } else {
-                Log::error("Biometric API: Teacher registration failed - Fingerprint ID: {$fingerprintId}, Error: " . ($apiResult['message'] ?? 'Unknown error'));
+                Log::error("ZKTeco Direct: Teacher registration failed - Fingerprint ID: {$fingerprintId}, Error: " . ($apiResult['message'] ?? 'Unknown error'));
             }
         } catch (\Exception $e) {
             $errorMessage = $e->getMessage();
-            Log::error('Biometric API Registration Error: ' . $errorMessage);
-            Log::error('Biometric API Registration Stack Trace: ' . $e->getTraceAsString());
+            Log::error('ZKTeco Direct Registration Error: ' . $errorMessage);
+            Log::error('ZKTeco Direct Registration Stack Trace: ' . $e->getTraceAsString());
             
-            // Continue even if API call fails - teacher is still registered
+            // Continue even if device registration fails - teacher is still registered
         }
 
         // Create user for login with same fingerprint_id
@@ -655,6 +658,7 @@ class ManageTeachersController extends Controller
                     'unique:teachers,phone_number,' . $teacherId,
                     'regex:/^255\d{9}$/'
                 ],
+                'bank_account_number' => 'nullable|string|max:255',
                 'image'           => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
             ], [
                 'phone_number.regex' => 'Phone number must have 12 digits: start with 255 followed by 9 digits (e.g., 255614863345)',
@@ -712,6 +716,7 @@ class ManageTeachersController extends Controller
                 'address'         => $request->address ?? null,
                 'email'           => $request->email,
                 'phone_number'    => $request->phone_number,
+                'bank_account_number' => $request->bank_account_number ?? null,
                 'position'        => $request->position ?? null,
                 'status'          => $request->status ?? 'Active',
             ]);
@@ -1453,9 +1458,9 @@ class ManageTeachersController extends Controller
                 }
             }
 
-            // Send teacher to biometric device via API
+            // Send teacher to biometric device directly (not via API)
             $teacherName = strtoupper($teacher->first_name); // Use first_name only as per requirement
-            $apiResult = $this->registerTeacherToBiometricDevice($fingerprintId, $teacherName);
+            $apiResult = $this->registerTeacherToBiometricDeviceDirect($fingerprintId, $teacherName);
 
             if ($apiResult['success']) {
                 $enrollId = $apiResult['data']['enroll_id'] ?? $fingerprintId;
@@ -1474,7 +1479,7 @@ class ManageTeachersController extends Controller
                 ]);
             } else {
                 // Even if API fails, fingerprint_id is saved
-                Log::error("Biometric API: Teacher registration failed - Fingerprint ID: {$fingerprintId}, Error: " . ($apiResult['message'] ?? 'Unknown error'));
+                Log::error("ZKTeco Direct: Teacher registration failed - Fingerprint ID: {$fingerprintId}, Error: " . ($apiResult['message'] ?? 'Unknown error'));
                 
                 DB::commit();
 
@@ -1495,6 +1500,59 @@ class ManageTeachersController extends Controller
                 'success' => false,
                 'message' => 'An error occurred: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Register teacher to biometric device directly (not via API)
+     */
+    private function registerTeacherToBiometricDeviceDirect($fingerprintId, $teacherName)
+    {
+        try {
+            // Direct registration to ZKTeco device using internal service
+            $ip = config('zkteco.ip', '192.168.1.108');
+            $port = (int) config('zkteco.port', 4370);
+
+            Log::info("ZKTeco Direct: Attempting to register teacher to device", [
+                'fingerprint_id' => $fingerprintId,
+                'teacher_name'   => $teacherName,
+                'device_ip'      => $ip,
+                'device_port'    => $port,
+            ]);
+
+            $zkteco = new ZKTecoService($ip, $port);
+
+            // UID and UserID will both use fingerprintId (must be 1–65535)
+            $uid = (int) $fingerprintId;
+            $name = strtoupper($teacherName);
+
+            $result = $zkteco->registerUser($uid, $name, 0, '', '', (string) $uid);
+
+            // If no exception thrown, treat as success
+            Log::info("ZKTeco Direct: Registration result", [
+                'fingerprint_id' => $fingerprintId,
+                'result'         => $result,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'User registered to device directly',
+                'data'    => [
+                    'enroll_id'           => $uid,
+                    'device_registered_at'=> now()->format('Y-m-d H:i:s'),
+                    'device_ip'           => $ip,
+                    'device_port'         => $port,
+                ],
+            ];
+        } catch (\Throwable $e) {
+            Log::error("ZKTeco Direct: Exception during registration - " . $e->getMessage(), [
+                'fingerprint_id' => $fingerprintId,
+                'trace'          => $e->getTraceAsString()
+            ]);
+            return [
+                'success' => false,
+                'message' => 'Exception: ' . $e->getMessage()
+            ];
         }
     }
 }

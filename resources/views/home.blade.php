@@ -1065,7 +1065,7 @@
         <div class="splash-icon">
             <i class="fa fa-graduation-cap"></i>
         </div>
-        <div class="splash-text">ShuleXpert</div>
+        <div class="splash-text">ShuleXpertS</div>
         <div class="splash-loader"></div>
         <div class="splash-powered">Powered by: EmCa Technologies LTD</div>
     </div>

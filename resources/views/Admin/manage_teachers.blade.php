@@ -629,6 +629,10 @@
                             </div>
                         </div>
                         <div class="col-md-4">
+                            <label class="form-label fw-bold">Bank Account Number</label>
+                            <input type="text" name="bank_account_number" class="form-control" placeholder="e.g., 1234567890">
+                        </div>
+                        <div class="col-md-4">
                             <label class="form-label fw-bold">National ID <span class="text-danger">*</span></label>
                             <input type="text" name="national_id" class="form-control" required>
                         </div>
@@ -806,6 +810,10 @@
                             <div class="invalid-feedback" id="edit_phone_error" style="display: none;">
                                 Phone number must have 12 digits: start with 255 followed by 9 digits
                             </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Bank Account Number</label>
+                            <input type="text" name="bank_account_number" id="edit_bank_account_number" class="form-control" placeholder="e.g., 1234567890">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-bold">National ID <span class="text-danger">*</span></label>
@@ -1891,6 +1899,7 @@
                     $('#edit_position').val(teacher.position || '');
                     $('#edit_status').val(teacher.status || 'Active');
                     $('#edit_address').val(teacher.address || '');
+                    $('#edit_bank_account_number').val(teacher.bank_account_number || '');
 
                     // Reset phone validation
                     $('#edit_phone_number').removeClass('is-invalid is-valid');

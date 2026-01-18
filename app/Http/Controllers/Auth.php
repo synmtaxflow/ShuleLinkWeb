@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\School;
 use App\Models\Teacher;
 use App\Models\ParentModel;
+use App\Models\OtherStaff;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -26,6 +27,8 @@ class Auth extends Controller
                 return redirect()->route('AdminDashboard');
             } elseif ($userType === 'Teacher') {
                 return redirect()->route('teachersDashboard');
+            } elseif ($userType === 'Staff') {
+                return redirect()->route('staffDashboard');
             }
         }
 
@@ -134,7 +137,41 @@ class Auth extends Controller
                     ->with('success', 'You have logged in successfully as Teacher!');
                 break;
 
-                case 'parent':
+            case 'Staff':
+                $staff = OtherStaff::where('employee_number', $username)->first();
+
+                if (!$staff) {
+                    return redirect()->back()
+                        ->with('error', 'Staff record not found.')
+                        ->withInput($request->only('username'));
+                }
+
+                // Set session data
+                Session::put('schoolID', $staff->schoolID);
+                Session::put('staffID', $staff->id);
+                Session::put('user_type', $userLogin->user_type);
+                Session::put('userID', $userLogin->id);
+                Session::put('user_name', $userLogin->name);
+                Session::put('user_email', $userLogin->email);
+                Session::put('staff_name', $staff->first_name . ' ' . $staff->last_name);
+                Session::put('profession_id', $staff->profession_id);
+
+                // Load staff permissions based on profession
+                if ($staff->profession_id) {
+                    $permissions = \App\Models\StaffPermission::where('profession_id', $staff->profession_id)
+                        ->pluck('name')
+                        ->toArray();
+                    Session::put('staff_permissions', $permissions);
+                }
+
+                // Regenerate session ID for security
+                $request->session()->regenerate();
+
+                return redirect()->route('staffDashboard')
+                    ->with('success', 'You have logged in successfully as Staff!');
+                break;
+
+            case 'parent':
                 $parent = ParentModel::where('phone',$username)->first();
                 // Set session data
                 Session::put('parentID', $parent->parentID);

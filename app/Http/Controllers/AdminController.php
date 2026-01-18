@@ -672,20 +672,13 @@ class AdminController extends Controller
     }
 
     /**
-     * Manage Other Staff
+     * Manage Other Staff - Redirect to ManageOtherStaffController
      */
     public function manageOtherStaff()
     {
-        $user = Session::get('user_type');
-        $schoolID = Session::get('schoolID');
-
-        if (!$user || $user !== 'Admin') {
-            return redirect()->route('login')->with('error', 'Unauthorized access');
-        }
-
-        // TODO: Implement other staff management functionality
-        // For now, return a placeholder view
-        return view('Admin.manage_other_staff', compact('schoolID'));
+        // Delegate to ManageOtherStaffController
+        $controller = new ManageOtherStaffController();
+        return $controller->manageOtherStaff();
     }
 
     /**
