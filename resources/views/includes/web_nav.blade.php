@@ -454,7 +454,7 @@
         <div class="row align-items-center h-100">
             <div class="col-lg-4 text-center text-lg-start">
                 <a href="/" style="text-decoration: none;">
-                    <h1 class="display-5 m-0" style="color: #940000 !important;">ShuleXpertSSSSSSSS</h1>
+                    <h1 class="display-5 m-0" style="color: #940000 !important;">ShuleXpert</h1>
                 </a>
             </div>
             <div class="col-lg-8 d-none d-lg-block">
