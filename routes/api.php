@@ -93,4 +93,11 @@ Route::get('/teacher/subjects/{classSubjectID}/session-attendance', [\App\Http\C
 // Teacher Exam Attendance endpoints
 Route::get('/teacher/subjects/{classSubjectID}/exam-attendance', [\App\Http\Controllers\TeachersController::class, 'getExamAttendanceDataAPI'])->name('api.teacher.subjects.exam_attendance');
 
+// Teacher My Sessions endpoints
+Route::get('/teacher/my-sessions', [\App\Http\Controllers\TeachersController::class, 'getTeacherMySessionsAPI'])->name('api.teacher.my_sessions');
+Route::get('/teacher/my-sessions/students', [\App\Http\Controllers\TeachersController::class, 'getSessionStudentsAPI'])->name('api.teacher.my_sessions.students');
+Route::get('/teacher/my-sessions/attendance', [\App\Http\Controllers\TeachersController::class, 'getSessionAttendanceForUpdateAPI'])->name('api.teacher.my_sessions.attendance');
+Route::post('/teacher/my-sessions/attendance', [\App\Http\Controllers\TeachersController::class, 'collectSessionAttendanceAPI'])->name('api.teacher.my_sessions.attendance.save');
+Route::post('/teacher/my-sessions/tasks', [\App\Http\Controllers\TeachersController::class, 'assignSessionTaskAPI'])->name('api.teacher.my_sessions.tasks.assign');
+
 

@@ -7854,6 +7854,618 @@ class TeachersController extends Controller
     }
 
     /**
+     * Get teacher weekly sessions for API (Flutter app)
+     */
+    public function getTeacherMySessionsAPI(Request $request)
+    {
+        try {
+            // Get authentication data from headers (stateless authentication)
+            $teacherID = $request->header('teacherID') ?? $request->input('teacherID');
+            $schoolID = $request->header('schoolID') ?? $request->input('schoolID');
+            $userID = $request->header('user_id') ?? $request->input('user_id');
+            $userType = $request->header('user_type') ?? $request->input('user_type');
+
+            // Validate required parameters
+            if (!$teacherID || !$schoolID || !$userID || !$userType) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Missing required authentication parameters. Please provide: user_id, user_type, schoolID, and teacherID in headers or request body.'
+                ], 401);
+            }
+
+            // Validate user type
+            if ($userType !== 'Teacher') {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Invalid user type. This endpoint is for Teachers only.'
+                ], 403);
+            }
+
+            // Verify teacher exists and belongs to the school
+            $teacher = Teacher::where('id', $teacherID)
+                ->where('schoolID', $schoolID)
+                ->first();
+
+            if (!$teacher) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Teacher not found or does not belong to the specified school.'
+                ], 404);
+            }
+
+            $weekOffset = (int) ($request->input('week') ?? 0);
+
+            // Get active session timetable definition
+            $definition = DB::table('session_timetable_definitions')
+                ->where('schoolID', $schoolID)
+                ->first();
+
+            if (!$definition) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'No timetable definition found. Please contact admin.'
+                ], 404);
+            }
+
+            $currentDate = Carbon::now(config('app.timezone'));
+            $startOfWeek = $currentDate->copy()->startOfWeek(Carbon::MONDAY)->addWeeks($weekOffset);
+            $endOfWeek = $startOfWeek->copy()->endOfWeek();
+
+            $sessions = ClassSessionTimetable::with(['subclass.class', 'subject', 'classSubject.subject'])
+                ->where('teacherID', $teacherID)
+                ->where('definitionID', $definition->definitionID)
+                ->orderByRaw("FIELD(day, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday')")
+                ->orderBy('start_time')
+                ->get();
+
+            $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+            // Get holidays and events for current week
+            $weekStart = $startOfWeek->format('Y-m-d');
+            $weekEnd = $endOfWeek->format('Y-m-d');
+
+            $holidays = Holiday::where('schoolID', $schoolID)
+                ->where(function($query) use ($weekStart, $weekEnd) {
+                    $query->whereBetween('start_date', [$weekStart, $weekEnd])
+                        ->orWhereBetween('end_date', [$weekStart, $weekEnd])
+                        ->orWhere(function($q) use ($weekStart, $weekEnd) {
+                            $q->where('start_date', '<=', $weekStart)
+                              ->where('end_date', '>=', $weekEnd);
+                        });
+                })
+                ->get();
+
+            $events = Event::where('schoolID', $schoolID)
+                ->whereBetween('event_date', [$weekStart, $weekEnd])
+                ->where('is_non_working_day', true)
+                ->get();
+
+            $holidayDates = [];
+            foreach ($holidays as $holiday) {
+                $start = Carbon::parse($holiday->start_date);
+                $end = Carbon::parse($holiday->end_date);
+                while ($start <= $end) {
+                    $holidayDates[] = $start->format('Y-m-d');
+                    $start->addDay();
+                }
+            }
+            foreach ($events as $event) {
+                $holidayDates[] = Carbon::parse($event->event_date)->format('Y-m-d');
+            }
+
+            $now = Carbon::now(config('app.timezone'));
+            $todayDayName = $now->format('l');
+
+            $daysData = [];
+            foreach ($days as $day) {
+                $dayDate = $startOfWeek->copy()->addDays(array_search($day, $days));
+                $dayDateStr = $dayDate->format('Y-m-d');
+                $isHoliday = in_array($dayDateStr, $holidayDates);
+                $isWeekend = ($dayDate->dayOfWeek === Carbon::SATURDAY || $dayDate->dayOfWeek === Carbon::SUNDAY);
+                $daySessions = $sessions->where('day', $day)->values();
+
+                $sessionsData = [];
+                foreach ($daySessions as $session) {
+                    $startTimeStr = is_string($session->start_time)
+                        ? $session->start_time
+                        : ($session->start_time instanceof \DateTime
+                            ? $session->start_time->format('H:i:s')
+                            : '00:00:00');
+                    $endTimeStr = is_string($session->end_time)
+                        ? $session->end_time
+                        : ($session->end_time instanceof \DateTime
+                            ? $session->end_time->format('H:i:s')
+                            : '00:00:00');
+
+                    if (strlen($startTimeStr) === 5) {
+                        $startTimeStr .= ':00';
+                    }
+                    if (strlen($endTimeStr) === 5) {
+                        $endTimeStr .= ':00';
+                    }
+
+                    $sessionDateTime = $dayDate->copy()->setTimeFromTimeString($startTimeStr);
+                    $sessionEndDateTime = $dayDate->copy()->setTimeFromTimeString($endTimeStr);
+
+                    $hasReachedStartTime = $now >= $sessionDateTime;
+                    $isBeforeEndTime = $now <= $sessionEndDateTime;
+                    $isWithinSessionTime = $hasReachedStartTime && $isBeforeEndTime;
+                    $isTodaySession = $dayDate->isToday() && ($session->day === $todayDayName);
+                    $isSessionTime = $now >= $sessionDateTime && $now <= $sessionEndDateTime;
+                    $isPast = $now > $sessionEndDateTime;
+                    $canInteract = !$isHoliday && !$isWeekend && $isTodaySession && $isWithinSessionTime;
+
+                    $subjectName = 'N/A';
+                    if ($session->classSubject && $session->classSubject->subject && $session->classSubject->subject->subject_name) {
+                        $subjectName = $session->classSubject->subject->subject_name;
+                    } elseif ($session->subject && $session->subject->subject_name) {
+                        $subjectName = $session->subject->subject_name;
+                    }
+                    if ($session->is_prepo) {
+                        $subjectName .= ' (Prepo)';
+                    }
+
+                    $className = $session->subclass->class->class_name ?? '';
+                    $subclassName = $session->subclass->subclass_name ?? '';
+                    $classLabel = trim($className . ($className && $subclassName ? ' - ' : '') . $subclassName);
+
+                    $task = SessionTask::where('session_timetableID', $session->session_timetableID)
+                        ->where('task_date', $dayDateStr)
+                        ->first();
+
+                    $sessionsData[] = [
+                        'session_timetableID' => $session->session_timetableID,
+                        'day' => $session->day,
+                        'date' => $dayDateStr,
+                        'start_time' => $startTimeStr,
+                        'end_time' => $endTimeStr,
+                        'start_time_formatted' => Carbon::parse($startTimeStr)->format('h:i A'),
+                        'end_time_formatted' => Carbon::parse($endTimeStr)->format('h:i A'),
+                        'subject_name' => $subjectName,
+                        'class_name' => $className,
+                        'subclass_name' => $subclassName,
+                        'class_label' => $classLabel,
+                        'is_prepo' => (bool) $session->is_prepo,
+                        'is_session_time' => $isSessionTime,
+                        'is_past' => $isPast,
+                        'can_interact' => $canInteract,
+                        'task' => $task ? [
+                            'session_taskID' => $task->session_taskID ?? null,
+                            'status' => $task->status,
+                            'topic' => $task->topic,
+                            'subtopic' => $task->subtopic,
+                            'task_description' => $task->task_description,
+                        ] : null,
+                        'has_approved_task' => $task && $task->status === 'approved',
+                    ];
+                }
+
+                $daysData[] = [
+                    'day' => $day,
+                    'date' => $dayDateStr,
+                    'is_holiday' => $isHoliday,
+                    'is_weekend' => $isWeekend,
+                    'sessions' => $sessionsData,
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'week_offset' => $weekOffset,
+                    'week_start' => $startOfWeek->format('Y-m-d'),
+                    'week_end' => $endOfWeek->format('Y-m-d'),
+                    'days' => $daysData,
+                    'holiday_dates' => array_values(array_unique($holidayDates)),
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting teacher sessions API: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to retrieve teacher sessions: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get students for a session (API)
+     */
+    public function getSessionStudentsAPI(Request $request)
+    {
+        try {
+            // Get authentication data from headers (stateless authentication)
+            $teacherID = $request->header('teacherID') ?? $request->input('teacherID');
+            $schoolID = $request->header('schoolID') ?? $request->input('schoolID');
+            $userID = $request->header('user_id') ?? $request->input('user_id');
+            $userType = $request->header('user_type') ?? $request->input('user_type');
+            $sessionTimetableID = $request->input('session_timetableID');
+            $attendanceDate = $request->input('attendance_date');
+
+            // Validate required parameters
+            if (!$teacherID || !$schoolID || !$userID || !$userType) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Missing required authentication parameters. Please provide: user_id, user_type, schoolID, and teacherID in headers or request body.'
+                ], 401);
+            }
+
+            // Validate user type
+            if ($userType !== 'Teacher') {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Invalid user type. This endpoint is for Teachers only.'
+                ], 403);
+            }
+
+            // Verify teacher exists and belongs to the school
+            $teacher = Teacher::where('id', $teacherID)
+                ->where('schoolID', $schoolID)
+                ->first();
+
+            if (!$teacher) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Teacher not found or does not belong to the specified school.'
+                ], 404);
+            }
+
+            if (!$sessionTimetableID) {
+                return response()->json(['success' => false, 'error' => 'session_timetableID is required'], 422);
+            }
+
+            if (!$attendanceDate) {
+                return response()->json(['success' => false, 'error' => 'attendance_date is required'], 422);
+            }
+
+            // Get session
+            $session = ClassSessionTimetable::with(['subclass', 'subject'])
+                ->where('session_timetableID', $sessionTimetableID)
+                ->where('teacherID', $teacherID)
+                ->first();
+
+            if (!$session) {
+                return response()->json(['success' => false, 'error' => 'Session not found'], 404);
+            }
+
+            // Check if attendance already exists for this session and date
+            $existingAttendance = StudentSessionAttendance::where('session_timetableID', $sessionTimetableID)
+                ->where('attendance_date', $attendanceDate)
+                ->exists();
+
+            // Get students for this subclass
+            $students = Student::where('subclassID', $session->subclassID)
+                ->where('status', 'Active')
+                ->orderBy('first_name')
+                ->orderBy('last_name')
+                ->get();
+
+            // Get existing attendance records if any
+            $existingRecords = StudentSessionAttendance::where('session_timetableID', $sessionTimetableID)
+                ->where('attendance_date', $attendanceDate)
+                ->get()
+                ->keyBy('studentID');
+
+            $studentData = [];
+            foreach ($students as $student) {
+                $existing = $existingRecords->get($student->studentID);
+                $studentData[] = [
+                    'studentID' => $student->studentID,
+                    'name' => trim(($student->first_name ?? '') . ' ' . ($student->middle_name ?? '') . ' ' . ($student->last_name ?? '')),
+                    'status' => $existing ? $existing->status : 'Present',
+                    'remark' => $existing ? $existing->remark : null,
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'students' => $studentData,
+                'attendance_exists' => $existingAttendance,
+                'can_collect' => !$existingAttendance
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting session students API: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to retrieve session students: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Collect/update attendance for a session (API)
+     */
+    public function collectSessionAttendanceAPI(Request $request)
+    {
+        try {
+            // Get authentication data from headers (stateless authentication)
+            $teacherID = $request->header('teacherID') ?? $request->input('teacherID');
+            $schoolID = $request->header('schoolID') ?? $request->input('schoolID');
+            $userID = $request->header('user_id') ?? $request->input('user_id');
+            $userType = $request->header('user_type') ?? $request->input('user_type');
+
+            // Validate required parameters
+            if (!$teacherID || !$schoolID || !$userID || !$userType) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Missing required authentication parameters. Please provide: user_id, user_type, schoolID, and teacherID in headers or request body.'
+                ], 401);
+            }
+
+            // Validate user type
+            if ($userType !== 'Teacher') {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Invalid user type. This endpoint is for Teachers only.'
+                ], 403);
+            }
+
+            // Verify teacher exists and belongs to the school
+            $teacher = Teacher::where('id', $teacherID)
+                ->where('schoolID', $schoolID)
+                ->first();
+
+            if (!$teacher) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Teacher not found or does not belong to the specified school.'
+                ], 404);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'session_timetableID' => 'required|exists:class_session_timetables,session_timetableID',
+                'attendance_date' => 'required|date',
+                'attendance' => 'required|array',
+                'attendance.*.studentID' => 'required|exists:students,studentID',
+                'attendance.*.status' => 'required|in:Present,Absent,Late,Excused',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+            }
+
+            $sessionTimetableID = $request->input('session_timetableID');
+            $attendanceDate = $request->input('attendance_date');
+            $attendanceData = $request->input('attendance');
+            $isUpdate = $request->input('is_update', false);
+
+            $session = ClassSessionTimetable::where('session_timetableID', $sessionTimetableID)
+                ->where('teacherID', $teacherID)
+                ->first();
+
+            if (!$session) {
+                return response()->json(['success' => false, 'error' => 'Session not found'], 404);
+            }
+
+            $existingAttendance = StudentSessionAttendance::where('session_timetableID', $sessionTimetableID)
+                ->where('attendance_date', $attendanceDate)
+                ->exists();
+
+            if ($existingAttendance && !$isUpdate) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Attendance for this session on this date has already been collected. Please use "Update Attendance" to modify it.'
+                ], 422);
+            }
+
+            DB::beginTransaction();
+
+            foreach ($attendanceData as $attendance) {
+                StudentSessionAttendance::updateOrCreate(
+                    [
+                        'session_timetableID' => $sessionTimetableID,
+                        'studentID' => $attendance['studentID'],
+                        'attendance_date' => $attendanceDate,
+                    ],
+                    [
+                        'schoolID' => $schoolID,
+                        'teacherID' => $teacherID,
+                        'status' => $attendance['status'],
+                        'remark' => $attendance['remark'] ?? null,
+                    ]
+                );
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Attendance collected successfully'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error collecting session attendance API: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to collect attendance: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get session attendance data for update (API)
+     */
+    public function getSessionAttendanceForUpdateAPI(Request $request)
+    {
+        try {
+            // Get authentication data from headers (stateless authentication)
+            $teacherID = $request->header('teacherID') ?? $request->input('teacherID');
+            $schoolID = $request->header('schoolID') ?? $request->input('schoolID');
+            $userID = $request->header('user_id') ?? $request->input('user_id');
+            $userType = $request->header('user_type') ?? $request->input('user_type');
+
+            // Validate required parameters
+            if (!$teacherID || !$schoolID || !$userID || !$userType) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Missing required authentication parameters. Please provide: user_id, user_type, schoolID, and teacherID in headers or request body.'
+                ], 401);
+            }
+
+            // Validate user type
+            if ($userType !== 'Teacher') {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Invalid user type. This endpoint is for Teachers only.'
+                ], 403);
+            }
+
+            // Verify teacher exists and belongs to the school
+            $teacher = Teacher::where('id', $teacherID)
+                ->where('schoolID', $schoolID)
+                ->first();
+
+            if (!$teacher) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Teacher not found or does not belong to the specified school.'
+                ], 404);
+            }
+
+            $sessionTimetableID = $request->input('session_timetableID');
+            $attendanceDate = $request->input('attendance_date');
+
+            if (!$sessionTimetableID || !$attendanceDate) {
+                return response()->json(['success' => false, 'error' => 'Missing required parameters']);
+            }
+
+            $session = ClassSessionTimetable::where('session_timetableID', $sessionTimetableID)
+                ->where('teacherID', $teacherID)
+                ->first();
+
+            if (!$session) {
+                return response()->json(['success' => false, 'error' => 'Session not found'], 404);
+            }
+
+            $attendanceRecords = StudentSessionAttendance::with(['student'])
+                ->where('session_timetableID', $sessionTimetableID)
+                ->where('attendance_date', $attendanceDate)
+                ->where('teacherID', $teacherID)
+                ->get();
+
+            $data = [];
+            foreach ($attendanceRecords as $record) {
+                $data[] = [
+                    'attendanceID' => $record->session_attendanceID,
+                    'studentID' => $record->studentID,
+                    'student_name' => trim(($record->student->first_name ?? '') . ' ' . ($record->student->middle_name ?? '') . ' ' . ($record->student->last_name ?? '')),
+                    'status' => $record->status,
+                    'remark' => $record->remark,
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting session attendance for update API: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to retrieve attendance: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Assign task for a session (API)
+     */
+    public function assignSessionTaskAPI(Request $request)
+    {
+        try {
+            // Get authentication data from headers (stateless authentication)
+            $teacherID = $request->header('teacherID') ?? $request->input('teacherID');
+            $schoolID = $request->header('schoolID') ?? $request->input('schoolID');
+            $userID = $request->header('user_id') ?? $request->input('user_id');
+            $userType = $request->header('user_type') ?? $request->input('user_type');
+
+            // Validate required parameters
+            if (!$teacherID || !$schoolID || !$userID || !$userType) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Missing required authentication parameters. Please provide: user_id, user_type, schoolID, and teacherID in headers or request body.'
+                ], 401);
+            }
+
+            // Validate user type
+            if ($userType !== 'Teacher') {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Invalid user type. This endpoint is for Teachers only.'
+                ], 403);
+            }
+
+            // Verify teacher exists and belongs to the school
+            $teacher = Teacher::where('id', $teacherID)
+                ->where('schoolID', $schoolID)
+                ->first();
+
+            if (!$teacher) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized. Teacher not found or does not belong to the specified school.'
+                ], 404);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'session_timetableID' => 'required|exists:class_session_timetables,session_timetableID',
+                'task_date' => 'required|date',
+                'topic' => 'required|string|max:255',
+                'subtopic' => 'nullable|string|max:255',
+                'task_description' => 'required|string|min:10',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+            }
+
+            $sessionTimetableID = $request->input('session_timetableID');
+
+            $session = ClassSessionTimetable::where('session_timetableID', $sessionTimetableID)
+                ->where('teacherID', $teacherID)
+                ->first();
+
+            if (!$session) {
+                return response()->json(['success' => false, 'error' => 'Session not found'], 404);
+            }
+
+            $existingTask = SessionTask::where('session_timetableID', $sessionTimetableID)
+                ->where('task_date', $request->input('task_date'))
+                ->first();
+
+            if ($existingTask) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Task already assigned for this session on this date'
+                ], 422);
+            }
+
+            $task = SessionTask::create([
+                'schoolID' => $schoolID,
+                'session_timetableID' => $sessionTimetableID,
+                'teacherID' => $teacherID,
+                'task_date' => $request->input('task_date'),
+                'topic' => $request->input('topic'),
+                'subtopic' => $request->input('subtopic'),
+                'task_description' => $request->input('task_description'),
+                'status' => 'pending',
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Task assigned successfully',
+                'task' => $task
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error assigning session task API: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to assign task: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Get students for a session
      */
     public function getSessionStudents(Request $request)
