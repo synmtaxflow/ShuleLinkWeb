@@ -317,11 +317,11 @@
                 <!-- Profile with School Logo -->
                 <li class="text-center my-3">
                     @php
-                        $schoolLogo = isset($school_details) && $school_details && $school_details->school_logo 
-                            ? asset($school_details->school_logo) 
+                        $schoolLogo = isset($school_details) && $school_details && $school_details->school_logo
+                            ? asset($school_details->school_logo)
                             : asset('images/admin.jpg');
-                        $schoolName = isset($school_details) && $school_details && $school_details->school_name 
-                            ? $school_details->school_name 
+                        $schoolName = isset($school_details) && $school_details && $school_details->school_name
+                            ? $school_details->school_name
                             : 'ShuleXpert';
                     @endphp
                     <img src="{{ $schoolLogo }}" alt="School Logo" class="rounded-circle" width="80" height="80" style="object-fit: cover; border: 3px solid #940000;">
@@ -331,7 +331,7 @@
                 <li class="sidebar-links-container">
                     <ul style="list-style: none; padding: 0; margin: 0; font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif;">
                         <li><a href="{{ route('AdminDashboard') }}" class="nav-link"><i class="fa fa-building"></i> Dashboard</a></li>
-                        
+
                         <!-- User Management -->
                         <li class="dropdown-nav-item">
                             <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#userManagement" aria-expanded="false">
@@ -344,7 +344,7 @@
                                 <li><a href="{{ route('manage_other_staff') }}" class="nav-link"><i class="fa fa-user-circle"></i> Other Staff</a></li>
                             </ul>
                         </li>
-                        
+
                         <!-- Academic Management -->
                         <li class="dropdown-nav-item">
                             <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#academicManagement" aria-expanded="false">
@@ -360,7 +360,7 @@
                                 <li><a href="{{ route('manageAttendance') }}" class="nav-link"><i class="fa fa-check-square-o"></i> Attendance</a></li>
                             </ul>
                         </li>
-                        
+
                         <!-- Planning & Scheduling -->
                         <li class="dropdown-nav-item">
                             <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#planningScheduling" aria-expanded="false">
@@ -374,7 +374,7 @@
                                 <li><a href="{{ route('admin.academicYears') }}" class="nav-link"><i class="fa fa-calendar-check-o"></i> Academic Years</a></li>
                             </ul>
                         </li>
-                        
+
                         <!-- Services -->
                         <li class="dropdown-nav-item">
                             <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#services" aria-expanded="false">
@@ -387,7 +387,7 @@
                                 <li><a href="{{ route('sms_notification') }}" class="nav-link"><i class="fa fa-bell"></i> SMS Information</a></li>
                             </ul>
                         </li>
-                        
+
                         <!-- Reports & Analytics -->
                         <li class="dropdown-nav-item">
                             <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#reportsAnalytics" aria-expanded="false">
@@ -400,7 +400,7 @@
                                 <li><a href="{{ route('admin.printing_unit') }}" class="nav-link"><i class="fa fa-print"></i> Printing Unit</a></li>
                             </ul>
                         </li>
-                        
+
                         <!-- Revenue and Expenses -->
                         <li class="dropdown-nav-item">
                             <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#revenueExpenses" aria-expanded="false">
@@ -411,7 +411,7 @@
                                 <li><a href="{{ route('manage_expenses') }}" class="nav-link"><i class="fa fa-arrow-down"></i> Manage Expenses</a></li>
                             </ul>
                         </li>
-                        
+
                         <!-- School Resources -->
                         <li class="dropdown-nav-item">
                             <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#schoolResources" aria-expanded="false">
@@ -565,30 +565,29 @@
         <!-- Header-->
 
 <script>
+// Ensure $ inside this block refers to jQuery (pass window.jQuery into IIFE)
+(function(){
 // Function to initialize menu and dropdowns
 function initializeMenuDropdowns() {
-    // Wait for jQuery to be available
-    if (typeof jQuery === 'undefined') {
+    // Wait for jQuery to be available and for Bootstrap collapse plugin
+    if (typeof window.jQuery === 'undefined' || typeof window.jQuery.fn === 'undefined' || typeof window.jQuery.fn.collapse === 'undefined') {
         setTimeout(initializeMenuDropdowns, 100);
         return;
     }
-    
-    // Wait for Bootstrap collapse plugin to be available
-    if (typeof jQuery.fn.collapse === 'undefined') {
-        setTimeout(initializeMenuDropdowns, 100);
-        return;
-    }
-    
+
+    // Use a local $ bound to window.jQuery to avoid conflicts
+    var $ = window.jQuery;
+
     // Get all sidebar menu links
     const menuLinks = document.querySelectorAll('#left-panel .nav-link');
-    
+
     // Remove active class from all links
     function removeActiveClass() {
         menuLinks.forEach(link => {
             link.classList.remove('menu-active');
         });
     }
-    
+
     // Reset all dropdowns to closed state first
     function resetAllDropdowns() {
         document.querySelectorAll('.dropdown-nav-item .collapse').forEach(collapse => {
@@ -602,7 +601,7 @@ function initializeMenuDropdowns() {
             }
         });
     }
-    
+
     // Initialize all collapse elements and close them by default
     document.querySelectorAll('.dropdown-nav-item .collapse').forEach(collapse => {
         // Initialize collapse if not already initialized and if collapse function is available
@@ -624,13 +623,13 @@ function initializeMenuDropdowns() {
             toggle.setAttribute('aria-expanded', 'false');
         }
     });
-    
+
     // Remove all existing event listeners by cloning and replacing
     document.querySelectorAll('.dropdown-toggle').forEach(toggle => {
         const newToggle = toggle.cloneNode(true);
         toggle.parentNode.replaceChild(newToggle, toggle);
     });
-    
+
     // Add click event listener to each link
     menuLinks.forEach(link => {
         link.addEventListener('click', function(e) {
@@ -638,15 +637,15 @@ function initializeMenuDropdowns() {
             if (this.classList.contains('dropdown-toggle')) {
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 const targetId = this.getAttribute('data-target');
                 const target = document.querySelector(targetId);
-                
+
                 if (!target) return;
-                
+
                 const $target = $(target);
                 const isExpanded = this.getAttribute('aria-expanded') === 'true';
-                
+
                 // Toggle current dropdown
                 if (isExpanded) {
                     // Close current dropdown
@@ -666,7 +665,7 @@ function initializeMenuDropdowns() {
                             }
                         }
                     });
-                    
+
                     // Open current dropdown after a small delay to ensure others are closed
                     setTimeout(() => {
                         if (typeof $target.collapse === 'function') {
@@ -675,10 +674,10 @@ function initializeMenuDropdowns() {
                         this.setAttribute('aria-expanded', 'true');
                     }, 50);
                 }
-                
+
                 return false;
             }
-            
+
             // Don't prevent default if it's not a hash link
             if (this.getAttribute('href') !== '#') {
                 // Remove active class from all links
@@ -688,46 +687,46 @@ function initializeMenuDropdowns() {
             }
         });
     });
-    
+
     // Set active based on current URL on page load
     const currentUrl = window.location.href;
     const currentPath = window.location.pathname;
-    
+
     // Function to check if URL matches
     function urlMatches(linkHref, currentUrl, currentPath) {
         if (!linkHref || linkHref === '#') return false;
-        
+
         // Remove query strings and fragments for comparison
         let linkPath = linkHref.split('?')[0].split('#')[0].replace(/\/$/, ''); // Remove trailing slash
         let currentPathClean = currentPath.split('?')[0].split('#')[0].replace(/\/$/, '');
         let currentUrlClean = currentUrl.split('?')[0].split('#')[0].replace(/\/$/, '');
-        
+
         // Normalize paths
         linkPath = linkPath.toLowerCase();
         currentPathClean = currentPathClean.toLowerCase();
         currentUrlClean = currentUrlClean.toLowerCase();
-        
+
         // Check exact match
         if (currentPathClean === linkPath || currentUrlClean === linkPath) {
             return true;
         }
-        
+
         // Check if current URL/path ends with link path (for nested routes)
         if (currentPathClean.endsWith(linkPath) || currentUrlClean.endsWith(linkPath)) {
             return true;
         }
-        
+
         // Check if current URL/path contains link path (for routes with parameters)
         if (linkPath && (currentPathClean.includes(linkPath) || currentUrlClean.includes(linkPath))) {
             return true;
         }
-        
+
         return false;
     }
-    
+
     // First reset all dropdowns - close ALL dropdowns
     resetAllDropdowns();
-    
+
     // Force close all dropdowns again after a delay
     setTimeout(() => {
         document.querySelectorAll('.dropdown-nav-item .collapse').forEach(collapse => {
@@ -741,17 +740,17 @@ function initializeMenuDropdowns() {
             }
         });
     }, 100);
-    
+
     // Then set active link and expand ONLY the parent dropdown of active link
     setTimeout(() => {
         let activeLinkFound = false;
-        
+
         menuLinks.forEach(link => {
             const linkHref = link.getAttribute('href');
             if (urlMatches(linkHref, currentUrl, currentPath)) {
                 link.classList.add('menu-active');
                 activeLinkFound = true;
-                
+
                 // If link is in a submenu, expand the parent dropdown and make it active
                 const submenu = link.closest('.submenu');
                 if (submenu) {
@@ -766,7 +765,7 @@ function initializeMenuDropdowns() {
                                 $submenu.collapse('show');
                             }
                             dropdownToggle.setAttribute('aria-expanded', 'true');
-                            
+
                             // Add active class to parent toggle
                             dropdownToggle.classList.add('menu-active');
                         }
@@ -784,7 +783,7 @@ function initializeMenuDropdowns() {
                 }
             }
         });
-        
+
         // If no active link found, check if we need to highlight parent menu
         // BUT ONLY expand ONE dropdown - the one containing the active link
         if (!activeLinkFound) {
@@ -798,7 +797,7 @@ function initializeMenuDropdowns() {
                         if (currentPath.includes(linkPath) || currentUrl.includes(linkPath)) {
                             link.classList.add('menu-active');
                             activeLinkFound = true;
-                            
+
                             // Expand ONLY the parent dropdown of this active link
                             const submenu = link.closest('.submenu');
                             if (submenu) {
@@ -851,7 +850,7 @@ function initializeMenuDropdowns() {
                 }
             });
         }
-        
+
         // Also check for parent dropdowns that might contain active children
         if (activeLinkFound) {
             // Ensure all parent dropdowns of active links are open and highlighted
@@ -869,7 +868,7 @@ function initializeMenuDropdowns() {
             });
         }
     }, 300);
-    
+
     // Initialize Bootstrap collapse events for dropdowns
     $('.dropdown-nav-item .collapse').off('show.bs.collapse hide.bs.collapse').on('show.bs.collapse', function() {
         const toggle = $(this).prev('.dropdown-toggle');
@@ -882,7 +881,7 @@ function initializeMenuDropdowns() {
             toggle.attr('aria-expanded', 'false');
         }
     });
-    
+
     // Also listen for when links are clicked that navigate to new pages
     menuLinks.forEach(link => {
         if (link.getAttribute('href') && link.getAttribute('href') !== '#') {
@@ -908,4 +907,6 @@ window.addEventListener('pageshow', function(event) {
 
 // Re-initialize after a short delay to ensure everything is loaded
 setTimeout(initializeMenuDropdowns, 500);
+
+})(window.jQuery);
 </script>

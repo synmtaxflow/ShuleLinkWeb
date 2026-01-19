@@ -38,7 +38,7 @@
         border-color: #940000;
         box-shadow: 0 0 0 0.2rem rgba(148, 0, 0, 0.25);
     }
-    
+
     /* School Details Card Styles */
     .school-details-card {
         background: white;
@@ -47,7 +47,7 @@
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
         margin-bottom: 25px;
     }
-    
+
     .school-header {
         display: flex;
         align-items: center;
@@ -56,14 +56,14 @@
         padding-bottom: 15px;
         border-bottom: 2px solid #e9ecef;
     }
-    
+
     .school-title {
         font-size: 1.5rem;
         font-weight: 600;
         color: #212529;
         margin: 0;
     }
-    
+
     .school-logo-preview {
         width: 80px;
         height: 80px;
@@ -75,19 +75,19 @@
         overflow: hidden;
         border: 2px solid #e9ecef;
     }
-    
+
     .school-logo-preview img {
         max-width: 100%;
         max-height: 100%;
         object-fit: cover;
     }
-    
+
     .school-info-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
         gap: 15px;
     }
-    
+
     .info-item {
         display: flex;
         align-items: flex-start;
@@ -95,7 +95,7 @@
         background: #f8f9fa;
         border-radius: 8px;
     }
-    
+
     .info-item i {
         color: #6c757d;
         margin-right: 10px;
@@ -103,11 +103,11 @@
         font-size: 18px;
         width: 20px;
     }
-    
+
     .info-item-content {
         flex: 1;
     }
-    
+
     .info-item-label {
         font-size: 0.75rem;
         color: #6c757d;
@@ -115,7 +115,7 @@
         letter-spacing: 0.5px;
         margin-bottom: 3px;
     }
-    
+
     .info-item-value {
         font-size: 0.95rem;
         color: #212529;
@@ -474,7 +474,7 @@
                         </select>
                         <small class="text-muted">Select the profession to assign duties/permissions</small>
                     </div>
-                    
+
                     <div class="border rounded p-3" style="max-height: 500px; overflow-y: auto;">
                         <h6 class="mb-3 text-primary-custom">Select Permissions/Duties</h6>
                         @php
@@ -515,10 +515,10 @@
                                         @endphp
                                         <div class="col-md-3">
                                             <div class="form-check">
-                                                <input class="form-check-input permission-checkbox" 
-                                                       type="checkbox" 
-                                                       name="permissions[]" 
-                                                       value="{{ $permissionName }}" 
+                                                <input class="form-check-input permission-checkbox"
+                                                       type="checkbox"
+                                                       name="permissions[]"
+                                                       value="{{ $permissionName }}"
                                                        id="{{ $permissionId }}">
                                                 <label class="form-check-label" for="{{ $permissionId }}">
                                                     {{ ucfirst(str_replace('_', ' ', $action)) }}
@@ -812,7 +812,7 @@
 @include('includes.footer')
 
 <!-- DataTables JS -->
-<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<!-- jQuery removed here to avoid duplicate include; use jQuery loaded in footer -->
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -825,7 +825,7 @@ console.log('$ loaded:', typeof $ !== 'undefined');
 
 $(document).ready(function() {
     console.log('=== DOCUMENT READY FIRED ===');
-    
+
     // Initialize DataTable
     var staffTable = $('#staffTable').DataTable({
         "order": [[1, "asc"]],
@@ -835,7 +835,7 @@ $(document).ready(function() {
             'copy', 'csv', 'excel', 'pdf', 'print'
         ]
     });
-    
+
     // Initialize modals
     var staffProfessionsModal = null;
     var viewStaffProfessionsModal = null;
@@ -874,28 +874,28 @@ $(document).ready(function() {
     });
 
     // ==================== STAFF PROFESSION HANDLERS ====================
-    
+
     // Debug: Check if form exists
     console.log('Form check:', $('#staffProfessionForm').length);
     console.log('Form element:', document.getElementById('staffProfessionForm'));
-    
+
     // ATTACH FORM HANDLER - Use event delegation to ensure it works even if form is in modal
     $(document).on('submit', '#staffProfessionForm', function(e) {
-        console.log('=== FORM SUBMIT EVENT CAUGHT ===');
-        
         // CRITICAL: Prevent default form submission FIRST
         e.preventDefault();
-        e.stopPropagation();
-        
-        console.log('=== FORM SUBMIT TRIGGERED (after preventDefault) ===');
-        
-        // Verify form exists and get form data
+        e.stopPropagation(); // Stop bubbling
+
+        console.log('=== FORM SUBMIT EVENT FIRED ===');
+
+        // Verify form exists and gets the correct form
         var $form = $(this);
+        console.log('Form ID:', $form.attr('id'));
+        
         var formData = $form.serialize();
         var url = '{{ route("save_staff_profession") }}';
         var method = 'POST';
         var professionId = $('#profession_id').val();
-        
+
         if (professionId) {
             // Update existing
             url = '{{ route("update_staff_profession") }}';
@@ -913,12 +913,9 @@ $(document).ready(function() {
             return false;
         }
 
-        console.log('Submitting profession form', {
-            url: url,
-            method: method,
-            formData: formData,
-            professionId: professionId
-        });
+        console.log('Submitting profession form to:', url);
+        console.log('Method:', method);
+        console.log('Data:', formData);
 
         var $submitBtn = $form.find('button[type="submit"]');
         var originalText = $submitBtn.html();
@@ -932,6 +929,14 @@ $(document).ready(function() {
             success: function(response) {
                 console.log('AJAX Success Response:', response);
                 $submitBtn.prop('disabled', false).html(originalText);
+                
+                // Close modal first
+                if (typeof bootstrap !== 'undefined' && staffProfessionsModal) {
+                    staffProfessionsModal.hide();
+                } else {
+                    $('#staffProfessionsModal').modal('hide');
+                }
+
                 Swal.fire({
                     icon: 'success',
                     title: 'Success!',
@@ -939,66 +944,34 @@ $(document).ready(function() {
                     timer: 2000,
                     showConfirmButton: false
                 }).then(() => {
-                    if (typeof bootstrap !== 'undefined' && staffProfessionsModal) {
-                        staffProfessionsModal.hide();
-                    } else {
-                        $('#staffProfessionsModal').modal('hide');
-                    }
                     location.reload();
                 });
             },
             error: function(xhr, status, error) {
                 $submitBtn.prop('disabled', false).html(originalText);
-                console.error('AJAX Error Details:', {
+                console.error('AJAX Error:', {
                     status: xhr.status,
                     statusText: xhr.statusText,
-                    responseText: xhr.responseText ? xhr.responseText.substring(0, 500) : 'No response text',
-                    responseJSON: xhr.responseJSON,
-                    error: error,
-                    status_code: status,
-                    readyState: xhr.readyState
+                    responseText: xhr.responseText,
+                    error: error
                 });
-                
-                // If request didn't even reach the server
-                if (xhr.status === 0 || !xhr.readyState) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Network Error',
-                        text: 'Unable to connect to server. Please check your connection and try again.'
-                    });
-                    return;
-                }
-                
+
+                // Detailed error handling
                 if (xhr.status === 422) {
                     var errors = xhr.responseJSON && xhr.responseJSON.errors ? xhr.responseJSON.errors : {};
-                    var errorMsg = '';
-                    if (Object.keys(errors).length > 0) {
-                        errorMsg = Object.values(errors).join('<br>');
-                    } else if (xhr.responseJSON && xhr.responseJSON.error) {
-                        errorMsg = xhr.responseJSON.error;
-                    } else {
-                        errorMsg = 'Validation failed. Please check your input.';
+                    var errorMsg = Object.values(errors).join('<br>'); // Join all errors
+                    if (!errorMsg && xhr.responseJSON && xhr.responseJSON.error) {
+                         errorMsg = xhr.responseJSON.error;
                     }
+                    if (!errorMsg) errorMsg = 'Validation failed.';
+
                     Swal.fire({
                         icon: 'error',
                         title: 'Validation Error',
                         html: errorMsg
                     });
-                } else if (xhr.status === 500) {
-                    var errorMsg = xhr.responseJSON && xhr.responseJSON.error 
-                        ? xhr.responseJSON.error 
-                        : 'Server error occurred. Please check console for details.';
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Server Error',
-                        text: errorMsg
-                    });
                 } else {
-                    var errorMsg = xhr.responseJSON && xhr.responseJSON.error 
-                        ? xhr.responseJSON.error 
-                        : (xhr.responseJSON && xhr.responseJSON.message 
-                            ? xhr.responseJSON.message 
-                            : 'An error occurred. Please try again.');
+                     var errorMsg = (xhr.responseJSON && xhr.responseJSON.error) ? xhr.responseJSON.error : 'An error occurred. check console.';
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',
@@ -1007,8 +980,8 @@ $(document).ready(function() {
                 }
             }
         });
-        
-        return false; // Prevent form from submitting normally
+
+        return false; // Extra safety
     });
 
     // Handle Edit Profession Button
@@ -1017,7 +990,7 @@ $(document).ready(function() {
         var $btn = $(this);
         var originalText = $btn.html();
         $btn.prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> Loading...');
-        
+
         $.ajax({
             url: '{{ url("get_staff_profession") }}/' + professionId,
             method: 'GET',
@@ -1049,7 +1022,7 @@ $(document).ready(function() {
     $(document).on('click', '.delete-profession-btn', function() {
         var professionId = $(this).data('profession-id');
         var professionName = $(this).data('profession-name');
-        
+
         Swal.fire({
             title: 'Delete Profession?',
             text: `Are you sure you want to delete "${professionName}"?`,
@@ -1094,7 +1067,7 @@ $(document).ready(function() {
     });
 
     // ==================== STAFF DUTIES/PERMISSIONS HANDLERS ====================
-    
+
     // Handle Staff Duties Form Submit
     $('#staffDutiesForm').on('submit', function(e) {
         e.preventDefault();
@@ -1181,7 +1154,7 @@ $(document).ready(function() {
             success: function(response) {
                 // Uncheck all permissions first
                 $('.permission-checkbox').prop('checked', false);
-                
+
                 // Check permissions that are assigned to this profession
                 if (response.profession && response.profession.permissions) {
                     response.profession.permissions.forEach(function(permission) {
@@ -1197,7 +1170,7 @@ $(document).ready(function() {
     });
 
     // ==================== STAFF CRUD HANDLERS ====================
-    
+
     // Handle Add Staff Form Submit
     $('#addStaffForm').on('submit', function(e) {
         e.preventDefault();
@@ -1219,8 +1192,8 @@ $(document).ready(function() {
                     icon: 'success',
                     title: 'Success!',
                     text: response.success || 'Staff registered successfully!',
-                    html: response.fingerprint_id ? 
-                        'Staff registered successfully!<br><strong>Fingerprint ID:</strong> ' + response.fingerprint_id : 
+                    html: response.fingerprint_id ?
+                        'Staff registered successfully!<br><strong>Fingerprint ID:</strong> ' + response.fingerprint_id :
                         'Staff registered successfully!',
                     timer: 3000,
                     showConfirmButton: false
@@ -1255,7 +1228,7 @@ $(document).ready(function() {
         e.preventDefault();
         var staffId = $(this).data('staff-id');
         var staffDetails = $('.staff-full-details[data-staff-id="' + staffId + '"]').html();
-        
+
         if (staffDetails) {
             $('#viewStaffModalBody').html(staffDetails);
             if (viewStaffModal) {
@@ -1266,11 +1239,32 @@ $(document).ready(function() {
         }
     });
 
+// Native DOM debug listeners (temporary) to detect if clicks/submits reach the browser
+(function(){
+    try {
+        var submitBtn = document.querySelector('#staffProfessionsModal button[type="submit"]');
+        var form = document.getElementById('staffProfessionForm');
+        console.log('Native debug attach:', {submitBtn: !!submitBtn, form: !!form});
+        if (submitBtn) {
+            submitBtn.addEventListener('click', function(ev){
+                console.log('Native submit button clicked', ev);
+            }, {capture:true});
+        }
+        if (form) {
+            form.addEventListener('submit', function(ev){
+                console.log('Native form submit event', ev);
+            }, {capture:true});
+        }
+    } catch (e) {
+        console.error('Native debug attach error', e);
+    }
+})();
+
     // Handle Edit Staff Button
     $(document).on('click', '.edit-staff-btn', function(e) {
         e.preventDefault();
         var staffId = $(this).data('staff-id');
-        
+
         $.ajax({
             url: '{{ url("get_other_staff") }}/' + staffId,
             method: 'GET',
@@ -1366,7 +1360,7 @@ $(document).ready(function() {
         e.preventDefault();
         var staffId = $(this).data('staff-id');
         var staffName = $(this).data('staff-name');
-        
+
         Swal.fire({
             title: 'Delete Staff?',
             text: `Are you sure you want to delete "${staffName}"?`,
@@ -1388,7 +1382,7 @@ $(document).ready(function() {
                         Swal.showLoading();
                     }
                 });
-                
+
                 $.ajax({
                     url: '{{ url("delete_other_staff") }}/' + staffId,
                     method: 'DELETE',
@@ -1420,7 +1414,7 @@ $(document).ready(function() {
         e.preventDefault();
         var staffId = $(this).data('staff-id');
         var staffName = $(this).data('staff-name');
-        
+
         Swal.fire({
             title: 'Send to Fingerprint Device?',
             text: `Send "${staffName}" to fingerprint device?`,
@@ -1442,7 +1436,7 @@ $(document).ready(function() {
                         Swal.showLoading();
                     }
                 });
-                
+
                 $.ajax({
                     url: '{{ route("send_staff_to_fingerprint") }}',
                     method: 'POST',
@@ -1453,8 +1447,8 @@ $(document).ready(function() {
                                 icon: 'success',
                                 title: 'Success!',
                                 text: response.message || 'Staff sent to fingerprint device successfully!',
-                                html: response.fingerprint_id ? 
-                                    'Staff sent successfully!<br><strong>Fingerprint ID:</strong> ' + response.fingerprint_id : 
+                                html: response.fingerprint_id ?
+                                    'Staff sent successfully!<br><strong>Fingerprint ID:</strong> ' + response.fingerprint_id :
                                     'Staff sent successfully!',
                                 timer: 3000,
                                 showConfirmButton: false
@@ -1466,8 +1460,8 @@ $(document).ready(function() {
                                 icon: 'warning',
                                 title: 'Warning',
                                 text: response.message || 'Staff sent but device registration may have failed',
-                                html: response.fingerprint_id ? 
-                                    response.message + '<br><strong>Fingerprint ID:</strong> ' + response.fingerprint_id : 
+                                html: response.fingerprint_id ?
+                                    response.message + '<br><strong>Fingerprint ID:</strong> ' + response.fingerprint_id :
                                     response.message
                             });
                         }

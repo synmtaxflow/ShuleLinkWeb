@@ -326,6 +326,12 @@ Route::post('update_staff_profession', [ManageOtherStaffController::class, 'upda
 Route::delete('delete_staff_profession/{id}', [ManageOtherStaffController::class, 'delete_staff_profession'])->name('delete_staff_profession');
 Route::get('get_staff_profession_with_permissions/{id}', [ManageOtherStaffController::class, 'get_staff_profession_with_permissions'])->name('get_staff_profession_with_permissions');
 
+// Temporary debug route to verify server receives browser requests
+Route::get('debug/ping', function () {
+    \Illuminate\Support\Facades\Log::info('debug/ping hit from browser', ['path' => request()->path(), 'ip' => request()->ip()]);
+    return response()->json(['pong' => true, 'time' => now()->toDateTimeString()]);
+});
+
 // Staff Permissions/Duties Routes
 Route::post('save_staff_permissions', [ManageOtherStaffController::class, 'save_staff_permissions'])->name('save_staff_permissions');
 
@@ -552,18 +558,18 @@ Route::post('students/{id}/register-device', [ZKTecoController::class, 'register
 Route::get('populate-results', function () {
     $output = [];
     $output[] = "Starting to populate results...<br>";
-    
+
     // Check how many records need updating
     $count = DB::table('results')
         ->whereNull('marks')
         ->where('status', 'not_allowed')
         ->count();
-    
+
     $output[] = "Records to update: $count<br>";
-    
+
     if ($count > 0) {
         $output[] = "Updating marks...<br>";
-        
+
         // Update marks in batches
         $updated = 0;
         DB::table('results')
@@ -580,17 +586,17 @@ Route::get('populate-results', function () {
                     } else {
                         $marks = mt_rand(65, 100);
                     }
-                    
+
                     DB::table('results')
                         ->where('resultID', $result->resultID)
                         ->update(['marks' => $marks]);
                     $updated++;
                 }
             });
-        
+
         $output[] = "Updated $updated marks.<br>";
         $output[] = "Updating grades...<br>";
-        
+
         // Update grades
         DB::statement("
             UPDATE results r
@@ -598,9 +604,9 @@ Route::get('populate-results', function () {
             INNER JOIN subclasses s ON r.subclassID = s.subclassID
             INNER JOIN classes c ON s.classID = c.classID
             INNER JOIN schools sch ON c.schoolID = sch.schoolID
-            SET r.grade = CASE 
+            SET r.grade = CASE
                 WHEN sch.school_type = 'Secondary' AND LOWER(REPLACE(REPLACE(c.class_name, ' ', '_'), '-', '_')) IN ('form_one', 'form_two', 'form_three', 'form_four', 'form_1', 'form_2', 'form_3', 'form_4') THEN
-                    CASE 
+                    CASE
                         WHEN r.marks >= 75 THEN 'A'
                         WHEN r.marks >= 65 THEN 'B'
                         WHEN r.marks >= 45 THEN 'C'
@@ -609,15 +615,15 @@ Route::get('populate-results', function () {
                         ELSE 'F'
                     END
                 WHEN sch.school_type = 'Primary' THEN
-                    CASE 
+                    CASE
                         WHEN r.marks >= 75 THEN 'A'
                         WHEN r.marks >= 65 THEN 'B'
                         WHEN r.marks >= 45 THEN 'C'
                         WHEN r.marks >= 30 THEN 'D'
                         ELSE 'F'
                     END
-                ELSE 
-                    CASE 
+                ELSE
+                    CASE
                         WHEN r.marks >= 75 THEN 'A'
                         WHEN r.marks >= 65 THEN 'B'
                         WHEN r.marks >= 45 THEN 'C'
@@ -627,10 +633,10 @@ Route::get('populate-results', function () {
             END
             WHERE r.marks IS NOT NULL AND r.grade IS NULL
         ");
-        
+
         $output[] = "Grades updated.<br>";
         $output[] = "Updating remarks...<br>";
-        
+
         // Update remarks
         DB::table('results')
             ->whereNotNull('marks')
@@ -638,19 +644,19 @@ Route::get('populate-results', function () {
             ->update([
                 'remark' => DB::raw("CASE WHEN marks >= 30 THEN 'Pass' ELSE 'Fail' END")
             ]);
-        
+
         $output[] = "Remarks updated.<br>";
         $output[] = "Updating status...<br>";
-        
+
         // Update status
         DB::table('results')
             ->whereNotNull('marks')
             ->where('status', 'not_allowed')
             ->update(['status' => 'allowed']);
-        
+
         $output[] = "Status updated.<br>";
     }
-    
+
     // Show summary
     $summary = DB::table('results')
         ->selectRaw('
@@ -661,13 +667,13 @@ Route::get('populate-results', function () {
             COUNT(CASE WHEN marks < 30 THEN 1 END) as failed
         ')
         ->first();
-    
+
     $output[] = "<br><strong>Summary:</strong><br>";
     $output[] = "Total records: {$summary->total}<br>";
     $output[] = "With marks: {$summary->with_marks}<br>";
     $output[] = "With grades: {$summary->with_grades}<br>";
     $output[] = "Passed (>=30): {$summary->passed}<br>";
     $output[] = "Failed (<30): {$summary->failed}<br>";
-    
+
     return implode('', $output);
 })->name('populate.results');

@@ -42,6 +42,7 @@ class ManageOtherStaffController extends Controller
      */
     public function save_staff_profession(Request $request)
     {
+        DB::beginTransaction();
         try {
             Log::info('save_staff_profession called', [
                 'request_data' => $request->all(),
@@ -73,9 +74,11 @@ class ManageOtherStaffController extends Controller
             // Check if profession with same name already exists for this school
             $existing = StaffProfession::where('schoolID', $schoolID)
                 ->where('name', $request->name)
+                ->lockForUpdate() // Lock to prevent race conditions
                 ->first();
 
             if ($existing) {
+                DB::rollBack();
                 Log::warning('Profession already exists', ['name' => $request->name]);
                 return response()->json(['errors' => ['name' => 'This profession already exists for your school']], 422);
             }
@@ -92,6 +95,7 @@ class ManageOtherStaffController extends Controller
                 'schoolID' => $schoolID,
             ]);
 
+            DB::commit();
             Log::info('Profession created successfully', ['profession_id' => $profession->id]);
 
             return response()->json([
@@ -100,6 +104,7 @@ class ManageOtherStaffController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::error('Exception in save_staff_profession', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -363,6 +368,7 @@ class ManageOtherStaffController extends Controller
      */
     public function save_other_staff(Request $request)
     {
+        DB::beginTransaction();
         try {
             $validator = Validator::make($request->all(), [
                 'first_name'      => 'required|string|max:255',
@@ -487,14 +493,18 @@ class ManageOtherStaffController extends Controller
                 Log::error('SMS sending error: ' . $e->getMessage());
             }
 
+            DB::commit();
+
             return response()->json([
                 'success' => 'Staff added successfully!',
                 'fingerprint_id' => $fingerprintId
             ]);
 
         } catch (\Illuminate\Database\QueryException $e) {
+            DB::rollBack();
             return response()->json(['error' => 'Database error: ' . $e->getMessage()], 500);
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json(['error' => 'An error occurred: ' . $e->getMessage()], 500);
         }
     }
@@ -683,13 +693,26 @@ class ManageOtherStaffController extends Controller
                 OtherStaff::where('id', (int)$fingerprintId)->exists()
             );
 
-            // Update staff with fingerprint_id and id = fingerprintID
-            $staff->update(['fingerprint_id' => $fingerprintId]);
+            // Update staff with fingerprint_id first
+            $staff->fingerprint_id = $fingerprintId;
+            $staff->save();
             
             if ($oldStaffId != (int)$fingerprintId) {
+                // WARNING: Changing Primary Key is risky. 
+                // We must temporarily disable FK checks to avoid constraint violations during the update.
                 DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-                DB::statement("UPDATE other_staff SET id = ? WHERE id = ?", [(int)$fingerprintId, $oldStaffId]);
-                DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+                try {
+                    DB::table('other_staff')
+                        ->where('id', $oldStaffId)
+                        ->update(['id' => (int)$fingerprintId]);
+                        
+                    // Also update any related tables manually if not CASCADE
+                    // For example, if User links to OtherStaff via some other key, or if there are other relations
+                } finally {
+                    DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+                }
+                
+                // Refresh staff instance with new ID
                 $staff = OtherStaff::find((int)$fingerprintId);
             }
 
@@ -705,10 +728,15 @@ class ManageOtherStaffController extends Controller
                     'fingerprint_id' => $fingerprintId
                 ]);
             } else {
+                // We keep the ID change even if device registration fails? 
+                // Usually better to commit the ID change so we don't handle it again, 
+                // but the user might want a retry. 
+                // Let's commit because the ID change is a database structural requirement for this system
                 DB::commit();
+                
                 return response()->json([
                     'success' => false,
-                    'message' => 'Fingerprint ID generated but failed to register to device: ' . ($apiResult['message'] ?? 'Unknown error'),
+                    'message' => 'Fingerprint ID generated (' . $fingerprintId . ') but failed to register to device: ' . ($apiResult['message'] ?? 'Unknown error'),
                     'fingerprint_id' => $fingerprintId
                 ], 200);
             }

@@ -6,6 +6,19 @@ use Symfony\Component\Console\Input\ArgvInput;
 
 define('LARAVEL_START', microtime(true));
 
+// Workaround: some external tools (IDE extensions) call `php artisan route:list --columns=...`
+// which causes a Symfony/Console parse error if the option isn't supported.
+// Strip any `--columns` arguments early so they don't reach ArgvInput.
+if (isset($argv) && is_array($argv)) {
+	foreach ($argv as $i => $arg) {
+		if (str_starts_with($arg, '--columns')) {
+			unset($argv[$i]);
+		}
+	}
+	// Reindex argv to keep expected indexing
+	$argv = array_values($argv);
+}
+
 // Register the Composer autoloader...
 require __DIR__.'/vendor/autoload.php';
 
