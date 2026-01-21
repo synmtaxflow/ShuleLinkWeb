@@ -796,6 +796,133 @@ class TeachersController extends Controller
         return view('Teacher.dashboard', compact('rejectionNotifications', 'pendingApprovals', 'specialRoleApprovals', 'waitingApprovals', 'approvalChainExams', 'superviseExamCount', 'hasAssignedClass', 'dashboardStats', 'notifications', 'graphData', 'teacherNotifications', 'managementPermissions'));
     }
 
+    public function manageTeacherFeedback(Request $request)
+    {
+        $user = Session::get('user_type');
+        if (!$user || $user !== 'Teacher') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $teacherID = Session::get('teacherID');
+        $schoolID = Session::get('schoolID');
+
+        if (!$teacherID || !$schoolID) {
+            return redirect()->route('login')->with('error', 'Session expired');
+        }
+
+        $tab = $request->query('tab');
+        $section = $request->query('section', 'send');
+        if (!$tab) {
+            $routeName = optional($request->route())->getName();
+            $tab = $routeName === 'teacher.incidents' ? 'incidents' : 'suggestions';
+        }
+
+        $dateFrom = $request->query('date_from');
+        $dateTo = $request->query('date_to');
+
+        $feedbackQuery = \App\Models\TeacherFeedback::where('teacherID', $teacherID)
+            ->where('schoolID', $schoolID);
+
+        if ($dateFrom) {
+            $feedbackQuery->whereDate('created_at', '>=', $dateFrom);
+        }
+        if ($dateTo) {
+            $feedbackQuery->whereDate('created_at', '<=', $dateTo);
+        }
+
+        $feedback = $feedbackQuery->orderBy('created_at', 'desc')->get();
+
+        $suggestions = $feedback->where('type', 'suggestion')->values();
+        $incidents = $feedback->where('type', 'incident')->values();
+
+        $suggestionStats = [
+            'total' => $suggestions->count(),
+            'pending' => $suggestions->where('status', 'pending')->count(),
+            'approved' => $suggestions->where('status', 'approved')->count(),
+            'rejected' => $suggestions->where('status', 'rejected')->count(),
+        ];
+
+        $incidentStats = [
+            'total' => $incidents->count(),
+            'pending' => $incidents->where('status', 'pending')->count(),
+            'approved' => $incidents->where('status', 'approved')->count(),
+            'rejected' => $incidents->where('status', 'rejected')->count(),
+        ];
+
+        $readType = $tab === 'incidents' ? 'incident' : 'suggestion';
+        \App\Models\TeacherFeedback::where('teacherID', $teacherID)
+            ->where('schoolID', $schoolID)
+            ->where('type', $readType)
+            ->update(['is_read_by_teacher' => true]);
+
+        return view('Teacher.manage_feedback', [
+            'activeTab' => $tab,
+            'activeSection' => $section,
+            'suggestions' => $suggestions,
+            'incidents' => $incidents,
+            'suggestionStats' => $suggestionStats,
+            'incidentStats' => $incidentStats,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+        ]);
+    }
+
+    public function storeTeacherFeedback(Request $request)
+    {
+        $user = Session::get('user_type');
+        if (!$user || $user !== 'Teacher') {
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+            }
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $teacherID = Session::get('teacherID');
+        $schoolID = Session::get('schoolID');
+
+        if (!$teacherID || !$schoolID) {
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Session expired'], 403);
+            }
+            return redirect()->route('login')->with('error', 'Session expired');
+        }
+
+        $validated = $request->validate([
+            'type' => 'required|in:suggestion,incident',
+            'message' => 'required|string',
+        ]);
+
+        \App\Models\TeacherFeedback::create([
+            'schoolID' => $schoolID,
+            'teacherID' => $teacherID,
+            'type' => $validated['type'],
+            'message' => $validated['message'],
+            'status' => 'pending',
+            'is_read_by_admin' => false,
+            'is_read_by_teacher' => true,
+        ]);
+
+        $teacher = \App\Models\Teacher::where('id', $teacherID)->first();
+        $school = \App\Models\School::where('schoolID', $schoolID)->first();
+        $adminPhone = $school->phone ?? null;
+
+        if ($adminPhone) {
+            $typeLabel = $validated['type'] === 'incident' ? 'Incident' : 'Suggestion';
+            $teacherName = $teacher ? trim(($teacher->first_name ?? '') . ' ' . ($teacher->last_name ?? '')) : 'Teacher';
+            $message = "New {$typeLabel} from {$teacherName}. Please review in the system.";
+            $smsService = new \App\Services\SmsService();
+            $smsService->sendSms($adminPhone, $message);
+        }
+
+        $routeName = $validated['type'] === 'incident' ? 'teacher.incidents' : 'teacher.suggestions';
+
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Message sent successfully.']);
+        }
+
+        return redirect()->route($routeName)->with('success', 'Message sent successfully.');
+    }
+
     /**
      * Get teacher dashboard data for API (Flutter app)
      */

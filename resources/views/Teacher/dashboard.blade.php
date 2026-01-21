@@ -1,29 +1,96 @@
 @include('includes.teacher_nav')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 <style>
-    .dashboard-widget-row {
+    body, .content, .card, .btn, .form-control, .form-select, .table, .list-group-item, .alert {
+        font-family: "Century Gothic", Arial, sans-serif;
+    }
+    .bg-primary-custom {
+        background-color: #940000 !important;
+    }
+    .text-primary-custom {
+        color: #940000 !important;
+    }
+    .btn-primary-custom {
+        background-color: #940000;
+        border-color: #940000;
+        color: white;
+    }
+    .btn-primary-custom:hover {
+        background-color: #b30000;
+        border-color: #b30000;
+        color: white;
+    }
+    .btn-outline-primary-custom {
+        border-color: #940000;
+        color: #940000;
+    }
+    .btn-outline-primary-custom:hover {
+        background-color: #940000;
+        border-color: #940000;
+        color: white;
+    }
+    .dashboard-hero {
+        background: #fff7f7;
+        border: 1px solid #f0dada;
+        padding: 18px 20px;
+        margin-bottom: 24px;
         display: flex;
-        flex-wrap: wrap;
-        margin-bottom: 1.5rem;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
     }
-    .dashboard-widget-row::after {
-        content: "";
-        display: table;
-        clear: both;
+    .dashboard-hero .hero-title {
+        font-size: 1.4rem;
+        margin-bottom: 6px;
     }
-    .dashboard-widget {
-        float: left;
-        width: 100%;
+    .dashboard-hero .hero-subtitle {
+        color: #6c757d;
+        margin-bottom: 0;
     }
-    @media (min-width: 768px) {
-        .dashboard-widget {
-            width: 50%;
-        }
+    .dashboard-hero .hero-actions .btn {
+        margin-left: 8px;
     }
-    @media (min-width: 992px) {
-        .dashboard-widget {
-            width: 25%;
-        }
+    .dashboard-card {
+        border: 1px solid #f0f0f0;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        height: 100%;
+    }
+    .dashboard-card .card-title {
+        font-weight: 600;
+        color: #940000;
+        margin-bottom: 8px;
+    }
+    .dashboard-card .stat {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #2f2f2f;
+        margin-bottom: 6px;
+    }
+    .dashboard-card .stat-note {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    .dashboard-card .card-icon {
+        font-size: 2rem;
+        color: rgba(148, 0, 0, 0.35);
+    }
+    .dashboard-card .card-actions {
+        margin-top: 14px;
+    }
+    .section-card {
+        border: 1px solid #f0f0f0;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    }
+    .section-card .section-header {
+        background: #fff7f7;
+        border-bottom: 1px solid #f0dada;
+        color: #940000;
+        font-weight: 600;
+        padding: 12px 16px;
+    }
+    .section-card .section-header small {
+        color: #6c757d;
+        font-weight: 400;
     }
 </style>
 <div class="container-fluid mt-3">
@@ -69,208 +136,72 @@
 
 <!-- Dashboard Statistics Section -->
 @if(isset($dashboardStats))
-<!-- First Row: 4 Widgets -->
-<div class="row mb-4">
-    <!-- Subjects Count -->
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #940000 !important;">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-muted mb-2" style="font-size: 0.85rem; font-weight: 600;">Subjects Teaching</h6>
-                        <h3 class="mb-0" style="color: #940000; font-weight: bold;">{{ $dashboardStats['subjects_count'] ?? 0 }}</h3>
-                    </div>
-                    <div class="text-primary-custom" style="font-size: 2.5rem; opacity: 0.3;">
-                        <i class="fa fa-book"></i>
-                    </div>
-                </div>
-                <a href="{{ route('teacherSubjects') }}" class="btn btn-sm btn-outline-primary-custom mt-3 w-100">
-                    <i class="fa fa-eye"></i> View Subjects
-                </a>
-            </div>
-        </div>
+<div class="dashboard-hero">
+    <div>
+        <div class="text-muted" style="font-size: 0.9rem;">Today · {{ \Carbon\Carbon::now()->format('l, d M Y') }}</div>
+        <div class="hero-title">Hello, Teacher</div>
+        <p class="hero-subtitle">Quick access to your teaching modules and updates.</p>
     </div>
-
-    <!-- Classes Count (Subclasses with Sessions) -->
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #17a2b8 !important;">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-muted mb-2" style="font-size: 0.85rem; font-weight: 600;">Classes Teaching</h6>
-                        <h3 class="mb-0" style="color: #17a2b8; font-weight: bold;">{{ $dashboardStats['classes_count'] ?? 0 }}</h3>
-                        <small class="text-muted">Subclasses with sessions</small>
-                    </div>
-                    <div style="font-size: 2.5rem; opacity: 0.3; color: #17a2b8;">
-                        <i class="fa fa-users"></i>
-                    </div>
-                </div>
-                @if (isset($hasAssignedClass) && $hasAssignedClass)
-                <a href="{{ route('AdmitedClasses') }}" class="btn btn-sm btn-outline-info mt-3 w-100">
-                    <i class="fa fa-eye"></i> View Classes
-                </a>
-                @else
-                <button class="btn btn-sm btn-outline-secondary mt-3 w-100" disabled>
-                    <i class="fa fa-lock"></i> No Classes Assigned
-                </button>
-                @endif
-            </div>
-        </div>
-    </div>
-
-    <!-- Class Teacher Subclasses Count -->
-    @if(isset($coordinator) && $coordinator->count() > 0)
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #e83e8c !important;">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-muted mb-2" style="font-size: 0.85rem; font-weight: 600;">Class Teacher</h6>
-                        <h3 class="mb-0" style="color: #e83e8c; font-weight: bold;">{{ $dashboardStats['class_teacher_subclasses_count'] ?? 0 }}</h3>
-                        <small class="text-muted">Subclasses Managing</small>
-                    </div>
-                    <div style="font-size: 2.5rem; opacity: 0.3; color: #e83e8c;">
-                        <i class="fa fa-user-tie"></i>
-                    </div>
-                </div>
-                <a href="{{ route('AdmitedClasses') }}" class="btn btn-sm mt-3 w-100" style="background-color: #e83e8c; border-color: #e83e8c; color: white; border-radius: 0;">
-                    <i class="fa fa-eye"></i> View Managed Classes
-                </a>
-            </div>
-        </div>
-    </div>
-    @endif
-
-    <!-- Sessions Per Week -->
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #28a745 !important;">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-muted mb-2" style="font-size: 0.85rem; font-weight: 600;">Sessions Per Week</h6>
-                        <h3 class="mb-0" style="color: #28a745; font-weight: bold;">{{ $dashboardStats['sessions_per_week'] ?? 0 }}</h3>
-                        <small class="text-muted">Monday - Friday</small>
-                    </div>
-                    <div style="font-size: 2.5rem; opacity: 0.3; color: #28a745;">
-                        <i class="fa fa-calendar-week"></i>
-                    </div>
-                </div>
-                <a href="{{ route('teacher.mySessions') }}" class="btn btn-sm btn-outline-success mt-3 w-100">
-                    <i class="fa fa-clock-o"></i> View Sessions
-                </a>
-            </div>
-        </div>
+    <div class="hero-actions">
+        <a href="{{ route('teacher.mySessions') }}" class="btn btn-primary-custom btn-sm">
+            <i class="fa fa-clock-o"></i> My Sessions
+        </a>
+        <a href="{{ route('teacher.myTasks') }}" class="btn btn-outline-primary-custom btn-sm">
+            <i class="fa fa-tasks"></i> My Tasks
+        </a>
     </div>
 </div>
 
-    <!-- Coordinator Main Classes Count -->
-    @if(isset($dashboardStats['coordinator_classes_count']) && $dashboardStats['coordinator_classes_count'] > 0)
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #20c997 !important;">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-muted mb-2" style="font-size: 0.85rem; font-weight: 600;">Coordinator</h6>
-                        <h3 class="mb-0" style="color: #20c997; font-weight: bold;">{{ $dashboardStats['coordinator_classes_count'] ?? 0 }}</h3>
-                        <small class="text-muted">Main Classes Managing</small>
-                    </div>
-                    <div style="font-size: 2.5rem; opacity: 0.3; color: #20c997;">
-                        <i class="fa fa-user-graduate"></i>
-                    </div>
-                </div>
-                <a href="{{ route('AdmitedClasses', ['coordinator' => 'true']) }}" class="btn btn-sm mt-3 w-100" style="background-color: #20c997; border-color: #20c997; color: white; border-radius: 0;">
-                    <i class="fa fa-cog"></i> Manage Classes
-                </a>
-            </div>
-        </div>
-    </div>
-    @endif
+@php
+    $cards = [
+        ['title' => 'Subjects Teaching', 'count' => $dashboardStats['subjects_count'] ?? 0, 'icon' => 'fa-book', 'link' => route('teacherSubjects'), 'link_label' => 'View Subjects'],
+        ['title' => 'Classes Teaching', 'count' => $dashboardStats['classes_count'] ?? 0, 'icon' => 'fa-users', 'note' => 'Subclasses with sessions', 'link' => (isset($hasAssignedClass) && $hasAssignedClass) ? route('AdmitedClasses') : null, 'link_label' => (isset($hasAssignedClass) && $hasAssignedClass) ? 'View Classes' : 'No Classes Assigned'],
+    ];
+    if (isset($coordinator) && $coordinator->count() > 0) {
+        $cards[] = ['title' => 'Class Teacher', 'count' => $dashboardStats['class_teacher_subclasses_count'] ?? 0, 'icon' => 'fa-user-tie', 'note' => 'Subclasses Managing', 'link' => route('AdmitedClasses'), 'link_label' => 'View Managed Classes'];
+    }
+    $cards[] = ['title' => 'Sessions Per Week', 'count' => $dashboardStats['sessions_per_week'] ?? 0, 'icon' => 'fa-calendar', 'note' => 'Monday - Friday', 'link' => route('teacher.mySessions'), 'link_label' => 'View Sessions'];
+    if (isset($dashboardStats['coordinator_classes_count']) && $dashboardStats['coordinator_classes_count'] > 0) {
+        $cards[] = ['title' => 'Coordinator', 'count' => $dashboardStats['coordinator_classes_count'] ?? 0, 'icon' => 'fa-user-graduate', 'note' => 'Main Classes Managing', 'link' => route('AdmitedClasses', ['coordinator' => 'true']), 'link_label' => 'Manage Classes'];
+    }
+    $cards[] = ['title' => 'Sessions Per Year', 'count' => $dashboardStats['sessions_per_year'] ?? 0, 'icon' => 'fa-calendar', 'note' => 'Excluding holidays', 'link' => null, 'link_label' => 'Annual Count'];
+    $cards[] = ['title' => 'Sessions Entered', 'count' => $dashboardStats['approved_sessions_count'] ?? 0, 'icon' => 'fa-check-circle', 'note' => 'With approved tasks', 'link' => route('teacher.mySessions'), 'link_label' => 'View More'];
+    $cards[] = ['title' => 'Scheme of Work', 'count' => $dashboardStats['scheme_of_work_count'] ?? 0, 'icon' => 'fa-book-open', 'note' => 'For current year', 'link' => route('teacher.schemeOfWork'), 'link_label' => 'View Scheme of Work'];
+    $cards[] = ['title' => 'Lesson Plans', 'count' => $dashboardStats['lesson_plans_count'] ?? 0, 'icon' => 'fa-file-text', 'note' => ($dashboardStats['lesson_plans_sent_count'] ?? 0) . ' sent to admin', 'link' => route('teacher.lessonPlans'), 'link_label' => 'View Lesson Plans'];
+@endphp
 
-    <!-- Sessions Per Year -->
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #ffc107 !important;">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-muted mb-2" style="font-size: 0.85rem; font-weight: 600;">Sessions Per Year</h6>
-                        <h3 class="mb-0" style="color: #ffc107; font-weight: bold;">{{ $dashboardStats['sessions_per_year'] ?? 0 }}</h3>
-                        <small class="text-muted">Excluding holidays</small>
+<div class="row">
+    @foreach($cards as $card)
+        <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
+            <div class="card dashboard-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="card-title">{{ $card['title'] }}</div>
+                            <div class="stat">{{ $card['count'] }}</div>
+                            @if(!empty($card['note']))
+                                <div class="stat-note">{{ $card['note'] }}</div>
+                            @endif
+                        </div>
+                        <div class="card-icon">
+                            <i class="fa {{ $card['icon'] }}"></i>
+                        </div>
                     </div>
-                    <div style="font-size: 2.5rem; opacity: 0.3; color: #ffc107;">
-                        <i class="fa fa-calendar"></i>
-                    </div>
-                </div>
-                <button class="btn btn-sm btn-outline-warning mt-3 w-100" disabled>
-                    <i class="fa fa-info-circle"></i> Annual Count
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sessions Entered -->
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #6f42c1 !important;">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-muted mb-2" style="font-size: 0.85rem; font-weight: 600;">Sessions Entered</h6>
-                        <h3 class="mb-0" style="color: #6f42c1; font-weight: bold;">{{ $dashboardStats['approved_sessions_count'] ?? 0 }}</h3>
-                        <small class="text-muted">With approved tasks</small>
-                    </div>
-                    <div style="font-size: 2.5rem; opacity: 0.3; color: #6f42c1;">
-                        <i class="fa fa-check-circle"></i>
+                    <div class="card-actions">
+                        @if(!empty($card['link']))
+                            <a href="{{ $card['link'] }}" class="btn btn-sm btn-outline-primary-custom w-100">
+                                <i class="fa fa-eye"></i> {{ $card['link_label'] }}
+                            </a>
+                        @else
+                            <button class="btn btn-sm btn-outline-primary-custom w-100" disabled>
+                                <i class="fa fa-info-circle"></i> {{ $card['link_label'] }}
+                            </button>
+                        @endif
                     </div>
                 </div>
-                <a href="{{ route('teacher.mySessions') }}" class="btn btn-sm btn-outline-secondary mt-3 w-100">
-                    <i class="fa fa-list"></i> View More
-                </a>
             </div>
         </div>
-    </div>
-
-    <!-- Scheme of Work -->
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #fd7e14 !important;">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-muted mb-2" style="font-size: 0.85rem; font-weight: 600;">Scheme of Work</h6>
-                        <h3 class="mb-0" style="color: #fd7e14; font-weight: bold;">{{ $dashboardStats['scheme_of_work_count'] ?? 0 }}</h3>
-                        <small class="text-muted">For current year</small>
-                    </div>
-                    <div style="font-size: 2.5rem; opacity: 0.3; color: #fd7e14;">
-                        <i class="fa fa-book-open"></i>
-                    </div>
-                </div>
-                <a href="{{ route('teacher.schemeOfWork') }}" class="btn btn-sm mt-3 w-100" style="background-color: #fd7e14; border-color: #fd7e14; color: white; border-radius: 0;">
-                    <i class="fa fa-eye"></i> View Scheme of Work
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Lesson Plans -->
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #007bff !important;">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-muted mb-2" style="font-size: 0.85rem; font-weight: 600;">Lesson Plans</h6>
-                        <h3 class="mb-0" style="color: #007bff; font-weight: bold;">{{ $dashboardStats['lesson_plans_count'] ?? 0 }}</h3>
-                        <small class="text-muted">
-                            {{ $dashboardStats['lesson_plans_sent_count'] ?? 0 }} sent to admin
-                        </small>
-                    </div>
-                    <div style="font-size: 2.5rem; opacity: 0.3; color: #007bff;">
-                        <i class="fa fa-file-text"></i>
-                    </div>
-                </div>
-                <a href="{{ route('teacher.lessonPlans') }}" class="btn btn-sm mt-3 w-100" style="background-color: #007bff; border-color: #007bff; color: white; border-radius: 0;">
-                    <i class="fa fa-eye"></i> View Lesson Plans
-                </a>
-            </div>
-        </div>
-    </div>
+    @endforeach
 </div>
 
 <!-- Exam Approval Widgets -->
@@ -457,7 +388,7 @@
     </div>
     @foreach($managementPermissions as $permission)
         <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid {{ $permission['color'] }} !important;">
+            <div class="card section-card h-100" style="border-left: 4px solid {{ $permission['color'] }} !important;">
             <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
@@ -481,11 +412,9 @@
 <!-- Teaching Subjects Display -->
 <div class="row mb-4">
     <div class="col-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header text-white" style="background: linear-gradient(135deg, #940000 0%, #b30000 100%);">
-                <h5 class="mb-0">
-                    <i class="fa fa-book"></i> Teaching Subjects
-                </h5>
+        <div class="card section-card">
+            <div class="section-header">
+                <i class="fa fa-book"></i> Teaching Subjects
             </div>
             <div class="card-body">
                 @if(isset($dashboardStats['teaching_subjects']) && $dashboardStats['teaching_subjects']->count() > 0)
@@ -532,12 +461,10 @@
 <div class="row mb-4">
     <!-- Graph 1: Sessions per week by day -->
     <div class="col-lg-6 mb-4">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header text-white" style="background: linear-gradient(135deg, #940000 0%, #b30000 100%);">
-                <h5 class="mb-0">
-                    <i class="fa fa-calendar-week"></i> Sessions Per Week by Day
-                </h5>
-                <small>Based on approved tasks</small>
+        <div class="card section-card">
+            <div class="section-header">
+                <i class="fa fa-calendar-week"></i> Sessions Per Week by Day
+                <small class="d-block">Based on approved tasks</small>
             </div>
             <div class="card-body">
                 <canvas id="sessionsByDayChart" height="200"></canvas>
@@ -547,12 +474,10 @@
 
     <!-- Graph 2: Subject Performance -->
     <div class="col-lg-6 mb-4">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header text-white" style="background: linear-gradient(135deg, #940000 0%, #b30000 100%);">
-                <h5 class="mb-0">
-                    <i class="fa fa-line-chart"></i> Subject Performance (Pass/Fail Rates)
-                </h5>
-                <small>Performance across all classes</small>
+        <div class="card section-card">
+            <div class="section-header">
+                <i class="fa fa-line-chart"></i> Subject Performance (Pass/Fail Rates)
+                <small class="d-block">Performance across all classes</small>
             </div>
             <div class="card-body">
                 <canvas id="subjectPerformanceChart" height="200"></canvas>
@@ -562,12 +487,10 @@
 
     <!-- Graph 3: Classes with Most Sessions -->
     <div class="col-lg-12 mb-4">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header text-white" style="background: linear-gradient(135deg, #940000 0%, #b30000 100%);">
-                <h5 class="mb-0">
-                    <i class="fa fa-users"></i> Classes with Most Sessions
-                </h5>
-                <small>Based on approved tasks</small>
+        <div class="card section-card">
+            <div class="section-header">
+                <i class="fa fa-users"></i> Classes with Most Sessions
+                <small class="d-block">Based on approved tasks</small>
             </div>
             <div class="card-body">
                 <canvas id="classesSessionsChart" height="100"></canvas>

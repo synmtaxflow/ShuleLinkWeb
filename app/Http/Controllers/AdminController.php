@@ -768,6 +768,28 @@ class AdminController extends Controller
         return redirect()->route('manage_revenue')->with('success', 'Source of income updated successfully.');
     }
 
+    public function deleteRevenueSource(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'revenue_sourceID' => 'required|exists:revenue_sources,revenue_sourceID',
+        ]);
+
+        $source = \App\Models\RevenueSource::where('revenue_sourceID', $validated['revenue_sourceID'])
+            ->where('schoolID', $schoolID)
+            ->firstOrFail();
+
+        $source->update(['status' => 'Inactive']);
+
+        return redirect()->route('manage_revenue')->with('success', 'Source of income deleted successfully.');
+    }
+
     /**
      * Store revenue record
      */
@@ -1022,6 +1044,84 @@ class AdminController extends Controller
             ->with('success', 'Expense recorded successfully.');
     }
 
+    public function updateExpenseRecord(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'expense_recordID' => 'required|exists:expense_records,expense_recordID',
+            'expense_date' => 'required|date',
+            'amount' => 'required|numeric|min:0.01',
+            'description' => 'required|string',
+        ]);
+
+        $record = \App\Models\ExpenseRecord::where('expense_recordID', $validated['expense_recordID'])
+            ->where('schoolID', $schoolID)
+            ->firstOrFail();
+
+        $budget = \App\Models\ExpenseBudget::where('expense_budgetID', $record->expense_budgetID)
+            ->where('schoolID', $schoolID)
+            ->firstOrFail();
+
+        $available = $budget->remaining_amount + $record->amount;
+        if ($validated['amount'] > $available) {
+            return redirect()->route('manage_expenses', ['year' => $budget->year])
+                ->with('error', 'Updated amount exceeds remaining budget.');
+        }
+
+        \DB::transaction(function () use ($record, $budget, $validated) {
+            $budget->update([
+                'remaining_amount' => ($budget->remaining_amount + $record->amount) - $validated['amount'],
+            ]);
+
+            $record->update([
+                'expense_date' => $validated['expense_date'],
+                'amount' => $validated['amount'],
+                'description' => $validated['description'],
+            ]);
+        });
+
+        return redirect()->route('manage_expenses', ['year' => $budget->year])
+            ->with('success', 'Expense updated successfully.');
+    }
+
+    public function deleteExpenseRecord(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'expense_recordID' => 'required|exists:expense_records,expense_recordID',
+        ]);
+
+        $record = \App\Models\ExpenseRecord::where('expense_recordID', $validated['expense_recordID'])
+            ->where('schoolID', $schoolID)
+            ->firstOrFail();
+
+        $budget = \App\Models\ExpenseBudget::where('expense_budgetID', $record->expense_budgetID)
+            ->where('schoolID', $schoolID)
+            ->firstOrFail();
+
+        \DB::transaction(function () use ($record, $budget) {
+            $budget->update([
+                'remaining_amount' => $budget->remaining_amount + $record->amount,
+            ]);
+            $record->delete();
+        });
+
+        return redirect()->route('manage_expenses', ['year' => $budget->year])
+            ->with('success', 'Expense deleted successfully.');
+    }
+
     /**
      * School Resources Management Methods
      */
@@ -1034,7 +1134,180 @@ class AdminController extends Controller
             return redirect()->route('login')->with('error', 'Unauthorized access');
         }
 
-        return view('Admin.manage_incoming_resources', compact('schoolID'));
+        $resources = \App\Models\SchoolResource::where('schoolID', $schoolID)
+            ->orderBy('resource_name')
+            ->get();
+
+        $incomingRecords = \App\Models\IncomingResourceRecord::where('schoolID', $schoolID)
+            ->orderBy('received_date', 'desc')
+            ->limit(50)
+            ->get();
+
+        return view('Admin.manage_incoming_resources', compact('schoolID', 'resources', 'incomingRecords'));
+    }
+
+    public function storeSchoolResources(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'resources' => 'required|array|min:1',
+            'resources.*.resource_name' => 'required|string|max:255',
+            'resources.*.resource_type' => 'required|string|max:100',
+            'resources.*.requires_quantity' => 'required|in:0,1',
+            'resources.*.requires_price' => 'required|in:0,1',
+            'resources.*.quantity' => 'nullable|integer|min:0',
+            'resources.*.unit_price' => 'nullable|numeric|min:0',
+        ]);
+
+        foreach ($validated['resources'] as $resource) {
+            $requiresQuantity = (bool) $resource['requires_quantity'];
+            $requiresPrice = (bool) $resource['requires_price'];
+            $quantity = $requiresQuantity ? (int) ($resource['quantity'] ?? 0) : null;
+            $unitPrice = $requiresPrice ? (float) ($resource['unit_price'] ?? 0) : 0;
+
+            \App\Models\SchoolResource::create([
+                'schoolID' => $schoolID,
+                'resource_name' => $resource['resource_name'],
+                'resource_type' => $resource['resource_type'],
+                'requires_quantity' => $requiresQuantity,
+                'requires_price' => $requiresPrice,
+                'quantity' => $quantity,
+                'unit_price' => $unitPrice,
+            ]);
+        }
+
+        return redirect()->route('manage_incoming_resources')->with('success', 'Resources saved successfully.');
+    }
+
+    public function updateSchoolResource(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'resourceID' => 'required|exists:school_resources,resourceID',
+            'resource_name' => 'required|string|max:255',
+            'resource_type' => 'required|string|max:100',
+            'requires_quantity' => 'required|in:0,1',
+            'requires_price' => 'required|in:0,1',
+            'quantity' => 'nullable|integer|min:0',
+            'unit_price' => 'nullable|numeric|min:0',
+        ]);
+
+        $resource = \App\Models\SchoolResource::where('resourceID', $validated['resourceID'])
+            ->where('schoolID', $schoolID)
+            ->firstOrFail();
+
+        $requiresQuantity = (bool) $validated['requires_quantity'];
+        $requiresPrice = (bool) $validated['requires_price'];
+        $quantity = $requiresQuantity ? (int) ($validated['quantity'] ?? 0) : null;
+        $unitPrice = $requiresPrice ? (float) ($validated['unit_price'] ?? 0) : 0;
+
+        $resource->update([
+            'resource_name' => $validated['resource_name'],
+            'resource_type' => $validated['resource_type'],
+            'requires_quantity' => $requiresQuantity,
+            'requires_price' => $requiresPrice,
+            'quantity' => $quantity,
+            'unit_price' => $unitPrice,
+        ]);
+
+        return redirect()->route('manage_incoming_resources')->with('success', 'Resource updated successfully.');
+    }
+
+    public function deleteSchoolResource(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'resourceID' => 'required|exists:school_resources,resourceID',
+        ]);
+
+        $resource = \App\Models\SchoolResource::where('resourceID', $validated['resourceID'])
+            ->where('schoolID', $schoolID)
+            ->firstOrFail();
+
+        $hasIncoming = \App\Models\IncomingResourceRecord::where('schoolID', $schoolID)
+            ->where('resourceID', $resource->resourceID)
+            ->exists();
+        $hasOutgoing = \App\Models\OutgoingResourceRecord::where('schoolID', $schoolID)
+            ->where('resourceID', $resource->resourceID)
+            ->exists();
+        $hasDamaged = \App\Models\DamagedLostRecord::where('schoolID', $schoolID)
+            ->where('resourceID', $resource->resourceID)
+            ->exists();
+
+        if ($hasIncoming || $hasOutgoing || $hasDamaged) {
+            return redirect()->route('manage_incoming_resources')
+                ->with('error', 'Cannot delete resource with existing records.');
+        }
+
+        $resource->delete();
+
+        return redirect()->route('manage_incoming_resources')->with('success', 'Resource deleted successfully.');
+    }
+
+    public function storeIncomingResource(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'resourceID' => 'required|exists:school_resources,resourceID',
+            'received_date' => 'required|date',
+            'quantity' => 'nullable|integer|min:0',
+            'unit_price' => 'nullable|numeric|min:0',
+            'note' => 'nullable|string',
+        ]);
+
+        $resource = \App\Models\SchoolResource::where('resourceID', $validated['resourceID'])
+            ->where('schoolID', $schoolID)
+            ->firstOrFail();
+
+        $requiresQuantity = (bool) $resource->requires_quantity;
+        $requiresPrice = (bool) $resource->requires_price;
+        $quantity = $requiresQuantity ? (int) ($validated['quantity'] ?? 0) : null;
+        $unitPrice = $requiresPrice ? (float) ($validated['unit_price'] ?? $resource->unit_price) : 0;
+        $totalPrice = $requiresPrice ? ($requiresQuantity ? ($unitPrice * $quantity) : $unitPrice) : 0;
+
+        \DB::transaction(function () use ($schoolID, $resource, $validated, $quantity, $unitPrice, $totalPrice, $requiresQuantity) {
+            \App\Models\IncomingResourceRecord::create([
+                'schoolID' => $schoolID,
+                'resourceID' => $resource->resourceID,
+                'received_date' => $validated['received_date'],
+                'quantity' => $quantity,
+                'unit_price' => $unitPrice,
+                'total_price' => $totalPrice,
+                'note' => $validated['note'] ?? null,
+            ]);
+
+            if ($requiresQuantity) {
+                $resource->update([
+                    'quantity' => ($resource->quantity ?? 0) + $quantity,
+                ]);
+            }
+        });
+
+        return redirect()->route('manage_incoming_resources')->with('success', 'Incoming resource recorded successfully.');
     }
 
     public function manageOutgoingResources()
@@ -1046,7 +1319,246 @@ class AdminController extends Controller
             return redirect()->route('login')->with('error', 'Unauthorized access');
         }
 
-        return view('Admin.manage_outgoing_resources', compact('schoolID'));
+        $resources = \App\Models\SchoolResource::where('schoolID', $schoolID)
+            ->orderBy('resource_name')
+            ->get();
+
+        $outgoingRecords = \App\Models\OutgoingResourceRecord::where('schoolID', $schoolID)
+            ->orderBy('outgoing_date', 'desc')
+            ->limit(50)
+            ->get();
+
+        $outgoingSummary = \App\Models\OutgoingResourceRecord::where('schoolID', $schoolID)
+            ->select('resourceID', \DB::raw('SUM(quantity) as total_quantity'), \DB::raw('SUM(total_price) as total_price'))
+            ->groupBy('resourceID')
+            ->get()
+            ->keyBy('resourceID');
+
+        return view('Admin.manage_outgoing_resources', compact('schoolID', 'resources', 'outgoingRecords', 'outgoingSummary'));
+    }
+
+    public function storeOutgoingResource(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'resourceID' => 'required|exists:school_resources,resourceID',
+            'outgoing_date' => 'required|date',
+            'outgoing_type' => 'required|in:permanent,temporary',
+            'quantity' => 'nullable|integer|min:0',
+            'unit_price' => 'nullable|numeric|min:0',
+            'description' => 'required|string',
+        ]);
+
+        $resource = \App\Models\SchoolResource::where('resourceID', $validated['resourceID'])
+            ->where('schoolID', $schoolID)
+            ->firstOrFail();
+
+        $requiresQuantity = (bool) $resource->requires_quantity;
+        $requiresPrice = (bool) $resource->requires_price;
+        $quantity = $requiresQuantity ? (int) ($validated['quantity'] ?? 0) : null;
+        $unitPrice = $requiresPrice ? (float) ($validated['unit_price'] ?? $resource->unit_price) : 0;
+        $totalPrice = $requiresPrice ? ($requiresQuantity ? ($unitPrice * $quantity) : $unitPrice) : 0;
+
+        if ($requiresQuantity && $quantity > ($resource->quantity ?? 0)) {
+            return redirect()->route('manage_outgoing_resources')
+                ->with('error', 'Outgoing quantity exceeds available stock.');
+        }
+
+        \DB::transaction(function () use ($schoolID, $resource, $validated, $quantity, $unitPrice, $totalPrice, $requiresQuantity) {
+            \App\Models\OutgoingResourceRecord::create([
+                'schoolID' => $schoolID,
+                'resourceID' => $resource->resourceID,
+                'outgoing_date' => $validated['outgoing_date'],
+                'outgoing_type' => $validated['outgoing_type'],
+                'quantity' => $quantity,
+                'unit_price' => $unitPrice,
+                'total_price' => $totalPrice,
+                'description' => $validated['description'],
+            ]);
+
+            if ($requiresQuantity) {
+                $resource->update([
+                    'quantity' => max(0, ($resource->quantity ?? 0) - $quantity),
+                ]);
+            }
+        });
+
+        return redirect()->route('manage_outgoing_resources')->with('success', 'Outgoing resource recorded successfully.');
+    }
+
+    public function updateOutgoingResource(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'outgoing_resourceID' => 'required|exists:outgoing_resource_records,outgoing_resourceID',
+            'outgoing_date' => 'required|date',
+            'outgoing_type' => 'required|in:permanent,temporary',
+            'quantity' => 'nullable|integer|min:0',
+            'unit_price' => 'nullable|numeric|min:0',
+            'description' => 'required|string',
+        ]);
+
+        $record = \App\Models\OutgoingResourceRecord::where('outgoing_resourceID', $validated['outgoing_resourceID'])
+            ->where('schoolID', $schoolID)
+            ->firstOrFail();
+
+        if ($record->is_returned) {
+            return redirect()->route('manage_outgoing_resources')
+                ->with('error', 'Returned records cannot be edited.');
+        }
+
+        $resource = \App\Models\SchoolResource::where('resourceID', $record->resourceID)
+            ->where('schoolID', $schoolID)
+            ->firstOrFail();
+
+        $requiresQuantity = (bool) $resource->requires_quantity;
+        $requiresPrice = (bool) $resource->requires_price;
+        $newQty = $requiresQuantity ? (int) ($validated['quantity'] ?? 0) : null;
+        $unitPrice = $requiresPrice ? (float) ($validated['unit_price'] ?? $resource->unit_price) : 0;
+        $totalPrice = $requiresPrice ? ($requiresQuantity ? ($unitPrice * $newQty) : $unitPrice) : 0;
+
+        if ($requiresQuantity) {
+            $available = ($resource->quantity ?? 0) + ($record->quantity ?? 0);
+            if ($newQty > $available) {
+                return redirect()->route('manage_outgoing_resources')
+                    ->with('error', 'Outgoing quantity exceeds available stock.');
+            }
+        }
+
+        \DB::transaction(function () use ($record, $resource, $validated, $requiresQuantity, $newQty, $unitPrice, $totalPrice) {
+            if ($requiresQuantity) {
+                $restored = ($resource->quantity ?? 0) + ($record->quantity ?? 0);
+                $resource->update([
+                    'quantity' => max(0, $restored - $newQty),
+                ]);
+            }
+
+            $record->update([
+                'outgoing_date' => $validated['outgoing_date'],
+                'outgoing_type' => $validated['outgoing_type'],
+                'quantity' => $newQty,
+                'unit_price' => $unitPrice,
+                'total_price' => $totalPrice,
+                'description' => $validated['description'],
+            ]);
+        });
+
+        return redirect()->route('manage_outgoing_resources')->with('success', 'Outgoing resource updated successfully.');
+    }
+
+    public function deleteOutgoingResource(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'outgoing_resourceID' => 'required|exists:outgoing_resource_records,outgoing_resourceID',
+        ]);
+
+        $record = \App\Models\OutgoingResourceRecord::where('outgoing_resourceID', $validated['outgoing_resourceID'])
+            ->where('schoolID', $schoolID)
+            ->firstOrFail();
+
+        $resource = \App\Models\SchoolResource::where('resourceID', $record->resourceID)
+            ->where('schoolID', $schoolID)
+            ->first();
+
+        \DB::transaction(function () use ($record, $resource) {
+            if ($resource && $resource->requires_quantity && !$record->is_returned) {
+                $resource->update([
+                    'quantity' => ($resource->quantity ?? 0) + ($record->quantity ?? 0),
+                ]);
+            }
+            $record->delete();
+        });
+
+        return redirect()->route('manage_outgoing_resources')->with('success', 'Outgoing resource deleted successfully.');
+    }
+
+    public function returnOutgoingResource(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'outgoing_resourceID' => 'required|exists:outgoing_resource_records,outgoing_resourceID',
+            'returned_at' => 'required|date',
+            'return_quantity' => 'nullable|integer|min:0',
+            'return_description' => 'required|string',
+        ]);
+
+        $record = \App\Models\OutgoingResourceRecord::where('outgoing_resourceID', $validated['outgoing_resourceID'])
+            ->where('schoolID', $schoolID)
+            ->firstOrFail();
+
+        if ($record->outgoing_type !== 'temporary') {
+            return redirect()->route('manage_outgoing_resources')
+                ->with('error', 'Only temporary outgoing resources can be returned.');
+        }
+
+        if ($record->is_returned) {
+            return redirect()->route('manage_outgoing_resources')
+                ->with('error', 'This outgoing record was already returned.');
+        }
+
+        $resource = \App\Models\SchoolResource::where('resourceID', $record->resourceID)
+            ->where('schoolID', $schoolID)
+            ->first();
+
+        $requiresQuantity = $resource && $resource->requires_quantity;
+        $recordQty = (int) ($record->quantity ?? 0);
+        $alreadyReturned = (int) ($record->returned_quantity ?? 0);
+        $remaining = max(0, $recordQty - $alreadyReturned);
+        $returnQty = $requiresQuantity ? (int) ($validated['return_quantity'] ?? 0) : 0;
+
+        if ($requiresQuantity) {
+            if ($returnQty <= 0) {
+                return redirect()->route('manage_outgoing_resources')
+                    ->with('error', 'Return quantity must be greater than zero.');
+            }
+            if ($returnQty > $remaining) {
+                return redirect()->route('manage_outgoing_resources')
+                    ->with('error', 'Return quantity exceeds remaining quantity.');
+            }
+        }
+
+        \DB::transaction(function () use ($record, $resource, $validated, $requiresQuantity, $returnQty, $remaining) {
+            if ($resource && $resource->requires_quantity) {
+                $resource->update([
+                    'quantity' => ($resource->quantity ?? 0) + $returnQty,
+                ]);
+            }
+
+            $newReturned = $requiresQuantity ? (($record->returned_quantity ?? 0) + $returnQty) : 0;
+            $record->update([
+                'returned_at' => $validated['returned_at'],
+                'returned_quantity' => $newReturned,
+                'is_returned' => $requiresQuantity ? ($newReturned >= ($record->quantity ?? 0)) : true,
+                'return_description' => $validated['return_description'],
+            ]);
+        });
+
+        return redirect()->route('manage_outgoing_resources')->with('success', 'Resource returned successfully.');
     }
 
     public function manageBuildingsInfrastructure()
@@ -1142,7 +1654,343 @@ class AdminController extends Controller
             return redirect()->route('login')->with('error', 'Unauthorized access');
         }
 
-        return view('Admin.manage_damaged_lost_items', compact('schoolID'));
+        $resources = \App\Models\SchoolResource::where('schoolID', $schoolID)
+            ->orderBy('resource_name')
+            ->get();
+
+        $records = \App\Models\DamagedLostRecord::where('schoolID', $schoolID)
+            ->orderBy('record_date', 'desc')
+            ->limit(50)
+            ->get();
+
+        $summary = \App\Models\DamagedLostRecord::where('schoolID', $schoolID)
+            ->select(
+                'resourceID',
+                \DB::raw("SUM(CASE WHEN record_type = 'damaged' THEN quantity ELSE 0 END) as total_damaged"),
+                \DB::raw("SUM(CASE WHEN record_type = 'lost' THEN quantity ELSE 0 END) as total_lost"),
+                \DB::raw("SUM(CASE WHEN record_type = 'used_up' THEN quantity ELSE 0 END) as total_used_up")
+            )
+            ->groupBy('resourceID')
+            ->get()
+            ->keyBy('resourceID');
+
+        return view('Admin.manage_damaged_lost_items', compact('schoolID', 'resources', 'records', 'summary'));
+    }
+
+    public function manageTeacherFeedbackAdmin(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $tab = $request->query('tab');
+        $section = $request->query('section', 'view');
+        if (!$tab) {
+            $routeName = optional($request->route())->getName();
+            $tab = $routeName === 'admin.incidents' ? 'incidents' : 'suggestions';
+        }
+
+        $dateFrom = $request->query('date_from');
+        $dateTo = $request->query('date_to');
+        $teacherName = $request->query('teacher_name');
+
+        $feedbackQuery = \App\Models\TeacherFeedback::where('schoolID', $schoolID);
+
+        if ($dateFrom) {
+            $feedbackQuery->whereDate('created_at', '>=', $dateFrom);
+        }
+        if ($dateTo) {
+            $feedbackQuery->whereDate('created_at', '<=', $dateTo);
+        }
+
+        $teacherMap = \App\Models\Teacher::where('schoolID', $schoolID)
+            ->get()
+            ->keyBy('id');
+
+        if ($teacherName) {
+            $teacherIds = $teacherMap
+                ->filter(function ($teacher) use ($teacherName) {
+                    $fullName = trim(($teacher->first_name ?? '') . ' ' . ($teacher->last_name ?? ''));
+                    return stripos($fullName, $teacherName) !== false;
+                })
+                ->keys()
+                ->toArray();
+
+            if (count($teacherIds) === 0) {
+                $feedback = collect();
+            } else {
+                $feedbackQuery->whereIn('teacherID', $teacherIds);
+                $feedback = $feedbackQuery->orderBy('created_at', 'desc')->get();
+            }
+        } else {
+            $feedback = $feedbackQuery->orderBy('created_at', 'desc')->get();
+        }
+
+        $feedback = $feedback->map(function ($item) use ($teacherMap) {
+            $teacher = $teacherMap->get($item->teacherID);
+            $item->teacher_name = $teacher ? trim(($teacher->first_name ?? '') . ' ' . ($teacher->last_name ?? '')) : 'Teacher';
+            return $item;
+        });
+
+        $suggestions = $feedback->where('type', 'suggestion')->values();
+        $incidents = $feedback->where('type', 'incident')->values();
+
+        $suggestionStats = [
+            'total' => $suggestions->count(),
+            'pending' => $suggestions->where('status', 'pending')->count(),
+            'approved' => $suggestions->where('status', 'approved')->count(),
+            'rejected' => $suggestions->where('status', 'rejected')->count(),
+        ];
+
+        $incidentStats = [
+            'total' => $incidents->count(),
+            'pending' => $incidents->where('status', 'pending')->count(),
+            'approved' => $incidents->where('status', 'approved')->count(),
+            'rejected' => $incidents->where('status', 'rejected')->count(),
+        ];
+
+        $readType = $tab === 'incidents' ? 'incident' : 'suggestion';
+        \App\Models\TeacherFeedback::where('schoolID', $schoolID)
+            ->where('type', $readType)
+            ->update(['is_read_by_admin' => true]);
+
+        return view('Admin.manage_teacher_feedback', [
+            'activeTab' => $tab,
+            'activeSection' => $section,
+            'suggestions' => $suggestions,
+            'incidents' => $incidents,
+            'suggestionStats' => $suggestionStats,
+            'incidentStats' => $incidentStats,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'teacherName' => $teacherName,
+        ]);
+    }
+
+    public function approveTeacherFeedback(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+            }
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'feedbackID' => 'required|exists:teacher_feedbacks,feedbackID',
+            'admin_response' => 'required|string',
+            'response_due_date' => 'required|date',
+        ]);
+
+        $feedback = \App\Models\TeacherFeedback::where('feedbackID', $validated['feedbackID'])
+            ->where('schoolID', $schoolID)
+            ->firstOrFail();
+
+        $feedback->update([
+            'status' => 'approved',
+            'admin_response' => $validated['admin_response'],
+            'response_due_date' => $validated['response_due_date'],
+            'responded_at' => now(),
+            'is_read_by_teacher' => false,
+        ]);
+
+        $teacher = \App\Models\Teacher::where('id', $feedback->teacherID)->first();
+        if ($teacher && $teacher->phone_number) {
+            $typeLabel = $feedback->type === 'incident' ? 'Incident' : 'Suggestion';
+            $message = "{$typeLabel} approved. Planned date: {$validated['response_due_date']}. {$validated['admin_response']}";
+            $smsService = new \App\Services\SmsService();
+            $smsService->sendSms($teacher->phone_number, $message);
+        }
+
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Feedback approved successfully.']);
+        }
+        return redirect()->back()->with('success', 'Feedback approved successfully.');
+    }
+
+    public function rejectTeacherFeedback(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+            }
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'feedbackID' => 'required|exists:teacher_feedbacks,feedbackID',
+            'admin_response' => 'required|string',
+        ]);
+
+        $feedback = \App\Models\TeacherFeedback::where('feedbackID', $validated['feedbackID'])
+            ->where('schoolID', $schoolID)
+            ->firstOrFail();
+
+        $feedback->update([
+            'status' => 'rejected',
+            'admin_response' => $validated['admin_response'],
+            'responded_at' => now(),
+            'is_read_by_teacher' => false,
+        ]);
+
+        $teacher = \App\Models\Teacher::where('id', $feedback->teacherID)->first();
+        if ($teacher && $teacher->phone_number) {
+            $typeLabel = $feedback->type === 'incident' ? 'Incident' : 'Suggestion';
+            $message = "{$typeLabel} rejected. Reason: {$validated['admin_response']}";
+            $smsService = new \App\Services\SmsService();
+            $smsService->sendSms($teacher->phone_number, $message);
+        }
+
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Feedback rejected successfully.']);
+        }
+        return redirect()->back()->with('success', 'Feedback rejected successfully.');
+    }
+
+    public function storeDamagedLostRecord(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'resourceID' => 'required|exists:school_resources,resourceID',
+            'record_date' => 'required|date',
+            'record_type' => 'required|in:damaged,lost,used_up',
+            'quantity' => 'nullable|integer|min:0',
+            'description' => 'required|string',
+        ]);
+
+        $resource = \App\Models\SchoolResource::where('resourceID', $validated['resourceID'])
+            ->where('schoolID', $schoolID)
+            ->firstOrFail();
+
+        $requiresQuantity = (bool) $resource->requires_quantity;
+        $quantity = $requiresQuantity ? (int) ($validated['quantity'] ?? 0) : null;
+
+        if ($requiresQuantity && $quantity > ($resource->quantity ?? 0)) {
+            return redirect()->route('manage_damaged_lost_items')
+                ->with('error', 'Recorded quantity exceeds available stock.');
+        }
+
+        \DB::transaction(function () use ($schoolID, $resource, $validated, $quantity, $requiresQuantity) {
+            \App\Models\DamagedLostRecord::create([
+                'schoolID' => $schoolID,
+                'resourceID' => $resource->resourceID,
+                'record_date' => $validated['record_date'],
+                'record_type' => $validated['record_type'],
+                'quantity' => $quantity,
+                'description' => $validated['description'],
+            ]);
+
+            if ($requiresQuantity) {
+                $resource->update([
+                    'quantity' => max(0, ($resource->quantity ?? 0) - $quantity),
+                ]);
+            }
+        });
+
+        return redirect()->route('manage_damaged_lost_items')->with('success', 'Record saved successfully.');
+    }
+
+    public function updateDamagedLostRecord(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'damaged_lostID' => 'required|exists:damaged_lost_records,damaged_lostID',
+            'record_date' => 'required|date',
+            'record_type' => 'required|in:damaged,lost,used_up',
+            'quantity' => 'nullable|integer|min:0',
+            'description' => 'required|string',
+        ]);
+
+        $record = \App\Models\DamagedLostRecord::where('damaged_lostID', $validated['damaged_lostID'])
+            ->where('schoolID', $schoolID)
+            ->firstOrFail();
+
+        $resource = \App\Models\SchoolResource::where('resourceID', $record->resourceID)
+            ->where('schoolID', $schoolID)
+            ->firstOrFail();
+
+        $requiresQuantity = (bool) $resource->requires_quantity;
+        $newQty = $requiresQuantity ? (int) ($validated['quantity'] ?? 0) : null;
+
+        if ($requiresQuantity) {
+            $available = ($resource->quantity ?? 0) + ($record->quantity ?? 0);
+            if ($newQty > $available) {
+                return redirect()->route('manage_damaged_lost_items')
+                    ->with('error', 'Recorded quantity exceeds available stock.');
+            }
+        }
+
+        \DB::transaction(function () use ($record, $resource, $validated, $requiresQuantity, $newQty) {
+            if ($requiresQuantity) {
+                $restored = ($resource->quantity ?? 0) + ($record->quantity ?? 0);
+                $resource->update([
+                    'quantity' => max(0, $restored - $newQty),
+                ]);
+            }
+
+            $record->update([
+                'record_date' => $validated['record_date'],
+                'record_type' => $validated['record_type'],
+                'quantity' => $newQty,
+                'description' => $validated['description'],
+            ]);
+        });
+
+        return redirect()->route('manage_damaged_lost_items')->with('success', 'Record updated successfully.');
+    }
+
+    public function deleteDamagedLostRecord(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'damaged_lostID' => 'required|exists:damaged_lost_records,damaged_lostID',
+        ]);
+
+        $record = \App\Models\DamagedLostRecord::where('damaged_lostID', $validated['damaged_lostID'])
+            ->where('schoolID', $schoolID)
+            ->firstOrFail();
+
+        $resource = \App\Models\SchoolResource::where('resourceID', $record->resourceID)
+            ->where('schoolID', $schoolID)
+            ->first();
+
+        \DB::transaction(function () use ($record, $resource) {
+            if ($resource && $resource->requires_quantity) {
+                $resource->update([
+                    'quantity' => ($resource->quantity ?? 0) + ($record->quantity ?? 0),
+                ]);
+            }
+            $record->delete();
+        });
+
+        return redirect()->route('manage_damaged_lost_items')->with('success', 'Record deleted successfully.');
     }
 
     public function resourceReport()

@@ -57,6 +57,36 @@
         color: #6c757d;
         font-size: 0.9rem;
     }
+    .form-loading {
+        display: none;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        border: 1px solid rgba(148, 0, 0, 0.25);
+        background: rgba(148, 0, 0, 0.05);
+        margin-bottom: 12px;
+    }
+    .form-progress {
+        position: relative;
+        flex: 1;
+        height: 8px;
+        background: #f0f0f0;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .form-progress::after {
+        content: "";
+        position: absolute;
+        left: -40%;
+        width: 40%;
+        height: 100%;
+        background: #940000;
+        animation: progressSlide 1.1s linear infinite;
+    }
+    @keyframes progressSlide {
+        0% { left: -40%; }
+        100% { left: 100%; }
+    }
 </style>
 
 <div class="breadcrumbs">
@@ -94,6 +124,10 @@
                     </ul>
                 </div>
             @endif
+            <div class="form-loading" id="revenueLoading">
+                <span><i class="fa fa-spinner fa-spin text-primary-custom"></i> Saving...</span>
+                <div class="form-progress"></div>
+            </div>
             <div class="row">
                 <div class="col-sm-4">
                     <div class="list-group revenue-menu">
@@ -165,7 +199,7 @@
 
                     <div id="section-add-source" class="revenue-section d-none">
                         <div class="section-title">Add New Source of Income</div>
-                        <form method="POST" action="{{ route('revenue_sources.store') }}" class="mb-4">
+                        <form method="POST" action="{{ route('revenue_sources.store') }}" class="mb-4 js-show-loading">
                             @csrf
                             <div class="form-group mb-3">
                                 <label for="source_name">Source Name</label>
@@ -226,6 +260,13 @@
                                                 >
                                                     <i class="fa fa-pencil"></i> Edit
                                                 </button>
+                                                <form method="POST" action="{{ route('revenue_sources.delete') }}" style="display:inline-block;" class="js-show-loading">
+                                                    @csrf
+                                                    <input type="hidden" name="revenue_sourceID" value="{{ $source->revenue_sourceID }}">
+                                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this source?')">
+                                                        <i class="fa fa-trash"></i> Delete
+                                                    </button>
+                                                </form>
                                             </td>
                                         </tr>
                                     @empty
@@ -240,7 +281,7 @@
 
                     <div id="section-record-revenue" class="revenue-section d-none">
                         <div class="section-title">Record Revenue</div>
-                        <form method="POST" action="{{ route('revenue_records.store') }}">
+                        <form method="POST" action="{{ route('revenue_records.store') }}" class="js-show-loading">
                             @csrf
                             <div class="form-group mb-3">
                                 <label for="record_date">Date</label>
@@ -351,7 +392,7 @@
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <form method="POST" action="{{ route('revenue_sources.update') }}">
+            <form method="POST" action="{{ route('revenue_sources.update') }}" class="js-show-loading">
                 @csrf
                 <div class="modal-body">
                     <input type="hidden" name="revenue_sourceID" id="edit_source_id">
@@ -394,6 +435,18 @@
 
 <script>
     (function() {
+        const loadingBar = document.getElementById('revenueLoading');
+        const loadingForms = document.querySelectorAll('.js-show-loading');
+        if (loadingForms.length) {
+            loadingForms.forEach(form => {
+                form.addEventListener('submit', () => {
+                    if (loadingBar) {
+                        loadingBar.style.display = 'flex';
+                    }
+                });
+            });
+        }
+
         const menuItems = document.querySelectorAll('.revenue-menu .list-group-item');
         const sections = document.querySelectorAll('.revenue-section');
         const feesYearSelect = document.getElementById('fees_year');

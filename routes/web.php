@@ -162,6 +162,9 @@ Route::post('deselect_student', [ManageSubjectController::class, 'deselect_stude
 // Teachers Routes
 Route::get('teachersDashboard', [TeachersController::class, 'teachersDashboard'])->name('teachersDashboard');
 Route::get('teacher/my-sessions', [TeachersController::class, 'mySessions'])->name('teacher.mySessions');
+Route::get('teacher/suggestions', [TeachersController::class, 'manageTeacherFeedback'])->name('teacher.suggestions');
+Route::get('teacher/incidents', [TeachersController::class, 'manageTeacherFeedback'])->name('teacher.incidents');
+Route::post('teacher/feedback', [TeachersController::class, 'storeTeacherFeedback'])->name('teacher.feedback.store');
 Route::get('teacher/my-tasks', [TeachersController::class, 'myTasks'])->name('teacher.myTasks');
 Route::get('teacher/get-session-students', [TeachersController::class, 'getSessionStudents'])->name('teacher.get_session_students');
 Route::post('teacher/collect-session-attendance', [TeachersController::class, 'collectSessionAttendance'])->name('teacher.collect_session_attendance');
@@ -339,16 +342,27 @@ Route::post('save_staff_permissions', [ManageOtherStaffController::class, 'save_
 Route::get('manage_revenue', [AdminController::class, 'manageRevenue'])->name('manage_revenue');
 Route::post('revenue-sources', [AdminController::class, 'storeRevenueSource'])->name('revenue_sources.store');
 Route::post('revenue-sources/update', [AdminController::class, 'updateRevenueSource'])->name('revenue_sources.update');
+Route::post('revenue-sources/delete', [AdminController::class, 'deleteRevenueSource'])->name('revenue_sources.delete');
 Route::post('revenue-records', [AdminController::class, 'storeRevenueRecord'])->name('revenue_records.store');
 Route::get('revenue-report-data', [AdminController::class, 'revenueReportData'])->name('revenue_report.data');
 Route::get('manage_expenses', [AdminController::class, 'manageExpenses'])->name('manage_expenses');
 Route::post('expense-budgets', [AdminController::class, 'storeExpenseBudget'])->name('expense_budgets.store');
 Route::post('expense-budgets/update', [AdminController::class, 'updateExpenseBudget'])->name('expense_budgets.update');
 Route::post('expense-records', [AdminController::class, 'storeExpenseRecord'])->name('expense_records.store');
+Route::post('expense-records/update', [AdminController::class, 'updateExpenseRecord'])->name('expense_records.update');
+Route::post('expense-records/delete', [AdminController::class, 'deleteExpenseRecord'])->name('expense_records.delete');
 
 // School Resources Routes
 Route::get('manage_incoming_resources', [AdminController::class, 'manageIncomingResources'])->name('manage_incoming_resources');
+Route::post('school-resources', [AdminController::class, 'storeSchoolResources'])->name('school_resources.store');
+Route::post('school-resources/update', [AdminController::class, 'updateSchoolResource'])->name('school_resources.update');
+Route::post('school-resources/delete', [AdminController::class, 'deleteSchoolResource'])->name('school_resources.delete');
+Route::post('incoming-resources', [AdminController::class, 'storeIncomingResource'])->name('incoming_resources.store');
 Route::get('manage_outgoing_resources', [AdminController::class, 'manageOutgoingResources'])->name('manage_outgoing_resources');
+Route::post('outgoing-resources', [AdminController::class, 'storeOutgoingResource'])->name('outgoing_resources.store');
+Route::post('outgoing-resources/update', [AdminController::class, 'updateOutgoingResource'])->name('outgoing_resources.update');
+Route::post('outgoing-resources/delete', [AdminController::class, 'deleteOutgoingResource'])->name('outgoing_resources.delete');
+Route::post('outgoing-resources/return', [AdminController::class, 'returnOutgoingResource'])->name('outgoing_resources.return');
 Route::get('manage_buildings_infrastructure', [AdminController::class, 'manageBuildingsInfrastructure'])->name('manage_buildings_infrastructure');
 Route::get('manage_desks', [AdminController::class, 'manageDesks'])->name('manage_desks');
 Route::get('manage_chairs', [AdminController::class, 'manageChairs'])->name('manage_chairs');
@@ -357,6 +371,13 @@ Route::get('manage_books', [AdminController::class, 'manageBooks'])->name('manag
 Route::get('manage_teaching_aids', [AdminController::class, 'manageTeachingAids'])->name('manage_teaching_aids');
 Route::get('inventory_list', [AdminController::class, 'inventoryList'])->name('inventory_list');
 Route::get('manage_damaged_lost_items', [AdminController::class, 'manageDamagedLostItems'])->name('manage_damaged_lost_items');
+Route::get('admin/suggestions', [AdminController::class, 'manageTeacherFeedbackAdmin'])->name('admin.suggestions');
+Route::get('admin/incidents', [AdminController::class, 'manageTeacherFeedbackAdmin'])->name('admin.incidents');
+Route::post('admin/feedback/approve', [AdminController::class, 'approveTeacherFeedback'])->name('admin.feedback.approve');
+Route::post('admin/feedback/reject', [AdminController::class, 'rejectTeacherFeedback'])->name('admin.feedback.reject');
+Route::post('damaged-lost', [AdminController::class, 'storeDamagedLostRecord'])->name('damaged_lost.store');
+Route::post('damaged-lost/update', [AdminController::class, 'updateDamagedLostRecord'])->name('damaged_lost.update');
+Route::post('damaged-lost/delete', [AdminController::class, 'deleteDamagedLostRecord'])->name('damaged_lost.delete');
 Route::get('resource_report', [AdminController::class, 'resourceReport'])->name('resource_report');
 Route::get('usage_report', [AdminController::class, 'usageReport'])->name('usage_report');
 Route::post('save_parent', [ManageParentsController::class, 'save_parent'])->name('save_parent');

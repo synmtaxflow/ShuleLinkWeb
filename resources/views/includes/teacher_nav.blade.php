@@ -28,7 +28,8 @@
 #left-panel .navbar-nav,
 #left-panel ul {
     background-color: #ffffff !important; /* nyeupe */
-    color: #940000 !important;
+    color: #2f2f2f !important;
+    font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif !important;
 }
 
 /* Badilisha rangi ya maandishi (links) */
@@ -37,7 +38,7 @@
 #left-panel li a,
 #left-panel .navbar-nav li a,
 #left-panel .navbar-nav > li > a {
-    color: #940000 !important;
+    color: #2f2f2f !important;
     font-weight: 600;
     background-color: transparent !important;
     font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif !important;
@@ -59,8 +60,8 @@
 #left-panel .navbar-nav li a:hover,
 #left-panel .navbar-nav > li > a:hover,
 #left-panel li:hover {
-    background-color: #f8f9fa !important; /* kijivu chepesi */
-    color: #940000 !important;
+    background-color: #f5f5f5 !important; /* kijivu chepesi */
+    color: #2f2f2f !important;
 }
 
 /* Active link */
@@ -71,9 +72,11 @@
 #left-panel .nav-link.menu-active,
 #left-panel a.nav-link.menu-active,
 #left-panel li.menu-active > a {
-    background-color: #940000 !important;
-    color: #ffffff !important;
-    border-radius: 4px;
+    background-color: rgba(148, 0, 0, 0.08) !important;
+    color: #2f2f2f !important;
+    border-radius: 4px !important;
+    padding: 8px 15px !important;
+    margin: 2px 0 !important;
 }
 
 /* Active link icons - white when active */
@@ -82,26 +85,27 @@
 #left-panel li.active > a i,
 #left-panel .nav-link.menu-active i,
 #left-panel a.nav-link.menu-active i {
-    color: #ffffff !important;
+    color: #940000 !important;
 }
 
 /* Rangi ya jina la "Teacher" na maandishi ya ndani ya sidebar */
 #left-panel p,
 #left-panel .navbar-brand,
 #left-panel .navbar-brand:hover {
-    color: #940000 !important;
+    color: #2f2f2f !important;
     font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif !important;
 }
 
 /* Rangi ya navbar brand */
 #left-panel .navbar-header .navbar-brand {
-    color: #940000 !important;
+    color: #2f2f2f !important;
+    font-weight: 700 !important;
 }
 
 /* Rangi ya toggle button */
 #left-panel .navbar-toggler,
 #left-panel .navbar-toggler i {
-    color: #940000 !important;
+    color: #2f2f2f !important;
 }
 
 /* Background ya list items */
@@ -116,7 +120,8 @@
 
 /* Ensure all text in sidebar is #940000 */
 #left-panel * {
-    color: #940000 !important;
+    color: #2f2f2f !important;
+    font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif !important;
 }
 
 /* Apply Century Gothic to text elements only, not icons */
@@ -131,24 +136,38 @@
 
 /* Exception for icons - keep them #940000 */
 #left-panel i,
-#left-panel .fa {
+#left-panel .fa,
+#left-panel [class*="fa-"],
+#left-panel [class^="fa-"] {
     color: #940000 !important;
+    font-family: 'FontAwesome' !important;
 }
 
 /* Overflow scroll kwa sidebar links container - with visible scrollbar */
 .sidebar-links-container {
-    overflow-y: auto !important;
+    overflow-y: hidden !important;
     overflow-x: hidden !important;
     max-height: calc(100vh - 200px) !important;
     width: 100% !important;
-    /* Show scrollbar */
-    scrollbar-width: thin !important; /* Firefox */
-    scrollbar-color: #940000 #f0f0f0 !important; /* Firefox */
-    -ms-overflow-style: scrollbar !important; /* IE and Edge */
+    /* Hide scrollbar until hover */
+    scrollbar-width: none !important; /* Firefox */
+    -ms-overflow-style: none !important; /* IE and Edge */
 }
 
 /* Custom scrollbar styling for WebKit browsers (Chrome, Safari, Opera) */
 .sidebar-links-container::-webkit-scrollbar {
+    width: 0 !important;
+    display: none !important;
+}
+
+.sidebar-links-container:hover {
+    overflow-y: auto !important;
+    scrollbar-width: thin !important; /* Firefox */
+    scrollbar-color: #cfcfcf #f0f0f0 !important; /* Firefox */
+    -ms-overflow-style: scrollbar !important; /* IE and Edge */
+}
+
+.sidebar-links-container:hover::-webkit-scrollbar {
     width: 8px !important;
     display: block !important;
 }
@@ -159,12 +178,12 @@
 }
 
 .sidebar-links-container::-webkit-scrollbar-thumb {
-    background: #940000 !important;
+    background: #cfcfcf !important;
     border-radius: 4px !important;
 }
 
 .sidebar-links-container::-webkit-scrollbar-thumb:hover {
-    background: #7a0000 !important;
+    background: #bdbdbd !important;
 }
 
 .sidebar-links-container ul {
@@ -193,8 +212,23 @@
 
 .dropdown-nav-item .submenu {
     background-color: #f8f9fa !important;
-    border-left: 2px solid #940000;
+    border-left: 2px solid #e0e0e0;
     margin-left: 10px;
+}
+
+.dropdown-nav-item .submenu li {
+    border-bottom: none !important;
+}
+
+.dropdown-nav-item .submenu li a {
+    padding-left: 15px !important;
+    font-size: 0.9rem;
+    color: #2f2f2f !important;
+}
+
+.dropdown-nav-item .submenu li a:hover {
+    background-color: #f2f2f2 !important;
+    padding-left: 20px !important;
 }
 
 .dropdown-nav-item .submenu li {
@@ -215,6 +249,36 @@
 .dropdown-nav-item .submenu li a i {
     margin-right: 8px;
     font-size: 0.85rem;
+}
+
+/* Sidebar profile block */
+.sidebar-profile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(148, 0, 0, 0.08);
+    border: 1px solid rgba(148, 0, 0, 0.35);
+    border-radius: 8px;
+}
+.sidebar-profile img.profile-image {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: rgba(148, 0, 0, 0.08);
+    border: 2px solid rgba(148, 0, 0, 0.35);
+}
+.sidebar-profile .profile-name {
+    font-weight: 700;
+    color: #2f2f2f !important;
+}
+.sidebar-profile .profile-role {
+    font-size: 0.8rem;
+    color: #666666 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 /* Ensure sidebar itself can scroll if needed */
@@ -253,14 +317,13 @@
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#main-menu" aria-controls="main-menu" aria-expanded="false" aria-label="Toggle navigation">
                 <i class="fa fa-bars"></i>
             </button>
-            <a class="navbar-brand" href="#">ShuleXpert</a>
             <a class="navbar-brand hidden" href="#">SL</a>
         </div>
 
         <div id="main-menu" class="main-menu collapse navbar-collapse">
             <ul class="nav navbar-nav">
                 <!-- Profile -->
-                <li class="text-center my-3">
+                <li class="text-center mt-3 mb-2">
                     @php
                         // Get teacher profile image dynamically
                         $imgPath = isset($teacher) && $teacher && $teacher->image
@@ -269,21 +332,23 @@
                                 ? asset('images/female.png')
                                 : asset('images/male.png'));
                     @endphp
-                    <img src="{{ $imgPath }}" alt="Teacher" class="rounded-circle" width="80" style="object-fit: cover; border: 3px solid #940000;">
-                    <p class="mt-2 mb-0 font-weight-bold">
-                        @php
-                            // Get teacher's role name if exists
-                            $teacherRoleName = 'Teacher'; // Default
-                            if (isset($role) && $role->count() > 0) {
-                                // Get first role name (if teacher has multiple roles, show first one)
-                                $firstRole = $role->first();
-                                if ($firstRole && isset($firstRole->role_name) && !empty($firstRole->role_name)) {
-                                    $teacherRoleName = $firstRole->role_name;
-                                }
+                    @php
+                        // Get teacher's role name if exists
+                        $teacherRoleName = 'Teacher'; // Default
+                        if (isset($role) && $role->count() > 0) {
+                            $firstRole = $role->first();
+                            if ($firstRole && isset($firstRole->role_name) && !empty($firstRole->role_name)) {
+                                $teacherRoleName = $firstRole->role_name;
                             }
-                        @endphp
-                        {{ $teacherRoleName }}
-                    </p>
+                        }
+                    @endphp
+                    <div class="sidebar-profile">
+                        <img src="{{ $imgPath }}" alt="Teacher" class="profile-image">
+                        <div class="profile-meta text-left">
+                            <div class="profile-role">User Type</div>
+                            <div class="profile-name">{{ $teacherRoleName }}</div>
+                        </div>
+                    </div>
                 </li>
 
                 <!-- Sidebar Links -->
@@ -337,6 +402,49 @@
                             </a>
                             <ul id="personal" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
                                 <li><a href="#" class="nav-link"><i class="fa fa-calculator"></i> My Salary</a></li>
+                            </ul>
+                        </li>
+
+                        <!-- Suggestions & Incidents -->
+                        <li class="dropdown-nav-item">
+                            <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#teacherFeedback" aria-expanded="false">
+                                <i class="fa fa-commenting"></i> Suggestions & Incidents <i class="fa fa-chevron-down float-right"></i>
+                            </a>
+                            <ul id="teacherFeedback" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
+                                @php
+                                    $teacherID = Session::get('teacherID');
+                                    $schoolID = Session::get('schoolID');
+                                    $unreadTeacherSuggestions = 0;
+                                    $unreadTeacherIncidents = 0;
+                                    if ($teacherID && $schoolID) {
+                                        $unreadTeacherSuggestions = \App\Models\TeacherFeedback::where('schoolID', $schoolID)
+                                            ->where('teacherID', $teacherID)
+                                            ->where('type', 'suggestion')
+                                            ->where('is_read_by_teacher', false)
+                                            ->count();
+                                        $unreadTeacherIncidents = \App\Models\TeacherFeedback::where('schoolID', $schoolID)
+                                            ->where('teacherID', $teacherID)
+                                            ->where('type', 'incident')
+                                            ->where('is_read_by_teacher', false)
+                                            ->count();
+                                    }
+                                @endphp
+                                <li>
+                                    <a href="{{ route('teacher.suggestions') }}" class="nav-link">
+                                        <i class="fa fa-lightbulb-o"></i> Suggestions
+                                        @if($unreadTeacherSuggestions > 0)
+                                            <span class="badge badge-danger ml-1">{{ $unreadTeacherSuggestions }}</span>
+                                        @endif
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{{ route('teacher.incidents') }}" class="nav-link">
+                                        <i class="fa fa-exclamation-triangle"></i> Incidents
+                                        @if($unreadTeacherIncidents > 0)
+                                            <span class="badge badge-danger ml-1">{{ $unreadTeacherIncidents }}</span>
+                                        @endif
+                                    </a>
+                                </li>
                             </ul>
                         </li>
 

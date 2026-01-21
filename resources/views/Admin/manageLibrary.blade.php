@@ -12,8 +12,26 @@
         --primary-hover: #b30000;
     }
 
+    body, .content, .card, .btn, .form-control, .form-select, .table, .list-group-item {
+        font-family: "Century Gothic", Arial, sans-serif;
+    }
+
     body {
-        background-color: #f8f9fa;
+        background-color: #ffffff;
+    }
+
+    .card, .alert, .btn, div, .form-control, .form-select {
+        border-radius: 0 !important;
+    }
+
+    .bg-primary-custom {
+        background-color: #940000 !important;
+    }
+    .text-primary-custom {
+        color: #940000 !important;
+    }
+    .border-primary-custom {
+        border-color: #940000 !important;
     }
 
     /* Statistics Cards */
@@ -221,7 +239,7 @@
 
     .search-filter-section {
         background: white;
-        border-radius: 12px;
+        border-radius: 0;
         padding: 20px;
         margin-bottom: 20px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
@@ -232,103 +250,137 @@
         color: #495057;
         margin-bottom: 8px;
     }
+
+    .library-menu .list-group-item {
+        cursor: pointer;
+        border-left: 4px solid transparent;
+    }
+    .library-menu .list-group-item.active {
+        border-left-color: #940000;
+        background: #fff5f5;
+        color: #940000;
+        font-weight: 600;
+    }
+
+    .library-management-body {
+        max-height: 70vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
 </style>
 
-<div class="container-fluid" style="padding: 20px;">
-    <!-- Statistics Section -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="fa fa-book"></i>
-                </div>
-                <div class="stat-number" id="totalBooks">{{ $totalBooks ?? 0 }}</div>
-                <div class="stat-label">Total Books</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="fa fa-bookmark"></i>
-                </div>
-                <div class="stat-number" id="availableBooks">{{ $availableBooks ?? 0 }}</div>
-                <div class="stat-label">Available Books</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="fa fa-hand-paper-o"></i>
-                </div>
-                <div class="stat-number" id="issuedBooks">{{ $issuedBooks ?? 0 }}</div>
-                <div class="stat-label">Issued Books</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="fa fa-users"></i>
-                </div>
-                <div class="stat-number" id="borrowedBooks">{{ $borrowedBooks ?? 0 }}</div>
-                <div class="stat-label">Students with Borrowed Books</div>
+<div class="breadcrumbs">
+    <div class="col-sm-4">
+        <div class="page-header float-left">
+            <div class="page-title">
+                <h1>Manage Library</h1>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Search and Filter Section -->
-    <div class="search-filter-section">
-        <div class="row">
-            <div class="col-md-3">
-                <label class="form-label"><i class="fa fa-filter"></i> Select Class</label>
-                <select class="form-control" id="filterClass">
-                    <option value="">All Classes</option>
-                    @foreach($classes as $class)
-                        <option value="{{ $class->classID }}">{{ $class->class_name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label"><i class="fa fa-bookmark"></i> Select Subject</label>
-                <select class="form-control" id="filterSubject">
-                    <option value="">All Subjects</option>
-                    @foreach($subjects as $subject)
-                        <option value="{{ $subject->subjectID }}">{{ $subject->subject_name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label"><i class="fa fa-search"></i> Search Book</label>
-                <input type="text" class="form-control" id="searchBook" placeholder="Search by title, author, or ISBN...">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">&nbsp;</label>
-                <button class="btn btn-primary-custom w-100" onclick="loadBooks()">
-                    <i class="fa fa-search"></i> Search
-                </button>
-            </div>
-        </div>
+<div class="content mt-3">
+    <div class="table-responsive mb-4">
+        <table class="table table-bordered">
+            <thead class="bg-primary-custom text-white">
+                <tr>
+                    <th>Total Books</th>
+                    <th>Available Books</th>
+                    <th>Issued Books</th>
+                    <th>Students with Borrowed Books</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td id="totalBooks">{{ $totalBooks ?? 0 }}</td>
+                    <td id="availableBooks">{{ $availableBooks ?? 0 }}</td>
+                    <td id="issuedBooks">{{ $issuedBooks ?? 0 }}</td>
+                    <td id="borrowedBooks">{{ $borrowedBooks ?? 0 }}</td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 
-    <!-- Main Content Tabs -->
-    <ul class="nav nav-tabs mb-3" role="tablist">
-        <li class="nav-item">
-            <a class="nav-link active" data-toggle="tab" href="#booksTab">
-                <i class="fa fa-book"></i> Books
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" data-toggle="tab" href="#borrowsTab">
-                <i class="fa fa-hand-paper-o"></i> Borrow Records
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" data-toggle="tab" href="#statisticsTab">
-                <i class="fa fa-bar-chart"></i> Statistics
-            </a>
-        </li>
-    </ul>
+    <div class="card">
+        <div class="card-header bg-primary-custom text-white">
+            <strong>Library Management</strong>
+        </div>
+        <div class="card-body library-management-body">
+            <div class="row">
+                <div class="col-sm-4">
+                    <div class="list-group library-menu">
+                        <a class="list-group-item active" data-target="#booksTab">
+                            <i class="fa fa-book"></i> Books
+                        </a>
+                        <a class="list-group-item" data-target="#borrowsTab">
+                            <i class="fa fa-hand-paper-o"></i> Borrow Records
+                        </a>
+                        <a class="list-group-item" data-target="#statisticsTab">
+                            <i class="fa fa-bar-chart"></i> Statistics
+                        </a>
+                        <a class="list-group-item" data-action="add-book">
+                            <i class="fa fa-plus"></i> Add Book
+                        </a>
+                        <a class="list-group-item" data-action="borrow-book">
+                            <i class="fa fa-hand-paper-o"></i> Borrow Book
+                        </a>
+                    </div>
+                </div>
 
-    <div class="tab-content">
+                <div class="col-md-8">
+                    <!-- Search and Filter Section -->
+                    <div class="search-filter-section">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label class="form-label"><i class="fa fa-filter"></i> Select Class</label>
+                                <select class="form-control" id="filterClass">
+                                    <option value="">All Classes</option>
+                                    @foreach($classes as $class)
+                                        <option value="{{ $class->classID }}">{{ $class->class_name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label"><i class="fa fa-bookmark"></i> Select Subject</label>
+                                <select class="form-control" id="filterSubject">
+                                    <option value="">All Subjects</option>
+                                    @foreach($subjects as $subject)
+                                        <option value="{{ $subject->subjectID }}">{{ $subject->subject_name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label"><i class="fa fa-search"></i> Search Book</label>
+                                <input type="text" class="form-control" id="searchBook" placeholder="Search by title, author, or ISBN...">
+                            </div>
+                            <div class="col-md-12 mt-2">
+                                <button class="btn btn-primary-custom w-100" onclick="loadBooks()">
+                                    <i class="fa fa-search"></i> Search
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Content Tabs -->
+                    <ul class="nav nav-tabs mb-3 d-none" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-toggle="tab" href="#booksTab">
+                                <i class="fa fa-book"></i> Books
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-toggle="tab" href="#borrowsTab">
+                                <i class="fa fa-hand-paper-o"></i> Borrow Records
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-toggle="tab" href="#statisticsTab">
+                                <i class="fa fa-bar-chart"></i> Statistics
+                            </a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
         <!-- Books Tab -->
         <div class="tab-pane fade show active" id="booksTab">
             <div class="library-card">
@@ -336,9 +388,6 @@
                     <h5 class="card-title-custom">
                         <i class="fa fa-book"></i> Books List
                     </h5>
-                    <button class="btn btn-primary-custom" onclick="showAddBookModal()" type="button">
-                        <i class="fa fa-plus"></i> Add Book
-                    </button>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover">
@@ -463,6 +512,10 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -622,6 +675,28 @@
             
             $(document).ready(function() {
                 console.log('Document ready, jQuery version:', $.fn.jquery);
+
+                // Sidebar menu to control tabs
+                $('.library-menu .list-group-item').on('click', function() {
+                    const action = $(this).data('action');
+                    if (action === 'add-book') {
+                        showAddBookModal();
+                        return;
+                    }
+                    if (action === 'borrow-book') {
+                        showBorrowBookModal();
+                        return;
+                    }
+                    $('.library-menu .list-group-item').removeClass('active');
+                    $(this).addClass('active');
+                    const target = $(this).data('target');
+                    if (target) {
+                        const tabLink = $('.nav-tabs a[href="' + target + '"]');
+                        if (tabLink.length && typeof tabLink.tab === 'function') {
+                            tabLink.tab('show');
+                        }
+                    }
+                });
                 
                 // Load books and borrows after a short delay to ensure DOM is ready
                 setTimeout(function() {

@@ -57,6 +57,36 @@
         color: #6c757d;
         font-size: 0.9rem;
     }
+    .form-loading {
+        display: none;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        border: 1px solid rgba(148, 0, 0, 0.25);
+        background: rgba(148, 0, 0, 0.05);
+        margin-bottom: 12px;
+    }
+    .form-progress {
+        position: relative;
+        flex: 1;
+        height: 8px;
+        background: #f0f0f0;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .form-progress::after {
+        content: "";
+        position: absolute;
+        left: -40%;
+        width: 40%;
+        height: 100%;
+        background: #940000;
+        animation: progressSlide 1.1s linear infinite;
+    }
+    @keyframes progressSlide {
+        0% { left: -40%; }
+        100% { left: 100%; }
+    }
 </style>
 
 <div class="breadcrumbs">
@@ -94,6 +124,10 @@
                     </ul>
                 </div>
             @endif
+            <div class="form-loading" id="expensesLoading">
+                <span><i class="fa fa-spinner fa-spin text-primary-custom"></i> Saving...</span>
+                <div class="form-progress"></div>
+            </div>
 
             <div class="row">
                 <div class="col-sm-4">
@@ -141,7 +175,7 @@
                         </form>
 
                         @if(!$budget)
-                            <form method="POST" action="{{ route('expense_budgets.store') }}">
+                            <form method="POST" action="{{ route('expense_budgets.store') }}" class="js-show-loading">
                                 @csrf
                                 <input type="hidden" name="year" value="{{ $year ?? date('Y') }}">
                                 <div class="form-group mb-3">
@@ -153,11 +187,11 @@
                                 </button>
                             </form>
                         @else
-                            <div class="alert alert-info">
+            <div class="alert alert-info">
                                 Total Budget: <strong>{{ number_format($budget->total_amount, 0) }}</strong><br>
                                 Remaining Budget: <strong>{{ number_format($budget->remaining_amount, 0) }}</strong>
                             </div>
-                            <form method="POST" action="{{ route('expense_budgets.update') }}">
+                            <form method="POST" action="{{ route('expense_budgets.update') }}" class="js-show-loading">
                                 @csrf
                                 <input type="hidden" name="expense_budgetID" value="{{ $budget->expense_budgetID }}">
                                 <div class="form-group mb-3">
@@ -178,7 +212,7 @@
                                 Please create a budget for this year before recording expenses.
                             </div>
                         @else
-                            <form method="POST" action="{{ route('expense_records.store') }}">
+                            <form method="POST" action="{{ route('expense_records.store') }}" class="js-show-loading">
                                 @csrf
                                 <input type="hidden" name="expense_budgetID" value="{{ $budget->expense_budgetID }}">
                                 <div class="form-group mb-3">
@@ -211,6 +245,7 @@
                                             <th>Date</th>
                                             <th>Description</th>
                                             <th>Amount</th>
+                                            <th>Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -219,6 +254,27 @@
                                                 <td>{{ \Carbon\Carbon::parse($expense->expense_date)->format('Y-m-d') }}</td>
                                                 <td>{{ $expense->description }}</td>
                                                 <td>{{ number_format($expense->amount, 0) }}</td>
+                                                <td>
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-sm btn-outline-primary"
+                                                        data-toggle="modal"
+                                                        data-target="#editExpenseModal"
+                                                        data-id="{{ $expense->expense_recordID }}"
+                                                        data-date="{{ $expense->expense_date }}"
+                                                        data-amount="{{ $expense->amount }}"
+                                                        data-description="{{ $expense->description }}"
+                                                    >
+                                                        <i class="fa fa-pencil"></i> Edit
+                                                    </button>
+                                                    <form method="POST" action="{{ route('expense_records.delete') }}" style="display:inline-block;" class="js-show-loading">
+                                                        @csrf
+                                                        <input type="hidden" name="expense_recordID" value="{{ $expense->expense_recordID }}">
+                                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this expense?')">
+                                                            <i class="fa fa-trash"></i> Delete
+                                                        </button>
+                                                    </form>
+                                                </td>
                                             </tr>
                                         @endforeach
                                     </tbody>
@@ -236,8 +292,56 @@
 
 @include('includes.footer')
 
+<!-- Edit Expense Modal -->
+<div class="modal fade" id="editExpenseModal" tabindex="-1" role="dialog" aria-labelledby="editExpenseModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary-custom text-white">
+                <h5 class="modal-title" id="editExpenseModalLabel"><i class="fa fa-pencil"></i> Update Expense</h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="POST" action="{{ route('expense_records.update') }}" class="js-show-loading">
+                @csrf
+                <div class="modal-body">
+                    <input type="hidden" name="expense_recordID" id="edit_expense_id">
+                    <div class="form-group mb-3">
+                        <label for="edit_expense_date">Date</label>
+                        <input type="date" class="form-control" id="edit_expense_date" name="expense_date" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="edit_expense_amount">Amount</label>
+                        <input type="number" class="form-control" id="edit_expense_amount" name="amount" min="0" step="0.01" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="edit_expense_description">Description</label>
+                        <textarea class="form-control" id="edit_expense_description" name="description" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary-custom"><i class="fa fa-save"></i> Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
     (function() {
+        const loadingBar = document.getElementById('expensesLoading');
+        const loadingForms = document.querySelectorAll('.js-show-loading');
+        if (loadingForms.length) {
+            loadingForms.forEach(form => {
+                form.addEventListener('submit', () => {
+                    if (loadingBar) {
+                        loadingBar.style.display = 'flex';
+                    }
+                });
+            });
+        }
+
         const menuItems = document.querySelectorAll('.expenses-menu .list-group-item');
         const sections = document.querySelectorAll('.expenses-section');
 
@@ -259,6 +363,16 @@
                 if (target) {
                     showSection(target.replace('#', ''));
                 }
+            });
+        });
+
+        const editButtons = document.querySelectorAll('[data-target="#editExpenseModal"]');
+        editButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.getElementById('edit_expense_id').value = this.getAttribute('data-id');
+                document.getElementById('edit_expense_date').value = this.getAttribute('data-date');
+                document.getElementById('edit_expense_amount').value = this.getAttribute('data-amount');
+                document.getElementById('edit_expense_description').value = this.getAttribute('data-description');
             });
         });
     })();

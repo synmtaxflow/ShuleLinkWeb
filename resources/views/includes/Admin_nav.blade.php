@@ -155,18 +155,29 @@
 
 /* Overflow scroll kwa sidebar links container - with visible scrollbar */
 .sidebar-links-container {
-    overflow-y: auto !important;
+    overflow-y: hidden !important;
     overflow-x: hidden !important;
     max-height: calc(100vh - 200px) !important;
     width: 100% !important;
-    /* Show scrollbar */
+    /* Hide scrollbar until hover */
+    scrollbar-width: none !important; /* Firefox */
+    -ms-overflow-style: none !important; /* IE and Edge */
+}
+
+/* Custom scrollbar styling for WebKit browsers (Chrome, Safari, Opera) */
+.sidebar-links-container::-webkit-scrollbar {
+    width: 0 !important;
+    display: none !important;
+}
+
+.sidebar-links-container:hover {
+    overflow-y: auto !important;
     scrollbar-width: thin !important; /* Firefox */
     scrollbar-color: #cfcfcf #f0f0f0 !important; /* Firefox */
     -ms-overflow-style: scrollbar !important; /* IE and Edge */
 }
 
-/* Custom scrollbar styling for WebKit browsers (Chrome, Safari, Opera) */
-.sidebar-links-container::-webkit-scrollbar {
+.sidebar-links-container:hover::-webkit-scrollbar {
     width: 8px !important;
     display: block !important;
 }
@@ -309,19 +320,28 @@
     align-items: center;
     justify-content: center;
     gap: 10px;
-    padding: 10px 0;
+    padding: 10px 12px;
+    background: rgba(148, 0, 0, 0.08);
+    border: 1px solid rgba(148, 0, 0, 0.35);
+    border-radius: 8px;
 }
 .sidebar-profile img.profile-image {
     width: 64px;
     height: 64px;
     border-radius: 50%;
     object-fit: cover;
-    background: #ffffff;
-    border: 2px solid #e0e0e0;
+    background: rgba(148, 0, 0, 0.08);
+    border: 2px solid rgba(148, 0, 0, 0.35);
 }
 .sidebar-profile .profile-name {
     font-weight: 700;
     color: #2f2f2f !important;
+}
+.sidebar-profile .profile-role {
+    font-size: 0.8rem;
+    color: #666666 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 </style>
 
@@ -346,7 +366,10 @@
                 <li class="text-center mt-3 mb-2">
                     <div class="sidebar-profile">
                         <img src="{{ asset('images/shuleXpert.jpg') }}" alt="Admin" class="profile-image">
-                        <div class="profile-name">Administrator</div>
+                        <div class="profile-meta text-left">
+                            <div class="profile-role">User Type</div>
+                            <div class="profile-name">Administrator</div>
+                        </div>
                     </div>
                 </li>
                 <!-- Sidebar Links -->
@@ -416,8 +439,37 @@
                                 <i class="fa fa-bar-chart"></i> Reports & Analytics <i class="fa fa-chevron-down float-right"></i>
                             </a>
                             <ul id="reportsAnalytics" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
-                                <li><a href="#" class="nav-link"><i class="fa fa-lightbulb-o"></i> Suggestions</a></li>
-                                <li><a href="#" class="nav-link"><i class="fa fa-exclamation-triangle"></i> Incidence</a></li>
+                                @php
+                                    $schoolID = Session::get('schoolID');
+                                    $unreadSuggestions = 0;
+                                    $unreadIncidents = 0;
+                                    if ($schoolID) {
+                                        $unreadSuggestions = \App\Models\TeacherFeedback::where('schoolID', $schoolID)
+                                            ->where('type', 'suggestion')
+                                            ->where('is_read_by_admin', false)
+                                            ->count();
+                                        $unreadIncidents = \App\Models\TeacherFeedback::where('schoolID', $schoolID)
+                                            ->where('type', 'incident')
+                                            ->where('is_read_by_admin', false)
+                                            ->count();
+                                    }
+                                @endphp
+                                <li>
+                                    <a href="{{ \Illuminate\Support\Facades\Route::has('admin.suggestions') ? route('admin.suggestions') : '#' }}" class="nav-link">
+                                        <i class="fa fa-lightbulb-o"></i> Suggestions
+                                        @if($unreadSuggestions > 0)
+                                            <span class="badge badge-danger ml-1">{{ $unreadSuggestions }}</span>
+                                        @endif
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{{ \Illuminate\Support\Facades\Route::has('admin.incidents') ? route('admin.incidents') : '#' }}" class="nav-link">
+                                        <i class="fa fa-exclamation-triangle"></i> Incidents
+                                        @if($unreadIncidents > 0)
+                                            <span class="badge badge-danger ml-1">{{ $unreadIncidents }}</span>
+                                        @endif
+                                    </a>
+                                </li>
                                 <li><a href="#" class="nav-link"><i class="fa fa-line-chart"></i> Performance</a></li>
                                 <li><a href="{{ route('admin.printing_unit') }}" class="nav-link"><i class="fa fa-print"></i> Printing Unit</a></li>
                             </ul>

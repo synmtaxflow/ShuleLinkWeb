@@ -14,6 +14,7 @@ class SchoolResource extends Model
         'resource_name',
         'resource_type',
         'requires_quantity',
+        'requires_price',
         'quantity',
         'unit_price',
     ];
