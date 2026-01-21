@@ -337,6 +337,10 @@ Route::post('save_staff_permissions', [ManageOtherStaffController::class, 'save_
 
 // Revenue and Expenses Routes
 Route::get('manage_revenue', [AdminController::class, 'manageRevenue'])->name('manage_revenue');
+Route::post('revenue-sources', [AdminController::class, 'storeRevenueSource'])->name('revenue_sources.store');
+Route::post('revenue-sources/update', [AdminController::class, 'updateRevenueSource'])->name('revenue_sources.update');
+Route::post('revenue-records', [AdminController::class, 'storeRevenueRecord'])->name('revenue_records.store');
+Route::get('revenue-report-data', [AdminController::class, 'revenueReportData'])->name('revenue_report.data');
 Route::get('manage_expenses', [AdminController::class, 'manageExpenses'])->name('manage_expenses');
 
 // School Resources Routes
@@ -510,6 +514,7 @@ Route::get('get_parents_by_class_sms', [SMS_InformationController::class, 'get_p
 Route::get('get_all_teachers_sms', [SMS_InformationController::class, 'get_all_teachers'])->name('get_all_teachers_sms');
 Route::get('get_parent_by_student_sms', [SMS_InformationController::class, 'get_parent_by_student'])->name('get_parent_by_student_sms');
 Route::get('search_students_sms', [SMS_InformationController::class, 'search_students'])->name('search_students_sms');
+Route::get('search_teachers_sms', [SMS_InformationController::class, 'search_teachers'])->name('search_teachers_sms');
 Route::get('get_sms_balance', [SMS_InformationController::class, 'get_sms_balance'])->name('get_sms_balance');
 Route::post('send_sms', [SMS_InformationController::class, 'send_sms'])->name('send_sms');
 

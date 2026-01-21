@@ -31,7 +31,7 @@
 #left-panel .navbar-nav,
 #left-panel ul {
     background-color: #ffffff !important; /* nyeupe */
-    color: #940000 !important;
+    color: #2f2f2f !important;
     font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif !important;
 }
 
@@ -41,7 +41,7 @@
 #left-panel li a,
 #left-panel .navbar-nav li a,
 #left-panel .navbar-nav > li > a {
-    color: #940000 !important;
+    color: #2f2f2f !important;
     font-weight: 600;
     background-color: transparent !important;
     font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif !important;
@@ -63,8 +63,8 @@
 #left-panel .navbar-nav li a:hover,
 #left-panel .navbar-nav > li > a:hover,
 #left-panel li:hover {
-    background-color: #f8f9fa !important; /* kijivu chepesi */
-    color: #940000 !important;
+    background-color: #f5f5f5 !important; /* kijivu chepesi */
+    color: #2f2f2f !important;
 }
 
 /* Active link - higher specificity */
@@ -79,8 +79,8 @@
 #left-panel .sidebar-links-container a.nav-link.menu-active,
 #left-panel .submenu .nav-link.menu-active,
 #left-panel .submenu a.nav-link.menu-active {
-    background-color: #940000 !important;
-    color: #ffffff !important;
+    background-color: rgba(148, 0, 0, 0.08) !important;
+    color: #2f2f2f !important;
     border-radius: 4px !important;
     padding: 8px 15px !important;
     margin: 2px 0 !important;
@@ -94,37 +94,38 @@
 #left-panel a.nav-link.menu-active i,
 #left-panel .sidebar-links-container .nav-link.menu-active i,
 #left-panel .submenu .nav-link.menu-active i {
-    color: #ffffff !important;
+    color: #666666 !important;
 }
 
 /* Active dropdown toggle */
 #left-panel .dropdown-toggle.menu-active {
-    background-color: #940000 !important;
-    color: #ffffff !important;
+    background-color: rgba(148, 0, 0, 0.08) !important;
+    color: #2f2f2f !important;
     border-radius: 4px !important;
 }
 
 #left-panel .dropdown-toggle.menu-active i {
-    color: #ffffff !important;
+    color: #666666 !important;
 }
 
 /* Rangi ya jina la "Teacher" na maandishi ya ndani ya sidebar */
 #left-panel p,
 #left-panel .navbar-brand,
 #left-panel .navbar-brand:hover {
-    color: #940000 !important;
+    color: #2f2f2f !important;
     font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif !important;
 }
 
 /* Rangi ya navbar brand */
 #left-panel .navbar-header .navbar-brand {
-    color: #940000 !important;
+    color: #2f2f2f !important;
+    font-weight: 700 !important;
 }
 
 /* Rangi ya toggle button */
 #left-panel .navbar-toggler,
 #left-panel .navbar-toggler i {
-    color: #940000 !important;
+    color: #2f2f2f !important;
 }
 
 /* Background ya list items */
@@ -139,7 +140,7 @@
 
 /* Ensure all text in sidebar is #940000 */
 #left-panel * {
-    color: #940000 !important;
+    color: #2f2f2f !important;
     font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif !important;
 }
 
@@ -148,7 +149,7 @@
 #left-panel .fa,
 #left-panel [class*="fa-"],
 #left-panel [class^="fa-"] {
-    color: #940000 !important;
+    color: #666666 !important;
     font-family: 'FontAwesome' !important;
 }
 
@@ -160,7 +161,7 @@
     width: 100% !important;
     /* Show scrollbar */
     scrollbar-width: thin !important; /* Firefox */
-    scrollbar-color: #940000 #f0f0f0 !important; /* Firefox */
+    scrollbar-color: #cfcfcf #f0f0f0 !important; /* Firefox */
     -ms-overflow-style: scrollbar !important; /* IE and Edge */
 }
 
@@ -176,12 +177,12 @@
 }
 
 .sidebar-links-container::-webkit-scrollbar-thumb {
-    background: #940000 !important;
+    background: #cfcfcf !important;
     border-radius: 4px !important;
 }
 
 .sidebar-links-container::-webkit-scrollbar-thumb:hover {
-    background: #7a0000 !important;
+    background: #bdbdbd !important;
 }
 
 .sidebar-links-container ul {
@@ -204,12 +205,12 @@
 }
 
 #left-panel::-webkit-scrollbar-thumb {
-    background: #940000 !important;
+    background: #cfcfcf !important;
     border-radius: 4px !important;
 }
 
 #left-panel::-webkit-scrollbar-thumb:hover {
-    background: #7a0000 !important;
+    background: #bdbdbd !important;
 }
 
 /* Dropdown menu items styling */
@@ -234,7 +235,7 @@
 
 .dropdown-nav-item .submenu {
     background-color: #f8f9fa !important;
-    border-left: 2px solid #940000;
+    border-left: 2px solid #e0e0e0;
     margin-left: 10px;
 }
 
@@ -245,11 +246,11 @@
 .dropdown-nav-item .submenu li a {
     padding-left: 15px !important;
     font-size: 0.9rem;
-    color: #940000 !important;
+    color: #2f2f2f !important;
 }
 
 .dropdown-nav-item .submenu li a:hover {
-    background-color: #e9ecef !important;
+    background-color: #f2f2f2 !important;
     padding-left: 20px !important;
 }
 
@@ -261,7 +262,7 @@
 /* Header styling */
 #header {
     background-color: #ffffff !important;
-    border-bottom: 2px solid #940000 !important;
+    border-bottom: 2px solid #e0e0e0 !important;
 }
 
 #header .header-menu {
@@ -271,28 +272,56 @@
 #header .menutoggle,
 #header .search-trigger,
 #header .btn-secondary {
-    color: #940000 !important;
+    color: #2f2f2f !important;
 }
 
 #header .user-avatar {
-    border: 2px solid #940000 !important;
+    border: 2px solid #e0e0e0 !important;
 }
 
 #header .dropdown-toggle {
-    color: #940000 !important;
+    color: #2f2f2f !important;
 }
 
 #header .dropdown-menu {
-    border: 1px solid #940000 !important;
+    border: 1px solid #e0e0e0 !important;
 }
 
 #header .dropdown-menu a {
-    color: #940000 !important;
+    color: #2f2f2f !important;
 }
 
 #header .dropdown-menu a:hover {
-    background-color: #f8f9fa !important;
+    background-color: #f5f5f5 !important;
+    color: #2f2f2f !important;
+}
+
+/* Brand styling */
+.brand-title {
     color: #940000 !important;
+    font-weight: 700 !important;
+    font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif !important;
+}
+
+/* Sidebar profile block */
+.sidebar-profile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px 0;
+}
+.sidebar-profile img.profile-image {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #ffffff;
+    border: 2px solid #e0e0e0;
+}
+.sidebar-profile .profile-name {
+    font-weight: 700;
+    color: #2f2f2f !important;
 }
 </style>
 
@@ -308,24 +337,17 @@
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#main-menu" aria-controls="main-menu" aria-expanded="false" aria-label="Toggle navigation">
                 <i class="fa fa-bars"></i>
             </button>
-            <a class="navbar-brand" href="#">ShuleXpert</a>
             <a class="navbar-brand hidden" href="#">SL</a>
         </div>
 
         <div id="main-menu" class="main-menu collapse navbar-collapse">
             <ul class="nav navbar-nav">
-                <!-- Profile with School Logo -->
-                <li class="text-center my-3">
-                    @php
-                        $schoolLogo = isset($school_details) && $school_details && $school_details->school_logo
-                            ? asset($school_details->school_logo)
-                            : asset('images/admin.jpg');
-                        $schoolName = isset($school_details) && $school_details && $school_details->school_name
-                            ? $school_details->school_name
-                            : 'ShuleXpert';
-                    @endphp
-                    <img src="{{ $schoolLogo }}" alt="School Logo" class="rounded-circle" width="80" height="80" style="object-fit: cover; border: 3px solid #940000;">
-                    <p class="mt-2 mb-0 font-weight-bold" style="font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif; color: #940000;">Admin</p>
+                <!-- Profile -->
+                <li class="text-center mt-3 mb-2">
+                    <div class="sidebar-profile">
+                        <img src="{{ asset('images/shuleXpert.jpg') }}" alt="Admin" class="profile-image">
+                        <div class="profile-name">Administrator</div>
+                    </div>
                 </li>
                 <!-- Sidebar Links -->
                 <li class="sidebar-links-container">

@@ -16,22 +16,35 @@
         --info-color: #17a2b8;
     }
 
+    .bg-primary-custom {
+        background-color: #940000 !important;
+    }
+    .text-primary-custom {
+        color: #940000 !important;
+    }
+    .border-primary-custom {
+        border-color: #940000 !important;
+    }
+
+    body, .content, .card, .btn, .form-control, .form-select, .table {
+        font-family: "Century Gothic", Arial, sans-serif;
+    }
+
     body {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        background: #ffffff;
         min-height: 100vh;
     }
 
-    .sms-container {
-        padding: 30px;
+    .card, .alert, .btn, div, .form-control, .form-select {
+        border-radius: 0 !important;
     }
 
     .sms-header {
-        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
-        color: white;
-        padding: 25px;
-        border-radius: 12px;
-        margin-bottom: 30px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        background: #ffffff;
+        color: #212529;
+        padding: 15px 0 5px;
+        margin-bottom: 20px;
+        border-bottom: 1px solid #e9ecef;
     }
 
     .sms-header h2 {
@@ -48,16 +61,10 @@
 
     .sms-card {
         background: white;
-        border-radius: 12px;
-        padding: 25px;
-        margin-bottom: 25px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-        transition: all 0.3s ease;
-    }
-
-    .sms-card:hover {
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
-        transform: translateY(-2px);
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+        transition: none;
     }
 
     .card-title {
@@ -68,8 +75,8 @@
         display: flex;
         align-items: center;
         gap: 10px;
-        padding-bottom: 15px;
-        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e9ecef;
     }
 
     .card-title i {
@@ -78,8 +85,8 @@
     }
 
     .recipient-option {
-        border: 2px solid #e9ecef;
-        border-radius: 10px;
+        border: 1px solid #e9ecef;
+        border-radius: 0;
         padding: 20px;
         margin-bottom: 15px;
         cursor: pointer;
@@ -139,8 +146,8 @@
     }
 
     .form-control, .form-select {
-        border: 2px solid #e9ecef;
-        border-radius: 8px;
+        border: 1px solid #e9ecef;
+        border-radius: 0;
         padding: 10px 15px;
         transition: all 0.3s ease;
     }
@@ -163,20 +170,19 @@
     }
 
     .btn-send {
-        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+        background: var(--primary-color);
         color: white;
         border: none;
-        padding: 12px 30px;
-        border-radius: 8px;
+        padding: 10px 24px;
+        border-radius: 0;
         font-weight: 600;
         font-size: 1rem;
-        transition: all 0.3s ease;
-        box-shadow: 0 2px 10px rgba(148, 0, 0, 0.3);
+        transition: all 0.2s ease;
+        box-shadow: none;
     }
 
     .btn-send:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(148, 0, 0, 0.4);
+        background: var(--primary-hover);
     }
 
     .btn-send:disabled {
@@ -341,10 +347,21 @@
 
     .search-filter-section {
         background: white;
-        border-radius: 12px;
+        border-radius: 0;
         padding: 20px;
         margin-bottom: 20px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    }
+
+    .sms-menu .list-group-item {
+        cursor: pointer;
+        border-left: 4px solid transparent;
+    }
+    .sms-menu .list-group-item.active {
+        border-left-color: var(--primary-color);
+        background: #fff5f5;
+        color: var(--primary-color);
+        font-weight: 600;
     }
 
     .btn-primary-custom {
@@ -361,140 +378,144 @@
     }
 </style>
 
-<div class="container-fluid" style="padding: 20px;">
-    <!-- Header -->
-    <div class="sms-header">
-        <h2>
-            <i class="fa fa-comments"></i>
-            SMS Notification Management System
-        </h2>
-        <p style="margin: 10px 0 0 0; opacity: 0.9;">Send notifications to parents and teachers efficiently</p>
-    </div>
-
-    <!-- Statistics Widgets (Like Attendance Overview) -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card bg-success">
-                <div class="card-body text-center" style="color: #ffffff;">
-                    <h4 style="color: #ffffff; font-size: 2.5rem; font-weight: 700; margin: 10px 0;" id="totalRecipientsWidget">0</h4>
-                    <p class="mb-0" style="color: #ffffff; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Total Recipients</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-info">
-                <div class="card-body text-center" style="color: #ffffff;">
-                    <h4 style="color: #ffffff; font-size: 2.5rem; font-weight: 700; margin: 10px 0;" id="availableSmsWidget">
-                        <i class="fa fa-spinner fa-spin"></i>
-                    </h4>
-                    <p class="mb-0" style="color: #ffffff; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Available SMS</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;">
-                <div class="card-body text-center" style="color: #ffffff;">
-                    <h4 style="color: #ffffff; font-size: 2.5rem; font-weight: 700; margin: 10px 0;" id="successCountWidget">0</h4>
-                    <p class="mb-0" style="color: #ffffff; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Successfully Sent</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-danger">
-                <div class="card-body text-center" style="color: #ffffff;">
-                    <h4 style="color: #ffffff; font-size: 2.5rem; font-weight: 700; margin: 10px 0;" id="failedCountWidget">0</h4>
-                    <p class="mb-0" style="color: #ffffff; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Failed</p>
-                </div>
+<div class="breadcrumbs">
+    <div class="col-sm-4">
+        <div class="page-header float-left">
+            <div class="page-title">
+                <h1>Manage SMS Information</h1>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Search and Filter Section (Horizontal like manage_library) -->
-    <div class="search-filter-section">
-        <div class="row">
-            <div class="col-md-3">
-                <label class="form-label"><i class="fa fa-filter"></i> Recipient Type</label>
-                <select class="form-control" id="quickRecipientType" onchange="handleQuickRecipientChange()">
-                    <option value="">-- Select Type --</option>
-                    <option value="all_parents">All Parents</option>
-                    <option value="class_parents">Class Parents</option>
-                    <option value="all_parents_teachers">All Parents & Teachers</option>
-                    <option value="specific_parent">Specific Parent</option>
-                </select>
-            </div>
-            <div class="col-md-3" id="quickClassGroup" style="display: none;">
-                <label class="form-label"><i class="fa fa-graduation-cap"></i> Select Class</label>
-                <select class="form-control" id="quickClassID">
-                    <option value="">-- Select Class --</option>
-                    @foreach($classes as $class)
-                        <option value="{{ $class->classID }}">{{ $class->class_name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-md-4" id="quickStudentSearchGroup" style="display: none;">
-                <label class="form-label"><i class="fa fa-search"></i> Search Student</label>
-                <input type="text" class="form-control" id="quickStudentSearch" placeholder="Search by name or admission number...">
-                <div class="student-search-results" id="quickStudentResults"></div>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">&nbsp;</label>
-                <button class="btn btn-primary-custom w-100" onclick="loadRecipientCount()">
-                    <i class="fa fa-refresh"></i> Refresh
-                </button>
-            </div>
+<div class="content mt-3">
+    <div class="card">
+        <div class="card-header bg-primary-custom text-white">
+            <strong>SMS Information</strong>
         </div>
-    </div>
+        <div class="card-body">
+            <!-- Header -->
+            <div class="sms-header">
+                <h2>
+                    <i class="fa fa-comments"></i>
+                    SMS Notification Management System
+                </h2>
+                <p style="margin: 10px 0 0 0; color: #6c757d;">Send notifications to parents and teachers efficiently</p>
+            </div>
 
-    <!-- Compose Message Section (Hidden by default, shown after selecting recipient type) -->
-    <div class="row hidden" id="composeMessageSection">
-        <div class="col-lg-12">
-            <div class="sms-card">
-                <div class="card-title">
-                    <i class="fa fa-paper-plane"></i>
-                    Compose Message
-                </div>
-
-                <form id="smsForm">
-                    <!-- Hidden recipient type (synced from search) -->
-                    <input type="hidden" id="recipient_type" name="recipient_type">
-                    <input type="hidden" id="classID" name="classID">
-                    <input type="hidden" id="studentID" name="studentID">
-
-                    <!-- Selected Recipient Info -->
-                    <div class="recipient-preview" id="selectedRecipientInfo">
-                        <strong>Selected Recipients:</strong> <span id="selectedRecipientText">-</span>
-                        <br>
-                        <strong>Total Recipients:</strong> <span id="recipientCount">0</span>
+            <div class="row">
+                <div class="col-sm-4">
+                    <div class="list-group sms-menu">
+                        <a class="list-group-item active" data-recipient="all_parents">
+                            <i class="fa fa-users"></i> All Parents
+                        </a>
+                        <a class="list-group-item" data-recipient="class_parents">
+                            <i class="fa fa-graduation-cap"></i> Class Parents
+                        </a>
+                        <a class="list-group-item" data-recipient="all_parents_teachers">
+                            <i class="fa fa-user-plus"></i> Parents & Teachers
+                        </a>
+                        <a class="list-group-item" data-recipient="all_teachers">
+                            <i class="fa fa-users"></i> All Teachers
+                        </a>
+                        <a class="list-group-item" data-recipient="specific_parent">
+                            <i class="fa fa-user"></i> Specific Parent
+                        </a>
+                        <a class="list-group-item" data-recipient="specific_teacher">
+                            <i class="fa fa-user"></i> Specific Teacher
+                        </a>
                     </div>
-
-                    <!-- Message -->
-                    <div class="form-group" style="margin-top: 20px;">
-                        <label class="form-label" for="message">
-                            <i class="fa fa-comment"></i>
-                            Message
-                        </label>
-                        <textarea class="form-control" id="message" name="message" rows="5" placeholder="Enter your message here... (School name will be automatically added at the beginning)"></textarea>
-                        <div class="char-count">
-                            <span id="charCount">0</span> characters
+                </div>
+                <div class="col-md-8">
+                    <!-- Search and Filter Section (Horizontal like manage_library) -->
+                    <div class="search-filter-section">
+                        <select class="form-control d-none" id="quickRecipientType" onchange="handleQuickRecipientChange()">
+                            <option value="">-- Select Type --</option>
+                            <option value="all_parents">All Parents</option>
+                            <option value="class_parents">Class Parents</option>
+                            <option value="all_parents_teachers">All Parents & Teachers</option>
+                            <option value="all_teachers">All Teachers</option>
+                            <option value="specific_parent">Specific Parent</option>
+                            <option value="specific_teacher">Specific Teacher</option>
+                        </select>
+                        <div class="row">
+                            <div class="col-md-4" id="quickClassGroup" style="display: none;">
+                                <label class="form-label"><i class="fa fa-graduation-cap"></i> Select Class</label>
+                                <select class="form-control" id="quickClassID">
+                                    <option value="">-- Select Class --</option>
+                                    @foreach($classes as $class)
+                                        <option value="{{ $class->classID }}">{{ $class->class_name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-5" id="quickStudentSearchGroup" style="display: none;">
+                                <label class="form-label"><i class="fa fa-search"></i> Search Student</label>
+                                <input type="text" class="form-control" id="quickStudentSearch" placeholder="Search by name or admission number...">
+                                <div class="student-search-results" id="quickStudentResults"></div>
+                            </div>
+                            <div class="col-md-5" id="quickTeacherSearchGroup" style="display: none;">
+                                <label class="form-label"><i class="fa fa-search"></i> Search Teacher</label>
+                                <input type="text" class="form-control" id="quickTeacherSearch" placeholder="Search by name or phone...">
+                                <div class="student-search-results" id="quickTeacherResults"></div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Send Button -->
-                    <div class="form-group">
-                        <button type="button" class="btn btn-send" id="sendBtn" onclick="sendSMS()">
-                            <i class="fa fa-paper-plane"></i> Send SMS
-                        </button>
-                    </div>
-                </form>
-            </div>
+                    <!-- Compose Message Section (Hidden by default, shown after selecting recipient type) -->
+                    <div class="row hidden" id="composeMessageSection">
+                        <div class="col-lg-12">
+                            <div class="sms-card">
+                                <div class="card-title">
+                                    <i class="fa fa-paper-plane"></i>
+                                    Compose Message
+                                </div>
 
-            <!-- Results Section -->
-            <div class="sms-card hidden" id="resultsCard">
-                <div class="card-title">
-                    <i class="fa fa-chart-bar"></i>
-                    Sending Results
+                                <form id="smsForm">
+                                    <!-- Hidden recipient type (synced from search) -->
+                                    <input type="hidden" id="recipient_type" name="recipient_type">
+                                    <input type="hidden" id="classID" name="classID">
+                                    <input type="hidden" id="studentID" name="studentID">
+                                    <input type="hidden" id="teacherID" name="teacherID">
+
+                                    <!-- Selected Recipient Info -->
+                                    <div class="recipient-preview" id="selectedRecipientInfo">
+                                        <strong>Selected Recipients:</strong> <span id="selectedRecipientText">-</span>
+                                        <br>
+                                        <strong>Total Recipients:</strong> <span id="recipientCount">0</span>
+                                    </div>
+
+                                    <!-- Message -->
+                                    <div class="form-group" style="margin-top: 20px;">
+                                        <label class="form-label" for="message">
+                                            <i class="fa fa-comment"></i>
+                                            Message
+                                        </label>
+                                        <textarea class="form-control" id="message" name="message" rows="5" placeholder="Enter your message here... (School name will be automatically added at the beginning)"></textarea>
+                                        <div class="char-count">
+                                            <span id="charCount">0</span> characters
+                                        </div>
+                                    </div>
+
+                                    <!-- Send Button -->
+                                    <div class="form-group">
+                                        <button type="button" class="btn btn-send" id="sendBtn" onclick="sendSMS()">
+                                            <i class="fa fa-paper-plane"></i> Send SMS
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Results Section -->
+                            <div class="sms-card hidden" id="resultsCard">
+                                <div class="card-title">
+                                    <i class="fa fa-chart-bar"></i>
+                                    Sending Results
+                                </div>
+                                <div id="resultsContent"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div id="resultsContent"></div>
             </div>
         </div>
     </div>
@@ -517,6 +538,7 @@
 
 <script>
     let selectedStudentID = null;
+    let selectedTeacherID = null;
     let searchTimeout = null;
 
     // Wait for jQuery
@@ -530,6 +552,22 @@
             var $ = jQuery;
 
             $(document).ready(function() {
+                // Sidebar menu for recipient types
+                document.querySelectorAll('.sms-menu .list-group-item').forEach(function(item) {
+                    item.addEventListener('click', function() {
+                        document.querySelectorAll('.sms-menu .list-group-item').forEach(function(i) {
+                            i.classList.remove('active');
+                        });
+                        this.classList.add('active');
+                        const value = this.getAttribute('data-recipient');
+                        const select = document.getElementById('quickRecipientType');
+                        if (select) {
+                            select.value = value;
+                            handleQuickRecipientChange();
+                        }
+                    });
+                });
+
                 // Load SMS balance on page load
                 loadSmsBalance();
                 
@@ -564,6 +602,19 @@
                         $('#quickStudentResults').hide().empty();
                     }
                 });
+
+                // Quick teacher search
+                $('#quickTeacherSearch').on('input', function() {
+                    const search = $(this).val().trim();
+                    if (searchTimeout) {
+                        clearTimeout(searchTimeout);
+                    }
+                    if (search.length >= 2) {
+                        searchTimeout = setTimeout(() => searchQuickTeachers(search), 300);
+                    } else {
+                        $('#quickTeacherResults').hide().empty();
+                    }
+                });
             });
         }
 
@@ -589,6 +640,7 @@
         // Show/hide quick search fields
         $('#quickClassGroup').hide();
         $('#quickStudentSearchGroup').hide();
+        $('#quickTeacherSearchGroup').hide();
 
         if (!recipientType) {
             $('#composeMessageSection').addClass('hidden');
@@ -631,8 +683,17 @@
             $('#totalRecipientsWidget').text('0');
             $('#recipientCount').text('0');
             // Student selection will update the form
+        } else if (recipientType === 'specific_teacher') {
+            $('#quickTeacherSearchGroup').show();
+            $('#teacherID').val('');
+            $('#quickTeacherSearch').val('');
+            $('#quickTeacherResults').hide().empty();
+            selectedTeacherID = null;
+            showComposeForm(recipientType);
+            $('#totalRecipientsWidget').text('0');
+            $('#recipientCount').text('0');
         } else {
-            // For all_parents or all_parents_teachers, show form immediately and fetch count
+            // For all_parents, all_parents_teachers, all_teachers, show form immediately and fetch count
             showComposeForm(recipientType);
             loadRecipientCount();
         }
@@ -751,6 +812,15 @@
             return;
         }
 
+        if (recipientType === 'specific_teacher' && !$('#teacherID').val()) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Teacher Required',
+                text: 'Please select a teacher'
+            });
+            return;
+        }
+
         // Confirm before sending
         Swal.fire({
             title: 'Confirm Send',
@@ -834,7 +904,8 @@
             recipient_type: $('#recipient_type').val(),
             message: messageValue,
             classID: $('#classID').val() || null,
-            studentID: $('#studentID').val() || null
+            studentID: $('#studentID').val() || null,
+            teacherID: $('#teacherID').val() || null
         };
         
         console.log('=== Sending SMS ===');
@@ -856,11 +927,18 @@
             url: '{{ route("send_sms") }}',
             type: 'POST',
             data: formData,
+            dataType: 'json',
+            timeout: 120000,
             success: function(response) {
-                document.getElementById('loadingOverlay').style.display = 'none';
-                document.getElementById('sendBtn').disabled = false;
-
                 if (response.success) {
+                    if (response.status === 'queued') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'SMS Sent!',
+                            text: 'SMS sending started successfully.'
+                        });
+                        return;
+                    }
                     const results = response.results;
                     
                     // Update widget statistics
@@ -891,15 +969,18 @@
                 }
             },
             error: function(xhr) {
-                document.getElementById('loadingOverlay').style.display = 'none';
-                document.getElementById('sendBtn').disabled = false;
-                
-                const error = xhr.responseJSON?.message || 'An error occurred';
+                const error = xhr.responseJSON?.message || (xhr.statusText || 'An error occurred');
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
                     text: error
                 });
+            },
+            complete: function() {
+                const overlay = document.getElementById('loadingOverlay');
+                const btn = document.getElementById('sendBtn');
+                if (overlay) overlay.style.display = 'none';
+                if (btn) btn.disabled = false;
             }
         });
     }
@@ -1038,8 +1119,25 @@
                 });
                 break;
 
+            case 'all_teachers':
+                countPromise = $.ajax({
+                    url: '{{ route("get_all_teachers_sms") }}',
+                    type: 'GET'
+                }).then(res => res.success ? res.count : 0);
+                break;
+
             case 'specific_parent':
                 $('#totalRecipientsWidget').text('1');
+                return;
+
+            case 'specific_teacher':
+                if (!$('#teacherID').val()) {
+                    $('#totalRecipientsWidget').text('0');
+                    $('#recipientCount').text('0');
+                    return;
+                }
+                $('#totalRecipientsWidget').text('1');
+                $('#recipientCount').text('1');
                 return;
 
             default:
@@ -1087,12 +1185,23 @@
             case 'all_parents_teachers':
                 recipientText = 'All Parents & All Teachers';
                 break;
+            case 'all_teachers':
+                recipientText = 'All Teachers';
+                break;
             case 'specific_parent':
                 const studentName = $('#quickStudentSearch').val();
                 if (studentName) {
                     recipientText = `Parent of ${studentName}`;
                 } else {
                     recipientText = 'Parent of [Search Student]';
+                }
+                break;
+            case 'specific_teacher':
+                const teacherName = $('#quickTeacherSearch').val();
+                if (teacherName) {
+                    recipientText = `Teacher: ${teacherName}`;
+                } else {
+                    recipientText = 'Teacher: [Search Teacher]';
                 }
                 break;
         }
@@ -1163,6 +1272,45 @@
         });
     }
 
+    // Search Quick Teachers
+    function searchQuickTeachers(search) {
+        if (typeof jQuery === 'undefined') return;
+        var $ = jQuery;
+
+        $.ajax({
+            url: '{{ route("search_teachers_sms") }}',
+            type: 'GET',
+            data: { search: search },
+            success: function(response) {
+                if (response.success && response.teachers.length > 0) {
+                    let html = '';
+                    response.teachers.forEach(teacher => {
+                        const fullName = `${teacher.first_name} ${teacher.middle_name || ''} ${teacher.last_name || ''}`.trim();
+                        const phone = teacher.phone_number || 'N/A';
+                        const escapedName = fullName.replace(/'/g, "\\'");
+                        const escapedPhone = phone.replace(/'/g, "\\'");
+                        html += `
+                            <div class="student-result-item" onclick="selectQuickTeacher(${teacher.id}, '${escapedName}', '${escapedPhone}')">
+                                <div class="student-info">
+                                    <div>
+                                        <div class="student-name">${fullName}</div>
+                                        <div class="student-details">Phone: ${phone}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    $('#quickTeacherResults').html(html).show();
+                } else {
+                    $('#quickTeacherResults').html('<div class="student-result-item">No teachers found</div>').show();
+                }
+            },
+            error: function() {
+                $('#quickTeacherResults').html('<div class="student-result-item">Error searching teachers</div>').show();
+            }
+        });
+    }
+
     // Select Quick Student - Make available globally
     window.selectQuickStudent = function(studentID, name, admissionNo, className) {
         if (typeof jQuery === 'undefined') {
@@ -1198,6 +1346,46 @@
         console.log('Student selected successfully. StudentID:', studentID, 'Recipient Type:', $('#recipient_type').val());
         
         // Scroll to compose form
+        setTimeout(() => {
+            const offset = composeSection.offset();
+            if (offset) {
+                $('html, body').animate({
+                    scrollTop: offset.top - 100
+                }, 500);
+            }
+        }, 200);
+    };
+
+    // Select Quick Teacher - Make available globally
+    window.selectQuickTeacher = function(teacherID, name, phone) {
+        if (typeof jQuery === 'undefined') {
+            console.error('jQuery is not loaded');
+            return;
+        }
+        
+        var $ = jQuery;
+        
+        console.log('Selecting teacher:', teacherID, name);
+        
+        selectedTeacherID = teacherID;
+        $('#teacherID').val(teacherID);
+        $('#quickTeacherSearch').val(name);
+        $('#quickTeacherResults').hide();
+        
+        $('#recipient_type').val('specific_teacher');
+        $('#quickRecipientType').val('specific_teacher');
+        
+        $('#totalRecipientsWidget').text('1');
+        $('#recipientCount').text('1');
+        $('#selectedRecipientText').text(`Teacher: ${name}`);
+        
+        const composeSection = $('#composeMessageSection');
+        composeSection.removeClass('hidden');
+        composeSection.css('display', 'block');
+        composeSection.show();
+        
+        console.log('Teacher selected successfully. TeacherID:', teacherID, 'Recipient Type:', $('#recipient_type').val());
+        
         setTimeout(() => {
             const offset = composeSection.offset();
             if (offset) {

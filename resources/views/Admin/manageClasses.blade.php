@@ -30,10 +30,17 @@
         box-shadow: 0 0 0 0.2rem rgba(148, 0, 0, 0.25);
     }
     
-    /* Gradient background for class widget cards */
-    .class-card .card-header.bg-primary-custom {
-        background: linear-gradient(135deg, #ff9898 0%, #940000 100%) !important;
-        background-color: #ff9898 !important;
+    /* Light background for widget cards */
+    .class-card .card-header.bg-primary-custom,
+    .subclass-card .card-header.bg-primary-custom {
+        background-color: rgba(148, 0, 0, 0.08) !important;
+        border-bottom: 1px solid rgba(148, 0, 0, 0.15) !important;
+    }
+    .class-card .card-header.bg-primary-custom,
+    .class-card .card-header.bg-primary-custom *,
+    .subclass-card .card-header.bg-primary-custom,
+    .subclass-card .card-header.bg-primary-custom * {
+        color: #940000 !important;
     }
 
     /* Hide scrollbar for edit subclass modal body */

@@ -244,6 +244,45 @@ class SMS_InformationController extends Controller
     }
 
     /**
+     * Search teachers for selection
+     */
+    public function search_teachers(Request $request)
+    {
+        try {
+            $schoolID = Session::get('schoolID');
+            if (!$schoolID) {
+                return response()->json(['success' => false, 'message' => 'School ID not found'], 400);
+            }
+
+            $search = $request->input('search', '');
+
+            $query = Teacher::where('schoolID', $schoolID)
+                ->where('status', 'Active')
+                ->whereNotNull('phone_number')
+                ->where('phone_number', '!=', '');
+
+            if ($search) {
+                $query->where(function($q) use ($search) {
+                    $q->where('first_name', 'like', "%{$search}%")
+                      ->orWhere('middle_name', 'like', "%{$search}%")
+                      ->orWhere('last_name', 'like', "%{$search}%")
+                      ->orWhere('phone_number', 'like', "%{$search}%");
+                });
+            }
+
+            $teachers = $query->limit(50)->get();
+
+            return response()->json([
+                'success' => true,
+                'teachers' => $teachers
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error searching teachers: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Send SMS to recipients
      */
     public function send_sms(Request $request)
@@ -256,7 +295,7 @@ class SMS_InformationController extends Controller
 
             $validator = Validator::make($request->all(), [
                 'message' => 'required|string|min:1',
-                'recipient_type' => 'required|in:all_parents,class_parents,all_parents_teachers,specific_parent'
+                'recipient_type' => 'required|in:all_parents,class_parents,all_parents_teachers,all_teachers,specific_parent,specific_teacher'
             ]);
 
             if ($validator->fails()) {
@@ -362,6 +401,22 @@ class SMS_InformationController extends Controller
                     }
                     break;
 
+                case 'all_teachers':
+                    $teachers = Teacher::where('schoolID', $schoolID)
+                        ->where('status', 'Active')
+                        ->whereNotNull('phone_number')
+                        ->where('phone_number', '!=', '')
+                        ->get();
+                    foreach ($teachers as $teacher) {
+                        $recipients[] = [
+                            'type' => 'teacher',
+                            'phone' => $teacher->phone_number,
+                            'name' => $teacher->first_name . ' ' . ($teacher->last_name ?? ''),
+                            'id' => $teacher->id
+                        ];
+                    }
+                    break;
+
                 case 'specific_parent':
                     $studentID = $request->input('studentID');
                     if (!$studentID) {
@@ -383,65 +438,101 @@ class SMS_InformationController extends Controller
                         'id' => $student->parent->parentID
                     ];
                     break;
+
+                case 'specific_teacher':
+                    $teacherID = $request->input('teacherID');
+                    if (!$teacherID) {
+                        return response()->json(['success' => false, 'message' => 'Teacher ID is required'], 400);
+                    }
+                    $teacher = Teacher::where('id', $teacherID)
+                        ->where('schoolID', $schoolID)
+                        ->where('status', 'Active')
+                        ->whereNotNull('phone_number')
+                        ->where('phone_number', '!=', '')
+                        ->first();
+                    if (!$teacher) {
+                        return response()->json(['success' => false, 'message' => 'Active teacher not found or phone number not available'], 404);
+                    }
+                    $recipients[] = [
+                        'type' => 'teacher',
+                        'phone' => $teacher->phone_number,
+                        'name' => $teacher->first_name . ' ' . ($teacher->last_name ?? ''),
+                        'id' => $teacher->id
+                    ];
+                    break;
             }
 
             $results['total'] = count($recipients);
 
-            // Send SMS in batches to avoid timeout
-            $batchSize = 50; // Send 50 at a time
-            $batches = array_chunk($recipients, $batchSize);
+            // Return response immediately, then continue sending in background
+            $response = response()->json([
+                'success' => true,
+                'status' => 'queued',
+                'message' => 'SMS sending started',
+                'results' => $results
+            ]);
 
-            foreach ($batches as $batchIndex => $batch) {
-                foreach ($batch as $recipient) {
-                    try {
-                        $smsResult = $this->smsService->sendSms($recipient['phone'], $fullMessage);
-                        
-                        if ($smsResult['success']) {
-                            $results['success']++;
-                            $results['details'][] = [
-                                'phone' => $recipient['phone'],
-                                'name' => $recipient['name'],
-                                'status' => 'success',
-                                'message' => 'SMS sent successfully'
-                            ];
-                        } else {
-                            $results['failed']++;
-                            $results['details'][] = [
-                                'phone' => $recipient['phone'],
-                                'name' => $recipient['name'],
-                                'status' => 'failed',
-                                'message' => $smsResult['message'] ?? 'Failed to send SMS'
-                            ];
-                        }
-                    } catch (\Exception $e) {
+            if (function_exists('fastcgi_finish_request')) {
+                $response->send();
+                fastcgi_finish_request();
+            }
+
+            $this->sendSmsBatch($recipients, $fullMessage, $results);
+
+            return $response;
+
+        } catch (\Exception $e) {
+            Log::error('Error sending SMS: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    private function sendSmsBatch(array $recipients, string $fullMessage, array &$results): void
+    {
+        // Send SMS in batches to avoid timeout
+        $batchSize = 50; // Send 50 at a time
+        $batches = array_chunk($recipients, $batchSize);
+
+        foreach ($batches as $batchIndex => $batch) {
+            foreach ($batch as $recipient) {
+                try {
+                    $smsResult = $this->smsService->sendSms($recipient['phone'], $fullMessage);
+                    
+                    if ($smsResult['success']) {
+                        $results['success']++;
+                        $results['details'][] = [
+                            'phone' => $recipient['phone'],
+                            'name' => $recipient['name'],
+                            'status' => 'success',
+                            'message' => 'SMS sent successfully'
+                        ];
+                    } else {
                         $results['failed']++;
                         $results['details'][] = [
                             'phone' => $recipient['phone'],
                             'name' => $recipient['name'],
                             'status' => 'failed',
-                            'message' => 'Exception: ' . $e->getMessage()
+                            'message' => $smsResult['message'] ?? 'Failed to send SMS'
                         ];
                     }
-                    
-                    // Small delay to avoid overwhelming the API
-                    usleep(100000); // 0.1 second delay
+                } catch (\Exception $e) {
+                    $results['failed']++;
+                    $results['details'][] = [
+                        'phone' => $recipient['phone'],
+                        'name' => $recipient['name'],
+                        'status' => 'failed',
+                        'message' => 'Exception: ' . $e->getMessage()
+                    ];
                 }
                 
-                // Longer delay between batches
-                if ($batchIndex < count($batches) - 1) {
-                    sleep(1); // 1 second delay between batches
-                }
+                // Small delay to avoid overwhelming the API
+                usleep(100000); // 0.1 second delay
             }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'SMS sending completed',
-                'results' => $results
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error sending SMS: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            
+            // Longer delay between batches
+            if ($batchIndex < count($batches) - 1) {
+                sleep(1); // 1 second delay between batches
+            }
         }
     }
 

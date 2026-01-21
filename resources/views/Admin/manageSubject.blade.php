@@ -50,10 +50,14 @@
         box-shadow: 0 4px 12px rgba(148, 0, 0, 0.15) !important;
     }
     
-    /* Gradient background for subject widget cards */
+    /* Light background for subject widget cards */
     .subject-card .card-header.bg-primary-custom {
-        background: linear-gradient(135deg, #ff9898 0%, #940000 100%) !important;
-        background-color: #ff9898 !important;
+        background-color: rgba(148, 0, 0, 0.08) !important;
+        border-bottom: 1px solid rgba(148, 0, 0, 0.15) !important;
+    }
+    .subject-card .card-header.bg-primary-custom,
+    .subject-card .card-header.bg-primary-custom * {
+        color: #940000 !important;
     }
     /* Ensure edit modal appears above view modal */
     #editClassSubjectModal {

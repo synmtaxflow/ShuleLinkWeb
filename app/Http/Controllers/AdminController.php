@@ -693,9 +693,163 @@ class AdminController extends Controller
             return redirect()->route('login')->with('error', 'Unauthorized access');
         }
 
-        // TODO: Implement revenue management functionality
-        // For now, return a placeholder view
-        return view('Admin.manage_revenue', compact('schoolID'));
+        $revenueSources = \App\Models\RevenueSource::where('schoolID', $schoolID)
+            ->where('status', 'Active')
+            ->orderBy('source_name')
+            ->get();
+
+        return view('Admin.manage_revenue', compact('schoolID', 'revenueSources'));
+    }
+
+    /**
+     * Store revenue source
+     */
+    public function storeRevenueSource(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'source_name' => 'required|string|max:255',
+            'source_type' => 'required|in:fixed,per_item,variable',
+            'default_amount' => 'nullable|numeric|min:0',
+            'description' => 'nullable|string',
+        ]);
+
+        \App\Models\RevenueSource::create([
+            'schoolID' => $schoolID,
+            'source_name' => $validated['source_name'],
+            'source_type' => $validated['source_type'],
+            'default_amount' => $validated['default_amount'] ?? null,
+            'description' => $validated['description'] ?? null,
+            'status' => 'Active',
+        ]);
+
+        return redirect()->route('manage_revenue')->with('success', 'Source of income added successfully.');
+    }
+
+    /**
+     * Update revenue source
+     */
+    public function updateRevenueSource(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'revenue_sourceID' => 'required|exists:revenue_sources,revenue_sourceID',
+            'source_name' => 'required|string|max:255',
+            'source_type' => 'required|in:fixed,per_item,variable',
+            'default_amount' => 'nullable|numeric|min:0',
+            'description' => 'nullable|string',
+            'status' => 'required|in:Active,Inactive',
+        ]);
+
+        $source = \App\Models\RevenueSource::where('revenue_sourceID', $validated['revenue_sourceID'])
+            ->where('schoolID', $schoolID)
+            ->firstOrFail();
+
+        $source->update([
+            'source_name' => $validated['source_name'],
+            'source_type' => $validated['source_type'],
+            'default_amount' => $validated['default_amount'] ?? null,
+            'description' => $validated['description'] ?? null,
+            'status' => $validated['status'],
+        ]);
+
+        return redirect()->route('manage_revenue')->with('success', 'Source of income updated successfully.');
+    }
+
+    /**
+     * Store revenue record
+     */
+    public function storeRevenueRecord(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'record_date' => 'required|date',
+            'revenue_sourceID' => 'required|exists:revenue_sources,revenue_sourceID',
+            'quantity' => 'nullable|integer|min:0',
+            'amount' => 'nullable|numeric|min:0',
+            'note' => 'nullable|string',
+        ]);
+
+        $source = \App\Models\RevenueSource::where('revenue_sourceID', $validated['revenue_sourceID'])
+            ->where('schoolID', $schoolID)
+            ->firstOrFail();
+
+        $quantity = $validated['quantity'] ?? null;
+        $amountInput = $validated['amount'] ?? null;
+        $unitAmount = null;
+        $totalAmount = 0;
+
+        if ($source->source_type === 'per_item') {
+            $unitAmount = $source->default_amount ?? 0;
+            $totalAmount = ($unitAmount) * ((int) ($quantity ?? 0));
+        } elseif ($source->source_type === 'fixed') {
+            $unitAmount = $source->default_amount ?? 0;
+            $totalAmount = $unitAmount;
+        } else {
+            $unitAmount = $amountInput ?? 0;
+            $totalAmount = $unitAmount;
+        }
+
+        if ($totalAmount <= 0) {
+            return redirect()->route('manage_revenue')->with('error', 'Amount must be greater than 0.');
+        }
+
+        \App\Models\RevenueRecord::create([
+            'schoolID' => $schoolID,
+            'revenue_sourceID' => $source->revenue_sourceID,
+            'record_date' => $validated['record_date'],
+            'unit_amount' => $unitAmount,
+            'quantity' => $quantity,
+            'total_amount' => $totalAmount,
+            'note' => $validated['note'] ?? null,
+        ]);
+
+        return redirect()->route('manage_revenue')->with('success', 'Revenue recorded successfully.');
+    }
+
+    /**
+     * Get revenue report data for other sources
+     */
+    public function revenueReportData(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        $year = $request->input('year', date('Y'));
+
+        $totals = \App\Models\RevenueRecord::where('schoolID', $schoolID)
+            ->whereYear('record_date', $year)
+            ->select('revenue_sourceID', \DB::raw('SUM(total_amount) as total_amount'))
+            ->groupBy('revenue_sourceID')
+            ->get()
+            ->pluck('total_amount', 'revenue_sourceID');
+
+        return response()->json([
+            'success' => true,
+            'data' => $totals,
+        ]);
     }
 
     /**
