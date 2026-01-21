@@ -16,83 +16,93 @@
         --info-color: #17a2b8;
     }
 
-    body {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        min-height: 100vh;
+    body, .content, .card, .btn, .form-control, .form-select, .table, .list-group-item, .alert {
+        font-family: "Century Gothic", Arial, sans-serif;
+    }
+    .card, .alert, .btn, div, .form-control, .form-select {
+        border-radius: 0 !important;
     }
 
-    .accommodation-container {
-        padding: 30px;
+    .bg-primary-custom {
+        background-color: #940000 !important;
+    }
+    .text-primary-custom {
+        color: #940000 !important;
+    }
+    .border-primary-custom {
+        border-color: #940000 !important;
+    }
+    .btn-primary-custom {
+        background-color: #940000;
+        border-color: #940000;
+        color: #ffffff;
+    }
+    .btn-primary-custom:hover {
+        background-color: #b30000;
+        border-color: #b30000;
+        color: #ffffff;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #940000;
+        box-shadow: 0 0 0 0.2rem rgba(148, 0, 0, 0.25);
     }
 
-    .accommodation-header {
-        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
-        color: white;
-        padding: 25px;
-        border-radius: 12px;
-        margin-bottom: 30px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    .accommodation-menu .list-group-item {
+        cursor: pointer;
+        border-left: 4px solid transparent;
     }
-
-    .accommodation-header h2 {
-        margin: 0;
+    .accommodation-menu .list-group-item.active {
+        border-left-color: #940000;
+        background: #fff5f5;
+        color: #940000;
         font-weight: 600;
-        display: flex;
+    }
+
+    .section-title {
+        font-weight: 600;
+        margin-bottom: 12px;
+    }
+    .muted-help {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+
+    .form-loading {
+        display: none;
         align-items: center;
-        gap: 15px;
+        gap: 12px;
+        padding: 10px 12px;
+        border: 1px solid rgba(148, 0, 0, 0.25);
+        background: rgba(148, 0, 0, 0.05);
+        margin-bottom: 12px;
     }
-
-    .accommodation-header h2 i {
-        font-size: 2rem;
+    .form-progress {
+        position: relative;
+        flex: 1;
+        height: 8px;
+        background: #f0f0f0;
+        border-radius: 4px;
+        overflow: hidden;
     }
-
-    .accommodation-card {
-        background: white;
-        border-radius: 12px;
-        padding: 25px;
-        margin-bottom: 25px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-        transition: all 0.3s ease;
+    .form-progress::after {
+        content: "";
+        position: absolute;
+        left: -40%;
+        width: 40%;
+        height: 100%;
+        background: #940000;
+        animation: progressSlide 1.1s linear infinite;
     }
-
-    .accommodation-card:hover {
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
-        transform: translateY(-2px);
+    @keyframes progressSlide {
+        0% { left: -40%; }
+        100% { left: 100%; }
     }
 
     .card-title {
-        font-size: 1.3rem;
+        font-size: 1.1rem;
         font-weight: 600;
         color: #212529;
-        margin-bottom: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding-bottom: 15px;
-        border-bottom: 2px solid #e9ecef;
-    }
-
-    .card-title i {
-        color: var(--primary-color);
-        font-size: 1.5rem;
-    }
-
-    .btn-primary-custom {
-        background-color: var(--primary-color);
-        border-color: var(--primary-color);
-        color: white;
-        padding: 10px 20px;
-        border-radius: 6px;
-        border: none;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        font-weight: 500;
-    }
-
-    .btn-primary-custom:hover {
-        background-color: var(--primary-hover);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        margin-bottom: 12px;
     }
 
     .btn-primary-custom i {
@@ -234,28 +244,11 @@
         color: #856404;
     }
 
-    .form-group {
-        margin-bottom: 20px;
-    }
-
     .form-label {
         font-weight: 500;
         color: #495057;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
         display: block;
-    }
-
-    .form-control {
-        border: 1px solid #ced4da;
-        border-radius: 6px;
-        padding: 10px 15px;
-        transition: all 0.3s ease;
-    }
-
-    .form-control:focus {
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 0.2rem rgba(148, 0, 0, 0.25);
-        outline: none;
     }
 
     .checkbox-group {
@@ -303,28 +296,6 @@
         text-align: center;
     }
 
-    .modal-header {
-        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
-        color: white;
-        border-bottom: none;
-    }
-
-    .modal-header .close {
-        color: white;
-        opacity: 0.9;
-    }
-
-    .modal-header .close:hover {
-        opacity: 1;
-    }
-
-    .modal-title {
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
     .hidden {
         display: none !important;
     }
@@ -365,152 +336,66 @@
     }
 </style>
 
-<div class="container-fluid accommodation-container">
-    <div class="accommodation-header">
-        <h2>
-            <i class="fa fa-bed"></i>
-            Accommodation Management
-        </h2>
+<div class="breadcrumbs">
+    <div class="col-sm-6">
+        <div class="page-header float-left">
+            <div class="page-title">
+                <h1>Manage Accommodation</h1>
     </div>
-
-    <!-- Assign Blocks Widget -->
-    <div class="accommodation-card">
-        <div class="card-title">
-            <span>
-                <i class="fa fa-building"></i>
-                Accommodation Blocks
-            </span>
-            <button class="btn btn-primary-custom" onclick="showAddBlockModal()">
-                <i class="fa fa-plus"></i> Add Block
-            </button>
         </div>
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Block Name</th>
-                        <th>Location</th>
-                        <th>Number of Rooms</th>
-                        <th>Block Type</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="blocksTableBody">
-                    <tr>
-                        <td colspan="6" class="text-center">
-                            <div class="empty-state">
-                                <i class="fa fa-building"></i>
-                                <p>No blocks added yet. Click "Add Block" to add a new block.</p>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
         </div>
     </div>
 
-    <!-- Assign Rooms Widget -->
-    <div class="accommodation-card">
-        <div class="card-title">
-            <span>
-                <i class="fa fa-door-open"></i>
-                Rooms in Blocks
-            </span>
-            <button class="btn btn-primary-custom" onclick="showAddRoomModal()">
-                <i class="fa fa-plus"></i> Add Room
-            </button>
+<div class="content mt-3">
+    <div class="card">
+        <div class="card-header bg-primary-custom text-white">
+            <strong>Accommodation Management</strong>
         </div>
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Room Name</th>
-                        <th>Block</th>
-                        <th>Room Number</th>
-                        <th>Capacity</th>
-                        <th>Items Inside</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="roomsTableBody">
-                    <tr>
-                        <td colspan="7" class="text-center">
-                            <div class="empty-state">
-                                <i class="fa fa-door-open"></i>
-                                <p>No rooms added yet. Click "Add Room" to add a new room.</p>
+        <div class="card-body">
+            <div class="form-loading" id="accommodationLoading">
+                <span><i class="fa fa-spinner fa-spin text-primary-custom"></i> Saving...</span>
+                <div class="form-progress"></div>
                             </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="row">
+                <div class="col-sm-4">
+                    <div class="list-group accommodation-menu">
+                        <a class="list-group-item active" data-target="#section-register-block">
+                            <i class="fa fa-building"></i> Register Block
+                        </a>
+                        <a class="list-group-item" data-target="#section-view-block">
+                            <i class="fa fa-eye"></i> View Blocks
+                        </a>
+                        <a class="list-group-item" data-target="#section-register-room">
+                            <i class="fa fa-door-open"></i> Register Room
+                        </a>
         </div>
+                    <div class="card border-primary-custom mt-3">
+                        <div class="card-body">
+                            <div class="section-title">Quick Notes</div>
+                            <div class="muted-help">
+                                - Register blocks before rooms.<br>
+                                - Only blocks with rooms appear in room registration.<br>
+                                - View blocks shows total rooms and beds.
     </div>
-
-    <!-- Beds Management Widget -->
-    <div class="accommodation-card">
-        <div class="card-title">
-            <span>
-                <i class="fa fa-bed"></i>
-                Beds Management
-            </span>
-            <button class="btn btn-primary-custom" onclick="showAddBedModal()">
-                <i class="fa fa-plus"></i> Add Bed
-            </button>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Bed Number</th>
-                        <th>Block</th>
-                        <th>Room</th>
-                        <th>Mattress</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="bedsTableBody">
-                    <tr>
-                        <td colspan="6" class="text-center">
-                            <div class="empty-state">
-                                <i class="fa fa-bed"></i>
-                                <p>No beds added yet. Click "Add Bed" to add a new bed.</p>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
         </div>
     </div>
 </div>
 
-<!-- Add/Edit Block Modal -->
-<div class="modal fade" id="blockModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="blockModalTitle">
-                    <i class="fa fa-building"></i> Add New Block
-                </h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
+                <div class="col-md-8">
+                    <div id="section-register-block" class="accommodation-section">
+                        <div class="section-title">Register Block</div>
                 <form id="blockForm">
                     <input type="hidden" id="blockID">
                     <div class="row">
-                        <div class="col-md-6 form-group">
+                                <div class="col-md-6 form-group mb-3">
                             <label class="form-label">Block Name <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="blockName" required placeholder="e.g., Block A, Block B">
                         </div>
-                        <div class="col-md-6 form-group">
+                                <div class="col-md-6 form-group mb-3">
                             <label class="form-label">Location <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="blockLocation" required placeholder="e.g., East Wing">
                         </div>
-                        <div class="col-md-6 form-group">
+                                <div class="col-md-6 form-group mb-3">
                             <label class="form-label">Block Type <span class="text-danger">*</span></label>
                             <select class="form-control" id="blockType" required onchange="toggleBlockTypeOptions()">
                                 <option value="">Select Type</option>
@@ -518,14 +403,23 @@
                                 <option value="without_rooms">Without Rooms (Block is beds only, like a hall)</option>
                             </select>
                         </div>
-                        <div class="col-md-6 form-group">
+                                <div class="col-md-6 form-group mb-3">
                             <label class="form-label">Status <span class="text-danger">*</span></label>
                             <select class="form-control" id="blockStatus" required>
                                 <option value="Active">Active</option>
                                 <option value="Inactive">Inactive</option>
                             </select>
                         </div>
-                        <div class="col-md-12 form-group" id="blockItemsSection" style="display: none;">
+                                <div class="col-md-6 form-group mb-3">
+                                    <label class="form-label">Sex Needed <span class="text-danger">*</span></label>
+                                    <select class="form-control" id="blockSex" required>
+                                        <option value="">Select</option>
+                                        <option value="Male">Male (Boys)</option>
+                                        <option value="Female">Female (Girls)</option>
+                                        <option value="Mixed">Mixed</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-12 form-group mb-3" id="blockItemsSection" style="display: none;">
                             <label class="form-label">Block Items (For blocks without rooms)</label>
                             <div class="checkbox-group" id="blockItemsList">
                                 <div class="checkbox-item">
@@ -561,125 +455,81 @@
                                     </div>
                                 </div>
                             </div>
-                            <small class="text-muted">Note: Beds for blocks without rooms should be added separately in the Beds Management section.</small>
+                                    <small class="text-muted">Beds for blocks without rooms should be added separately.</small>
                         </div>
-                        <div class="col-md-12 form-group">
+                                <div class="col-md-12 form-group mb-3">
                             <label class="form-label">Description</label>
                             <textarea class="form-control" id="blockDescription" rows="3" placeholder="Additional description about the block..."></textarea>
                         </div>
                     </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary-custom" id="saveBlockBtn" onclick="saveBlock()">
+                            <div class="d-flex flex-wrap">
+                                <button type="button" class="btn btn-primary-custom mr-2" id="saveBlockBtn" onclick="saveBlock()">
                     <i class="fa fa-save"></i> <span id="saveBlockBtnText">Save</span>
                 </button>
+                                <button type="button" class="btn btn-secondary" id="resetBlockBtn">
+                                    <i class="fa fa-refresh"></i> Reset
+                                </button>
             </div>
+                        </form>
         </div>
-    </div>
-</div>
 
-<!-- Add/Edit Room Modal -->
-<div class="modal fade" id="roomModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="roomModalTitle">
-                    <i class="fa fa-door-open"></i> Add New Room
-                </h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                    <div id="section-view-block" class="accommodation-section d-none">
+                        <div class="section-title">View Blocks</div>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="bg-primary-custom text-white">
+                                    <tr>
+                                        <th>Block Name</th>
+                                        <th>Location</th>
+                                        <th>Rooms</th>
+                                        <th>Beds</th>
+                                        <th>Block Type</th>
+                                        <th>Sex</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="blocksTableBody">
+                                    <tr>
+                                        <td colspan="8" class="text-center">
+                                            <div class="empty-state">
+                                                <i class="fa fa-building"></i>
+                                                <p>No blocks added yet. Use Register Block to add a new block.</p>
+    </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+</div>
             </div>
-            <div class="modal-body">
+
+                    <div id="section-register-room" class="accommodation-section d-none">
+                        <div class="section-title">Register Room</div>
                 <form id="roomForm">
-                    <input type="hidden" id="roomID">
-                    <div class="row">
-                        <div class="col-md-6 form-group">
+                            <div class="form-group mb-3">
                             <label class="form-label">Select Block <span class="text-danger">*</span></label>
-                            <select class="form-control" id="roomBlockID" required onchange="checkBlockType()">
+                                <select class="form-control" id="roomBlockID" required>
                                 <option value="">Select Block</option>
                             </select>
-                            <small class="text-muted" id="blockTypeHint" style="display: none;"></small>
+                                <small class="text-muted d-none" id="blockTypeHint"></small>
                         </div>
-                        <div class="col-md-6 form-group">
-                            <label class="form-label">Room Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="roomName" required placeholder="e.g., Room 101, Room 102">
+                            <div id="roomRows"></div>
+                            <div class="mb-3">
+                                <button type="button" class="btn btn-outline-secondary" id="addRoomRowBtn">
+                                    <i class="fa fa-plus"></i> Add Another Room
+                                </button>
                         </div>
-                        <div class="col-md-6 form-group">
-                            <label class="form-label">Room Number <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="roomNumber" required placeholder="e.g., 101, 102">
-                        </div>
-                        <div class="col-md-6 form-group">
-                            <label class="form-label">Capacity (Number of people) <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="roomCapacity" required min="1" placeholder="e.g., 4">
-                        </div>
-                        <div class="col-md-12 form-group">
-                            <label class="form-label">Items Inside the Room</label>
-                            <div class="checkbox-group" id="roomItemsList">
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="roomItem_table" value="table" onchange="toggleItemQuantity('roomItem_table', 'roomItemQty_table')">
-                                    <label for="roomItem_table">Tables</label>
-                                    <div class="item-quantity" id="roomItemQty_table" style="display: none;">
-                                        <label>Quantity:</label>
-                                        <input type="number" id="roomTableQuantity" min="1" value="1" class="form-control">
-                                    </div>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="roomItem_chair" value="chair" onchange="toggleItemQuantity('roomItem_chair', 'roomItemQty_chair')">
-                                    <label for="roomItem_chair">Chairs</label>
-                                    <div class="item-quantity" id="roomItemQty_chair" style="display: none;">
-                                        <label>Quantity:</label>
-                                        <input type="number" id="roomChairQuantity" min="1" value="1" class="form-control">
-                                    </div>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="roomItem_cabinet" value="cabinet" onchange="toggleItemQuantity('roomItem_cabinet', 'roomItemQty_cabinet')">
-                                    <label for="roomItem_cabinet">Cabinets</label>
-                                    <div class="item-quantity" id="roomItemQty_cabinet" style="display: none;">
-                                        <label>Quantity:</label>
-                                        <input type="number" id="roomCabinetQuantity" min="1" value="1" class="form-control">
-                                    </div>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="roomItem_wardrobe" value="wardrobe" onchange="toggleItemQuantity('roomItem_wardrobe', 'roomItemQty_wardrobe')">
-                                    <label for="roomItem_wardrobe">Wardrobes</label>
-                                    <div class="item-quantity" id="roomItemQty_wardrobe" style="display: none;">
-                                        <label>Quantity:</label>
-                                        <input type="number" id="roomWardrobeQuantity" min="1" value="1" class="form-control">
-                                    </div>
-                                </div>
-                                <div class="checkbox-item">
-                                    <input type="checkbox" id="roomItem_other" value="other" onchange="toggleItemQuantity('roomItem_other', 'roomItemQty_other')">
-                                    <label for="roomItem_other">Other Items</label>
-                                    <div class="item-quantity" id="roomItemQty_other" style="display: none;">
-                                        <label>Quantity:</label>
-                                        <input type="number" id="roomOtherQuantity" min="1" value="1" class="form-control">
-                                    </div>
-                                </div>
-                            </div>
-                            <small class="text-muted">Select items available in the room and specify their quantities. Beds should be added separately in the Beds Management section.</small>
-                        </div>
-                        <div class="col-md-12 form-group">
-                            <label class="form-label">Status <span class="text-danger">*</span></label>
-                            <select class="form-control" id="roomStatus" required>
-                                <option value="Active">Active</option>
-                                <option value="Inactive">Inactive</option>
-                            </select>
-                        </div>
-                        <div class="col-md-12 form-group">
-                            <label class="form-label">Description</label>
-                            <textarea class="form-control" id="roomDescription" rows="3" placeholder="Additional description about the room..."></textarea>
-                        </div>
+                            <div class="d-flex flex-wrap">
+                                <button type="button" class="btn btn-primary-custom mr-2" id="saveRoomBtn" onclick="saveRoom()">
+                                    <i class="fa fa-save"></i> Save Rooms
+                                </button>
+                                <button type="button" class="btn btn-secondary" id="resetRoomBtn">
+                                    <i class="fa fa-refresh"></i> Reset
+                                </button>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary-custom" id="saveRoomBtn" onclick="saveRoom()">
-                    <i class="fa fa-save"></i> <span id="saveRoomBtnText">Save</span>
-                </button>
+                </div>
             </div>
         </div>
     </div>
@@ -763,6 +613,7 @@
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
     // CSRF Token setup
@@ -782,12 +633,66 @@
         loadBlocks();
         loadRooms();
         loadBeds();
+        initAccommodationMenu();
+        bindRoomRowHandlers();
+        resetBlockForm();
+        resetRoomForm();
+
+        $('#resetBlockBtn').on('click', function() {
+            resetBlockForm();
+        });
+        $('#resetRoomBtn').on('click', function() {
+            resetRoomForm();
+        });
+        $('#addRoomRowBtn').on('click', function() {
+            addRoomRow();
+        });
+        $('#roomBlockID').on('change', function() {
+            checkBlockType();
+        });
         
         // Show/hide mattress info based on selection
         $('#bedHasMattress').on('change', function() {
             toggleMattressInfo();
         });
     });
+
+    function initAccommodationMenu() {
+        $('.accommodation-menu .list-group-item').on('click', function() {
+            $('.accommodation-menu .list-group-item').removeClass('active');
+            $(this).addClass('active');
+            const target = $(this).data('target');
+            showAccommodationSection(target);
+        });
+    }
+
+    function showAccommodationSection(target) {
+        $('.accommodation-section').addClass('d-none');
+        $(target).removeClass('d-none');
+    }
+
+    function showAlert(icon, title, text) {
+        if (typeof Swal === 'undefined') {
+            alert(text);
+            return;
+        }
+        Swal.fire({
+            icon: icon,
+            title: title,
+            text: text,
+            confirmButtonColor: '#940000'
+        });
+    }
+
+    function setAccommodationLoading(isLoading) {
+        const loadingBar = $('#accommodationLoading');
+        if (!loadingBar.length) return;
+        if (isLoading) {
+            loadingBar.css('display', 'flex');
+        } else {
+            loadingBar.hide();
+        }
+    }
 
     // Toggle mattress information
     function toggleMattressInfo() {
@@ -829,15 +734,107 @@
         const blockID = $('#roomBlockID').val();
         const block = blocks.find(b => b.blockID == blockID);
         const hint = $('#blockTypeHint');
+        const rowsContainer = $('#roomRows');
+        const addBtn = $('#addRoomRowBtn');
+
+        if (!blockID) {
+            hint.addClass('d-none');
+            rowsContainer.show();
+            addBtn.prop('disabled', false);
+            return;
+        }
         
         if (block && block.blockType === 'without_rooms') {
-            hint.text('⚠️ This block has no rooms. The entire block is beds only.');
-            hint.css('color', '#ffc107');
-            hint.show();
-            $('#roomBlockID').val('');
-            alert('This block does not have rooms. Please select a different block or add beds directly to this block.');
+            hint.text('⚠️ This block has no rooms. It is beds only (hall type).');
+            hint.removeClass('d-none').css('color', '#ffc107');
+            rowsContainer.hide();
+            addBtn.prop('disabled', true);
         } else {
-            hint.hide();
+            hint.addClass('d-none');
+            rowsContainer.show();
+            addBtn.prop('disabled', false);
+        }
+    }
+
+    function resetBlockForm() {
+        const form = $('#blockForm')[0];
+        if (form) {
+            form.reset();
+        }
+        $('#blockID').val('');
+        $('#blockItemsSection').hide();
+        $('#blockItemsList input[type="checkbox"]').prop('checked', false);
+        $('#blockItemsList .item-quantity').hide();
+        $('#saveBlockBtnText').text('Save');
+    }
+
+    function bindRoomRowHandlers() {
+        $('#roomRows').on('click', '.remove-room-row', function() {
+            if ($('#roomRows .room-row').length <= 1) {
+                showAlert('warning', 'Not allowed', 'At least one room row is required.');
+                return;
+            }
+            $(this).closest('.room-row').remove();
+        });
+    }
+
+    function resetRoomForm() {
+        const form = $('#roomForm')[0];
+        if (form) {
+            form.reset();
+        }
+        $('#roomForm').data('edit-room-id', '');
+        populateRoomBlocks();
+        $('#roomRows').empty();
+        addRoomRow();
+        checkBlockType();
+    }
+
+    function addRoomRow(values = {}) {
+        const rowId = Date.now() + Math.floor(Math.random() * 1000);
+        const roomName = values.roomName || '';
+        const roomNumber = values.roomNumber || '';
+        const capacity = values.capacity || 4;
+
+        $('#roomRows').append(`
+            <div class="room-row border p-2 mb-2" data-row-id="${rowId}">
+                <div class="row">
+                    <div class="col-md-5 form-group mb-2">
+                        <label class="form-label">Room Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control room-name" value="${roomName}" placeholder="e.g., Room A, Room B" required>
+                    </div>
+                    <div class="col-md-4 form-group mb-2">
+                        <label class="form-label">Room Number <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control room-number" value="${roomNumber}" placeholder="e.g., 101, 102" required>
+                    </div>
+                    <div class="col-md-3 form-group mb-2">
+                        <label class="form-label">Capacity</label>
+                        <input type="number" class="form-control room-capacity" value="${capacity}" min="1">
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-delete remove-room-row">
+                    <i class="fa fa-trash"></i> Remove
+                </button>
+            </div>
+        `);
+    }
+
+    function populateRoomBlocks() {
+        const blockSelect = $('#roomBlockID');
+        blockSelect.empty();
+        blockSelect.append('<option value="">Select Block</option>');
+        const availableBlocks = blocks.filter(b => b.status === 'Active' && b.blockType === 'with_rooms');
+        availableBlocks.forEach(block => {
+            blockSelect.append(`<option value="${block.blockID}">${block.blockName}</option>`);
+        });
+        if (availableBlocks.length === 0) {
+            blockSelect.prop('disabled', true);
+            const hint = $('#blockTypeHint');
+            hint.text('No blocks with rooms available. Please register a block with rooms first.');
+            hint.removeClass('d-none').css('color', '#dc3545');
+        } else {
+            blockSelect.prop('disabled', false);
+            $('#blockTypeHint').addClass('d-none');
         }
     }
 
@@ -865,14 +862,10 @@
 
     // Show Add Block Modal
     function showAddBlockModal() {
-        $('#blockID').val('');
-        $('#blockForm')[0].reset();
-        $('#blockItemsSection').hide();
-        $('#blockItemsList input[type="checkbox"]').prop('checked', false);
-        $('#blockItemsList .item-quantity').hide();
-        $('#blockModalTitle').html('<i class="fa fa-building"></i> Add New Block');
-        $('#saveBlockBtnText').text('Save');
-        $('#blockModal').modal('show');
+        resetBlockForm();
+        $('.accommodation-menu .list-group-item').removeClass('active');
+        $('.accommodation-menu .list-group-item[data-target="#section-register-block"]').addClass('active');
+        showAccommodationSection('#section-register-block');
     }
 
     // Show Edit Block Modal
@@ -885,6 +878,7 @@
         $('#blockLocation').val(block.location);
         $('#blockType').val(block.blockType);
         $('#blockStatus').val(block.status);
+        $('#blockSex').val(block.blockSex || block.sex || '');
         $('#blockDescription').val(block.description || '');
 
         toggleBlockTypeOptions();
@@ -900,9 +894,10 @@
             });
         }
 
-        $('#blockModalTitle').html('<i class="fa fa-edit"></i> Edit Block');
         $('#saveBlockBtnText').text('Update');
-        $('#blockModal').modal('show');
+        $('.accommodation-menu .list-group-item').removeClass('active');
+        $('.accommodation-menu .list-group-item[data-target="#section-register-block"]').addClass('active');
+        showAccommodationSection('#section-register-block');
     }
 
     // Save Block
@@ -937,33 +932,60 @@
             location: $('#blockLocation').val(),
             blockType: blockType,
             status: $('#blockStatus').val(),
+            blockSex: $('#blockSex').val(),
+            sex: $('#blockSex').val(),
             description: $('#blockDescription').val(),
             items: items
         };
 
         // AJAX call to save block
+        const saveBtn = $('#saveBlockBtn');
+        saveBtn.prop('disabled', true);
+        setAccommodationLoading(true);
         $.ajax({
             url: '/api/accommodation/blocks',
             method: blockData.blockID ? 'PUT' : 'POST',
             data: blockData,
             success: function(response) {
                 loadBlocks();
-                $('#blockModal').modal('hide');
-                alert('Block saved successfully!');
+                showAlert('success', 'Success', 'Block saved successfully!');
+                resetBlockForm();
             },
             error: function(xhr) {
                 console.error('Error saving block:', xhr);
-                alert('Error saving block. Please try again.');
+                showAlert('error', 'Failed', 'Error saving block. Please try again.');
+            },
+            complete: function() {
+                saveBtn.prop('disabled', false);
+                setAccommodationLoading(false);
             }
         });
     }
 
     // Delete Block
     function deleteBlock(blockID) {
-        if (!confirm('Are you sure you want to delete this block? This will also delete all rooms and beds in this block.')) {
-            return;
+        if (typeof Swal === 'undefined') {
+            if (!confirm('Are you sure you want to delete this block? This will also delete all rooms and beds in this block.')) {
+                return;
+            }
+            return performBlockDelete(blockID);
         }
+        Swal.fire({
+            icon: 'warning',
+            title: 'Delete Block?',
+            text: 'This will also delete all rooms and beds in this block.',
+            showCancelButton: true,
+            confirmButtonColor: '#940000',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, delete'
+        }).then(result => {
+            if (result.isConfirmed) {
+                performBlockDelete(blockID);
+            }
+        });
+    }
 
+    function performBlockDelete(blockID) {
         $.ajax({
             url: `/api/accommodation/blocks/${blockID}`,
             method: 'DELETE',
@@ -971,11 +993,11 @@
                 loadBlocks();
                 loadRooms();
                 loadBeds();
-                alert('Block deleted successfully!');
+                showAlert('success', 'Deleted', 'Block deleted successfully!');
             },
             error: function(xhr) {
                 console.error('Error deleting block:', xhr);
-                alert('Error deleting block. Please try again.');
+                showAlert('error', 'Failed', 'Error deleting block. Please try again.');
             }
         });
     }
@@ -988,11 +1010,13 @@
             success: function(response) {
                 blocks = response.data || [];
                 renderBlocksTable();
+                populateRoomBlocks();
             },
             error: function(xhr) {
                 console.error('Error loading blocks:', xhr);
                 blocks = [];
                 renderBlocksTable();
+                populateRoomBlocks();
             }
         });
     }
@@ -1005,10 +1029,10 @@
         if (blocks.length === 0) {
             tbody.html(`
                 <tr>
-                    <td colspan="6" class="text-center">
+                    <td colspan="8" class="text-center">
                         <div class="empty-state">
                             <i class="fa fa-building"></i>
-                            <p>No blocks added yet. Click "Add Block" to add a new block.</p>
+                            <p>No blocks added yet. Use Register Block to add a new block.</p>
                         </div>
                     </td>
                 </tr>
@@ -1018,10 +1042,12 @@
 
         blocks.forEach(block => {
             const roomCount = rooms.filter(r => r.blockID == block.blockID).length;
+            const bedCount = beds.filter(bed => bed.blockID == block.blockID).length;
             const blockTypeText = block.blockType === 'with_rooms' ? 'With Rooms' : 'Without Rooms (Hall)';
             const statusBadge = block.status === 'Active' 
                 ? '<span class="badge badge-success">Active</span>' 
                 : '<span class="badge badge-danger">Inactive</span>';
+            const sexLabel = block.blockSex || block.sex || 'N/A';
 
             let itemsHtml = '';
             if (block.items && block.items.length > 0) {
@@ -1043,7 +1069,9 @@
                     <td><strong>${block.blockName}</strong>${itemsHtml}</td>
                     <td>${block.location}</td>
                     <td>${roomCount}</td>
+                    <td>${bedCount}</td>
                     <td>${blockTypeText}</td>
+                    <td>${sexLabel}</td>
                     <td>${statusBadge}</td>
                     <td>
                         <div class="action-buttons">
@@ -1062,67 +1090,29 @@
 
     // Show Add Room Modal
     function showAddRoomModal() {
-        if (blocks.length === 0) {
-            alert('Please add a block first before adding a room!');
-            return;
-        }
-
-        $('#roomID').val('');
-        $('#roomForm')[0].reset();
-        $('#roomItemsList input[type="checkbox"]').prop('checked', false);
-        $('#roomItemsList .item-quantity').hide();
-        $('#blockTypeHint').hide();
-
-        // Populate block dropdown
-        const blockSelect = $('#roomBlockID');
-        blockSelect.empty();
-        blockSelect.append('<option value="">Select Block</option>');
-        blocks.filter(b => b.status === 'Active' && b.blockType === 'with_rooms').forEach(block => {
-            blockSelect.append(`<option value="${block.blockID}">${block.blockName}</option>`);
-        });
-
-        $('#roomModalTitle').html('<i class="fa fa-door-open"></i> Add New Room');
-        $('#saveRoomBtnText').text('Save');
-        $('#roomModal').modal('show');
+        resetRoomForm();
+        $('.accommodation-menu .list-group-item').removeClass('active');
+        $('.accommodation-menu .list-group-item[data-target="#section-register-room"]').addClass('active');
+        showAccommodationSection('#section-register-room');
     }
 
     // Show Edit Room Modal
     function editRoom(roomID) {
         const room = rooms.find(r => r.roomID == roomID);
         if (!room) return;
-
-        $('#roomID').val(room.roomID);
-        $('#roomName').val(room.roomName);
-        $('#roomNumber').val(room.roomNumber);
-        $('#roomCapacity').val(room.capacity);
-        $('#roomStatus').val(room.status);
-        $('#roomDescription').val(room.description || '');
-
-        // Populate block dropdown
-        const blockSelect = $('#roomBlockID');
-        blockSelect.empty();
-        blockSelect.append('<option value="">Select Block</option>');
-        blocks.filter(b => b.status === 'Active' && b.blockType === 'with_rooms').forEach(block => {
-            blockSelect.append(`<option value="${block.blockID}" ${block.blockID == room.blockID ? 'selected' : ''}>${block.blockName}</option>`);
+        $('#roomForm').data('edit-room-id', room.roomID);
+        populateRoomBlocks();
+        $('#roomBlockID').val(room.blockID);
+        $('#roomRows').empty();
+        addRoomRow({
+            roomName: room.roomName,
+            roomNumber: room.roomNumber,
+            capacity: room.capacity
         });
-
         checkBlockType();
-
-        // Load room items if any
-        if (room.items && room.items.length > 0) {
-            room.items.forEach(item => {
-                const checkboxId = `roomItem_${item.itemType}`;
-                const quantityId = `roomItemQty_${item.itemType}`;
-                $(`#${checkboxId}`).prop('checked', true);
-                $(`#${quantityId}`).show();
-                const quantityInput = $(`#room${item.itemType.charAt(0).toUpperCase() + item.itemType.slice(1)}Quantity`);
-                quantityInput.val(item.quantity);
-            });
-        }
-
-        $('#roomModalTitle').html('<i class="fa fa-edit"></i> Edit Room');
-        $('#saveRoomBtnText').text('Update');
-        $('#roomModal').modal('show');
+        $('.accommodation-menu .list-group-item').removeClass('active');
+        $('.accommodation-menu .list-group-item[data-target="#section-register-room"]').addClass('active');
+        showAccommodationSection('#section-register-room');
     }
 
     // Save Room
@@ -1137,70 +1127,133 @@
         const block = blocks.find(b => b.blockID == blockID);
 
         if (block && block.blockType === 'without_rooms') {
-            alert('You cannot add a room to a block that has no rooms!');
+            showAlert('warning', 'Invalid Block', 'You cannot add a room to a block that has no rooms!');
+            return;
+        }
+        const rows = $('#roomRows .room-row');
+        const roomsToSave = [];
+        rows.each(function() {
+            const name = $(this).find('.room-name').val().trim();
+            const number = $(this).find('.room-number').val().trim();
+            const capacity = parseInt($(this).find('.room-capacity').val()) || 1;
+            if (!name || !number) {
+                return;
+            }
+            roomsToSave.push({
+                roomName: name,
+                roomNumber: number,
+                capacity: capacity
+            });
+        });
+
+        if (roomsToSave.length === 0) {
+            showAlert('warning', 'Missing Data', 'Please fill in at least one room name and number.');
             return;
         }
 
-        const items = [];
-        const itemTypes = ['table', 'chair', 'cabinet', 'wardrobe', 'other'];
-        
-        itemTypes.forEach(itemType => {
-            const checkbox = $(`#roomItem_${itemType}`);
-            if (checkbox.is(':checked')) {
-                const quantityInput = $(`#room${itemType.charAt(0).toUpperCase() + itemType.slice(1)}Quantity`);
-                items.push({
-                    itemType: itemType,
-                    quantity: parseInt(quantityInput.val()) || 1
-                });
-            }
-        });
+        const editRoomId = $('#roomForm').data('edit-room-id');
+        const saveBtn = $('#saveRoomBtn');
+        saveBtn.prop('disabled', true);
+        setAccommodationLoading(true);
 
+        if (editRoomId) {
         const roomData = {
-            roomID: $('#roomID').val() || null,
+                roomID: editRoomId,
             blockID: parseInt(blockID),
-            roomName: $('#roomName').val(),
-            roomNumber: $('#roomNumber').val(),
-            capacity: parseInt($('#roomCapacity').val()),
-            status: $('#roomStatus').val(),
-            description: $('#roomDescription').val(),
-            items: items
-        };
-
-        // AJAX call to save room
+                roomName: roomsToSave[0].roomName,
+                roomNumber: roomsToSave[0].roomNumber,
+                capacity: roomsToSave[0].capacity,
+                status: 'Active',
+                description: '',
+                items: []
+            };
         $.ajax({
             url: '/api/accommodation/rooms',
-            method: roomData.roomID ? 'PUT' : 'POST',
-            data: roomData,
-            success: function(response) {
+                method: 'PUT',
+                data: roomData
+            }).done(function() {
                 loadRooms();
-                loadBlocks(); // Refresh to update room count
-                $('#roomModal').modal('hide');
-                alert('Room saved successfully!');
-            },
-            error: function(xhr) {
+                loadBlocks();
+                resetRoomForm();
+                showAlert('success', 'Success', 'Room updated successfully!');
+            }).fail(function(xhr) {
                 console.error('Error saving room:', xhr);
-                alert('Error saving room. Please try again.');
-            }
+                showAlert('error', 'Failed', 'Error saving room. Please try again.');
+            }).always(function() {
+                saveBtn.prop('disabled', false);
+                setAccommodationLoading(false);
+            });
+            return;
+        }
+
+        const requests = roomsToSave.map(roomItem => {
+            return $.ajax({
+                url: '/api/accommodation/rooms',
+                method: 'POST',
+                data: {
+                    blockID: parseInt(blockID),
+                    roomName: roomItem.roomName,
+                    roomNumber: roomItem.roomNumber,
+                    capacity: roomItem.capacity,
+                    status: 'Active',
+                    description: '',
+                    items: []
+                }
+            });
         });
+
+        $.when.apply($, requests)
+            .done(function() {
+                loadRooms();
+                loadBlocks();
+                resetRoomForm();
+                showAlert('success', 'Success', 'Rooms saved successfully!');
+            })
+            .fail(function(xhr) {
+                console.error('Error saving room:', xhr);
+                showAlert('error', 'Failed', 'Error saving rooms. Please try again.');
+            })
+            .always(function() {
+                saveBtn.prop('disabled', false);
+                setAccommodationLoading(false);
+            });
     }
 
     // Delete Room
     function deleteRoom(roomID) {
-        if (!confirm('Are you sure you want to delete this room?')) {
-            return;
+        if (typeof Swal === 'undefined') {
+            if (!confirm('Are you sure you want to delete this room?')) {
+                return;
+            }
+            return performRoomDelete(roomID);
         }
+        Swal.fire({
+            icon: 'warning',
+            title: 'Delete Room?',
+            text: 'Are you sure you want to delete this room?',
+            showCancelButton: true,
+            confirmButtonColor: '#940000',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, delete'
+        }).then(result => {
+            if (result.isConfirmed) {
+                performRoomDelete(roomID);
+            }
+        });
+    }
 
+    function performRoomDelete(roomID) {
         $.ajax({
             url: `/api/accommodation/rooms/${roomID}`,
             method: 'DELETE',
             success: function(response) {
                 loadRooms();
                 loadBlocks(); // Refresh to update room count
-                alert('Room deleted successfully!');
+                showAlert('success', 'Deleted', 'Room deleted successfully!');
             },
             error: function(xhr) {
                 console.error('Error deleting room:', xhr);
-                alert('Error deleting room. Please try again.');
+                showAlert('error', 'Failed', 'Error deleting room. Please try again.');
             }
         });
     }
@@ -1292,7 +1345,7 @@
     // Show Add Bed Modal
     function showAddBedModal() {
         if (blocks.length === 0) {
-            alert('Please add a block first before adding a bed!');
+            showAlert('warning', 'No Block', 'Please add a block first before adding a bed!');
             return;
         }
 
@@ -1359,13 +1412,13 @@
 
         // Validate: if block has rooms, room must be selected
         if (block && block.blockType === 'with_rooms' && !roomID) {
-            alert('This block has rooms. Please select a room for this bed.');
+            showAlert('warning', 'Room Required', 'This block has rooms. Please select a room for this bed.');
             return;
         }
 
         // Validate: if block has no rooms, room should be empty
         if (block && block.blockType === 'without_rooms' && roomID) {
-            alert('This block has no rooms. Please leave the room field empty.');
+            showAlert('warning', 'Room Not Needed', 'This block has no rooms. Please leave the room field empty.');
             return;
         }
 
@@ -1387,31 +1440,49 @@
             success: function(response) {
                 loadBeds();
                 $('#bedModal').modal('hide');
-                alert('Bed saved successfully!');
+                showAlert('success', 'Success', 'Bed saved successfully!');
             },
             error: function(xhr) {
                 console.error('Error saving bed:', xhr);
-                alert('Error saving bed. Please try again.');
+                showAlert('error', 'Failed', 'Error saving bed. Please try again.');
             }
         });
     }
 
     // Delete Bed
     function deleteBed(bedID) {
-        if (!confirm('Are you sure you want to delete this bed?')) {
-            return;
+        if (typeof Swal === 'undefined') {
+            if (!confirm('Are you sure you want to delete this bed?')) {
+                return;
+            }
+            return performBedDelete(bedID);
         }
+        Swal.fire({
+            icon: 'warning',
+            title: 'Delete Bed?',
+            text: 'Are you sure you want to delete this bed?',
+            showCancelButton: true,
+            confirmButtonColor: '#940000',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, delete'
+        }).then(result => {
+            if (result.isConfirmed) {
+                performBedDelete(bedID);
+            }
+        });
+    }
 
+    function performBedDelete(bedID) {
         $.ajax({
             url: `/api/accommodation/beds/${bedID}`,
             method: 'DELETE',
             success: function(response) {
                 loadBeds();
-                alert('Bed deleted successfully!');
+                showAlert('success', 'Deleted', 'Bed deleted successfully!');
             },
             error: function(xhr) {
                 console.error('Error deleting bed:', xhr);
-                alert('Error deleting bed. Please try again.');
+                showAlert('error', 'Failed', 'Error deleting bed. Please try again.');
             }
         });
     }
@@ -1424,11 +1495,13 @@
             success: function(response) {
                 beds = response.data || [];
                 renderBedsTable();
+                renderBlocksTable();
             },
             error: function(xhr) {
                 console.error('Error loading beds:', xhr);
                 beds = [];
                 renderBedsTable();
+                renderBlocksTable();
             }
         });
     }

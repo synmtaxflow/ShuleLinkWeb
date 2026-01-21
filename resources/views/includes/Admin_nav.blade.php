@@ -470,7 +470,11 @@
                                         @endif
                                     </a>
                                 </li>
-                                <li><a href="#" class="nav-link"><i class="fa fa-line-chart"></i> Performance</a></li>
+                                <li>
+                                    <a href="{{ \Illuminate\Support\Facades\Route::has('admin.performance') ? route('admin.performance') : '#' }}" class="nav-link">
+                                        <i class="fa fa-line-chart"></i> Performance
+                                    </a>
+                                </li>
                                 <li><a href="{{ route('admin.printing_unit') }}" class="nav-link"><i class="fa fa-print"></i> Printing Unit</a></li>
                             </ul>
                         </li>

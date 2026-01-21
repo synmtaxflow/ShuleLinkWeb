@@ -738,6 +738,41 @@ class TeachersController extends Controller
         $notifications = $notifications->sortByDesc(function($notification) {
             return $notification['date'];
         })->values()->take(10);
+
+        // Add feedback response notifications (suggestions/incidents)
+        if ($teacherID && $schoolID) {
+            $feedbackResponses = \App\Models\TeacherFeedback::where('schoolID', $schoolID)
+                ->where('teacherID', $teacherID)
+                ->where('is_read_by_teacher', false)
+                ->whereIn('status', ['approved', 'rejected'])
+                ->orderBy('responded_at', 'desc')
+                ->limit(5)
+                ->get();
+
+            foreach ($feedbackResponses as $feedback) {
+                $typeLabel = $feedback->type === 'incident' ? 'Incident' : 'Suggestion';
+                $statusLabel = ucfirst($feedback->status);
+                $color = $feedback->status === 'approved' ? 'success' : 'danger';
+                $link = $feedback->type === 'incident'
+                    ? route('teacher.incidents', ['tab' => 'incidents', 'section' => 'view'])
+                    : route('teacher.suggestions', ['tab' => 'suggestions', 'section' => 'view']);
+
+                $notifications->push([
+                    'type' => 'feedback_response',
+                    'icon' => 'fa-comments',
+                    'color' => $color,
+                    'title' => "{$typeLabel} {$statusLabel}",
+                    'message' => $feedback->admin_response ? $feedback->admin_response : "{$typeLabel} has been {$feedback->status}.",
+                    'date' => $feedback->responded_at ? $feedback->responded_at->toDateTimeString() : $feedback->updated_at->toDateTimeString(),
+                    'link' => $link,
+                ]);
+            }
+
+            // Re-sort after adding feedback notifications
+            $notifications = $notifications->sortByDesc(function($notification) {
+                return $notification['date'];
+            })->values()->take(10);
+        }
         
         // Get graph data
         $graphData = $this->getDashboardGraphData($teacherID, $schoolID);

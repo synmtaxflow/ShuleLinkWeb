@@ -137,7 +137,7 @@
 <!-- Dashboard Statistics Section -->
 @if(isset($dashboardStats))
 <div class="dashboard-hero">
-    <div>
+                    <div>
         <div class="text-muted" style="font-size: 0.9rem;">Today · {{ \Carbon\Carbon::now()->format('l, d M Y') }}</div>
         <div class="hero-title">Hello, Teacher</div>
         <p class="hero-subtitle">Quick access to your teaching modules and updates.</p>
@@ -174,18 +174,18 @@
     @foreach($cards as $card)
         <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
             <div class="card dashboard-card">
-                <div class="card-body">
+            <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start">
-                        <div>
+                    <div>
                             <div class="card-title">{{ $card['title'] }}</div>
                             <div class="stat">{{ $card['count'] }}</div>
                             @if(!empty($card['note']))
                                 <div class="stat-note">{{ $card['note'] }}</div>
-                            @endif
-                        </div>
+    @endif
+                    </div>
                         <div class="card-icon">
                             <i class="fa {{ $card['icon'] }}"></i>
-                        </div>
+    </div>
                     </div>
                     <div class="card-actions">
                         @if(!empty($card['link']))
@@ -414,7 +414,7 @@
     <div class="col-12">
         <div class="card section-card">
             <div class="section-header">
-                <i class="fa fa-book"></i> Teaching Subjects
+                    <i class="fa fa-book"></i> Teaching Subjects
             </div>
             <div class="card-body">
                 @if(isset($dashboardStats['teaching_subjects']) && $dashboardStats['teaching_subjects']->count() > 0)
@@ -463,7 +463,7 @@
     <div class="col-lg-6 mb-4">
         <div class="card section-card">
             <div class="section-header">
-                <i class="fa fa-calendar-week"></i> Sessions Per Week by Day
+                    <i class="fa fa-calendar-week"></i> Sessions Per Week by Day
                 <small class="d-block">Based on approved tasks</small>
             </div>
             <div class="card-body">
@@ -476,7 +476,7 @@
     <div class="col-lg-6 mb-4">
         <div class="card section-card">
             <div class="section-header">
-                <i class="fa fa-line-chart"></i> Subject Performance (Pass/Fail Rates)
+                    <i class="fa fa-line-chart"></i> Subject Performance (Pass/Fail Rates)
                 <small class="d-block">Performance across all classes</small>
             </div>
             <div class="card-body">
@@ -489,7 +489,7 @@
     <div class="col-lg-12 mb-4">
         <div class="card section-card">
             <div class="section-header">
-                <i class="fa fa-users"></i> Classes with Most Sessions
+                    <i class="fa fa-users"></i> Classes with Most Sessions
                 <small class="d-block">Based on approved tasks</small>
             </div>
             <div class="card-body">

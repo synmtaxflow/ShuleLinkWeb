@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ApiController;
 use App\Http\Controllers\AttendanceApiController;
+use App\Http\Controllers\AccomodationController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -99,5 +100,23 @@ Route::get('/teacher/my-sessions/students', [\App\Http\Controllers\TeachersContr
 Route::get('/teacher/my-sessions/attendance', [\App\Http\Controllers\TeachersController::class, 'getSessionAttendanceForUpdateAPI'])->name('api.teacher.my_sessions.attendance');
 Route::post('/teacher/my-sessions/attendance', [\App\Http\Controllers\TeachersController::class, 'collectSessionAttendanceAPI'])->name('api.teacher.my_sessions.attendance.save');
 Route::post('/teacher/my-sessions/tasks', [\App\Http\Controllers\TeachersController::class, 'assignSessionTaskAPI'])->name('api.teacher.my_sessions.tasks.assign');
+
+// Accommodation management (admin web session)
+Route::middleware('web')->group(function () {
+    Route::get('/accommodation/blocks', [AccomodationController::class, 'apiBlocksIndex']);
+    Route::post('/accommodation/blocks', [AccomodationController::class, 'apiBlocksStore']);
+    Route::put('/accommodation/blocks', [AccomodationController::class, 'apiBlocksUpdate']);
+    Route::delete('/accommodation/blocks/{blockID}', [AccomodationController::class, 'apiBlocksDestroy']);
+
+    Route::get('/accommodation/rooms', [AccomodationController::class, 'apiRoomsIndex']);
+    Route::post('/accommodation/rooms', [AccomodationController::class, 'apiRoomsStore']);
+    Route::put('/accommodation/rooms', [AccomodationController::class, 'apiRoomsUpdate']);
+    Route::delete('/accommodation/rooms/{roomID}', [AccomodationController::class, 'apiRoomsDestroy']);
+
+    Route::get('/accommodation/beds', [AccomodationController::class, 'apiBedsIndex']);
+    Route::post('/accommodation/beds', [AccomodationController::class, 'apiBedsStore']);
+    Route::put('/accommodation/beds', [AccomodationController::class, 'apiBedsUpdate']);
+    Route::delete('/accommodation/beds/{bedID}', [AccomodationController::class, 'apiBedsDestroy']);
+});
 
 

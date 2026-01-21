@@ -1770,6 +1770,478 @@ class AdminController extends Controller
         ]);
     }
 
+    public function performanceDashboard()
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $teachers = \App\Models\Teacher::where('schoolID', $schoolID)->orderBy('first_name')->get();
+        $subjects = \App\Models\SchoolSubject::where('schoolID', $schoolID)->orderBy('subject_name')->get();
+        $exams = \App\Models\Examination::where('schoolID', $schoolID)->orderBy('created_at', 'desc')->limit(50)->get();
+        $classes = \App\Models\ClassModel::where('schoolID', $schoolID)->orderBy('class_name')->get();
+
+        return view('Admin.performance', compact('teachers', 'subjects', 'exams', 'classes'));
+    }
+
+    private function calculatePassFailCounts($results)
+    {
+        $pass = 0;
+        $fail = 0;
+        foreach ($results as $result) {
+            $remark = strtolower(trim($result->remark ?? ''));
+            if ($remark === 'fail' || $remark === 'failed') {
+                $fail++;
+                continue;
+            }
+            if ($result->marks !== null) {
+                if ($result->marks >= 30) {
+                    $pass++;
+                } else {
+                    $fail++;
+                }
+                continue;
+            }
+            $grade = strtoupper(trim($result->grade ?? ''));
+            if (in_array($grade, ['A', 'B', 'C', 'D'])) {
+                $pass++;
+            } else {
+                $fail++;
+            }
+        }
+
+        $total = $pass + $fail;
+        $passRate = $total > 0 ? round(($pass / $total) * 100, 1) : 0;
+        $failRate = $total > 0 ? round(($fail / $total) * 100, 1) : 0;
+
+        $comment = 'Needs improvement.';
+        if ($passRate >= 75) {
+            $comment = 'Excellent performance. Keep going!';
+        } elseif ($passRate >= 50) {
+            $comment = 'Good effort. Keep improving.';
+        } elseif ($passRate >= 30) {
+            $comment = 'Fair performance. Work harder.';
+        }
+
+        return [
+            'total' => $total,
+            'pass_count' => $pass,
+            'fail_count' => $fail,
+            'pass_rate' => $passRate,
+            'fail_rate' => $failRate,
+            'comment' => $comment,
+        ];
+    }
+
+    public function teacherTermPerformance(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        $validated = $request->validate([
+            'teacher_id' => 'required|integer',
+            'subject_id' => 'required',
+            'term' => 'required|string',
+            'year' => 'required|integer',
+        ]);
+
+        $subjectId = $validated['subject_id'];
+        $resultsQuery = \App\Models\Result::query()
+            ->join('class_subjects', 'results.class_subjectID', '=', 'class_subjects.class_subjectID')
+            ->join('examinations', 'results.examID', '=', 'examinations.examID')
+            ->where('examinations.schoolID', $schoolID)
+            ->where('examinations.term', $validated['term'])
+            ->where('examinations.year', $validated['year'])
+            ->where('class_subjects.teacherID', $validated['teacher_id']);
+        if ($subjectId !== 'all') {
+            $resultsQuery->where('class_subjects.subjectID', $subjectId);
+        }
+        $results = $resultsQuery->select('results.marks', 'results.remark', 'results.grade')->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->calculatePassFailCounts($results),
+        ]);
+    }
+
+    public function teacherExamPerformance(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        $validated = $request->validate([
+            'teacher_id' => 'required|integer',
+            'subject_id' => 'required',
+            'exam_id' => 'required|integer',
+        ]);
+
+        $subjectId = $validated['subject_id'];
+        $resultsQuery = \App\Models\Result::query()
+            ->join('class_subjects', 'results.class_subjectID', '=', 'class_subjects.class_subjectID')
+            ->join('examinations', 'results.examID', '=', 'examinations.examID')
+            ->where('examinations.schoolID', $schoolID)
+            ->where('examinations.examID', $validated['exam_id'])
+            ->where('class_subjects.teacherID', $validated['teacher_id']);
+        if ($subjectId !== 'all') {
+            $resultsQuery->where('class_subjects.subjectID', $subjectId);
+        }
+        $results = $resultsQuery->select('results.marks', 'results.remark', 'results.grade')->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->calculatePassFailCounts($results),
+        ]);
+    }
+
+    public function teacherYearPerformance(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        $validated = $request->validate([
+            'teacher_id' => 'required|integer',
+            'subject_id' => 'required',
+            'year' => 'required|integer',
+        ]);
+
+        $subjectId = $validated['subject_id'];
+        $resultsQuery = \App\Models\Result::query()
+            ->join('class_subjects', 'results.class_subjectID', '=', 'class_subjects.class_subjectID')
+            ->join('examinations', 'results.examID', '=', 'examinations.examID')
+            ->where('examinations.schoolID', $schoolID)
+            ->where('examinations.year', $validated['year'])
+            ->where('class_subjects.teacherID', $validated['teacher_id']);
+        if ($subjectId !== 'all') {
+            $resultsQuery->where('class_subjects.subjectID', $subjectId);
+        }
+        $results = $resultsQuery->select('results.marks', 'results.remark', 'results.grade')->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->calculatePassFailCounts($results),
+        ]);
+    }
+
+    public function teacherSubjectsForPerformance(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        $validated = $request->validate([
+            'teacher_id' => 'required|integer',
+        ]);
+
+        $subjects = \App\Models\ClassSubject::with('subject')
+            ->where('teacherID', $validated['teacher_id'])
+            ->where('status', 'Active')
+            ->get()
+            ->map(function ($cs) {
+                return [
+                    'id' => $cs->subjectID,
+                    'name' => $cs->subject->subject_name ?? 'N/A',
+                ];
+            })
+            ->unique('id')
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $subjects,
+        ]);
+    }
+
+    public function classSubjectsForPerformance(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        $validated = $request->validate([
+            'class_id' => 'required|integer',
+        ]);
+
+        $subjects = \App\Models\ClassSubject::with('subject')
+            ->where('classID', $validated['class_id'])
+            ->where('status', 'Active')
+            ->get()
+            ->map(function ($cs) {
+                return [
+                    'id' => $cs->subjectID,
+                    'name' => $cs->subject->subject_name ?? 'N/A',
+                ];
+            })
+            ->unique('id')
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $subjects,
+        ]);
+    }
+
+    public function classSubclassesForPerformance(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        $validated = $request->validate([
+            'class_id' => 'required|integer',
+        ]);
+
+        $subclasses = \App\Models\Subclass::where('classID', $validated['class_id'])
+            ->orderBy('subclass_name')
+            ->get()
+            ->map(function ($subclass) {
+                return [
+                    'id' => $subclass->subclassID,
+                    'name' => $subclass->display_name ?? $subclass->subclass_name,
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $subclasses,
+        ]);
+    }
+
+    public function classStudentsForPerformance(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        $validated = $request->validate([
+            'class_id' => 'required|integer',
+            'subclass_id' => 'nullable|integer',
+        ]);
+
+        $studentsQuery = \App\Models\Student::query()
+            ->join('subclasses', 'students.subclassID', '=', 'subclasses.subclassID')
+            ->join('classes', 'subclasses.classID', '=', 'classes.classID')
+            ->where('classes.schoolID', $schoolID)
+            ->where('classes.classID', $validated['class_id'])
+            ->where('students.status', 'Active');
+
+        if (!empty($validated['subclass_id'])) {
+            $studentsQuery->where('students.subclassID', $validated['subclass_id']);
+        }
+
+        $students = $studentsQuery
+            ->select('students.studentID', 'students.first_name', 'students.middle_name', 'students.last_name', 'students.admission_number')
+            ->orderBy('students.first_name')
+            ->get()
+            ->map(function ($student) {
+                $name = trim(($student->first_name ?? '') . ' ' . ($student->middle_name ?? '') . ' ' . ($student->last_name ?? ''));
+                $label = $name;
+                if (!empty($student->admission_number)) {
+                    $label .= ' (' . $student->admission_number . ')';
+                }
+                return [
+                    'id' => $student->studentID,
+                    'name' => $label,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $students,
+        ]);
+    }
+
+    public function studentTermPerformance(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        $validated = $request->validate([
+            'class_id' => 'required|integer',
+            'subclass_id' => 'nullable|integer',
+            'subject_id' => 'required',
+            'student_id' => 'nullable|integer',
+            'term' => 'required|string',
+            'year' => 'required|integer',
+        ]);
+
+        $subjectId = $validated['subject_id'];
+        $examIds = \App\Models\Examination::where('schoolID', $schoolID)
+            ->where('term', $validated['term'])
+            ->where('year', $validated['year'])
+            ->where('approval_status', 'Approved')
+            ->pluck('examID');
+
+        $resultsQuery = \App\Models\Result::query()
+            ->join('students', 'results.studentID', '=', 'students.studentID')
+            ->join('subclasses', 'students.subclassID', '=', 'subclasses.subclassID')
+            ->join('classes', 'subclasses.classID', '=', 'classes.classID')
+            ->leftJoin('class_subjects', 'results.class_subjectID', '=', 'class_subjects.class_subjectID')
+            ->where('classes.schoolID', $schoolID)
+            ->whereIn('results.examID', $examIds)
+            ->where('results.status', 'allowed')
+            ->whereNotNull('results.marks')
+            ->where('classes.classID', $validated['class_id']);
+
+        if (!empty($validated['subclass_id'])) {
+            $resultsQuery->where('subclasses.subclassID', $validated['subclass_id']);
+        }
+        if (!empty($validated['student_id'])) {
+            $resultsQuery->where('results.studentID', $validated['student_id']);
+        }
+        if ($subjectId !== 'all') {
+            $resultsQuery->where('class_subjects.subjectID', $subjectId);
+        }
+
+        $results = $resultsQuery->select('results.marks', 'results.remark', 'results.grade')->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->calculatePassFailCounts($results),
+        ]);
+    }
+
+    public function studentExamPerformance(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        $validated = $request->validate([
+            'class_id' => 'required|integer',
+            'subclass_id' => 'nullable|integer',
+            'subject_id' => 'required',
+            'student_id' => 'nullable|integer',
+            'exam_id' => 'required|integer',
+        ]);
+
+        $subjectId = $validated['subject_id'];
+        $examApproved = \App\Models\Examination::where('schoolID', $schoolID)
+            ->where('examID', $validated['exam_id'])
+            ->where('approval_status', 'Approved')
+            ->exists();
+        if (!$examApproved) {
+            return response()->json([
+                'success' => true,
+                'data' => $this->calculatePassFailCounts(collect()),
+            ]);
+        }
+
+        $resultsQuery = \App\Models\Result::query()
+            ->join('students', 'results.studentID', '=', 'students.studentID')
+            ->join('subclasses', 'students.subclassID', '=', 'subclasses.subclassID')
+            ->join('classes', 'subclasses.classID', '=', 'classes.classID')
+            ->leftJoin('class_subjects', 'results.class_subjectID', '=', 'class_subjects.class_subjectID')
+            ->where('classes.schoolID', $schoolID)
+            ->where('results.examID', $validated['exam_id'])
+            ->where('results.status', 'allowed')
+            ->whereNotNull('results.marks')
+            ->where('classes.classID', $validated['class_id']);
+
+        if (!empty($validated['subclass_id'])) {
+            $resultsQuery->where('subclasses.subclassID', $validated['subclass_id']);
+        }
+        if (!empty($validated['student_id'])) {
+            $resultsQuery->where('results.studentID', $validated['student_id']);
+        }
+        if ($subjectId !== 'all') {
+            $resultsQuery->where('class_subjects.subjectID', $subjectId);
+        }
+
+        $results = $resultsQuery->select('results.marks', 'results.remark', 'results.grade')->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->calculatePassFailCounts($results),
+        ]);
+    }
+
+    public function studentYearPerformance(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        $validated = $request->validate([
+            'class_id' => 'required|integer',
+            'subclass_id' => 'nullable|integer',
+            'subject_id' => 'required',
+            'student_id' => 'nullable|integer',
+            'year' => 'required|integer',
+        ]);
+
+        $subjectId = $validated['subject_id'];
+        $examIds = \App\Models\Examination::where('schoolID', $schoolID)
+            ->where('year', $validated['year'])
+            ->where('approval_status', 'Approved')
+            ->pluck('examID');
+
+        $resultsQuery = \App\Models\Result::query()
+            ->join('students', 'results.studentID', '=', 'students.studentID')
+            ->join('subclasses', 'students.subclassID', '=', 'subclasses.subclassID')
+            ->join('classes', 'subclasses.classID', '=', 'classes.classID')
+            ->leftJoin('class_subjects', 'results.class_subjectID', '=', 'class_subjects.class_subjectID')
+            ->where('classes.schoolID', $schoolID)
+            ->whereIn('results.examID', $examIds)
+            ->where('results.status', 'allowed')
+            ->whereNotNull('results.marks')
+            ->where('classes.classID', $validated['class_id']);
+
+        if (!empty($validated['subclass_id'])) {
+            $resultsQuery->where('subclasses.subclassID', $validated['subclass_id']);
+        }
+        if (!empty($validated['student_id'])) {
+            $resultsQuery->where('results.studentID', $validated['student_id']);
+        }
+        if ($subjectId !== 'all') {
+            $resultsQuery->where('class_subjects.subjectID', $subjectId);
+        }
+
+        $results = $resultsQuery->select('results.marks', 'results.remark', 'results.grade')->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->calculatePassFailCounts($results),
+        ]);
+    }
+
     public function approveTeacherFeedback(Request $request)
     {
         $user = Session::get('user_type');

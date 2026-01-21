@@ -98,7 +98,7 @@
 <!-- Dashboard Statistics Section -->
 @if(isset($dashboardStats))
 <div class="dashboard-hero">
-    <div>
+                    <div>
         <div class="text-muted" style="font-size: 0.9rem;">Today · {{ \Carbon\Carbon::now()->format('l, d M Y') }}</div>
         <div class="hero-title">Hello, Administrator</div>
         <p class="hero-subtitle">Quick access to the modules that keep your school running.</p>
@@ -134,18 +134,18 @@
     @foreach($cards as $card)
         <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
             <div class="card dashboard-card">
-                <div class="card-body">
+            <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start">
-                        <div>
+                    <div>
                             <div class="card-title">{{ $card['title'] }}</div>
                             <div class="stat">{{ $card['count'] }}</div>
                             @if(!empty($card['note']))
                                 <div class="stat-note">{{ $card['note'] }}</div>
                             @endif
-                        </div>
+                    </div>
                         <div class="card-icon">
                             <i class="fa {{ $card['icon'] }}"></i>
-                        </div>
+    </div>
                     </div>
                     <div class="card-actions">
                         @if(!empty($card['link']))
@@ -155,7 +155,7 @@
                         @else
                             <button class="btn btn-sm btn-outline-primary-custom w-100" disabled>
                                 <i class="fa fa-info-circle"></i> {{ $card['link_label'] }}
-                            </button>
+                </button>
                         @endif
                     </div>
                 </div>

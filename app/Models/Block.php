@@ -17,6 +17,8 @@ class Block extends Model
         'block_name',
         'location',
         'block_type',
+        'block_sex',
+        'block_items',
         'description',
         'status',
     ];

@@ -375,6 +375,17 @@ Route::get('admin/suggestions', [AdminController::class, 'manageTeacherFeedbackA
 Route::get('admin/incidents', [AdminController::class, 'manageTeacherFeedbackAdmin'])->name('admin.incidents');
 Route::post('admin/feedback/approve', [AdminController::class, 'approveTeacherFeedback'])->name('admin.feedback.approve');
 Route::post('admin/feedback/reject', [AdminController::class, 'rejectTeacherFeedback'])->name('admin.feedback.reject');
+Route::get('admin/performance', [AdminController::class, 'performanceDashboard'])->name('admin.performance');
+Route::post('admin/performance/teacher/term', [AdminController::class, 'teacherTermPerformance'])->name('admin.performance.teacher.term');
+Route::post('admin/performance/teacher/exam', [AdminController::class, 'teacherExamPerformance'])->name('admin.performance.teacher.exam');
+Route::post('admin/performance/teacher/year', [AdminController::class, 'teacherYearPerformance'])->name('admin.performance.teacher.year');
+Route::get('admin/performance/teacher/subjects', [AdminController::class, 'teacherSubjectsForPerformance'])->name('admin.performance.teacher.subjects');
+Route::get('admin/performance/class/subjects', [AdminController::class, 'classSubjectsForPerformance'])->name('admin.performance.class.subjects');
+Route::get('admin/performance/class/subclasses', [AdminController::class, 'classSubclassesForPerformance'])->name('admin.performance.class.subclasses');
+Route::get('admin/performance/class/students', [AdminController::class, 'classStudentsForPerformance'])->name('admin.performance.class.students');
+Route::post('admin/performance/student/term', [AdminController::class, 'studentTermPerformance'])->name('admin.performance.student.term');
+Route::post('admin/performance/student/exam', [AdminController::class, 'studentExamPerformance'])->name('admin.performance.student.exam');
+Route::post('admin/performance/student/year', [AdminController::class, 'studentYearPerformance'])->name('admin.performance.student.year');
 Route::post('damaged-lost', [AdminController::class, 'storeDamagedLostRecord'])->name('damaged_lost.store');
 Route::post('damaged-lost/update', [AdminController::class, 'updateDamagedLostRecord'])->name('damaged_lost.update');
 Route::post('damaged-lost/delete', [AdminController::class, 'deleteDamagedLostRecord'])->name('damaged_lost.delete');
