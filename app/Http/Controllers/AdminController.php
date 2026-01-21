@@ -864,9 +864,162 @@ class AdminController extends Controller
             return redirect()->route('login')->with('error', 'Unauthorized access');
         }
 
-        // TODO: Implement expenses management functionality
-        // For now, return a placeholder view
-        return view('Admin.manage_expenses', compact('schoolID'));
+        $year = request()->input('year', date('Y'));
+
+        $totalRevenue = $this->getTotalRevenueForYear($schoolID, $year);
+        $budget = \App\Models\ExpenseBudget::where('schoolID', $schoolID)
+            ->where('year', $year)
+            ->first();
+
+        $expenses = \App\Models\ExpenseRecord::where('schoolID', $schoolID)
+            ->whereYear('expense_date', $year)
+            ->orderBy('expense_date', 'desc')
+            ->limit(50)
+            ->get();
+
+        return view('Admin.manage_expenses', compact('schoolID', 'year', 'totalRevenue', 'budget', 'expenses'));
+    }
+
+    private function getTotalRevenueForYear($schoolID, $year)
+    {
+        $feesRevenue = \DB::table('payment_records')
+            ->join('payments', 'payment_records.paymentID', '=', 'payments.paymentID')
+            ->join('academic_years', 'payments.academic_yearID', '=', 'academic_years.academic_yearID')
+            ->where('payments.schoolID', $schoolID)
+            ->where('academic_years.year', $year)
+            ->sum('payment_records.paid_amount');
+
+        $otherRevenue = \App\Models\RevenueRecord::where('schoolID', $schoolID)
+            ->whereYear('record_date', $year)
+            ->sum('total_amount');
+
+        return (float) $feesRevenue + (float) $otherRevenue;
+    }
+
+    public function storeExpenseBudget(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'year' => 'required|integer|min:2000|max:2100',
+            'total_amount' => 'required|numeric|min:0.01',
+        ]);
+
+        $totalRevenue = $this->getTotalRevenueForYear($schoolID, $validated['year']);
+        if ($validated['total_amount'] > $totalRevenue) {
+            return redirect()->route('manage_expenses', ['year' => $validated['year']])
+                ->with('error', 'Budget cannot exceed total revenue for the selected year.');
+        }
+
+        $existing = \App\Models\ExpenseBudget::where('schoolID', $schoolID)
+            ->where('year', $validated['year'])
+            ->first();
+
+        if ($existing) {
+            return redirect()->route('manage_expenses', ['year' => $validated['year']])
+                ->with('error', 'Budget for this year already exists. Use update instead.');
+        }
+
+        \App\Models\ExpenseBudget::create([
+            'schoolID' => $schoolID,
+            'year' => $validated['year'],
+            'total_amount' => $validated['total_amount'],
+            'remaining_amount' => $validated['total_amount'],
+            'status' => 'Active',
+        ]);
+
+        return redirect()->route('manage_expenses', ['year' => $validated['year']])
+            ->with('success', 'Budget created successfully.');
+    }
+
+    public function updateExpenseBudget(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'expense_budgetID' => 'required|exists:expense_budgets,expense_budgetID',
+            'total_amount' => 'required|numeric|min:0.01',
+        ]);
+
+        $budget = \App\Models\ExpenseBudget::where('expense_budgetID', $validated['expense_budgetID'])
+            ->where('schoolID', $schoolID)
+            ->firstOrFail();
+
+        $totalRevenue = $this->getTotalRevenueForYear($schoolID, $budget->year);
+        if ($validated['total_amount'] > $totalRevenue) {
+            return redirect()->route('manage_expenses', ['year' => $budget->year])
+                ->with('error', 'Budget cannot exceed total revenue for the selected year.');
+        }
+
+        $spent = \App\Models\ExpenseRecord::where('schoolID', $schoolID)
+            ->where('expense_budgetID', $budget->expense_budgetID)
+            ->sum('amount');
+
+        if ($validated['total_amount'] < $spent) {
+            return redirect()->route('manage_expenses', ['year' => $budget->year])
+                ->with('error', 'Budget cannot be less than total expenses already recorded.');
+        }
+
+        $budget->update([
+            'total_amount' => $validated['total_amount'],
+            'remaining_amount' => $validated['total_amount'] - $spent,
+        ]);
+
+        return redirect()->route('manage_expenses', ['year' => $budget->year])
+            ->with('success', 'Budget updated successfully.');
+    }
+
+    public function storeExpenseRecord(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'expense_budgetID' => 'required|exists:expense_budgets,expense_budgetID',
+            'expense_date' => 'required|date',
+            'amount' => 'required|numeric|min:0.01',
+            'description' => 'required|string',
+        ]);
+
+        $budget = \App\Models\ExpenseBudget::where('expense_budgetID', $validated['expense_budgetID'])
+            ->where('schoolID', $schoolID)
+            ->firstOrFail();
+
+        if ($validated['amount'] > $budget->remaining_amount) {
+            return redirect()->route('manage_expenses', ['year' => $budget->year])
+                ->with('error', 'Expense exceeds remaining budget.');
+        }
+
+        \DB::transaction(function () use ($validated, $schoolID, $budget) {
+            \App\Models\ExpenseRecord::create([
+                'schoolID' => $schoolID,
+                'expense_budgetID' => $budget->expense_budgetID,
+                'expense_date' => $validated['expense_date'],
+                'amount' => $validated['amount'],
+                'description' => $validated['description'],
+            ]);
+
+            $budget->update([
+                'remaining_amount' => $budget->remaining_amount - $validated['amount'],
+            ]);
+        });
+
+        return redirect()->route('manage_expenses', ['year' => $budget->year])
+            ->with('success', 'Expense recorded successfully.');
     }
 
     /**

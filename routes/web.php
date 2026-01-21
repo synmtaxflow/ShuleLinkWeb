@@ -342,6 +342,9 @@ Route::post('revenue-sources/update', [AdminController::class, 'updateRevenueSou
 Route::post('revenue-records', [AdminController::class, 'storeRevenueRecord'])->name('revenue_records.store');
 Route::get('revenue-report-data', [AdminController::class, 'revenueReportData'])->name('revenue_report.data');
 Route::get('manage_expenses', [AdminController::class, 'manageExpenses'])->name('manage_expenses');
+Route::post('expense-budgets', [AdminController::class, 'storeExpenseBudget'])->name('expense_budgets.store');
+Route::post('expense-budgets/update', [AdminController::class, 'updateExpenseBudget'])->name('expense_budgets.update');
+Route::post('expense-records', [AdminController::class, 'storeExpenseRecord'])->name('expense_records.store');
 
 // School Resources Routes
 Route::get('manage_incoming_resources', [AdminController::class, 'manageIncomingResources'])->name('manage_incoming_resources');
