@@ -395,6 +395,13 @@ Route::get('admin/hr/permissions', [AdminController::class, 'managePermissionsAd
 Route::get('admin/hr/permissions/attachment/{permissionID}', [AdminController::class, 'viewPermissionAttachment'])->name('admin.permissions.attachment');
 Route::post('admin/hr/permissions/approve', [AdminController::class, 'approvePermission'])->name('admin.permissions.approve');
 Route::post('admin/hr/permissions/reject', [AdminController::class, 'rejectPermission'])->name('admin.permissions.reject');
+Route::get('admin/school-visitors', [AdminController::class, 'manageSchoolVisitors'])->name('admin.school_visitors');
+Route::get('admin/school-visitors/today', [AdminController::class, 'todaySchoolVisitors'])->name('admin.school_visitors.today');
+Route::get('admin/school-visitors/list', [AdminController::class, 'listSchoolVisitors'])->name('admin.school_visitors.list');
+Route::post('admin/school-visitors/store', [AdminController::class, 'storeSchoolVisitors'])->name('admin.school_visitors.store');
+Route::post('admin/school-visitors/update', [AdminController::class, 'updateSchoolVisitor'])->name('admin.school_visitors.update');
+Route::post('admin/school-visitors/delete', [AdminController::class, 'deleteSchoolVisitor'])->name('admin.school_visitors.delete');
+Route::post('admin/school-visitors/sms', [AdminController::class, 'sendVisitorSms'])->name('admin.school_visitors.sms');
 Route::post('damaged-lost', [AdminController::class, 'storeDamagedLostRecord'])->name('damaged_lost.store');
 Route::post('damaged-lost/update', [AdminController::class, 'updateDamagedLostRecord'])->name('damaged_lost.update');
 Route::post('damaged-lost/delete', [AdminController::class, 'deleteDamagedLostRecord'])->name('damaged_lost.delete');

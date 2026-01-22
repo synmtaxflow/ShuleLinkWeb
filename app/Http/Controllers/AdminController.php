@@ -14,6 +14,8 @@ use App\Models\SchoolSubject;
 use App\Models\PermissionRequest;
 use App\Models\ParentModel;
 use App\Models\Student;
+use App\Models\SchoolVisitor;
+use App\Models\SchoolVisitorSmsLog;
 use App\Services\SmsService;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use Illuminate\Http\Request;
@@ -2561,6 +2563,266 @@ class AdminController extends Controller
             return response()->json(['success' => true, 'message' => 'Permission rejected successfully.']);
         }
         return redirect()->back()->with('success', 'Permission rejected successfully.');
+    }
+
+    public function manageSchoolVisitors()
+    {
+        $user = Session::get('user_type');
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $schoolID = Session::get('schoolID');
+        $schoolName = School::where('schoolID', $schoolID)->value('school_name') ?? 'School';
+
+        return view('Admin.manage_school_visitors', [
+            'schoolName' => $schoolName,
+        ]);
+    }
+
+    public function storeSchoolVisitors(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+        if (!$user || $user !== 'Admin' || !$schoolID) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        $names = $request->input('name', []);
+        $contacts = $request->input('contact', []);
+        $occupations = $request->input('occupation', []);
+        $reasons = $request->input('reason', []);
+        $signatures = $request->input('signature', []);
+
+        $today = Carbon::today()->toDateString();
+        $rows = [];
+
+        foreach ($names as $index => $name) {
+            $trimmed = trim((string) $name);
+            if ($trimmed === '') {
+                continue;
+            }
+            $rows[] = [
+                'schoolID' => $schoolID,
+                'visit_date' => $today,
+                'name' => $trimmed,
+                'contact' => isset($contacts[$index]) ? trim((string) $contacts[$index]) : null,
+                'occupation' => isset($occupations[$index]) ? trim((string) $occupations[$index]) : null,
+                'reason' => isset($reasons[$index]) ? trim((string) $reasons[$index]) : null,
+                'signature' => isset($signatures[$index]) ? $signatures[$index] : null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+
+        if (empty($rows)) {
+            return response()->json(['success' => false, 'message' => 'Please enter at least one visitor.'], 422);
+        }
+
+        DB::table('school_visitors')->insert($rows);
+
+        return response()->json(['success' => true, 'message' => 'Visitors recorded successfully.']);
+    }
+
+    public function todaySchoolVisitors()
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+        if (!$user || $user !== 'Admin' || !$schoolID) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        $today = Carbon::today()->toDateString();
+        $visitors = SchoolVisitor::where('schoolID', $schoolID)
+            ->whereDate('visit_date', $today)
+            ->orderBy('created_at')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $visitors->map(function ($visitor) {
+                return [
+                    'visitorID' => $visitor->visitorID,
+                    'visitDate' => $visitor->visit_date ? $visitor->visit_date->format('Y-m-d') : null,
+                    'name' => $visitor->name,
+                    'contact' => $visitor->contact,
+                    'occupation' => $visitor->occupation,
+                    'reason' => $visitor->reason,
+                    'signature' => $visitor->signature,
+                ];
+            }),
+        ]);
+    }
+
+    public function listSchoolVisitors(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+        if (!$user || $user !== 'Admin' || !$schoolID) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        $dateFrom = $request->get('date_from');
+        $dateTo = $request->get('date_to');
+
+        $query = SchoolVisitor::where('schoolID', $schoolID);
+        if ($dateFrom && $dateTo) {
+            $query->whereBetween('visit_date', [$dateFrom, $dateTo]);
+        }
+
+        $visitors = $query->orderBy('visit_date', 'desc')->orderBy('created_at', 'desc')->get();
+
+        $monthStart = Carbon::now()->startOfMonth();
+        $monthEnd = Carbon::now()->endOfMonth();
+        $usedCount = SchoolVisitorSmsLog::where('schoolID', $schoolID)
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->sum('recipient_count');
+
+        return response()->json([
+            'success' => true,
+            'data' => $visitors->map(function ($visitor) {
+                return [
+                    'visitorID' => $visitor->visitorID,
+                    'visitDate' => $visitor->visit_date ? $visitor->visit_date->format('Y-m-d') : null,
+                    'name' => $visitor->name,
+                    'contact' => $visitor->contact,
+                    'occupation' => $visitor->occupation,
+                    'reason' => $visitor->reason,
+                    'signature' => $visitor->signature,
+                ];
+            }),
+            'used' => $usedCount,
+        ]);
+    }
+
+    public function updateSchoolVisitor(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+        if (!$user || $user !== 'Admin' || !$schoolID) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        $validated = $request->validate([
+            'visitorID' => 'required|integer',
+            'name' => 'required|string',
+            'contact' => 'nullable|string',
+            'occupation' => 'nullable|string',
+            'reason' => 'nullable|string',
+        ]);
+
+        $visitor = SchoolVisitor::where('schoolID', $schoolID)
+            ->where('visitorID', $validated['visitorID'])
+            ->firstOrFail();
+
+        $visitor->update([
+            'name' => $validated['name'],
+            'contact' => $validated['contact'],
+            'occupation' => $validated['occupation'],
+            'reason' => $validated['reason'],
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Visitor updated successfully.']);
+    }
+
+    public function deleteSchoolVisitor(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+        if (!$user || $user !== 'Admin' || !$schoolID) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        $validated = $request->validate([
+            'visitorID' => 'required|integer',
+        ]);
+
+        $visitor = SchoolVisitor::where('schoolID', $schoolID)
+            ->where('visitorID', $validated['visitorID'])
+            ->firstOrFail();
+        $visitor->delete();
+
+        return response()->json(['success' => true, 'message' => 'Visitor deleted successfully.']);
+    }
+
+    public function sendVisitorSms(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+        if (!$user || $user !== 'Admin' || !$schoolID) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        $validated = $request->validate([
+            'message' => 'required|string',
+            'visitor_ids' => 'required|array|min:1',
+            'visitor_ids.*' => 'integer',
+        ]);
+
+        $schoolName = School::where('schoolID', $schoolID)->value('school_name') ?? 'School';
+        $prefix = trim($schoolName) !== '' ? trim($schoolName) . ': ' : '';
+        $message = $validated['message'];
+        if (strpos($message, $prefix) !== 0) {
+            $message = $prefix . $message;
+        }
+        if (mb_strlen($message) > 163) {
+            return response()->json(['success' => false, 'message' => 'SMS message must be 163 characters or less.'], 422);
+        }
+        if (!preg_match('/^[\x00-\x7F]+$/', $message)) {
+            return response()->json(['success' => false, 'message' => 'SMS must not contain emojis or non-ASCII characters.'], 422);
+        }
+
+        $visitorIds = $validated['visitor_ids'];
+        $visitors = SchoolVisitor::where('schoolID', $schoolID)
+            ->whereIn('visitorID', $visitorIds)
+            ->get();
+
+        if ($visitors->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'No valid visitors selected.'], 422);
+        }
+
+        $monthStart = Carbon::now()->startOfMonth();
+        $monthEnd = Carbon::now()->endOfMonth();
+        $usedCount = SchoolVisitorSmsLog::where('schoolID', $schoolID)
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->sum('recipient_count');
+
+        $recipientCount = $visitors->count();
+        if ($usedCount + $recipientCount > 200) {
+            return response()->json(['success' => false, 'message' => 'Monthly SMS limit (200) exceeded.'], 422);
+        }
+
+        set_time_limit(60);
+        $smsService = new SmsService();
+        $sent = 0;
+        $skipped = 0;
+
+        foreach ($visitors as $visitor) {
+            $phone = $visitor->contact;
+            if (!$phone || !preg_match('/\d{7,}/', $phone)) {
+                $skipped++;
+                continue;
+            }
+            $result = $smsService->sendSms($phone, $message);
+            if ($result['success']) {
+                $sent++;
+            } else {
+                $skipped++;
+            }
+        }
+
+        SchoolVisitorSmsLog::create([
+            'schoolID' => $schoolID,
+            'message' => $message,
+            'recipient_count' => $sent,
+            'recipient_ids' => $visitors->pluck('visitorID')->values()->all(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "SMS sent: {$sent}. Skipped: {$skipped}.",
+            'used' => $usedCount + $sent,
+        ]);
     }
 
     public function storeDamagedLostRecord(Request $request)
