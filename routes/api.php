@@ -117,6 +117,13 @@ Route::middleware('web')->group(function () {
     Route::post('/accommodation/beds', [AccomodationController::class, 'apiBedsStore']);
     Route::put('/accommodation/beds', [AccomodationController::class, 'apiBedsUpdate']);
     Route::delete('/accommodation/beds/{bedID}', [AccomodationController::class, 'apiBedsDestroy']);
+
+    Route::get('/accommodation/bed-assignments', [AccomodationController::class, 'apiBedAssignmentsIndex']);
+    Route::get('/accommodation/students', [AccomodationController::class, 'apiSearchStudents']);
+    Route::post('/accommodation/beds/assign', [AccomodationController::class, 'apiAssignStudentToBed']);
+    Route::post('/accommodation/beds/release', [AccomodationController::class, 'apiReleaseStudentFromBed']);
+    Route::post('/accommodation/beds/move', [AccomodationController::class, 'apiMoveStudentToBed']);
+    Route::post('/accommodation/blocks/{blockID}/remove-students', [AccomodationController::class, 'apiRemoveStudentsFromBlock']);
 });
 
 

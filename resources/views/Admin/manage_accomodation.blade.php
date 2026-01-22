@@ -334,6 +334,57 @@
         border-radius: 6px;
         margin-bottom: 15px;
     }
+
+    .bed-map-block {
+        border: 1px solid #e9ecef;
+        padding: 12px;
+        margin-bottom: 12px;
+        background: #fafafa;
+    }
+    .bed-map-title {
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+    .bed-map-room {
+        margin-bottom: 10px;
+        padding: 8px;
+        background: #ffffff;
+        border: 1px solid #eee;
+    }
+    .bed-map-room-title {
+        font-weight: 600;
+        margin-bottom: 6px;
+        font-size: 0.95rem;
+    }
+    .bed-pill {
+        display: inline-block;
+        padding: 6px 10px;
+        margin: 4px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        border: 1px solid transparent;
+    }
+    .bed-pill.available {
+        background: #d4edda;
+        color: #155724;
+        border-color: #c3e6cb;
+    }
+    .bed-pill.occupied {
+        background: #f8d7da;
+        color: #721c24;
+        border-color: #f5c6cb;
+    }
+    .bed-pill.maintenance {
+        background: #d1ecf1;
+        color: #0c5460;
+        border-color: #bee5eb;
+    }
+    .bed-pill.inactive {
+        background: #e2e3e5;
+        color: #6c757d;
+        border-color: #d6d8db;
+    }
 </style>
 
 <div class="breadcrumbs">
@@ -367,6 +418,12 @@
                         </a>
                         <a class="list-group-item" data-target="#section-register-room">
                             <i class="fa fa-door-open"></i> Register Room
+                        </a>
+                        <a class="list-group-item" data-target="#section-register-bed">
+                            <i class="fa fa-bed"></i> Register Beds
+                        </a>
+                        <a class="list-group-item" data-target="#section-view-bed">
+                            <i class="fa fa-th-large"></i> View Beds
                         </a>
         </div>
                     <div class="card border-primary-custom mt-3">
@@ -468,7 +525,7 @@
                 </button>
                                 <button type="button" class="btn btn-secondary" id="resetBlockBtn">
                                     <i class="fa fa-refresh"></i> Reset
-                                </button>
+                </button>
             </div>
                         </form>
         </div>
@@ -526,9 +583,47 @@
                                 <button type="button" class="btn btn-secondary" id="resetRoomBtn">
                                     <i class="fa fa-refresh"></i> Reset
                                 </button>
+                        </div>
+                </form>
+                        </div>
+
+                    <div id="section-register-bed" class="accommodation-section d-none">
+                        <div class="section-title">Register Beds</div>
+                        <form id="bedRegisterForm">
+                            <div class="form-group mb-3">
+                                <label class="form-label">Select Room (Blocks with Rooms)</label>
+                                <select class="form-control" id="bedRoomSelect">
+                                    <option value="">Select Room</option>
+                                </select>
+                                    </div>
+                            <div class="text-muted mb-2">OR</div>
+                            <div class="form-group mb-3">
+                                <label class="form-label">Select Block (Hall / No Rooms)</label>
+                                <select class="form-control" id="bedHallBlockID">
+                                    <option value="">Select Hall Block</option>
+                            </select>
+                        </div>
+                            <div id="bedRows"></div>
+                            <div class="mb-3">
+                                <button type="button" class="btn btn-outline-secondary" id="addBedRowBtn">
+                                    <i class="fa fa-plus"></i> Add Another Bed
+                                </button>
+                        </div>
+                            <div class="d-flex flex-wrap">
+                                <button type="button" class="btn btn-primary-custom mr-2" id="saveBedsBtn" onclick="saveBeds()">
+                                    <i class="fa fa-save"></i> Save Beds
+                                </button>
+                                <button type="button" class="btn btn-secondary" id="resetBedsBtn">
+                                    <i class="fa fa-refresh"></i> Reset
+                                </button>
                     </div>
                 </form>
             </div>
+
+                    <div id="section-view-bed" class="accommodation-section d-none">
+                        <div class="section-title">View Beds</div>
+                        <div id="bedMapContainer"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -609,6 +704,65 @@
     </div>
 </div>
 
+<!-- Bed Detail / Assignment Modal -->
+<div class="modal fade" id="bedDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fa fa-info-circle"></i> Bed Details
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="bedDetailInfo" class="mb-3"></div>
+                <div id="bedAssignWarning" class="alert alert-warning d-none"></div>
+
+                <div id="bedOccupiedSection" class="d-none">
+                    <div class="section-title">Student in Bed</div>
+                    <div id="bedStudentInfo"></div>
+                </div>
+
+                <div id="bedMoveSection" class="d-none">
+                    <div class="section-title">Move / Swap Student</div>
+                    <div class="form-group mb-2">
+                        <label class="form-label">Select Target Bed</label>
+                        <select class="form-control" id="bedMoveTarget">
+                            <option value="">Select Bed</option>
+                        </select>
+                        <small class="text-muted">Select an available bed to move, or occupied bed to swap.</small>
+                    </div>
+                    <button type="button" class="btn btn-primary-custom" id="bedMoveBtn">
+                        <i class="fa fa-exchange"></i> Move / Swap
+                    </button>
+                </div>
+                <div id="bedAssignSection" class="d-none">
+                    <div class="section-title">Assign Student</div>
+                    <div class="form-group mb-2">
+                        <label class="form-label">Search Student (Active)</label>
+                        <input type="text" class="form-control" id="bedStudentSearch" placeholder="Search by name or admission number">
+                    </div>
+                    <div id="bedStudentResults"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger d-none" id="bedRemoveStudentBtn">
+                    <i class="fa fa-user-times"></i> Remove Student
+                </button>
+                <button type="button" class="btn btn-info" id="bedEditBtn">
+                    <i class="fa fa-edit"></i> Edit Bed
+                </button>
+                <button type="button" class="btn btn-danger" id="bedDeleteBtn">
+                    <i class="fa fa-trash"></i> Delete Bed
+                </button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @include('includes.footer')
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -627,16 +781,20 @@
     let blocks = [];
     let rooms = [];
     let beds = [];
+    let bedAssignments = [];
 
     // Initialize on page load
     $(document).ready(function() {
         loadBlocks();
         loadRooms();
         loadBeds();
+        loadBedAssignments();
         initAccommodationMenu();
         bindRoomRowHandlers();
+        bindBedRowHandlers();
         resetBlockForm();
         resetRoomForm();
+        resetBedRegisterForm();
 
         $('#resetBlockBtn').on('click', function() {
             resetBlockForm();
@@ -649,6 +807,58 @@
         });
         $('#roomBlockID').on('change', function() {
             checkBlockType();
+        });
+        $('#addBedRowBtn').on('click', function() {
+            addBedRow();
+        });
+        $('#resetBedsBtn').on('click', function() {
+            resetBedRegisterForm();
+        });
+        $('#bedRoomSelect').on('change', function() {
+            if ($(this).val()) {
+                $('#bedHallBlockID').val('');
+            }
+        });
+        $('#bedHallBlockID').on('change', function() {
+            if ($(this).val()) {
+                $('#bedRoomSelect').val('');
+            }
+        });
+        $('#bedMapContainer').on('click', '.bed-pill', function() {
+            const bedId = $(this).data('bed-id');
+            openBedDetail(bedId);
+        });
+        $('#bedStudentSearch').on('input', function() {
+            const query = $(this).val().trim();
+            searchStudentsForBed(query);
+        });
+        $('#bedRemoveStudentBtn').on('click', function() {
+            const bedId = $('#bedDetailModal').data('bed-id');
+            if (bedId) {
+                removeStudentFromBed(bedId);
+            }
+        });
+        $('#bedEditBtn').on('click', function() {
+            const bedId = $('#bedDetailModal').data('bed-id');
+            if (bedId) {
+                $('#bedDetailModal').modal('hide');
+                editBed(bedId);
+            }
+        });
+        $('#bedDeleteBtn').on('click', function() {
+            const bedId = $('#bedDetailModal').data('bed-id');
+            if (bedId) {
+                deleteBed(bedId);
+            }
+        });
+        $('#bedMoveBtn').on('click', function() {
+            const bedId = $('#bedDetailModal').data('bed-id');
+            const targetBedId = $('#bedMoveTarget').val();
+            if (!bedId || !targetBedId) {
+                showAlert('warning', 'Missing Data', 'Select a target bed first.');
+                return;
+            }
+            moveStudentToBed(bedId, targetBedId);
         });
         
         // Show/hide mattress info based on selection
@@ -776,6 +986,16 @@
             }
             $(this).closest('.room-row').remove();
         });
+        $('#roomRows').on('change', '.room-item-check', function() {
+            const rowItem = $(this).closest('.room-item');
+            const qtyContainer = rowItem.find('.room-item-qty');
+            if ($(this).is(':checked')) {
+                qtyContainer.removeClass('d-none');
+            } else {
+                qtyContainer.addClass('d-none');
+                qtyContainer.find('input').val(1);
+            }
+        });
     }
 
     function resetRoomForm() {
@@ -788,6 +1008,65 @@
         $('#roomRows').empty();
         addRoomRow();
         checkBlockType();
+    }
+
+    function bindBedRowHandlers() {
+        $('#bedRows').on('click', '.remove-bed-row', function() {
+            if ($('#bedRows .bed-row').length <= 1) {
+                showAlert('warning', 'Not allowed', 'At least one bed row is required.');
+                return;
+            }
+            $(this).closest('.bed-row').remove();
+        });
+    }
+
+    function resetBedRegisterForm() {
+        const form = $('#bedRegisterForm')[0];
+        if (form) {
+            form.reset();
+        }
+        $('#bedRows').empty();
+        addBedRow();
+        populateBedRegisterOptions();
+    }
+
+    function addBedRow(value = '') {
+        const rowId = Date.now() + Math.floor(Math.random() * 1000);
+        const bedNumber = value || '';
+        $('#bedRows').append(`
+            <div class="bed-row border p-2 mb-2" data-row-id="${rowId}">
+                <div class="row">
+                    <div class="col-md-8 form-group mb-2">
+                        <label class="form-label">Bed Number <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control bed-number" value="${bedNumber}" placeholder="e.g., BED-001" required>
+                    </div>
+                    <div class="col-md-4 form-group mb-2 d-flex align-items-end">
+                        <button type="button" class="btn btn-sm btn-delete remove-bed-row">
+                            <i class="fa fa-trash"></i> Remove
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `);
+    }
+
+    function populateBedRegisterOptions() {
+        const hallSelect = $('#bedHallBlockID');
+        const roomSelect = $('#bedRoomSelect');
+        hallSelect.empty().append('<option value="">Select Hall Block</option>');
+        roomSelect.empty().append('<option value="">Select Room</option>');
+
+        const hallBlocks = blocks.filter(b => b.status === 'Active' && b.blockType === 'without_rooms');
+        hallBlocks.forEach(block => {
+            hallSelect.append(`<option value="${block.blockID}">${block.blockName}</option>`);
+        });
+
+        const activeRooms = rooms.filter(r => r.status === 'Active');
+        activeRooms.forEach(room => {
+            const block = blocks.find(b => b.blockID == room.blockID);
+            const blockName = block ? block.blockName : 'Unknown Block';
+            roomSelect.append(`<option value="${room.roomID}">${room.roomName} (${room.roomNumber}) - ${blockName}</option>`);
+        });
     }
 
     function addRoomRow(values = {}) {
@@ -812,11 +1091,72 @@
                         <input type="number" class="form-control room-capacity" value="${capacity}" min="1">
                     </div>
                 </div>
+                <div class="form-group mb-2">
+                    <label class="form-label">Items Inside the Room</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item room-item">
+                            <input type="checkbox" class="room-item-check" data-type="table">
+                            <label>Tables</label>
+                            <div class="item-quantity room-item-qty d-none">
+                                <label>Quantity:</label>
+                                <input type="number" class="form-control room-item-qty-input" value="1" min="1">
+                            </div>
+                        </div>
+                        <div class="checkbox-item room-item">
+                            <input type="checkbox" class="room-item-check" data-type="chair">
+                            <label>Chairs</label>
+                            <div class="item-quantity room-item-qty d-none">
+                                <label>Quantity:</label>
+                                <input type="number" class="form-control room-item-qty-input" value="1" min="1">
+                            </div>
+                        </div>
+                        <div class="checkbox-item room-item">
+                            <input type="checkbox" class="room-item-check" data-type="cabinet">
+                            <label>Cabinets</label>
+                            <div class="item-quantity room-item-qty d-none">
+                                <label>Quantity:</label>
+                                <input type="number" class="form-control room-item-qty-input" value="1" min="1">
+                            </div>
+                        </div>
+                        <div class="checkbox-item room-item">
+                            <input type="checkbox" class="room-item-check" data-type="wardrobe">
+                            <label>Wardrobes</label>
+                            <div class="item-quantity room-item-qty d-none">
+                                <label>Quantity:</label>
+                                <input type="number" class="form-control room-item-qty-input" value="1" min="1">
+                            </div>
+                        </div>
+                        <div class="checkbox-item room-item">
+                            <input type="checkbox" class="room-item-check" data-type="other">
+                            <label>Other Items</label>
+                            <div class="item-quantity room-item-qty d-none">
+                                <label>Quantity:</label>
+                                <input type="number" class="form-control room-item-qty-input" value="1" min="1">
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <button type="button" class="btn btn-sm btn-delete remove-room-row">
                     <i class="fa fa-trash"></i> Remove
                 </button>
             </div>
         `);
+    }
+
+    function populateRoomRowItems(row, items) {
+        if (!items || !items.length) {
+            return;
+        }
+        items.forEach(item => {
+            const checkbox = row.find(`.room-item-check[data-type="${item.itemType}"]`);
+            if (!checkbox.length) {
+                return;
+            }
+            checkbox.prop('checked', true);
+            const qtyContainer = checkbox.closest('.room-item').find('.room-item-qty');
+            qtyContainer.removeClass('d-none');
+            qtyContainer.find('input').val(item.quantity || 1);
+        });
     }
 
     function populateRoomBlocks() {
@@ -953,7 +1293,8 @@
             },
             error: function(xhr) {
                 console.error('Error saving block:', xhr);
-                showAlert('error', 'Failed', 'Error saving block. Please try again.');
+                const msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Error saving block. Please try again.';
+                showAlert('error', 'Failed', msg);
             },
             complete: function() {
                 saveBtn.prop('disabled', false);
@@ -965,8 +1306,8 @@
     // Delete Block
     function deleteBlock(blockID) {
         if (typeof Swal === 'undefined') {
-            if (!confirm('Are you sure you want to delete this block? This will also delete all rooms and beds in this block.')) {
-                return;
+        if (!confirm('Are you sure you want to delete this block? This will also delete all rooms and beds in this block.')) {
+            return;
             }
             return performBlockDelete(blockID);
         }
@@ -1002,6 +1343,41 @@
         });
     }
 
+    function removeStudentsFromBlock(blockID) {
+        if (typeof Swal === 'undefined') {
+            return performRemoveStudentsFromBlock(blockID);
+        }
+        Swal.fire({
+            icon: 'warning',
+            title: 'Remove All Students?',
+            text: 'This will remove all students from beds in this block.',
+            showCancelButton: true,
+            confirmButtonColor: '#940000',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, remove'
+        }).then(result => {
+            if (result.isConfirmed) {
+                performRemoveStudentsFromBlock(blockID);
+            }
+        });
+    }
+
+    function performRemoveStudentsFromBlock(blockID) {
+        $.ajax({
+            url: `/api/accommodation/blocks/${blockID}/remove-students`,
+            method: 'POST',
+            success: function(response) {
+                showAlert('success', 'Success', response.message || 'Students removed from block.');
+                loadBeds();
+                loadBedAssignments();
+            },
+            error: function(xhr) {
+                const msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Error removing students.';
+                showAlert('error', 'Failed', msg);
+            }
+        });
+    }
+
     // Load Blocks
     function loadBlocks() {
         $.ajax({
@@ -1011,12 +1387,16 @@
                 blocks = response.data || [];
                 renderBlocksTable();
                 populateRoomBlocks();
+                populateBedRegisterOptions();
+                renderBedMap();
             },
             error: function(xhr) {
                 console.error('Error loading blocks:', xhr);
                 blocks = [];
                 renderBlocksTable();
                 populateRoomBlocks();
+                populateBedRegisterOptions();
+                renderBedMap();
             }
         });
     }
@@ -1078,6 +1458,9 @@
                             <button class="btn btn-sm btn-edit" onclick="editBlock(${block.blockID})" title="Edit">
                                 <i class="fa fa-edit"></i>
                             </button>
+                            <button class="btn btn-sm btn-view" onclick="removeStudentsFromBlock(${block.blockID})" title="Remove Students">
+                                <i class="fa fa-user-times"></i>
+                            </button>
                             <button class="btn btn-sm btn-delete" onclick="deleteBlock(${block.blockID})" title="Delete">
                                 <i class="fa fa-trash"></i>
                             </button>
@@ -1109,6 +1492,8 @@
             roomNumber: room.roomNumber,
             capacity: room.capacity
         });
+        const roomRow = $('#roomRows .room-row').last();
+        populateRoomRowItems(roomRow, room.items || []);
         checkBlockType();
         $('.accommodation-menu .list-group-item').removeClass('active');
         $('.accommodation-menu .list-group-item[data-target="#section-register-room"]').addClass('active');
@@ -1139,10 +1524,21 @@
             if (!name || !number) {
                 return;
             }
+        const items = [];
+            $(this).find('.room-item-check:checked').each(function() {
+                const itemType = $(this).data('type');
+                const qtyInput = $(this).closest('.room-item').find('.room-item-qty-input');
+                const qtyValue = parseInt(qtyInput.val()) || 1;
+                items.push({
+                    itemType: itemType,
+                    quantity: qtyValue
+                });
+            });
             roomsToSave.push({
                 roomName: name,
                 roomNumber: number,
-                capacity: capacity
+                capacity: capacity,
+                items: items
             });
         });
 
@@ -1165,7 +1561,7 @@
                 capacity: roomsToSave[0].capacity,
                 status: 'Active',
                 description: '',
-                items: []
+                items: roomsToSave[0].items || []
             };
         $.ajax({
             url: '/api/accommodation/rooms',
@@ -1197,7 +1593,7 @@
                     capacity: roomItem.capacity,
                     status: 'Active',
                     description: '',
-                    items: []
+                    items: roomItem.items || []
                 }
             });
         });
@@ -1222,8 +1618,8 @@
     // Delete Room
     function deleteRoom(roomID) {
         if (typeof Swal === 'undefined') {
-            if (!confirm('Are you sure you want to delete this room?')) {
-                return;
+        if (!confirm('Are you sure you want to delete this room?')) {
+            return;
             }
             return performRoomDelete(roomID);
         }
@@ -1266,11 +1662,15 @@
             success: function(response) {
                 rooms = response.data || [];
                 renderRoomsTable();
+                populateBedRegisterOptions();
+                renderBedMap();
             },
             error: function(xhr) {
                 console.error('Error loading rooms:', xhr);
                 rooms = [];
                 renderRoomsTable();
+                populateBedRegisterOptions();
+                renderBedMap();
             }
         });
     }
@@ -1449,11 +1849,83 @@
         });
     }
 
+    function saveBeds() {
+        const roomID = $('#bedRoomSelect').val();
+        const hallBlockID = $('#bedHallBlockID').val();
+
+        if (!roomID && !hallBlockID) {
+            showAlert('warning', 'Missing Selection', 'Select a room or a hall block first.');
+            return;
+        }
+
+        let blockID = hallBlockID;
+        let resolvedRoomID = roomID || null;
+        if (roomID) {
+            const room = rooms.find(r => r.roomID == roomID);
+            blockID = room ? room.blockID : null;
+        }
+
+        if (!blockID) {
+            showAlert('error', 'Invalid Selection', 'Unable to resolve block for the selected room.');
+            return;
+        }
+
+        const rows = $('#bedRows .bed-row');
+        const bedsToSave = [];
+        rows.each(function() {
+            const bedNumber = $(this).find('.bed-number').val().trim();
+            if (!bedNumber) {
+                return;
+            }
+            bedsToSave.push({
+                bedNumber: bedNumber
+            });
+        });
+
+        if (bedsToSave.length === 0) {
+            showAlert('warning', 'Missing Data', 'Please enter at least one bed number.');
+            return;
+        }
+
+        const saveBtn = $('#saveBedsBtn');
+        saveBtn.prop('disabled', true);
+        setAccommodationLoading(true);
+
+        const requests = bedsToSave.map(item => {
+            return $.ajax({
+                url: '/api/accommodation/beds',
+                method: 'POST',
+                data: {
+                    blockID: parseInt(blockID),
+                    roomID: resolvedRoomID ? parseInt(resolvedRoomID) : null,
+                    bedNumber: item.bedNumber,
+                    hasMattress: 'Yes',
+                    status: 'Available'
+                }
+            });
+        });
+
+        $.when.apply($, requests)
+            .done(function() {
+                loadBeds();
+                resetBedRegisterForm();
+                showAlert('success', 'Success', 'Beds saved successfully!');
+            })
+            .fail(function(xhr) {
+                console.error('Error saving beds:', xhr);
+                showAlert('error', 'Failed', 'Error saving beds. Please try again.');
+            })
+            .always(function() {
+                saveBtn.prop('disabled', false);
+                setAccommodationLoading(false);
+        });
+    }
+
     // Delete Bed
     function deleteBed(bedID) {
         if (typeof Swal === 'undefined') {
-            if (!confirm('Are you sure you want to delete this bed?')) {
-                return;
+        if (!confirm('Are you sure you want to delete this bed?')) {
+            return;
             }
             return performBedDelete(bedID);
         }
@@ -1482,7 +1954,8 @@
             },
             error: function(xhr) {
                 console.error('Error deleting bed:', xhr);
-                showAlert('error', 'Failed', 'Error deleting bed. Please try again.');
+                const msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Error deleting bed. Please try again.';
+                showAlert('error', 'Failed', msg);
             }
         });
     }
@@ -1496,12 +1969,30 @@
                 beds = response.data || [];
                 renderBedsTable();
                 renderBlocksTable();
+                renderBedMap();
             },
             error: function(xhr) {
                 console.error('Error loading beds:', xhr);
                 beds = [];
                 renderBedsTable();
                 renderBlocksTable();
+                renderBedMap();
+            }
+        });
+    }
+
+    function loadBedAssignments() {
+        $.ajax({
+            url: '/api/accommodation/bed-assignments',
+            method: 'GET',
+            success: function(response) {
+                bedAssignments = response.data || [];
+                renderBedMap();
+            },
+            error: function(xhr) {
+                console.error('Error loading bed assignments:', xhr);
+                bedAssignments = [];
+                renderBedMap();
             }
         });
     }
@@ -1567,6 +2058,284 @@
                     </td>
                 </tr>
             `);
+        });
+    }
+
+    function renderBedMap() {
+        const container = $('#bedMapContainer');
+        if (!container.length) {
+            return;
+        }
+        container.empty();
+
+        if (blocks.length === 0 || beds.length === 0) {
+            container.html(`
+                <div class="empty-state">
+                    <i class="fa fa-bed"></i>
+                    <p>No beds found. Register beds first.</p>
+                </div>
+            `);
+            return;
+        }
+
+        const assignmentMap = {};
+        bedAssignments.forEach(assign => {
+            assignmentMap[assign.bedID] = assign;
+        });
+
+        blocks.forEach(block => {
+            const blockBeds = beds.filter(b => b.blockID == block.blockID);
+            if (blockBeds.length === 0) {
+                return;
+            }
+            let blockHtml = `
+                <div class="bed-map-block">
+                    <div class="bed-map-title">${block.blockName} (${block.blockType === 'with_rooms' ? 'With Rooms' : 'Hall'})</div>
+            `;
+
+            if (block.blockType === 'with_rooms') {
+                const blockRooms = rooms.filter(r => r.blockID == block.blockID);
+                blockRooms.forEach(room => {
+                    const roomBeds = blockBeds.filter(b => b.roomID == room.roomID);
+                    if (roomBeds.length === 0) {
+                        return;
+                    }
+                    blockHtml += `
+                        <div class="bed-map-room">
+                            <div class="bed-map-room-title">${room.roomName} (${room.roomNumber})</div>
+                            <div>
+                    `;
+                    roomBeds.forEach(bed => {
+                        const assignment = assignmentMap[bed.bedID];
+                        const statusClass = assignment ? 'occupied' : (bed.status || '').toLowerCase();
+                        const pillLabel = bed.bedNumber || `Bed ${bed.bedID}`;
+                        blockHtml += `<span class="bed-pill ${statusClass}" data-bed-id="${bed.bedID}">${pillLabel}</span>`;
+                    });
+                    blockHtml += `</div></div>`;
+                });
+            } else {
+                blockHtml += `<div>`;
+                blockBeds.forEach(bed => {
+                    const assignment = assignmentMap[bed.bedID];
+                    const statusClass = assignment ? 'occupied' : (bed.status || '').toLowerCase();
+                    const pillLabel = bed.bedNumber || `Bed ${bed.bedID}`;
+                    blockHtml += `<span class="bed-pill ${statusClass}" data-bed-id="${bed.bedID}">${pillLabel}</span>`;
+                });
+                blockHtml += `</div>`;
+            }
+
+            blockHtml += `</div>`;
+            container.append(blockHtml);
+        });
+    }
+
+    function openBedDetail(bedId) {
+        const bed = beds.find(b => b.bedID == bedId);
+        if (!bed) {
+            showAlert('error', 'Not found', 'Bed not found.');
+            return;
+        }
+        const block = blocks.find(b => b.blockID == bed.blockID);
+        const room = bed.roomID ? rooms.find(r => r.roomID == bed.roomID) : null;
+        const assignment = bedAssignments.find(a => a.bedID == bedId);
+
+        $('#bedDetailModal').data('bed-id', bedId);
+
+        const bedLabel = bed.bedNumber || `Bed ${bed.bedID}`;
+        const blockName = block ? block.blockName : 'N/A';
+        const roomName = room ? `${room.roomName} (${room.roomNumber})` : 'Direct in Block (Hall)';
+        const statusLabel = bed.status || 'Available';
+        const blockSex = block && (block.blockSex || block.sex) ? (block.blockSex || block.sex) : 'N/A';
+
+        $('#bedDetailInfo').html(`
+            <div><strong>Bed:</strong> ${bedLabel}</div>
+            <div><strong>Block:</strong> ${blockName}</div>
+            <div><strong>Room:</strong> ${roomName}</div>
+            <div><strong>Block Sex:</strong> ${blockSex}</div>
+            <div><strong>Status:</strong> ${statusLabel}</div>
+        `);
+
+        $('#bedAssignWarning').addClass('d-none');
+        $('#bedAssignSection').addClass('d-none');
+        $('#bedOccupiedSection').addClass('d-none');
+        $('#bedMoveSection').addClass('d-none');
+        $('#bedRemoveStudentBtn').addClass('d-none');
+
+        if (assignment) {
+            $('#bedOccupiedSection').removeClass('d-none');
+            $('#bedStudentInfo').html(`
+                <div><strong>Name:</strong> ${assignment.studentName}</div>
+                <div><strong>Class:</strong> ${assignment.className}</div>
+                <div><strong>Gender:</strong> ${assignment.studentGender || 'N/A'}</div>
+                <div><strong>Parent Phone:</strong> ${assignment.parentPhone || 'N/A'}</div>
+            `);
+            $('#bedRemoveStudentBtn').removeClass('d-none');
+            $('#bedMoveSection').removeClass('d-none');
+            populateMoveTargets(bedId, assignment.studentGender || '');
+            $('#bedDeleteBtn').prop('disabled', true);
+        } else {
+            $('#bedDeleteBtn').prop('disabled', false);
+            if (statusLabel !== 'Available') {
+                $('#bedAssignWarning')
+                    .removeClass('d-none')
+                    .text('This bed is not available for assignment.');
+            } else {
+                $('#bedAssignSection').removeClass('d-none');
+                $('#bedStudentSearch').val('');
+                $('#bedStudentResults').empty();
+            }
+        }
+
+        $('#bedDetailModal').modal('show');
+    }
+
+    function searchStudentsForBed(query) {
+        const results = $('#bedStudentResults');
+        results.empty();
+        if (!query || query.length < 2) {
+            return;
+        }
+        $.ajax({
+            url: `/api/accommodation/students?search=${encodeURIComponent(query)}`,
+            method: 'GET',
+            success: function(response) {
+                const data = response.data || [];
+                if (data.length === 0) {
+                    results.html('<div class="text-muted">No students found.</div>');
+                    return;
+                }
+                let html = '<div class="list-group">';
+                data.forEach(student => {
+                    html += `
+                        <button type="button" class="list-group-item list-group-item-action bed-assign-item" data-student-id="${student.studentID}">
+                            <strong>${student.studentName}</strong> (${student.admissionNumber || 'N/A'}) - ${student.className}
+                        </button>
+                    `;
+                });
+                html += '</div>';
+                results.html(html);
+                $('.bed-assign-item').on('click', function() {
+                    const studentId = $(this).data('student-id');
+                    assignStudentToBed(studentId);
+                });
+            },
+            error: function(xhr) {
+                console.error('Error searching students:', xhr);
+                results.html('<div class="text-danger">Error searching students.</div>');
+            }
+        });
+    }
+
+    function assignStudentToBed(studentId) {
+        const bedId = $('#bedDetailModal').data('bed-id');
+        if (!bedId) {
+            showAlert('error', 'Not found', 'Bed not selected.');
+            return;
+        }
+        $.ajax({
+            url: '/api/accommodation/beds/assign',
+            method: 'POST',
+            data: {
+                bedID: bedId,
+                studentID: studentId
+            },
+            success: function(response) {
+                showAlert('success', 'Assigned', response.message || 'Student assigned to bed.');
+                $('#bedDetailModal').modal('hide');
+                loadBeds();
+                loadBedAssignments();
+            },
+            error: function(xhr) {
+                const msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Error assigning student.';
+                showAlert('error', 'Failed', msg);
+            }
+        });
+    }
+
+    function populateMoveTargets(currentBedId, studentGender) {
+        const targetSelect = $('#bedMoveTarget');
+        targetSelect.empty().append('<option value="">Select Bed</option>');
+        const gender = (studentGender || '').toLowerCase();
+
+        beds.forEach(bed => {
+            if (bed.bedID == currentBedId) {
+                return;
+            }
+            const block = blocks.find(b => b.blockID == bed.blockID);
+            if (block && (block.blockSex || block.sex)) {
+                const blockSex = (block.blockSex || block.sex || '').toLowerCase();
+                if (blockSex !== 'mixed' && gender && blockSex !== gender) {
+                    return;
+                }
+                if (blockSex !== 'mixed' && !gender) {
+                    return;
+                }
+            }
+            const room = bed.roomID ? rooms.find(r => r.roomID == bed.roomID) : null;
+            const bedLabel = bed.bedNumber || `Bed ${bed.bedID}`;
+            const roomLabel = room ? `${room.roomName} (${room.roomNumber})` : 'Hall';
+            const blockName = block ? block.blockName : 'Unknown Block';
+            const assignment = bedAssignments.find(a => a.bedID == bed.bedID);
+            const statusLabel = assignment ? 'Occupied' : (bed.status || 'Available');
+            targetSelect.append(`<option value="${bed.bedID}">${bedLabel} - ${roomLabel} - ${blockName} [${statusLabel}]</option>`);
+        });
+    }
+
+    function moveStudentToBed(fromBedId, toBedId) {
+        $.ajax({
+            url: '/api/accommodation/beds/move',
+            method: 'POST',
+            data: {
+                fromBedID: fromBedId,
+                toBedID: toBedId
+            },
+            success: function(response) {
+                showAlert('success', 'Success', response.message || 'Student moved successfully.');
+                $('#bedDetailModal').modal('hide');
+                loadBeds();
+                loadBedAssignments();
+            },
+            error: function(xhr) {
+                const msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Error moving student.';
+                showAlert('error', 'Failed', msg);
+            }
+        });
+    }
+
+    function removeStudentFromBed(bedId) {
+        if (typeof Swal === 'undefined') {
+            return performRemoveStudent(bedId);
+        }
+        Swal.fire({
+            icon: 'warning',
+            title: 'Remove Student?',
+            text: 'Are you sure you want to remove this student from the bed?',
+            showCancelButton: true,
+            confirmButtonColor: '#940000',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, remove'
+        }).then(result => {
+            if (result.isConfirmed) {
+                performRemoveStudent(bedId);
+            }
+        });
+    }
+
+    function performRemoveStudent(bedId) {
+        $.ajax({
+            url: '/api/accommodation/beds/release',
+            method: 'POST',
+            data: { bedID: bedId },
+            success: function(response) {
+                showAlert('success', 'Removed', response.message || 'Student removed from bed.');
+                $('#bedDetailModal').modal('hide');
+                loadBeds();
+                loadBedAssignments();
+            },
+            error: function(xhr) {
+                const msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Error removing student.';
+                showAlert('error', 'Failed', msg);
+            }
         });
     }
 </script>

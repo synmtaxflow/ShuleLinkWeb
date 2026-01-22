@@ -36,4 +36,9 @@ class Bed extends Model
     {
         return $this->belongsTo(Room::class, 'roomID', 'roomID');
     }
+
+    public function assignments()
+    {
+        return $this->hasMany(BedAssignment::class, 'bedID', 'bedID');
+    }
 }
