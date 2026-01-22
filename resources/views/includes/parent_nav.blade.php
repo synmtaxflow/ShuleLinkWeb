@@ -172,6 +172,7 @@
                         <li><a href="{{ route('parentSubjects') }}" class="nav-link"><i class="fa fa-book"></i> <span data-translate="subjects">Subjects</span></a></li>
                         <li><a href="{{ route('parentPayments') }}" class="nav-link"><i class="fa fa-credit-card"></i> <span data-translate="payments">Payments</span></a></li>
                         <li><a href="{{ route('parentFeesSummary') }}" class="nav-link"><i class="fa fa-list-alt"></i> <span data-translate="fees_summary">Fees Summary</span></a></li>
+                        <li><a href="{{ route('parent.permissions') }}" class="nav-link"><i class="fa fa-check-square-o"></i> <span data-translate="permissions">Permission</span></a></li>
                     </ul>
                 </li>
             </ul>
@@ -195,6 +196,7 @@
                 'subjects': 'Masomo',
                 'payments': 'Malipo',
                 'fees_summary': 'Muhtasari wa Ada',
+                'permissions': 'Ruhusa',
                 'my_profile': 'Wasifu Wangu',
                 'notifications': 'Arifa',
                 'settings': 'Mipangilio',
@@ -207,6 +209,7 @@
                 'subjects': 'Subjects',
                 'payments': 'Payments',
                 'fees_summary': 'Fees Summary',
+                'permissions': 'Permission',
                 'my_profile': 'My Profile',
                 'notifications': 'Notifications',
                 'settings': 'Settings',

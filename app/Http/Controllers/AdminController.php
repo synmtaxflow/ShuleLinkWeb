@@ -11,12 +11,18 @@ use App\Models\SchemeOfWork;
 use App\Models\SchemeOfWorkItem;
 use App\Models\LessonPlan;
 use App\Models\SchoolSubject;
+use App\Models\PermissionRequest;
+use App\Models\ParentModel;
+use App\Models\Student;
+use App\Services\SmsService;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 
 class AdminController extends Controller
@@ -2326,6 +2332,235 @@ class AdminController extends Controller
             return response()->json(['success' => true, 'message' => 'Feedback rejected successfully.']);
         }
         return redirect()->back()->with('success', 'Feedback rejected successfully.');
+    }
+
+    public function managePermissionsAdmin(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $tab = $request->get('tab', 'teacher');
+        $dateFrom = $request->get('date_from');
+        $dateTo = $request->get('date_to');
+        $search = trim($request->get('search', ''));
+
+        $query = PermissionRequest::with(['teacher', 'student', 'parent'])
+            ->where('schoolID', $schoolID)
+            ->where('requester_type', $tab === 'student' ? 'student' : 'teacher');
+
+        if ($dateFrom && $dateTo) {
+            $query->whereBetween('created_at', [$dateFrom, Carbon::parse($dateTo)->endOfDay()]);
+        }
+
+        if ($search !== '') {
+            if ($tab === 'student') {
+                $query->whereHas('student', function ($q) use ($search) {
+                    $q->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('admission_number', 'like', "%{$search}%");
+                });
+            } else {
+                $query->whereHas('teacher', function ($q) use ($search) {
+                    $q->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('employee_number', 'like', "%{$search}%");
+                });
+            }
+        }
+
+        $permissions = $query->orderBy('created_at', 'desc')->get();
+
+        $pendingCount = PermissionRequest::where('schoolID', $schoolID)
+            ->where('status', 'pending')
+            ->where('is_read_by_admin', false)
+            ->count();
+        $approvedCount = PermissionRequest::where('schoolID', $schoolID)
+            ->where('status', 'approved')
+            ->where('is_read_by_admin', false)
+            ->count();
+        $rejectedCount = PermissionRequest::where('schoolID', $schoolID)
+            ->where('status', 'rejected')
+            ->where('is_read_by_admin', false)
+            ->count();
+
+        PermissionRequest::where('schoolID', $schoolID)->update(['is_read_by_admin' => true]);
+
+        if ($request->ajax() || $request->expectsJson()) {
+            $data = $permissions->map(function ($permission) use ($tab) {
+                $requesterName = 'N/A';
+                if ($tab === 'student' && $permission->student) {
+                    $requesterName = trim(($permission->student->first_name ?? '') . ' ' . ($permission->student->last_name ?? ''));
+                }
+                if ($tab !== 'student' && $permission->teacher) {
+                    $requesterName = trim(($permission->teacher->first_name ?? '') . ' ' . ($permission->teacher->last_name ?? ''));
+                }
+                return [
+                    'permissionID' => $permission->permissionID,
+                    'requesterName' => $requesterName,
+                    'timeMode' => $permission->time_mode,
+                    'daysCount' => $permission->days_count,
+                    'startDate' => $permission->start_date ? $permission->start_date->format('Y-m-d') : null,
+                    'endDate' => $permission->end_date ? $permission->end_date->format('Y-m-d') : null,
+                    'startTime' => $permission->start_time,
+                    'endTime' => $permission->end_time,
+                    'reasonType' => $permission->reason_type,
+                    'status' => $permission->status,
+                    'attachment' => $permission->attachment_path ? route('admin.permissions.attachment', $permission->permissionID) : null,
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $data,
+                'pendingCount' => $pendingCount,
+                'approvedCount' => $approvedCount,
+                'rejectedCount' => $rejectedCount,
+            ]);
+        }
+
+        return view('Admin.manage_permissions', [
+            'activeTab' => $tab,
+            'permissions' => $permissions,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'search' => $search,
+            'pendingCount' => $pendingCount,
+            'approvedCount' => $approvedCount,
+            'rejectedCount' => $rejectedCount,
+        ]);
+    }
+
+    public function viewPermissionAttachment($permissionID)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin' || !$schoolID) {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $permission = PermissionRequest::where('schoolID', $schoolID)
+            ->where('permissionID', $permissionID)
+            ->firstOrFail();
+
+        if (!$permission->attachment_path) {
+            abort(404);
+        }
+
+        $path = $permission->attachment_path;
+        if (!Storage::disk('public')->exists($path)) {
+            abort(404);
+        }
+
+        return Storage::disk('public')->response($path);
+    }
+
+    public function approvePermission(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+            }
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'permissionID' => 'required|exists:permission_requests,permissionID',
+            'admin_response' => 'required|string',
+            'admin_attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
+        ]);
+
+        $permission = PermissionRequest::where('schoolID', $schoolID)
+            ->where('permissionID', $validated['permissionID'])
+            ->firstOrFail();
+
+        $attachmentPath = $permission->admin_attachment_path;
+        if ($request->hasFile('admin_attachment')) {
+            $attachmentPath = $request->file('admin_attachment')->store('permission_admin_attachments', 'public');
+        }
+
+        $updateData = [
+            'status' => 'approved',
+            'admin_response' => $validated['admin_response'],
+            'reviewed_at' => now(),
+            'is_read_by_requester' => false,
+        ];
+        if (Schema::hasColumn('permission_requests', 'admin_attachment_path')) {
+            $updateData['admin_attachment_path'] = $attachmentPath;
+        }
+        $permission->update($updateData);
+
+        $smsService = new SmsService();
+        if ($permission->requester_type === 'teacher') {
+            $teacher = Teacher::where('id', $permission->teacherID)->first();
+            if ($teacher && $teacher->phone_number) {
+                $smsService->sendSms($teacher->phone_number, 'Your permission request has been approved.');
+            }
+        } else {
+            $parent = ParentModel::where('parentID', $permission->parentID)->first();
+            if ($parent && $parent->phone) {
+                $smsService->sendSms($parent->phone, 'Your permission request has been approved.');
+            }
+        }
+
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Permission approved successfully.']);
+        }
+        return redirect()->back()->with('success', 'Permission approved successfully.');
+    }
+
+    public function rejectPermission(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+            }
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'permissionID' => 'required|exists:permission_requests,permissionID',
+            'admin_response' => 'required|string',
+        ]);
+
+        $permission = PermissionRequest::where('schoolID', $schoolID)
+            ->where('permissionID', $validated['permissionID'])
+            ->firstOrFail();
+
+        $permission->update([
+            'status' => 'rejected',
+            'admin_response' => $validated['admin_response'],
+            'reviewed_at' => now(),
+            'is_read_by_requester' => false,
+        ]);
+
+        $smsService = new SmsService();
+        if ($permission->requester_type === 'teacher') {
+            $teacher = Teacher::where('id', $permission->teacherID)->first();
+            if ($teacher && $teacher->phone_number) {
+                $smsService->sendSms($teacher->phone_number, 'Your permission request has been rejected.');
+            }
+        } else {
+            $parent = ParentModel::where('parentID', $permission->parentID)->first();
+            if ($parent && $parent->phone) {
+                $smsService->sendSms($parent->phone, 'Your permission request has been rejected.');
+            }
+        }
+
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Permission rejected successfully.']);
+        }
+        return redirect()->back()->with('success', 'Permission rejected successfully.');
     }
 
     public function storeDamagedLostRecord(Request $request)

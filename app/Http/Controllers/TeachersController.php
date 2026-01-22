@@ -24,6 +24,7 @@ use App\Models\SchemeOfWork;
 use App\Models\SchemeOfWorkItem;
 use App\Models\SchemeOfWorkLearningObjective;
 use App\Models\LessonPlan;
+use App\Models\PermissionRequest;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use Dompdf\Dompdf;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -10545,5 +10546,169 @@ class TeachersController extends Controller
             Log::error('Error downloading bulk lesson plans PDF: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to generate PDF: ' . $e->getMessage());
         }
+    }
+
+    public function manageTeacherPermissions(Request $request)
+    {
+        $user = Session::get('user_type');
+        $teacherID = Session::get('teacherID');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Teacher' || !$teacherID || !$schoolID) {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $activeTab = $request->get('tab', 'request');
+
+        $permissions = PermissionRequest::where('schoolID', $schoolID)
+            ->where('requester_type', 'teacher')
+            ->where('teacherID', $teacherID)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $pendingPermissions = $permissions->where('status', 'pending');
+        $approvedPermissions = $permissions->where('status', 'approved');
+        $rejectedPermissions = $permissions->where('status', 'rejected');
+
+        if (in_array($activeTab, ['pending', 'approved', 'rejected'], true)) {
+            PermissionRequest::where('schoolID', $schoolID)
+                ->where('requester_type', 'teacher')
+                ->where('teacherID', $teacherID)
+                ->where('status', $activeTab)
+                ->update(['is_read_by_requester' => true]);
+        }
+
+        $unreadPendingCount = PermissionRequest::where('schoolID', $schoolID)
+            ->where('requester_type', 'teacher')
+            ->where('teacherID', $teacherID)
+            ->where('status', 'pending')
+            ->where('is_read_by_requester', false)
+            ->count();
+        $unreadApprovedCount = PermissionRequest::where('schoolID', $schoolID)
+            ->where('requester_type', 'teacher')
+            ->where('teacherID', $teacherID)
+            ->where('status', 'approved')
+            ->where('is_read_by_requester', false)
+            ->count();
+        $unreadRejectedCount = PermissionRequest::where('schoolID', $schoolID)
+            ->where('requester_type', 'teacher')
+            ->where('teacherID', $teacherID)
+            ->where('status', 'rejected')
+            ->where('is_read_by_requester', false)
+            ->count();
+
+        return view('Teacher.manage_permissions', [
+            'activeTab' => $activeTab,
+            'pendingPermissions' => $pendingPermissions,
+            'approvedPermissions' => $approvedPermissions,
+            'rejectedPermissions' => $rejectedPermissions,
+            'unreadPendingCount' => $unreadPendingCount,
+            'unreadApprovedCount' => $unreadApprovedCount,
+            'unreadRejectedCount' => $unreadRejectedCount,
+        ]);
+    }
+
+    public function storeTeacherPermission(Request $request)
+    {
+        $user = Session::get('user_type');
+        $teacherID = Session::get('teacherID');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Teacher' || !$teacherID || !$schoolID) {
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+            }
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'time_mode' => 'required|in:days,hours',
+            'days_count' => 'nullable|integer',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'start_time' => 'nullable|date_format:H:i',
+            'end_time' => 'nullable|date_format:H:i',
+            'reason_type' => 'required|in:medical,official,professional,emergency,other',
+            'reason_description' => 'required|string|min:5',
+        ]);
+
+        if ($validated['time_mode'] === 'days') {
+            if (empty($validated['days_count']) || empty($validated['start_date']) || empty($validated['end_date'])) {
+                if ($request->ajax() || $request->expectsJson()) {
+                    return response()->json(['success' => false, 'message' => 'Please provide days count and date range.'], 422);
+                }
+                return redirect()->back()->with('error', 'Please provide days count and date range.')->withInput();
+            }
+            $startDate = Carbon::parse($validated['start_date']);
+            $endDate = Carbon::parse($validated['end_date']);
+            $daysCount = $startDate->diffInDays($endDate) + 1;
+            if ($daysCount > 7) {
+                if ($request->ajax() || $request->expectsJson()) {
+                    return response()->json(['success' => false, 'message' => 'Days exceed limit. Use 7 days or less.'], 422);
+                }
+                return redirect()->back()->with('error', 'Days exceed limit. Use 7 days or less.')->withInput();
+            }
+        }
+
+        if ($validated['time_mode'] === 'hours') {
+            if (empty($validated['start_time']) || empty($validated['end_time'])) {
+                if ($request->ajax() || $request->expectsJson()) {
+                    return response()->json(['success' => false, 'message' => 'Please provide start and end time.'], 422);
+                }
+                return redirect()->back()->with('error', 'Please provide start and end time.')->withInput();
+            }
+            $start = Carbon::createFromFormat('H:i', $validated['start_time']);
+            $end = Carbon::createFromFormat('H:i', $validated['end_time']);
+            if ($end->lessThanOrEqualTo($start)) {
+                if ($request->ajax() || $request->expectsJson()) {
+                    return response()->json(['success' => false, 'message' => 'End time must be after start time.'], 422);
+                }
+                return redirect()->back()->with('error', 'End time must be after start time.')->withInput();
+            }
+        }
+
+        $computedDays = null;
+        if ($validated['time_mode'] === 'days') {
+            $startDate = Carbon::parse($validated['start_date']);
+            $endDate = Carbon::parse($validated['end_date']);
+            $computedDays = $startDate->diffInDays($endDate) + 1;
+        }
+
+        PermissionRequest::create([
+            'schoolID' => $schoolID,
+            'requester_type' => 'teacher',
+            'teacherID' => $teacherID,
+            'time_mode' => $validated['time_mode'],
+            'days_count' => $validated['time_mode'] === 'days' ? $computedDays : null,
+            'start_date' => $validated['time_mode'] === 'days' ? $validated['start_date'] : null,
+            'end_date' => $validated['time_mode'] === 'days' ? $validated['end_date'] : null,
+            'start_time' => $validated['time_mode'] === 'hours' ? $validated['start_time'] : null,
+            'end_time' => $validated['time_mode'] === 'hours' ? $validated['end_time'] : null,
+            'reason_type' => $validated['reason_type'],
+            'reason_description' => $validated['reason_description'],
+            'status' => 'pending',
+            'is_read_by_admin' => false,
+            'is_read_by_requester' => true,
+        ]);
+
+        $teacher = Teacher::where('id', $teacherID)->first();
+        $school = School::where('schoolID', $schoolID)->first();
+        $smsService = new SmsService();
+
+        if ($teacher && $teacher->phone_number) {
+            $smsService->sendSms($teacher->phone_number, 'Your permission request has been submitted to Admin. Please wait for approval.');
+        }
+
+        if ($school && $school->phone) {
+            $teacherName = $teacher ? trim(($teacher->first_name ?? '') . ' ' . ($teacher->last_name ?? '')) : 'Teacher';
+            $reasonLabel = ucfirst($validated['reason_type']);
+            $schoolName = $school->school_name ?? 'School';
+            $smsService->sendSms($school->phone, "{$schoolName}: New permission request by {$teacherName}. Reason: {$reasonLabel}. Please review.");
+        }
+
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Permission request submitted successfully.']);
+        }
+        return redirect()->route('teacher.permissions')->with('success', 'Permission request submitted successfully.');
     }
 }

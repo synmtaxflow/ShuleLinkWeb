@@ -433,6 +433,30 @@
                             </ul>
                         </li>
 
+                        <!-- HR Operations -->
+                        <li class="dropdown-nav-item">
+                            <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#hrOperations" aria-expanded="false">
+                                <i class="fa fa-briefcase"></i> HR Operations <i class="fa fa-chevron-down float-right"></i>
+                            </a>
+                            <ul id="hrOperations" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
+                                <li>
+                                    <a href="{{ \Illuminate\Support\Facades\Route::has('admin.hr.leave') ? route('admin.hr.leave') : '#' }}" class="nav-link">
+                                        <i class="fa fa-calendar"></i> Leave
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{{ \Illuminate\Support\Facades\Route::has('admin.hr.permission') ? route('admin.hr.permission') : '#' }}" class="nav-link">
+                                        <i class="fa fa-check-square-o"></i> Permission
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{{ \Illuminate\Support\Facades\Route::has('admin.hr.payroll') ? route('admin.hr.payroll') : '#' }}" class="nav-link">
+                                        <i class="fa fa-money"></i> Payroll
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+
                         <!-- Reports & Analytics -->
                         <li class="dropdown-nav-item">
                             <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#reportsAnalytics" aria-expanded="false">

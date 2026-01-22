@@ -87,6 +87,8 @@ Route::get('parentAttendance', [ParentsContoller::class, 'parentAttendance'])->n
 Route::get('parentPayments', [ParentsContoller::class, 'parentPayments'])->name('parentPayments');
 Route::get('parentFeesSummary', [ParentsContoller::class, 'parentFeesSummary'])->name('parentFeesSummary');
 Route::get('parentSubjects', [ParentsContoller::class, 'parentSubjects'])->name('parentSubjects');
+Route::get('parentPermissions', [ParentsContoller::class, 'manageParentPermissions'])->name('parent.permissions');
+Route::post('parentPermissions', [ParentsContoller::class, 'storeParentPermission'])->name('parent.permissions.store');
 Route::get('get_student_subjects/{studentID}', [ParentsContoller::class, 'getStudentSubjects'])->name('get_student_subjects');
 Route::post('elect_subject', [ParentsContoller::class, 'electSubject'])->name('elect_subject');
 Route::post('deselect_subject', [ParentsContoller::class, 'deselectSubject'])->name('deselect_subject');
@@ -165,6 +167,8 @@ Route::get('teacher/my-sessions', [TeachersController::class, 'mySessions'])->na
 Route::get('teacher/suggestions', [TeachersController::class, 'manageTeacherFeedback'])->name('teacher.suggestions');
 Route::get('teacher/incidents', [TeachersController::class, 'manageTeacherFeedback'])->name('teacher.incidents');
 Route::post('teacher/feedback', [TeachersController::class, 'storeTeacherFeedback'])->name('teacher.feedback.store');
+Route::get('teacher/permissions', [TeachersController::class, 'manageTeacherPermissions'])->name('teacher.permissions');
+Route::post('teacher/permissions', [TeachersController::class, 'storeTeacherPermission'])->name('teacher.permissions.store');
 Route::get('teacher/my-tasks', [TeachersController::class, 'myTasks'])->name('teacher.myTasks');
 Route::get('teacher/get-session-students', [TeachersController::class, 'getSessionStudents'])->name('teacher.get_session_students');
 Route::post('teacher/collect-session-attendance', [TeachersController::class, 'collectSessionAttendance'])->name('teacher.collect_session_attendance');
@@ -386,6 +390,11 @@ Route::get('admin/performance/class/students', [AdminController::class, 'classSt
 Route::post('admin/performance/student/term', [AdminController::class, 'studentTermPerformance'])->name('admin.performance.student.term');
 Route::post('admin/performance/student/exam', [AdminController::class, 'studentExamPerformance'])->name('admin.performance.student.exam');
 Route::post('admin/performance/student/year', [AdminController::class, 'studentYearPerformance'])->name('admin.performance.student.year');
+
+Route::get('admin/hr/permissions', [AdminController::class, 'managePermissionsAdmin'])->name('admin.hr.permission');
+Route::get('admin/hr/permissions/attachment/{permissionID}', [AdminController::class, 'viewPermissionAttachment'])->name('admin.permissions.attachment');
+Route::post('admin/hr/permissions/approve', [AdminController::class, 'approvePermission'])->name('admin.permissions.approve');
+Route::post('admin/hr/permissions/reject', [AdminController::class, 'rejectPermission'])->name('admin.permissions.reject');
 Route::post('damaged-lost', [AdminController::class, 'storeDamagedLostRecord'])->name('damaged_lost.store');
 Route::post('damaged-lost/update', [AdminController::class, 'updateDamagedLostRecord'])->name('damaged_lost.update');
 Route::post('damaged-lost/delete', [AdminController::class, 'deleteDamagedLostRecord'])->name('damaged_lost.delete');

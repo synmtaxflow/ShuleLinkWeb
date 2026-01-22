@@ -16,6 +16,7 @@ use App\Models\Payment;
 use App\Models\Fee;
 use App\Models\ClassSubject;
 use App\Models\SubjectElector;
+use App\Models\PermissionRequest;
 use App\Services\SmsService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -271,6 +272,168 @@ class ParentsContoller extends Controller
             'school',
             'notifications'
         ));
+    }
+
+    public function manageParentPermissions(Request $request)
+    {
+        $userType = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+        $parentID = Session::get('parentID');
+
+        $normalizedUserType = strtolower($userType ?? '');
+        if (!$userType || $normalizedUserType !== 'parent' || !$schoolID || !$parentID) {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $activeTab = $request->get('tab', 'request');
+        $students = Student::where('schoolID', $schoolID)
+            ->where('parentID', $parentID)
+            ->where('status', 'Active')
+            ->orderBy('first_name')
+            ->get();
+        $studentNames = $students->mapWithKeys(function ($student) {
+            $name = trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''));
+            return [$student->studentID => $name ?: 'N/A'];
+        });
+
+        $permissions = PermissionRequest::where('schoolID', $schoolID)
+            ->where('requester_type', 'student')
+            ->where('parentID', $parentID)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $pendingPermissions = $permissions->where('status', 'pending');
+        $approvedPermissions = $permissions->where('status', 'approved');
+        $rejectedPermissions = $permissions->where('status', 'rejected');
+
+        if (in_array($activeTab, ['pending', 'approved', 'rejected'], true)) {
+            PermissionRequest::where('schoolID', $schoolID)
+                ->where('requester_type', 'student')
+                ->where('parentID', $parentID)
+                ->where('status', $activeTab)
+                ->update(['is_read_by_requester' => true]);
+        }
+
+        $unreadPendingCount = PermissionRequest::where('schoolID', $schoolID)
+            ->where('requester_type', 'student')
+            ->where('parentID', $parentID)
+            ->where('status', 'pending')
+            ->where('is_read_by_requester', false)
+            ->count();
+        $unreadApprovedCount = PermissionRequest::where('schoolID', $schoolID)
+            ->where('requester_type', 'student')
+            ->where('parentID', $parentID)
+            ->where('status', 'approved')
+            ->where('is_read_by_requester', false)
+            ->count();
+        $unreadRejectedCount = PermissionRequest::where('schoolID', $schoolID)
+            ->where('requester_type', 'student')
+            ->where('parentID', $parentID)
+            ->where('status', 'rejected')
+            ->where('is_read_by_requester', false)
+            ->count();
+
+        return view('Parent.manage_permissions', [
+            'activeTab' => $activeTab,
+            'students' => $students,
+            'studentNames' => $studentNames,
+            'pendingPermissions' => $pendingPermissions,
+            'approvedPermissions' => $approvedPermissions,
+            'rejectedPermissions' => $rejectedPermissions,
+            'unreadPendingCount' => $unreadPendingCount,
+            'unreadApprovedCount' => $unreadApprovedCount,
+            'unreadRejectedCount' => $unreadRejectedCount,
+        ]);
+    }
+
+    public function storeParentPermission(Request $request)
+    {
+        $userType = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+        $parentID = Session::get('parentID');
+
+        $normalizedUserType = strtolower($userType ?? '');
+        if (!$userType || $normalizedUserType !== 'parent' || !$schoolID || !$parentID) {
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+            }
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'student_id' => 'required|integer|exists:students,studentID',
+            'days_count' => 'nullable|integer',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'reason_type' => 'required|in:medical,official,professional,emergency,other',
+            'reason_description' => 'required|string|min:5',
+            'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
+        ]);
+
+        $student = Student::where('schoolID', $schoolID)
+            ->where('parentID', $parentID)
+            ->where('studentID', $validated['student_id'])
+            ->where('status', 'Active')
+            ->firstOrFail();
+
+        if ($validated['reason_type'] === 'medical' && !$request->hasFile('attachment')) {
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Medical reason requires attachment.'], 422);
+            }
+            return redirect()->back()->with('error', 'Medical reason requires attachment.')->withInput();
+        }
+
+        $attachmentPath = null;
+        if ($request->hasFile('attachment')) {
+            $attachmentPath = $request->file('attachment')->store('permission_attachments', 'public');
+        }
+
+        $startDate = Carbon::parse($validated['start_date']);
+        $endDate = Carbon::parse($validated['end_date']);
+        $daysCount = $startDate->diffInDays($endDate) + 1;
+        if ($daysCount > 7) {
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Days exceed limit. Use 7 days or less.'], 422);
+            }
+            return redirect()->back()->with('error', 'Days exceed limit. Use 7 days or less.')->withInput();
+        }
+
+        PermissionRequest::create([
+            'schoolID' => $schoolID,
+            'requester_type' => 'student',
+            'studentID' => $student->studentID,
+            'parentID' => $parentID,
+            'time_mode' => 'days',
+            'days_count' => $daysCount,
+            'start_date' => $validated['start_date'],
+            'end_date' => $validated['end_date'],
+            'reason_type' => $validated['reason_type'],
+            'reason_description' => $validated['reason_description'],
+            'attachment_path' => $attachmentPath,
+            'status' => 'pending',
+            'is_read_by_admin' => false,
+            'is_read_by_requester' => true,
+        ]);
+
+        $parent = ParentModel::where('parentID', $parentID)->first();
+        $school = School::where('schoolID', $schoolID)->first();
+        $smsService = $this->smsService;
+
+        if ($parent && $parent->phone) {
+            $smsService->sendSms($parent->phone, 'Your permission request has been submitted to Admin. Please wait for approval.');
+        }
+
+        if ($school && $school->phone) {
+            $studentName = trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''));
+            $reasonLabel = ucfirst($validated['reason_type']);
+            $schoolName = $school->school_name ?? 'School';
+            $smsService->sendSms($school->phone, "{$schoolName}: New student permission request by {$studentName}. Reason: {$reasonLabel}. Please review.");
+        }
+
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Permission request submitted successfully.']);
+        }
+        return redirect()->route('parent.permissions')->with('success', 'Permission request submitted successfully.');
     }
 
     public function parentResults(Request $request)
