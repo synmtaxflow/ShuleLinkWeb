@@ -2633,6 +2633,22 @@ Would you like to try direct registration anyway, or use the manual method?`;
             });
         });
 
+        function generateAdmissionNumber() {
+            const now = new Date();
+            const pad = (value, length = 2) => String(value).padStart(length, '0');
+            const timestamp = [
+                now.getFullYear(),
+                pad(now.getMonth() + 1),
+                pad(now.getDate()),
+                pad(now.getHours()),
+                pad(now.getMinutes()),
+                pad(now.getSeconds()),
+                pad(now.getMilliseconds(), 3)
+            ].join('');
+            const random = Math.floor(100 + Math.random() * 900);
+            return `${timestamp}${random}`;
+        }
+
         // Register Student Form
         $('#addStudentForm').on('submit', function(e) {
             e.preventDefault();
@@ -2679,6 +2695,11 @@ Would you like to try direct registration anyway, or use the manual method?`;
                     confirmButtonColor: '#940000'
                 });
                 return;
+            }
+
+            if (!admission_number) {
+                admission_number = generateAdmissionNumber();
+                $('#admission_number').val(admission_number);
             }
 
             let formData = new FormData(this);
