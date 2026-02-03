@@ -5,6 +5,14 @@
 @endif
 
 <style>
+    body, .content, .card, .btn, .form-control, .form-select, .table, .list-group-item {
+        font-family: "Century Gothic", Arial, sans-serif;
+    }
+    /* Remove border-radius from all widgets */
+    .card, .alert, .btn, div, .form-control, .form-select {
+        border-radius: 0 !important;
+    }
+
     /* Minimal custom CSS - only for #940000 color scheme */
     .bg-primary-custom {
         background-color: #940000 !important;
@@ -134,6 +142,88 @@
         color: #212529;
         font-weight: 500;
     }
+
+    .teachers-menu .list-group-item {
+        cursor: pointer;
+        border-left: 4px solid transparent;
+    }
+    .teachers-menu .list-group-item.active {
+        border-left-color: #940000;
+        background: #fff5f5;
+        color: #940000;
+        font-weight: 600;
+    }
+    .teacher-section {
+        margin-bottom: 1.5rem;
+    }
+    .section-title {
+        font-weight: 600;
+        margin-bottom: 12px;
+    }
+    .muted-help {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    .teachers-content {
+        max-height: 70vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-right: 6px;
+    }
+    .teachers-table {
+        width: 100% !important;
+        table-layout: fixed;
+    }
+    .teachers-table th,
+    .teachers-table td {
+        white-space: normal;
+        word-wrap: break-word;
+        overflow-wrap: anywhere;
+        vertical-align: top;
+    }
+    .teachers-table th {
+        font-weight: 600;
+        background: #f8f9fa;
+    }
+    .teachers-table td {
+        font-size: 0.92rem;
+    }
+    .teachers-table .btn {
+        white-space: nowrap;
+    }
+    .teachers-content .table-responsive {
+        overflow: visible;
+    }
+    .teachers-content .dropdown-menu {
+        z-index: 1055;
+    }
+    .actions-dropdown {
+        position: relative;
+        display: inline-block;
+    }
+    .actions-dropdown .actions-menu {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        min-width: 200px;
+        background: #ffffff;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+        padding: 6px 0;
+        margin: 6px 0 0;
+        list-style: none;
+        display: none;
+        z-index: 2000;
+    }
+    .actions-dropdown.is-open .actions-menu {
+        display: block;
+    }
+    .actions-dropdown .actions-menu .dropdown-item {
+        width: 100%;
+        text-align: left;
+        background: transparent;
+        border: none;
+    }
 </style>
 
 <!-- Bootstrap Icons -->
@@ -145,554 +235,706 @@
 
 <div class="container-fluid mt-4">
     <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body bg-light rounded">
-        <div class="d-flex justify-content-between align-items-center">
-                <h4 class="mb-0 text-primary-custom">
-                <i class="bi bi-people-fill"></i> Manage Teachers
-            </h4>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-outline-primary-custom fw-bold" id="manageRolesBtn" type="button">
-                        <i class="bi bi-shield-check"></i> Manage Roles & Permissions
-                    </button>
-                    <button class="btn btn-outline-primary-custom fw-bold" id="viewTeachersRolesBtn" type="button" data-bs-toggle="modal" data-bs-target="#viewTeachersRolesModal">
-                        <i class="bi bi-eye"></i> View Teachers Roles
-                    </button>
-                    <button class="btn btn-outline-primary-custom fw-bold" id="assignRoleBtn" type="button" data-bs-toggle="modal" data-bs-target="#assignRoleModal">
-                        <i class="bi bi-person-badge"></i> Assign Roles
-                    </button>
-                    <button class="btn btn-outline-primary-custom fw-bold" id="addTeacherBtn" type="button" data-bs-toggle="modal" data-bs-target="#addTeacherModal">
-                <i class="bi bi-person-plus"></i> Add New Teacher
-            </button>
-                    <button class="btn btn-outline-primary-custom fw-bold" id="viewTeacherAttendanceBtn" type="button" data-bs-toggle="modal" data-bs-target="#teacherAttendanceModal">
-                <i class="bi bi-calendar-check"></i> Teacher Attendance
-            </button>
-                </div>
-            </div>
+        <div class="card-header bg-primary-custom text-white">
+            <strong><i class="bi bi-people-fill"></i> Manage Teachers</strong>
         </div>
-    </div>
-
-    <div class="card border-0 shadow-sm">
         <div class="card-body">
-        <div class="table-responsive">
-                <table id="teachersTable" class="table table-hover align-middle mb-0" style="width:100%">
-                    <thead>
-                    <tr>
-                        <th>Image</th>
-                        <th>Full Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Fingerprint ID</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if(count($teachers) > 0)
-                    @foreach ($teachers as $index => $teacher)
-                        <tr data-teacher-id="{{ $teacher->id }}">
-                            <td>
-                                @php
-                                    $imgPath = $teacher->image
-                                        ? asset('userImages/' . $teacher->image)
-                                        : ($teacher->gender == 'Female'
-                                            ? asset('images/female.png')
-                                            : asset('images/male.png'));
-                                @endphp
-                                    <img src="{{ $imgPath }}" class="rounded-circle" style="width: 50px; height: 50px; object-fit: cover; border: 3px solid #940000;" alt="Teacher">
-                            </td>
-                            <td><strong>{{ $teacher->first_name }} {{ $teacher->middle_name }} {{ $teacher->last_name }}</strong></td>
-                            <td>{{ $teacher->email }}</td>
-                            <td>{{ $teacher->phone_number }}</td>
-                            <td>
-                                @if($teacher->fingerprint_id)
-                                    <span class="badge bg-info text-white" style="font-size: 0.9rem; font-weight: bold;">
-                                        <i class="bi bi-fingerprint"></i> {{ $teacher->fingerprint_id }}
-                                    </span>
-                                @else
-                                    <span class="text-muted" style="font-style: italic;">
-                                        <i class="bi bi-dash-circle"></i> Not assigned
-                                    </span>
-                                @endif
-                            </td>
-                            <td>
-                                    <span class="badge {{ strtolower($teacher->status) == 'active' ? 'bg-success' : 'bg-secondary' }}">
-                                    {{ $teacher->status }}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="d-flex justify-content-center align-items-center gap-2">
-                                        <a href="#" class="btn btn-sm btn-info text-white view-teacher-btn"
-                                       data-teacher-id="{{ $teacher->id }}"
-                                       title="View Details">
-                                        <i class="bi bi-eye-fill"></i>
-                                    </a>
-                                        <a href="#" class="btn btn-sm btn-warning text-dark edit-teacher-btn"
-                                           data-teacher-id="{{ $teacher->id }}"
-                                           title="Edit">
-                                        <i class="bi bi-pencil-square"></i>
-                                    </a>
-                                        <a href="#" class="btn btn-sm btn-success text-white send-to-fingerprint-btn"
-                                           data-teacher-id="{{ $teacher->id }}"
-                                           data-teacher-name="{{ $teacher->first_name }}"
-                                           title="Send to Fingerprint Device">
-                                        <i class="bi bi-fingerprint"></i>
-                                    </a>
-                                        <a href="#" class="btn btn-sm btn-danger text-white" title="Delete">
-                                        <i class="bi bi-trash"></i>
-                                    </a>
-                                </div>
-                            </td>
-                            <!-- Hidden data for View More - stored in data attribute -->
-                            <div style="display:none;" class="teacher-full-details" data-teacher-id="{{ $teacher->id }}">
-                                @php
-                                    $teacherImgPath = $teacher->image
-                                        ? asset('userImages/' . $teacher->image)
-                                        : ($teacher->gender == 'Female'
-                                            ? asset('images/female.png')
-                                            : asset('images/male.png'));
-                                @endphp
-                                    <div class="p-3">
-                                    <!-- Teacher Details Card (like manage_school) -->
-                                        <div class="school-details-card">
-                                            <div class="school-header">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="school-logo-preview me-3">
-                                                        <img src="{{ $teacherImgPath }}" alt="{{ $teacher->first_name }} {{ $teacher->last_name }}">
-                                                    </div>
-                                                    <div>
-                                                        <h3 class="school-title">{{ $teacher->first_name }} {{ $teacher->middle_name }} {{ $teacher->last_name }}</h3>
-                                                        <small class="text-muted">Employee: {{ $teacher->employee_number }}</small>
-                                                    </div>
-                                                </div>
-                                                <span class="badge {{ strtolower($teacher->status) == 'active' ? 'bg-success' : 'bg-secondary' }}">
-                                                    {{ $teacher->status }}
-                                                </span>
-                                            </div>
+            <div class="row">
+                <div class="col-sm-4">
+                    <div class="list-group teachers-menu">
+                        <a class="list-group-item active" data-target="#section-teachers">
+                            <i class="bi bi-people-fill"></i> Teachers List
+                        </a>
+                        <a class="list-group-item" data-target="#section-add-teacher" data-permission="register_teacher">
+                            <i class="bi bi-person-plus"></i> Add New Teacher
+                        </a>
+                        <a class="list-group-item" data-target="#section-assign-role" data-permission="assign_role_teacher">
+                            <i class="bi bi-person-badge"></i> Assign Roles
+                        </a>
+                        <a class="list-group-item" data-target="#section-view-roles" data-permission="view_teachers_roles">
+                            <i class="bi bi-eye"></i> View Teachers Roles
+                        </a>
+                        <a class="list-group-item" data-target="#section-manage-roles" data-permission="manage_roles_permissions">
+                            <i class="bi bi-shield-check"></i> Manage Roles & Permissions
+                        </a>
+                    </div>
+                    <div class="card border-primary-custom mt-3">
+                        <div class="card-body">
+                            <div class="section-title">Guide</div>
+                            <div class="muted-help">
+                                - Use Teachers List to view, edit, or send to fingerprint.<br>
+                                - Add New Teacher registers a teacher profile.<br>
+                                - Assign Roles controls access permissions.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8 teachers-content">
+                    <div id="section-teachers" class="teacher-section">
+                        <div class="section-title">Teachers List</div>
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table id="teachersTable" class="table table-hover align-middle mb-0 teachers-table" style="width:100%">
+                                        <thead>
+                                            <tr>
+                                                <th>Image</th>
+                                                <th>Full Name</th>
+                                                <th>Phone</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @if(count($teachers) > 0)
+                                            @foreach ($teachers as $index => $teacher)
+                                                <tr data-teacher-id="{{ $teacher->id }}">
+                                                    <td>
+                                                        @php
+                                                            $imgPath = $teacher->image
+                                                                ? asset('userImages/' . $teacher->image)
+                                                                : ($teacher->gender == 'Female'
+                                                                    ? asset('images/female.png')
+                                                                    : asset('images/male.png'));
+                                                        @endphp
+                                                        <img src="{{ $imgPath }}" class="rounded-circle" style="width: 50px; height: 50px; object-fit: cover; border: 3px solid #940000;" alt="Teacher">
+                                                    </td>
+                                                    <td><strong>{{ $teacher->first_name }} {{ $teacher->middle_name }} {{ $teacher->last_name }}</strong></td>
+                                                    <td>{{ $teacher->phone_number }}</td>
+                                                    <td>
+                                                        <span class="badge {{ strtolower($teacher->status) == 'active' ? 'bg-success' : 'bg-secondary' }}">
+                                                            {{ $teacher->status }}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <div class="actions-dropdown">
+                                                            <button class="btn btn-sm btn-outline-primary js-actions-toggle" type="button" aria-expanded="false">
+                                                                Actions
+                                                            </button>
+                                                            <ul class="actions-menu">
+                                                                <li>
+                                                                    <a href="#" class="dropdown-item view-teacher-btn" data-teacher-id="{{ $teacher->id }}">
+                                                                        <i class="bi bi-eye-fill"></i> View Details
+                                                                    </a>
+                                                                </li>
+                                                                <li>
+                                                                    <a href="#" class="dropdown-item edit-teacher-btn" data-teacher-id="{{ $teacher->id }}">
+                                                                        <i class="bi bi-pencil-square"></i> Edit
+                                                                    </a>
+                                                                </li>
+                                                                <li>
+                                                                    <a href="#" class="dropdown-item send-to-fingerprint-btn" data-teacher-id="{{ $teacher->id }}" data-teacher-name="{{ $teacher->first_name }}">
+                                                                        <i class="bi bi-fingerprint"></i> Send to Fingerprint
+                                                                    </a>
+                                                                </li>
+                                                                <li>
+                                                                    <a href="#" class="dropdown-item text-danger">
+                                                                        <i class="bi bi-trash"></i> Delete
+                                                                    </a>
+                                                                </li>
+                                                            </ul>
+                                                        </div>
+                                                    </td>
+                                                    <!-- Hidden data for View More - stored in data attribute -->
+                                                    <div style="display:none;" class="teacher-full-details" data-teacher-id="{{ $teacher->id }}">
+                                                        @php
+                                                            $teacherImgPath = $teacher->image
+                                                                ? asset('userImages/' . $teacher->image)
+                                                                : ($teacher->gender == 'Female'
+                                                                    ? asset('images/female.png')
+                                                                    : asset('images/male.png'));
+                                                        @endphp
+                                                        <div class="p-3">
+                                                            <!-- Teacher Details Card (like manage_school) -->
+                                                            <div class="school-details-card">
+                                                                <div class="school-header">
+                                                                    <div class="d-flex align-items-center">
+                                                                        <div class="school-logo-preview me-3">
+                                                                            <img src="{{ $teacherImgPath }}" alt="{{ $teacher->first_name }} {{ $teacher->last_name }}">
+                                                                        </div>
+                                                                        <div>
+                                                                            <h3 class="school-title">{{ $teacher->first_name }} {{ $teacher->middle_name }} {{ $teacher->last_name }}</h3>
+                                                                            <small class="text-muted">Employee: {{ $teacher->employee_number }}</small>
+                                                                        </div>
+                                                                    </div>
+                                                                    <span class="badge {{ strtolower($teacher->status) == 'active' ? 'bg-success' : 'bg-secondary' }}">
+                                                                        {{ $teacher->status }}
+                                                                    </span>
+                                                                </div>
 
-                                            <!-- Teacher Info Grid (like manage_school) -->
-                                            <div class="school-info-grid">
-                                                <div class="info-item">
-                                                    <i class="bi bi-gender-ambiguous"></i>
-                                                    <div class="info-item-content">
-                                                        <div class="info-item-label">Gender</div>
-                                                        <div class="info-item-value">{{ $teacher->gender }}</div>
+                                                                <!-- Teacher Info Grid (like manage_school) -->
+                                                                <div class="school-info-grid">
+                                                                    <div class="info-item">
+                                                                        <i class="bi bi-gender-ambiguous"></i>
+                                                                        <div class="info-item-content">
+                                                                            <div class="info-item-label">Gender</div>
+                                                                            <div class="info-item-value">{{ $teacher->gender }}</div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    @if($teacher->position)
+                                                                    <div class="info-item">
+                                                                        <i class="bi bi-briefcase"></i>
+                                                                        <div class="info-item-content">
+                                                                            <div class="info-item-label">Position</div>
+                                                                            <div class="info-item-value">{{ $teacher->position }}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                    @endif
+
+                                                                    <div class="info-item">
+                                                                        <i class="bi bi-card-text"></i>
+                                                                        <div class="info-item-content">
+                                                                            <div class="info-item-label">National ID</div>
+                                                                            <div class="info-item-value">{{ $teacher->national_id }}</div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div class="info-item">
+                                                                        <i class="bi bi-person-badge"></i>
+                                                                        <div class="info-item-content">
+                                                                            <div class="info-item-label">Employee Number</div>
+                                                                            <div class="info-item-value">{{ $teacher->employee_number }}</div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div class="info-item">
+                                                                        <i class="bi bi-envelope"></i>
+                                                                        <div class="info-item-content">
+                                                                            <div class="info-item-label">Email</div>
+                                                                            <div class="info-item-value">{{ $teacher->email }}</div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div class="info-item">
+                                                                        <i class="bi bi-telephone"></i>
+                                                                        <div class="info-item-content">
+                                                                            <div class="info-item-label">Phone Number</div>
+                                                                            <div class="info-item-value">{{ $teacher->phone_number }}</div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div class="info-item">
+                                                                        <i class="bi bi-fingerprint"></i>
+                                                                        <div class="info-item-content">
+                                                                            <div class="info-item-label">Fingerprint ID</div>
+                                                                            <div class="info-item-value">{{ $teacher->fingerprint_id ?? 'Not assigned' }}</div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    @if($teacher->qualification)
+                                                                    <div class="info-item">
+                                                                        <i class="bi bi-mortarboard"></i>
+                                                                        <div class="info-item-content">
+                                                                            <div class="info-item-label">Qualification</div>
+                                                                            <div class="info-item-value">{{ $teacher->qualification }}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                    @endif
+
+                                                                    @if($teacher->specialization)
+                                                                    <div class="info-item">
+                                                                        <i class="bi bi-book"></i>
+                                                                        <div class="info-item-content">
+                                                                            <div class="info-item-label">Specialization</div>
+                                                                            <div class="info-item-value">{{ $teacher->specialization }}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                    @endif
+
+                                                                    @if($teacher->experience)
+                                                                    <div class="info-item">
+                                                                        <i class="bi bi-clock-history"></i>
+                                                                        <div class="info-item-content">
+                                                                            <div class="info-item-label">Experience</div>
+                                                                            <div class="info-item-value">{{ $teacher->experience }}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                    @endif
+
+                                                                    @if($teacher->date_of_birth)
+                                                                    <div class="info-item">
+                                                                        <i class="bi bi-calendar-event"></i>
+                                                                        <div class="info-item-content">
+                                                                            <div class="info-item-label">Date of Birth</div>
+                                                                            <div class="info-item-value">{{ date('d M Y', strtotime($teacher->date_of_birth)) }}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                    @endif
+
+                                                                    @if($teacher->date_hired)
+                                                                    <div class="info-item">
+                                                                        <i class="bi bi-calendar-check"></i>
+                                                                        <div class="info-item-content">
+                                                                            <div class="info-item-label">Date Hired</div>
+                                                                            <div class="info-item-value">{{ date('d M Y', strtotime($teacher->date_hired)) }}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                    @endif
+
+                                                                    @if($teacher->address)
+                                                                    <div class="info-item">
+                                                                        <i class="bi bi-geo-alt"></i>
+                                                                        <div class="info-item-content">
+                                                                            <div class="info-item-label">Address</div>
+                                                                            <div class="info-item-value">{{ $teacher->address }}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                    @endif
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                                
-                                                @if($teacher->position)
-                                                <div class="info-item">
-                                                    <i class="bi bi-briefcase"></i>
-                                                    <div class="info-item-content">
-                                                        <div class="info-item-label">Position</div>
-                                                        <div class="info-item-value">{{ $teacher->position }}</div>
-                                                    </div>
-                                                </div>
-                                                @endif
-                                                
-                                                <div class="info-item">
-                                                    <i class="bi bi-card-text"></i>
-                                                    <div class="info-item-content">
-                                                        <div class="info-item-label">National ID</div>
-                                                        <div class="info-item-value">{{ $teacher->national_id }}</div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="info-item">
-                                                    <i class="bi bi-person-badge"></i>
-                                                    <div class="info-item-content">
-                                                        <div class="info-item-label">Employee Number</div>
-                                                        <div class="info-item-value">{{ $teacher->employee_number }}</div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="info-item">
-                                                    <i class="bi bi-envelope"></i>
-                                                    <div class="info-item-content">
-                                                        <div class="info-item-label">Email</div>
-                                                        <div class="info-item-value">{{ $teacher->email }}</div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="info-item">
-                                                    <i class="bi bi-telephone"></i>
-                                                    <div class="info-item-content">
-                                                        <div class="info-item-label">Phone Number</div>
-                                                        <div class="info-item-value">{{ $teacher->phone_number }}</div>
-                                                    </div>
-                                                </div>
-                                                
-                                                @if($teacher->qualification)
-                                                <div class="info-item">
-                                                    <i class="bi bi-mortarboard"></i>
-                                                    <div class="info-item-content">
-                                                        <div class="info-item-label">Qualification</div>
-                                                        <div class="info-item-value">{{ $teacher->qualification }}</div>
-                                                    </div>
-                                                </div>
-                                                @endif
-                                                
-                                                @if($teacher->specialization)
-                                                <div class="info-item">
-                                                    <i class="bi bi-book"></i>
-                                                    <div class="info-item-content">
-                                                        <div class="info-item-label">Specialization</div>
-                                                        <div class="info-item-value">{{ $teacher->specialization }}</div>
-                                                    </div>
-                                                </div>
-                                                @endif
-                                                
-                                                @if($teacher->experience)
-                                                <div class="info-item">
-                                                    <i class="bi bi-clock-history"></i>
-                                                    <div class="info-item-content">
-                                                        <div class="info-item-label">Experience</div>
-                                                        <div class="info-item-value">{{ $teacher->experience }}</div>
-                                                    </div>
-                                                </div>
-                                                @endif
-                                                
-                                                @if($teacher->date_of_birth)
-                                                <div class="info-item">
-                                                    <i class="bi bi-calendar-event"></i>
-                                                    <div class="info-item-content">
-                                                        <div class="info-item-label">Date of Birth</div>
-                                                        <div class="info-item-value">{{ date('d M Y', strtotime($teacher->date_of_birth)) }}</div>
-                                                    </div>
-                                                </div>
-                                                @endif
-                                                
-                                                @if($teacher->date_hired)
-                                                <div class="info-item">
-                                                    <i class="bi bi-calendar-check"></i>
-                                                    <div class="info-item-content">
-                                                        <div class="info-item-label">Date Hired</div>
-                                                        <div class="info-item-value">{{ date('d M Y', strtotime($teacher->date_hired)) }}</div>
-                                                    </div>
-                                                </div>
-                                                @endif
-                                                
-                                                @if($teacher->address)
-                                                <div class="info-item">
-                                                    <i class="bi bi-geo-alt"></i>
-                                                    <div class="info-item-content">
-                                                        <div class="info-item-label">Address</div>
-                                                        <div class="info-item-value">{{ $teacher->address }}</div>
-                                                    </div>
-                                                </div>
-                                                @endif
+                                                </tr>
+                                            @endforeach
+                                            @endif
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="section-add-teacher" class="teacher-section d-none">
+                        <div class="section-title">Add New Teacher</div>
+                        <div class="card border-primary-custom">
+                            <div class="card-header bg-primary-custom text-white">
+                                <strong><i class="bi bi-person-plus-fill"></i> Add New Teacher</strong>
+                            </div>
+                            <div class="card-body">
+                                @if (session('success'))
+                                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                        {{ session('success') }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    </div>
+                                @endif
+                                @if (session('error'))
+                                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                        {{ session('error') }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    </div>
+                                @endif
+                                <form id="teacherForm" enctype="multipart/form-data">
+                                    @csrf
+                                    <div class="mb-3" id="addTeacherModalBody">
+                                        <style>
+                                            #addTeacherModalBody {
+                                                overflow-y: auto !important;
+                                                overflow-x: hidden !important;
+                                                scrollbar-width: thin;
+                                                scrollbar-color: #cbd5e0 #f7fafc;
+                                            }
+                                            #addTeacherModalBody::-webkit-scrollbar {
+                                                width: 8px;
+                                                height: 8px;
+                                            }
+                                            #addTeacherModalBody::-webkit-scrollbar-track {
+                                                background: #f1f1f1;
+                                                border-radius: 10px;
+                                            }
+                                            #addTeacherModalBody::-webkit-scrollbar-thumb {
+                                                background: #888;
+                                                border-radius: 10px;
+                                            }
+                                            #addTeacherModalBody::-webkit-scrollbar-thumb:hover {
+                                                background: #555;
+                                            }
+                                        </style>
+                                        <div class="row g-3">
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-bold">First Name <span class="text-danger">*</span></label>
+                                                <input type="text" name="first_name" class="form-control" required>
                                             </div>
-                                        </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-bold">Middle Name</label>
+                                                <input type="text" name="middle_name" class="form-control">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-bold">Last Name <span class="text-danger">*</span></label>
+                                                <input type="text" name="last_name" class="form-control" required>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-bold">Gender <span class="text-danger">*</span></label>
+                                                <select name="gender" class="form-select" required>
+                                                    <option value="">Select Gender</option>
+                                                    <option value="Male">Male</option>
+                                                    <option value="Female">Female</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-bold">Email <span class="text-danger">*</span></label>
+                                                <input type="email" name="email" class="form-control" required>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-bold">Phone Number <span class="text-danger">*</span></label>
+                                                <input type="text"
+                                                       name="phone_number"
+                                                       class="form-control"
+                                                       id="phone_number"
+                                                       pattern="^255\d{9}$"
+                                                       placeholder="255614863345"
+                                                       required
+                                                       maxlength="12">
+                                                <small class="text-muted">Must start with 255 followed by 9 digits (12 digits total, e.g., 255614863345)</small>
+                                                <div class="invalid-feedback" id="phone_error" style="display: none;">
+                                                    Phone number must have 12 digits: start with 255 followed by 9 digits
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-bold">Bank Account Number</label>
+                                                <input type="text" name="bank_account_number" class="form-control" placeholder="e.g., 1234567890">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-bold">National ID <span class="text-danger">*</span></label>
+                                                <input type="text" name="national_id" class="form-control" required>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-bold">Employee Number <span class="text-danger">*</span></label>
+                                                <input type="text" name="employee_number" class="form-control" required>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-bold">Qualification</label>
+                                                <input type="text" name="qualification" class="form-control" placeholder="e.g., Bachelor's Degree">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-bold">Specialization</label>
+                                                <input type="text" name="specialization" class="form-control" placeholder="e.g., Mathematics">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-bold">Experience</label>
+                                                <input type="text" name="experience" class="form-control" placeholder="e.g., 5 years">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-bold">Date of Birth</label>
+                                                <input type="date" name="date_of_birth" class="form-control">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-bold">Date Hired</label>
+                                                <input type="date" name="date_hired" class="form-control">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-bold">Position</label>
+                                                <input type="text" name="position" class="form-control" placeholder="e.g., Senior Teacher">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-bold">Status</label>
+                                                <select name="status" class="form-select">
+                                                    <option value="Active">Active</option>
+                                                    <option value="On Leave">On Leave</option>
+                                                    <option value="Retired">Retired</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-12">
+                                                <label class="form-label fw-bold">Address</label>
+                                                <input type="text" name="address" class="form-control" placeholder="Full address">
+                                            </div>
+                                            <div class="col-md-12">
+                                                <label class="form-label fw-bold">Teacher Image</label>
+                                                <input type="file" name="image" class="form-control" accept="image/*">
+                                                <small class="text-muted">Supported formats: JPG, PNG (Max: 2MB)</small>
                                             </div>
                                         </div>
                                     </div>
-                            </tr>
-                        @endforeach
-                        @endif
-                    </tbody>
-                </table>
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <button type="button" class="btn btn-secondary js-teachers-section-link" data-target="#section-teachers">
+                                            <i class="bi bi-x-circle"></i> Back
+                                        </button>
+                                        <button type="submit" class="btn btn-primary-custom">
+                                            <i class="bi bi-save"></i> Save Teacher
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="section-assign-role" class="teacher-section d-none">
+                        <div class="section-title">Assign Role to Teacher</div>
+                        <div class="card border-primary-custom">
+                            <div class="card-header bg-primary-custom text-white">
+                                <strong><i class="bi bi-person-badge"></i> Assign Role to Teacher</strong>
+                            </div>
+                            <div class="card-body">
+                                <form id="assignRoleForm">
+                                    @csrf
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Select Teacher <span class="text-danger">*</span></label>
+                                        <select name="teacher_id" id="teacher_select" class="form-select" required>
+                                            <option value="">Choose a teacher...</option>
+                                            @foreach($teachers as $teacher)
+                                                <option value="{{ $teacher->id }}" data-email="{{ $teacher->email }}">
+                                                    {{ $teacher->first_name }} {{ $teacher->middle_name }} {{ $teacher->last_name }} ({{ $teacher->employee_number }})
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Select Role <span class="text-danger">*</span></label>
+                                        <select name="role_id" id="role_select" class="form-select" required>
+                                            <option value="">Choose a role...</option>
+                                            @foreach($roles as $role)
+                                                <option value="{{ $role->id }}">{{ $role->role_name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <button type="button" class="btn btn-secondary js-teachers-section-link" data-target="#section-teachers">
+                                            <i class="bi bi-x-circle"></i> Back
+                                        </button>
+                                        <button type="submit" class="btn btn-primary-custom">
+                                            <i class="bi bi-save"></i> Assign Role
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="section-view-roles" class="teacher-section d-none">
+                        <div class="section-title">Teachers Roles</div>
+                        <div class="card border-primary-custom">
+                            <div class="card-header bg-primary-custom text-white">
+                                <strong><i class="bi bi-person-badge"></i> Teachers Roles</strong>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table id="teachersRolesTable" class="table table-hover table-striped align-middle mb-0 teachers-table" style="width:100%">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Image</th>
+                                                <th>Teacher Name</th>
+                                                <th>Role</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @if(count($teachersWithRoles) > 0)
+                                            @foreach ($teachersWithRoles as $teacherRole)
+                                                <tr>
+                                                    <td>
+                                                        @php
+                                                            $imgPath = $teacherRole->image
+                                                                ? asset('userImages/' . $teacherRole->image)
+                                                                : ($teacherRole->gender == 'Female'
+                                                                    ? asset('images/female.png')
+                                                                    : asset('images/male.png'));
+                                                        @endphp
+                                                        <img src="{{ $imgPath }}" class="rounded-circle" style="width: 50px; height: 50px; object-fit: cover; border: 3px solid #940000;" alt="Teacher">
+                                                    </td>
+                                                    <td><strong>{{ $teacherRole->first_name }} {{ $teacherRole->middle_name }} {{ $teacherRole->last_name }}</strong></td>
+                                                    <td>
+                                                        <span class="badge bg-primary-custom text-white">{{ $teacherRole->role_name }}</span>
+                                                    </td>
+                                                    <td>
+                                                        <div class="actions-dropdown">
+                                                            <button class="btn btn-sm btn-outline-primary js-actions-toggle" type="button" aria-expanded="false">
+                                                                Actions
+                                                            </button>
+                                                            <ul class="actions-menu">
+                                                                <li>
+                                                                    <button class="dropdown-item change-role-btn"
+                                                                            data-role-user-id="{{ $teacherRole->role_user_id }}"
+                                                                            data-role-id="{{ $teacherRole->role_id }}"
+                                                                            data-role-name="{{ $teacherRole->role_name }}"
+                                                                            data-current-teacher-id="{{ $teacherRole->teacher_id }}"
+                                                                            data-current-teacher-name="{{ $teacherRole->first_name }} {{ $teacherRole->last_name }}">
+                                                                        <i class="bi bi-arrow-repeat"></i> Change Role
+                                                                    </button>
+                                                                </li>
+                                                                <li>
+                                                                    <button class="dropdown-item text-danger remove-role-btn"
+                                                                            data-role-user-id="{{ $teacherRole->role_user_id }}"
+                                                                            data-role-id="{{ $teacherRole->role_id }}"
+                                                                            data-role-name="{{ $teacherRole->role_name }}"
+                                                                            data-teacher-id="{{ $teacherRole->teacher_id }}"
+                                                                            data-teacher-name="{{ $teacherRole->first_name }} {{ $teacherRole->middle_name }} {{ $teacherRole->last_name }}">
+                                                                        <i class="bi bi-trash"></i> Remove Role
+                                                                    </button>
+                                                                </li>
+                                                            </ul>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                            @else
+                                                <tr>
+                                                    <td colspan="6" class="text-center py-5">
+                                                        <i class="bi bi-inbox" style="font-size: 48px; color: #940000;"></i>
+                                                        <p class="mt-3 mb-0 text-muted">No teachers with assigned roles found. Click 'Assign Roles' to assign roles to teachers.</p>
+                                                    </td>
+                                                </tr>
+                                            @endif
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="d-flex justify-content-end mt-3">
+                                    <button type="button" class="btn btn-secondary js-teachers-section-link" data-target="#section-teachers">
+                                        <i class="bi bi-x-circle"></i> Back
+                                    </button>
                                 </div>
                             </div>
-    </div>
+                        </div>
+                    </div>
 
-</div>
+                    <div id="section-manage-roles" class="teacher-section d-none">
+                        <div class="section-title">Manage Roles & Permissions</div>
+                        <div class="card border-primary-custom">
+                            <div class="card-header bg-primary-custom text-white">
+                                <strong><i class="bi bi-shield-check"></i> Manage Roles & Permissions</strong>
+                            </div>
+                            <div class="card-body">
+                                <ul class="nav nav-tabs" id="rolesPermissionsTabs" role="tablist">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link active" id="roles-tab" data-bs-toggle="tab" data-bs-target="#roles" type="button" role="tab">
+                                            <i class="bi bi-person-badge"></i> Roles
+                                        </button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="permissions-tab" data-bs-toggle="tab" data-bs-target="#permissions" type="button" role="tab">
+                                            <i class="bi bi-key"></i> Permissions
+                                        </button>
+                                    </li>
+                                </ul>
 
-{{-- View Teachers Roles Modal --}}
-<div class="modal fade" id="viewTeachersRolesModal" tabindex="-1" aria-labelledby="viewTeachersRolesModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 95%; width: 95%;">
-        <div class="modal-content">
-            <div class="modal-header bg-primary-custom text-white">
-                <h5 class="modal-title" id="viewTeachersRolesModalLabel">
-                    <i class="bi bi-person-badge"></i> Teachers Roles
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="table-responsive">
-                    <table id="teachersRolesTable" class="table table-hover table-striped align-middle mb-0" style="width:100%">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Image</th>
-                                <th>Teacher Name</th>
-                                <th>Employee Number</th>
-                                <th>Email</th>
-                                <th>Role</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @if(count($teachersWithRoles) > 0)
-                            @foreach ($teachersWithRoles as $teacherRole)
-                                <tr>
-                                    <td>
-                                        @php
-                                            $imgPath = $teacherRole->image
-                                                ? asset('userImages/' . $teacherRole->image)
-                                                : ($teacherRole->gender == 'Female'
-                                                    ? asset('images/female.png')
-                                                    : asset('images/male.png'));
-                                        @endphp
-                                        <img src="{{ $imgPath }}" class="rounded-circle" style="width: 50px; height: 50px; object-fit: cover; border: 3px solid #940000;" alt="Teacher">
-                                    </td>
-                                    <td><strong>{{ $teacherRole->first_name }} {{ $teacherRole->middle_name }} {{ $teacherRole->last_name }}</strong></td>
-                                    <td>{{ $teacherRole->employee_number }}</td>
-                                    <td>{{ $teacherRole->email }}</td>
-                                    <td>
-                                        <span class="badge bg-primary-custom text-white fs-6 px-3 py-2">
-                                            {{ $teacherRole->role_name }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <button class="btn btn-sm btn-warning text-dark change-role-btn"
-                                                    data-role-user-id="{{ $teacherRole->role_user_id }}"
-                                                    data-role-id="{{ $teacherRole->role_id }}"
-                                                    data-role-name="{{ $teacherRole->role_name }}"
-                                                    data-current-teacher-id="{{ $teacherRole->teacher_id }}"
-                                                    data-current-teacher-name="{{ $teacherRole->first_name }} {{ $teacherRole->last_name }}"
-                                                    title="Change Role">
-                                                <i class="bi bi-arrow-repeat"></i> Change Role
-                                            </button>
-                                            <button class="btn btn-sm btn-danger remove-role-btn"
-                                                    data-role-user-id="{{ $teacherRole->role_user_id }}"
-                                                    data-role-id="{{ $teacherRole->role_id }}"
-                                                    data-role-name="{{ $teacherRole->role_name }}"
-                                                    data-teacher-id="{{ $teacherRole->teacher_id }}"
-                                                    data-teacher-name="{{ $teacherRole->first_name }} {{ $teacherRole->middle_name }} {{ $teacherRole->last_name }}"
-                                                    title="Remove Role">
-                                                <i class="bi bi-x-circle"></i> Remove
+                                <div class="tab-content mt-4" id="rolesPermissionsTabsContent">
+                                    <!-- Roles Tab -->
+                                    <div class="tab-pane fade show active" id="roles" role="tabpanel">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h6 class="mb-0">All Roles</h6>
+                                            <button class="btn btn-sm btn-primary-custom" id="addRoleBtn">
+                                                <i class="bi bi-plus-circle"></i> Add New Role
                                             </button>
                                         </div>
-                                    </td>
-                        </tr>
-                    @endforeach
-                            @else
-                                <tr>
-                                    <td colspan="6" class="text-center py-5">
-                                        <i class="bi bi-inbox" style="font-size: 48px; color: #940000;"></i>
-                                        <p class="mt-3 mb-0 text-muted">No teachers with assigned roles found. Click 'Assign Roles' to assign roles to teachers.</p>
-                                    </td>
-                                </tr>
-                    @endif
-                </tbody>
-            </table>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-circle"></i> Close
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+                                        <div class="table-responsive">
+                                            <table class="table table-hover table-striped teachers-table" id="rolesTable">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>Role Name</th>
+                                                        <th>Permissions</th>
+                                                        <th>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($roles as $role)
+                                                        <tr>
+                                                            <td><strong>{{ $role->role_name ?? $role->name }}</strong></td>
+                                                            <td>
+                                                                @php
+                                                                    $rolePermissions = collect();
+                                                                    if (method_exists($role, 'permissions')) {
+                                                                        try {
+                                                                            $perms = $role->permissions;
+                                                                            if ($perms instanceof \Illuminate\Database\Eloquent\Relations\Relation) {
+                                                                                $rolePermissions = $perms->get();
+                                                                            } elseif ($perms instanceof \Illuminate\Support\Collection) {
+                                                                                $rolePermissions = $perms;
+                                                                            } elseif (is_array($perms)) {
+                                                                                $rolePermissions = collect($perms);
+                                                                            } elseif (is_object($perms) && method_exists($perms, 'toArray')) {
+                                                                                $rolePermissions = collect($perms->toArray());
+                                                                            } else {
+                                                                                $rolePermissions = collect();
+                                                                            }
+                                                                        } catch (\Exception $e) {
+                                                                            $rolePermissions = collect();
+                                                                        }
+                                                                    }
+                                                                @endphp
+                                                                @if($rolePermissions && $rolePermissions->count() > 0)
+                                                                    <div class="d-flex flex-wrap gap-1">
+                                                                        @foreach($rolePermissions as $permission)
+                                                                            <span class="badge bg-info">{{ $permission->name ?? 'N/A' }}</span>
+                                                                        @endforeach
+                                                                    </div>
+                                                                @else
+                                                                    <span class="text-muted">No permissions</span>
+                                                                @endif
+                                                            </td>
+                                                            <td>
+                                                                <div class="btn-group" role="group">
+                                                                    <button class="btn btn-sm btn-primary text-white edit-role-name-btn"
+                                                                            data-role-id="{{ $role->id }}"
+                                                                            data-role-name="{{ $role->role_name ?? $role->name }}">
+                                                                        <i class="bi bi-pencil-square"></i> Edit Name
+                                                                    </button>
+                                                                    <button class="btn btn-sm btn-warning text-dark edit-role-permissions-btn"
+                                                                            data-role-id="{{ $role->id }}"
+                                                                            data-role-name="{{ $role->role_name ?? $role->name }}">
+                                                                        <i class="bi bi-pencil"></i> Edit Permissions
+                                                                    </button>
+                                                                    <button class="btn btn-sm btn-danger delete-role-btn"
+                                                                            data-role-id="{{ $role->id }}"
+                                                                            data-role-name="{{ $role->role_name ?? $role->name }}">
+                                                                        <i class="bi bi-trash"></i> Delete
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
 
-{{-- Assign Role Modal --}}
-<div class="modal fade" id="assignRoleModal" tabindex="-1" aria-labelledby="assignRoleModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-primary-custom text-white">
-                <h5 class="modal-title" id="assignRoleModalLabel">
-                    <i class="bi bi-person-badge"></i> Assign Role to Teacher
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="assignRoleForm">
-                @csrf
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Select Teacher <span class="text-danger">*</span></label>
-                        <select name="teacher_id" id="teacher_select" class="form-select" required>
-                            <option value="">Choose a teacher...</option>
-                            @foreach($teachers as $teacher)
-                                <option value="{{ $teacher->id }}" data-email="{{ $teacher->email }}">
-                                    {{ $teacher->first_name }} {{ $teacher->middle_name }} {{ $teacher->last_name }} ({{ $teacher->employee_number }})
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Select Role <span class="text-danger">*</span></label>
-                        <select name="role_id" id="role_select" class="form-select" required>
-                            <option value="">Choose a role...</option>
-                            @foreach($roles as $role)
-                                <option value="{{ $role->id }}">{{ $role->role_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-circle"></i> Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary-custom">
-                        <i class="bi bi-save"></i> Assign Role
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-{{-- Add Teacher Modal --}}
-<div class="modal fade" id="addTeacherModal" tabindex="-1" aria-labelledby="addTeacherModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content">
-        @if (session('success'))
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-@endif
-            @if (session('error'))
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        {{ session('error') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-@endif
-            <form id="teacherForm" enctype="multipart/form-data">
-                @csrf
-                <div class="modal-header bg-primary-custom text-white">
-                    <h5 class="modal-title" id="addTeacherModalLabel">
-                        <i class="bi bi-person-plus-fill"></i> Add New Teacher
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-
-                <div class="modal-body" id="addTeacherModalBody" style="max-height: 70vh; overflow-y: auto; overflow-x: hidden;">
-                    <style>
-                        /* Show scrollbar for all browsers */
-                        #addTeacherModalBody {
-                            overflow-y: auto !important;
-                            overflow-x: hidden !important;
-                            scrollbar-width: thin; /* Firefox - thin scrollbar */
-                            scrollbar-color: #cbd5e0 #f7fafc; /* Firefox - thumb and track colors */
-                        }
-                        
-                        /* Style scrollbar for Chrome, Safari, Opera */
-                        #addTeacherModalBody::-webkit-scrollbar {
-                            width: 8px;
-                            height: 8px;
-                        }
-                        
-                        #addTeacherModalBody::-webkit-scrollbar-track {
-                            background: #f1f1f1;
-                            border-radius: 10px;
-                        }
-                        
-                        #addTeacherModalBody::-webkit-scrollbar-thumb {
-                            background: #888;
-                            border-radius: 10px;
-                        }
-                        
-                        #addTeacherModalBody::-webkit-scrollbar-thumb:hover {
-                            background: #555;
-                        }
-                    </style>
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">First Name <span class="text-danger">*</span></label>
-                            <input type="text" name="first_name" class="form-control" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Middle Name</label>
-                            <input type="text" name="middle_name" class="form-control">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Last Name <span class="text-danger">*</span></label>
-                            <input type="text" name="last_name" class="form-control" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Gender <span class="text-danger">*</span></label>
-                            <select name="gender" class="form-select" required>
-                                <option value="">Select Gender</option>
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Email <span class="text-danger">*</span></label>
-                            <input type="email" name="email" class="form-control" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Phone Number <span class="text-danger">*</span></label>
-                            <input type="text"
-                                   name="phone_number"
-                                   class="form-control"
-                                   id="phone_number"
-                                   pattern="^255\d{9}$"
-                                   placeholder="255614863345"
-                                   required
-                                   maxlength="12">
-                            <small class="text-muted">Must start with 255 followed by 9 digits (12 digits total, e.g., 255614863345)</small>
-                            <div class="invalid-feedback" id="phone_error" style="display: none;">
-                                Phone number must have 12 digits: start with 255 followed by 9 digits
+                                    <!-- Permissions Tab -->
+                                    <div class="tab-pane fade" id="permissions" role="tabpanel">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h6 class="mb-0">All Permissions</h6>
+                                            <button class="btn btn-sm btn-primary-custom" id="addPermissionBtn">
+                                                <i class="bi bi-plus-circle"></i> Add New Permission
+                                            </button>
+                                        </div>
+                                        <div class="table-responsive">
+                                            <table class="table table-hover table-striped teachers-table" id="permissionsTable">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>Permission Name</th>
+                                                        <th>Guard</th>
+                                                        <th>Created At</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @if(isset($permissions) && $permissions->count() > 0)
+                                                        @foreach($permissions as $permission)
+                                                            <tr>
+                                                                <td><strong><code>{{ $permission->name }}</code></strong></td>
+                                                                <td><span class="badge bg-secondary">{{ $permission->guard_name ?? 'web' }}</span></td>
+                                                                <td>
+                                                                    @if(isset($permission->created_at))
+                                                                        @if(is_string($permission->created_at))
+                                                                            {{ \Carbon\Carbon::parse($permission->created_at)->format('d M Y') }}
+                                                                        @else
+                                                                            {{ $permission->created_at->format('d M Y') }}
+                                                                        @endif
+                                                                    @else
+                                                                        N/A
+                                                                    @endif
+                                                                </td>
+                                                            </tr>
+                                                        @endforeach
+                                                    @else
+                                                        <tr>
+                                                            <td colspan="3" class="text-center py-4">
+                                                                <i class="bi bi-inbox" style="font-size: 48px; color: #940000;"></i>
+                                                                <p class="text-muted mt-3 mb-0">No permissions found. Click "Add New Permission" to create one.</p>
+                                                            </td>
+                                                        </tr>
+                                                    @endif
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-end mt-3">
+                                    <button type="button" class="btn btn-secondary js-teachers-section-link" data-target="#section-teachers">
+                                        <i class="bi bi-x-circle"></i> Back
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Bank Account Number</label>
-                            <input type="text" name="bank_account_number" class="form-control" placeholder="e.g., 1234567890">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">National ID <span class="text-danger">*</span></label>
-                            <input type="text" name="national_id" class="form-control" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Employee Number <span class="text-danger">*</span></label>
-                            <input type="text" name="employee_number" class="form-control" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Qualification</label>
-                            <input type="text" name="qualification" class="form-control" placeholder="e.g., Bachelor's Degree">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Specialization</label>
-                            <input type="text" name="specialization" class="form-control" placeholder="e.g., Mathematics">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Experience</label>
-                            <input type="text" name="experience" class="form-control" placeholder="e.g., 5 years">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Date of Birth</label>
-                            <input type="date" name="date_of_birth" class="form-control">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Date Hired</label>
-                            <input type="date" name="date_hired" class="form-control">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Position</label>
-                            <input type="text" name="position" class="form-control" placeholder="e.g., Senior Teacher">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Status</label>
-                            <select name="status" class="form-select">
-                                <option value="Active">Active</option>
-                                <option value="On Leave">On Leave</option>
-                                <option value="Retired">Retired</option>
-                            </select>
-                        </div>
-                        <div class="col-md-12">
-                            <label class="form-label fw-bold">Address</label>
-                            <input type="text" name="address" class="form-control" placeholder="Full address">
-                        </div>
-                        <div class="col-md-12">
-                            <label class="form-label fw-bold">Teacher Image</label>
-                            <input type="file" name="image" class="form-control" accept="image/*">
-                            <small class="text-muted">Supported formats: JPG, PNG (Max: 2MB)</small>
-                        </div>
                     </div>
                 </div>
-
-                <div class="modal-footer" style="display: flex !important;">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-circle"></i> Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary-custom" style="display: inline-block !important;">
-                        <i class="bi bi-save"></i> Save Teacher
-                    </button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
 </div>
@@ -903,171 +1145,6 @@
 </div>
 
 {{-- Manage Roles & Permissions Modal --}}
-<div class="modal fade" id="manageRolesModal" tabindex="-1" aria-labelledby="manageRolesModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-fullscreen-lg-down modal-xl modal-dialog-centered modal-dialog-scrollable" style="max-width: 95%; width: 95%;">
-        <div class="modal-content">
-            <div class="modal-header bg-primary-custom text-white">
-                <h5 class="modal-title" id="manageRolesModalLabel">
-                    <i class="bi bi-shield-check"></i> Manage Roles & Permissions
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <ul class="nav nav-tabs" id="rolesPermissionsTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="roles-tab" data-bs-toggle="tab" data-bs-target="#roles" type="button" role="tab">
-                            <i class="bi bi-person-badge"></i> Roles
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="permissions-tab" data-bs-toggle="tab" data-bs-target="#permissions" type="button" role="tab">
-                            <i class="bi bi-key"></i> Permissions
-                        </button>
-                    </li>
-                </ul>
-
-                <div class="tab-content mt-4" id="rolesPermissionsTabsContent">
-                    <!-- Roles Tab -->
-                    <div class="tab-pane fade show active" id="roles" role="tabpanel">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="mb-0">All Roles</h6>
-                            <button class="btn btn-sm btn-primary-custom" id="addRoleBtn">
-                                <i class="bi bi-plus-circle"></i> Add New Role
-                            </button>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-hover table-striped" id="rolesTable">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Role Name</th>
-                                        <th>Permissions</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($roles as $role)
-                                        <tr>
-                                            <td><strong>{{ $role->role_name ?? $role->name }}</strong></td>
-                                            <td>
-                                                @php
-                                                    // Safely get permissions - check if it's a relationship or collection
-                                                    $rolePermissions = collect();
-                                                    if (method_exists($role, 'permissions')) {
-                                                        try {
-                                                            $perms = $role->permissions;
-                                                            // Check if it's a relationship (BelongsToMany, HasMany, etc.)
-                                                            if ($perms instanceof \Illuminate\Database\Eloquent\Relations\Relation) {
-                                                                $rolePermissions = $perms->get();
-                                                            } elseif ($perms instanceof \Illuminate\Support\Collection) {
-                                                                // Already a collection, use it directly
-                                                                $rolePermissions = $perms;
-                                                            } elseif (is_array($perms)) {
-                                                                $rolePermissions = collect($perms);
-                                                            } elseif (is_object($perms) && method_exists($perms, 'toArray')) {
-                                                                $rolePermissions = collect($perms->toArray());
-                                                            } else {
-                                                                $rolePermissions = collect();
-                                                            }
-                                                        } catch (\Exception $e) {
-                                                            $rolePermissions = collect();
-                                                        }
-                                                    }
-                                                @endphp
-                                                @if($rolePermissions && $rolePermissions->count() > 0)
-                                                    <div class="d-flex flex-wrap gap-1">
-                                                        @foreach($rolePermissions as $permission)
-                                                            <span class="badge bg-info">{{ $permission->name ?? 'N/A' }}</span>
-                                                        @endforeach
-                                                    </div>
-                                                @else
-                                                    <span class="text-muted">No permissions</span>
-                                                @endif
-                                            </td>
-                                            <td>
-                                                <div class="btn-group" role="group">
-                                                    <button class="btn btn-sm btn-primary text-white edit-role-name-btn"
-                                                            data-role-id="{{ $role->id }}"
-                                                            data-role-name="{{ $role->role_name ?? $role->name }}">
-                                                        <i class="bi bi-pencil-square"></i> Edit Name
-                                                    </button>
-                                                    <button class="btn btn-sm btn-warning text-dark edit-role-permissions-btn"
-                                                            data-role-id="{{ $role->id }}"
-                                                            data-role-name="{{ $role->role_name ?? $role->name }}">
-                                                        <i class="bi bi-pencil"></i> Edit Permissions
-                                                    </button>
-                                                    <button class="btn btn-sm btn-danger delete-role-btn"
-                                                            data-role-id="{{ $role->id }}"
-                                                            data-role-name="{{ $role->role_name ?? $role->name }}">
-                                                        <i class="bi bi-trash"></i> Delete
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Permissions Tab -->
-                    <div class="tab-pane fade" id="permissions" role="tabpanel">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="mb-0">All Permissions</h6>
-                            <button class="btn btn-sm btn-primary-custom" id="addPermissionBtn">
-                                <i class="bi bi-plus-circle"></i> Add New Permission
-                            </button>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-hover table-striped" id="permissionsTable">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Permission Name</th>
-                                        <th>Guard</th>
-                                        <th>Created At</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @if(isset($permissions) && $permissions->count() > 0)
-                                        @foreach($permissions as $permission)
-                                            <tr>
-                                                <td><strong><code>{{ $permission->name }}</code></strong></td>
-                                                <td><span class="badge bg-secondary">{{ $permission->guard_name ?? 'web' }}</span></td>
-                                                <td>
-                                                    @if(isset($permission->created_at))
-                                                        @if(is_string($permission->created_at))
-                                                            {{ \Carbon\Carbon::parse($permission->created_at)->format('d M Y') }}
-                                                        @else
-                                                            {{ $permission->created_at->format('d M Y') }}
-                                                        @endif
-                                                    @else
-                                                        N/A
-                                                    @endif
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    @else
-                                        <tr>
-                                            <td colspan="3" class="text-center py-4">
-                                                <i class="bi bi-inbox" style="font-size: 48px; color: #940000;"></i>
-                                                <p class="text-muted mt-3 mb-0">No permissions found. Click "Add New Permission" to create one.</p>
-                                            </td>
-                                        </tr>
-                                    @endif
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-circle"></i> Close
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 {{-- Add Role Modal --}}
 <div class="modal fade" id="addRoleModal" tabindex="-1" aria-labelledby="addRoleModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -1574,16 +1651,13 @@
         }
 
         // Initialize modals
-        var addTeacherModal = null;
-        var assignRoleModal = null;
         var editTeacherModal = null;
         var changeRoleModal = null;
-        var viewTeachersRolesModal = null;
-        var manageRolesModal = null;
         var addRoleModal = null;
         var addPermissionModal = null;
         var editRolePermissionsModal = null;
         var rolesTable = null;
+        var rolesTableInitialized = false;
         var teacherAttendanceModal = null;
 
         // Universal modal close handler - ensures all close buttons work
@@ -1627,23 +1701,11 @@
         });
 
         if (typeof bootstrap !== 'undefined') {
-            if (document.getElementById('addTeacherModal')) {
-                addTeacherModal = new bootstrap.Modal(document.getElementById('addTeacherModal'));
-            }
-            if (document.getElementById('assignRoleModal')) {
-                assignRoleModal = new bootstrap.Modal(document.getElementById('assignRoleModal'));
-            }
             if (document.getElementById('editTeacherModal')) {
                 editTeacherModal = new bootstrap.Modal(document.getElementById('editTeacherModal'));
             }
             if (document.getElementById('changeRoleModal')) {
                 changeRoleModal = new bootstrap.Modal(document.getElementById('changeRoleModal'));
-            }
-            if (document.getElementById('viewTeachersRolesModal')) {
-                viewTeachersRolesModal = new bootstrap.Modal(document.getElementById('viewTeachersRolesModal'));
-            }
-            if (document.getElementById('manageRolesModal')) {
-                manageRolesModal = new bootstrap.Modal(document.getElementById('manageRolesModal'));
             }
             if (document.getElementById('addRoleModal')) {
                 addRoleModal = new bootstrap.Modal(document.getElementById('addRoleModal'));
@@ -1662,26 +1724,86 @@
             }
         }
 
-        // Handle Add Teacher Button Click
-        $(document).on('click', '#addTeacherBtn', function(e) {
+        function showTeacherSection(targetId) {
+            if (!targetId) {
+                return;
+            }
+            $('.teacher-section').addClass('d-none');
+            $('#' + targetId).removeClass('d-none');
+        }
+
+        function initRolesTable() {
+            if (rolesTableInitialized || !$('#teachersRolesTable').length) {
+                return;
+            }
+            rolesTable = $('#teachersRolesTable').DataTable({
+                "order": [[1, "asc"]],
+                "pageLength": 25,
+                "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+                "autoWidth": false,
+                "responsive": false,
+                "language": {
+                    "search": "Search:",
+                    "lengthMenu": "Show _MENU_ records per page",
+                    "info": "Showing _START_ to _END_ of _TOTAL_ records",
+                    "infoEmpty": "No records available",
+                    "infoFiltered": "(filtered from _MAX_ total records)",
+                    "zeroRecords": "No matching records found",
+                    "emptyTable": "<div class='text-center py-5'><i class='bi bi-inbox' style='font-size: 48px; color: #940000;'></i><p class='mt-3 mb-0 text-muted'>No teachers with assigned roles found.</p></div>"
+                },
+                "columnDefs": [
+                    { "orderable": false, "targets": [0, 3] }
+                ]
+            });
+            rolesTableInitialized = true;
+        }
+
+        $(document).on('click', '.teachers-menu .list-group-item', function(e) {
             e.preventDefault();
-            if (!hasPermission('register_teacher')) {
+            var target = $(this).data('target');
+            var permission = $(this).data('permission');
+
+            if (permission && !hasPermission(permission)) {
                 Swal.fire({
                     icon: 'error',
                     title: 'Access Denied',
-                    text: 'You are not allowed to perform this action. You need the register_teacher permission.'
+                    text: 'You are not allowed to perform this action. You need the ' + permission + ' permission.'
                 });
                 return false;
             }
-            if (typeof bootstrap !== 'undefined' && addTeacherModal) {
-                addTeacherModal.show();
-            } else if ($('#addTeacherModal').length) {
-                $('#addTeacherModal').modal('show');
+
+            $('.teachers-menu .list-group-item').removeClass('active');
+            $(this).addClass('active');
+
+            if (target) {
+                showTeacherSection(target.replace('#', ''));
+                if (target === '#section-view-roles') {
+                    setTimeout(initRolesTable, 50);
+                }
             }
-            // Ensure submit button is visible
-            $('#teacherForm').find('button[type="submit"]').show().css('display', 'inline-block');
-            $('#teacherForm').find('.modal-footer').show();
-            return false;
+        });
+
+        $(document).on('click', '.js-teachers-section-link', function(e) {
+            e.preventDefault();
+            var target = $(this).data('target');
+            var $menuItem = $('.teachers-menu .list-group-item[data-target="' + target + '"]');
+            if ($menuItem.length) {
+                $menuItem.trigger('click');
+            } else if (target) {
+                showTeacherSection(target.replace('#', ''));
+            }
+        });
+
+        $(document).on('click', '.js-actions-toggle', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var $dropdown = $(this).closest('.actions-dropdown');
+            $('.actions-dropdown').not($dropdown).removeClass('is-open');
+            $dropdown.toggleClass('is-open');
+        });
+
+        $(document).on('click', function() {
+            $('.actions-dropdown').removeClass('is-open');
         });
 
         // Handle View Teacher Attendance Button Click
@@ -1700,88 +1822,8 @@
             return false;
         });
 
-        // Handle View Teachers Roles Button Click
-        $(document).on('click', '#viewTeachersRolesBtn', function(e) {
-            e.preventDefault();
-            if (!hasPermission('view_teachers_roles')) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Access Denied',
-                    text: 'You are not allowed to perform this action. You need the view_teachers_roles permission.'
-                });
-                return false;
-            }
-
-            // Destroy existing DataTable if it exists
-            if (rolesTable) {
-                rolesTable.destroy();
-                rolesTable = null;
-            }
-
-            // Show modal first
-            if (typeof bootstrap !== 'undefined' && viewTeachersRolesModal) {
-                viewTeachersRolesModal.show();
-            } else {
-                $('#viewTeachersRolesModal').modal('show');
-            }
-
-            // Initialize DataTable after modal is shown
-            setTimeout(function() {
-                if ($('#teachersRolesTable tbody tr').length > 0) {
-                    rolesTable = $('#teachersRolesTable').DataTable({
-                        "order": [[1, "asc"]], // Sort by name
-                        "pageLength": 25,
-                        "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-                        "autoWidth": false, // Let CSS control width
-                        "responsive": false, // Disable responsive mode to allow horizontal scroll
-                        "language": {
-                            "search": "Search:",
-                            "lengthMenu": "Show _MENU_ records per page",
-                            "info": "Showing _START_ to _END_ of _TOTAL_ records",
-                            "infoEmpty": "No records available",
-                            "infoFiltered": "(filtered from _MAX_ total records)",
-                            "zeroRecords": "No matching records found"
-                        },
-                        "columnDefs": [
-                            { "orderable": false, "targets": [0, 5] } // Disable sorting on Image and Actions columns
-                        ]
-                    });
-                } else {
-                    rolesTable = $('#teachersRolesTable').DataTable({
-                        "order": [[1, "asc"]], // Sort by name
-                        "pageLength": 25,
-                        "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-                        "autoWidth": false, // Let CSS control width
-                        "responsive": false, // Disable responsive mode to allow horizontal scroll
-                        "language": {
-                            "search": "Search:",
-                            "lengthMenu": "Show _MENU_ records per page",
-                            "info": "Showing _START_ to _END_ of _TOTAL_ records",
-                            "infoEmpty": "No records available",
-                            "infoFiltered": "(filtered from _MAX_ total records)",
-                            "zeroRecords": "No matching records found",
-                            "emptyTable": "<div class='text-center py-5'><i class='bi bi-inbox' style='font-size: 48px; color: #940000;'></i><p class='mt-3 mb-0 text-muted'>No teachers with assigned roles found.</p></div>"
-                        },
-                        "columnDefs": [
-                            { "orderable": false, "targets": [0, 5] } // Disable sorting on Image and Actions columns
-                        ]
-                    });
-                }
-            }, 300);
-
-            return false;
-        });
-
-        // Handle Assign Role Button Click
-        $(document).on('click', '#assignRoleBtn', function(e) {
-            e.preventDefault();
-            if (typeof bootstrap !== 'undefined' && assignRoleModal) {
-                assignRoleModal.show();
-            } else if ($('#assignRoleModal').length) {
-                $('#assignRoleModal').modal('show');
-            }
-            return false;
-        });
+        // Ensure initial section is visible
+        showTeacherSection('section-teachers');
 
         // Initialize DataTable (like manage_library style)
         if ($('#teachersTable tbody tr').length > 0) {
@@ -1804,7 +1846,7 @@
                     "zeroRecords": "No matching teachers found"
                 },
                 "columnDefs": [
-                    { "orderable": false, "targets": [0, 6] }
+                    { "orderable": false, "targets": [0, 4] }
                 ]
             });
         } else {
@@ -1822,7 +1864,7 @@
                     "emptyTable": "<div class='text-center py-5'><i class='bi bi-inbox' style='font-size: 48px; color: #940000;'></i><p class='mt-3 mb-0 text-muted'>No teachers found. Click 'Add New Teacher' to get started.</p></div>"
                 },
                 "columnDefs": [
-                    { "orderable": false, "targets": [0, 6] }
+                    { "orderable": false, "targets": [0, 4] }
                 ]
             });
         }
@@ -2312,12 +2354,6 @@
                 type: "POST",
                 data: formData,
                 success: function(response) {
-                    if (typeof bootstrap !== 'undefined' && assignRoleModal) {
-                        assignRoleModal.hide();
-                    } else {
-                        $('#assignRoleModal').modal('hide');
-                    }
-
                     $('#assignRoleForm')[0].reset();
                     $submitBtn.prop('disabled', false).html(originalText);
 
@@ -2393,12 +2429,6 @@
                 processData: false,
                 contentType: false,
                 success: function(response) {
-                    if (typeof bootstrap !== 'undefined' && addTeacherModal) {
-                        addTeacherModal.hide();
-                    } else {
-                        $('#addTeacherModal').modal('hide');
-                    }
-
                     $('#teacherForm')[0].reset();
                     $submitBtn.prop('disabled', false).html(originalText);
 
@@ -2568,25 +2598,6 @@
         });
 
         // Reset forms when modals are closed
-        if (document.getElementById('addTeacherModal')) {
-            document.getElementById('addTeacherModal').addEventListener('hidden.bs.modal', function() {
-            $('#teacherForm')[0].reset();
-                $('#phone_number').removeClass('is-invalid is-valid');
-                $('#phone_error').hide();
-            });
-            // Ensure submit button is visible when modal is shown
-            document.getElementById('addTeacherModal').addEventListener('shown.bs.modal', function() {
-                $('#teacherForm').find('button[type="submit"]').show().css('display', 'inline-block');
-                $('#teacherForm').find('.modal-footer').show();
-            });
-        }
-
-        if (document.getElementById('assignRoleModal')) {
-            document.getElementById('assignRoleModal').addEventListener('hidden.bs.modal', function() {
-                $('#assignRoleForm')[0].reset();
-            });
-        }
-
         if (document.getElementById('editTeacherModal')) {
             document.getElementById('editTeacherModal').addEventListener('hidden.bs.modal', function() {
                 $('#editTeacherForm')[0].reset();
@@ -2602,35 +2613,6 @@
                 $('#change_new_teacher_select option').show();
             });
         }
-
-        if (document.getElementById('viewTeachersRolesModal')) {
-            document.getElementById('viewTeachersRolesModal').addEventListener('hidden.bs.modal', function() {
-                // Destroy DataTable when modal is closed
-                if (rolesTable) {
-                    rolesTable.destroy();
-                    rolesTable = null;
-                }
-            });
-        }
-
-        // Handle Manage Roles & Permissions Button Click
-        $(document).on('click', '#manageRolesBtn', function(e) {
-            e.preventDefault();
-            if (!hasPermission('manage_roles_permissions')) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Access Denied',
-                    text: 'You are not allowed to perform this action. You need the manage_roles_permissions permission.'
-                });
-                return false;
-            }
-            if (typeof bootstrap !== 'undefined' && manageRolesModal) {
-                manageRolesModal.show();
-            } else if ($('#manageRolesModal').length) {
-                $('#manageRolesModal').modal('show');
-            }
-            return false;
-        });
 
         // Handle Add Role Button Click
         $(document).on('click', '#addRoleBtn', function(e) {

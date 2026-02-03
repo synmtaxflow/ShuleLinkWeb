@@ -411,9 +411,20 @@ class StudentRegistrationController extends Controller
     private function generateAdmissionNumber($schoolID)
     {
         $year = now()->year;
-        $count = Student::where('schoolID', $schoolID)->whereYear('created_at', $year)->count() + 1;
+        $prefix = $year . '-';
 
-        return $year . '-' . str_pad($count, 5, '0', STR_PAD_LEFT);
+        $lastAdmissionNumber = Student::where('schoolID', $schoolID)
+            ->where('admission_number', 'like', $prefix . '%')
+            ->lockForUpdate()
+            ->orderBy('admission_number', 'desc')
+            ->value('admission_number');
+
+        $sequence = 1;
+        if ($lastAdmissionNumber && preg_match('/^' . $year . '-(\d+)$/', $lastAdmissionNumber, $matches)) {
+            $sequence = (int)$matches[1] + 1;
+        }
+
+        return $year . '-' . str_pad($sequence, 5, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -436,6 +447,7 @@ class StudentRegistrationController extends Controller
             // Validate all steps
             $validationRules = [
                 // Step 1
+                'admission_number' => 'required|string|max:50|unique:students,admission_number|unique:users,name',
                 'first_name' => 'required|string|max:100',
                 'last_name' => 'required|string|max:100',
                 'gender' => 'required|in:Male,Female',
@@ -626,7 +638,7 @@ class StudentRegistrationController extends Controller
                 }
             } while (true);
 
-            $admissionNumber = $this->generateAdmissionNumber($schoolID);
+            $admissionNumber = $request->admission_number;
 
             $student = Student::create([
                 'studentID' => (int)$fingerprintId, // Set studentID equal to fingerprintID (as integer)

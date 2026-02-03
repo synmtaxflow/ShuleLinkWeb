@@ -2703,6 +2703,7 @@ Would you like to try direct registration anyway, or use the manual method?`;
             }
 
             let formData = new FormData(this);
+            formData.set('admission_number', admission_number);
             let submitBtn = $(this).find('button[type="submit"]');
             let originalBtnText = submitBtn.html();
 

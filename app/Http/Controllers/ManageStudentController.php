@@ -111,6 +111,28 @@ class ManageStudentController extends Controller
         return collect();
     }
 
+    private function generateAdmissionNumber($schoolID)
+    {
+        $school = School::find($schoolID);
+        $currentYear = date('Y');
+        $schoolNumber = $school->registration_number ?? 'SCH' . $schoolID;
+        $prefix = $schoolNumber . '/';
+        $suffix = '/' . $currentYear;
+
+        $lastAdmissionNumber = Student::where('schoolID', $schoolID)
+            ->where('admission_number', 'like', $prefix . '%' . $suffix)
+            ->lockForUpdate()
+            ->orderBy('admission_number', 'desc')
+            ->value('admission_number');
+
+        $sequence = 1;
+        if ($lastAdmissionNumber && preg_match('/\/(\d+)\/' . $currentYear . '$/', $lastAdmissionNumber, $matches)) {
+            $sequence = (int)$matches[1] + 1;
+        }
+
+        return $schoolNumber . '/' . str_pad($sequence, 3, '0', STR_PAD_LEFT) . '/' . $currentYear;
+    }
+
     public function save_student(Request $request)
     {
         // Check create permission - New format: student_create
@@ -130,36 +152,7 @@ class ManageStudentController extends Controller
             ], 400);
         }
 
-        // Auto-generate admission number if not provided
-        $school = School::find($schoolID);
-        $currentYear = date('Y');
         $admissionNumber = $request->admission_number;
-
-        if (empty($admissionNumber)) {
-            // Generate unique admission number: registration_number/unique_sequence/currentYear
-            $schoolNumber = $school->registration_number ?? 'SCH' . $schoolID;
-
-            // Get the last admission number for this school and year to generate next sequence
-            $lastStudent = Student::where('schoolID', $schoolID)
-                ->where('admission_number', 'like', $schoolNumber . '/%/' . $currentYear)
-                ->orderBy('admission_number', 'desc')
-                ->first();
-
-            $sequence = 1;
-            if ($lastStudent && preg_match('/\/(\d+)\/' . $currentYear . '$/', $lastStudent->admission_number, $matches)) {
-                $sequence = (int)$matches[1] + 1;
-            }
-
-            // Format: school_number/sequence/year (e.g., SCH001/001/2025)
-            $admissionNumber = $schoolNumber . '/' . str_pad($sequence, 3, '0', STR_PAD_LEFT) . '/' . $currentYear;
-
-            // Ensure uniqueness
-            while (Student::where('admission_number', $admissionNumber)->exists() ||
-                   User::where('name', $admissionNumber)->exists()) {
-                $sequence++;
-                $admissionNumber = $schoolNumber . '/' . str_pad($sequence, 3, '0', STR_PAD_LEFT) . '/' . $currentYear;
-            }
-        }
 
         $validator = Validator::make($request->all(), [
             'first_name' => 'required|string|max:100',
@@ -203,6 +196,15 @@ class ManageStudentController extends Controller
 
         try {
             DB::beginTransaction();
+
+            if (empty($admissionNumber)) {
+                do {
+                    $admissionNumber = $this->generateAdmissionNumber($schoolID);
+                } while (
+                    Student::where('admission_number', $admissionNumber)->exists() ||
+                    User::where('name', $admissionNumber)->exists()
+                );
+            }
 
             // Handle Image Upload
             $imageName = null;
