@@ -170,9 +170,7 @@
                     <i class="bi bi-people-fill"></i> Manage Parents
                 </h4>
                 <div class="d-flex gap-2">
-                    <button class="btn btn-outline-primary-custom fw-bold" id="addParentBtn" type="button" data-bs-toggle="modal" data-bs-target="#addParentModal">
-                        <i class="bi bi-person-plus"></i> Register New Parent
-                    </button>
+                   
                 </div>
             </div>
         </div>

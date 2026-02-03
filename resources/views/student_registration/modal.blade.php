@@ -6,7 +6,7 @@
                 <h5 class="modal-title fw-bold">
                     <i class="bi bi-person-check"></i> Student Registration Form
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" id="registrationModalCloseBtn" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
             <div class="modal-body p-4">
@@ -390,7 +390,7 @@
                 <button type="button" class="btn btn-secondary" id="prevBtn" style="display:none;">
                     <i class="bi bi-chevron-left"></i> Previous
                 </button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <button type="button" class="btn btn-secondary" id="registrationModalCancelBtn" data-bs-dismiss="modal">
                     <i class="bi bi-x-lg"></i> Cancel
                 </button>
                 <button type="button" class="btn" id="nextBtn" style="background-color: #f5f5f5; color: #212529; border: 1px solid #e9ecef;">
@@ -594,12 +594,33 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('stepIndicator').textContent = `Step ${step} of ${totalSteps}`;
 
         // Update buttons
-        document.getElementById('prevBtn').style.display = step === 1 ? 'none' : 'inline-block';
-        document.getElementById('nextBtn').style.display = step === totalSteps ? 'none' : 'inline-block';
-        document.getElementById('submitBtn').style.display = step === totalSteps ? 'inline-block' : 'none';
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const submitBtn = document.getElementById('submitBtn');
+        prevBtn.style.display = step === 1 ? 'none' : 'inline-block';
+        nextBtn.style.display = step === totalSteps ? 'none' : 'inline-block';
+        submitBtn.style.display = step === totalSteps ? 'inline-block' : 'none';
+        // Label preview when moving to the last step
+        nextBtn.innerHTML = step === totalSteps - 1
+            ? 'Preview <i class="bi bi-eye"></i>'
+            : 'Next <i class="bi bi-chevron-right"></i>';
 
         currentStep = step;
     };
+
+    // If on preview (step 5), close acts like "Previous"
+    const closeBtn = document.getElementById('registrationModalCloseBtn');
+    const cancelBtn = document.getElementById('registrationModalCancelBtn');
+    [closeBtn, cancelBtn].forEach(btn => {
+        if (!btn) return;
+        btn.addEventListener('click', (e) => {
+            if (currentStep === totalSteps) {
+                e.preventDefault();
+                e.stopPropagation();
+                showStep(currentStep - 1);
+            }
+        }, true);
+    });
 
     // Generate admission number on form load
     function generateAdmissionNumber() {
@@ -1017,11 +1038,15 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Navigation
-    document.getElementById('prevBtn').addEventListener('click', () => {
+    document.getElementById('prevBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         if (currentStep > 1) showStep(currentStep - 1);
     });
 
-    document.getElementById('nextBtn').addEventListener('click', () => {
+    document.getElementById('nextBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         console.log('Next button clicked, current step:', currentStep);
         
         // Always validate before proceeding - block if ANY error exists
@@ -1039,7 +1064,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    document.getElementById('submitBtn').addEventListener('click', submitForm);
+    document.getElementById('submitBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        submitForm();
+    });
 
     function validateCurrentStep() {
         const form = document.getElementById('registrationForm');

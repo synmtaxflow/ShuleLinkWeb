@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Session;
 use App\Models\Teacher;
 use App\Models\School;
 use App\Models\User;
+use App\Models\OtherStaff;
+use App\Models\StaffProfession;
 use App\Services\ZKTecoService;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -277,7 +279,14 @@ class ManageTeachersController extends Controller
             ->unique('role_user_id')
             ->values();
 
-        return view('Admin.manage_teachers', compact('teachers', 'roles', 'teachersWithRoles', 'permissions', 'school'));
+        $otherStaff = OtherStaff::where('schoolID', $schoolID)
+            ->with('profession')
+            ->get();
+        $staffProfessions = StaffProfession::where('schoolID', $schoolID)
+            ->with('permissions')
+            ->get();
+
+        return view('Admin.manage_teachers', compact('teachers', 'roles', 'teachersWithRoles', 'permissions', 'school', 'otherStaff', 'staffProfessions'));
     }
 
     public function save_teacher_role(Request $request)
