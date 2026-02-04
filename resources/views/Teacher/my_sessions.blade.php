@@ -6,7 +6,7 @@
 
 <style>
     .bg-primary-custom {
-        background-color: #940000 !important;
+        background-color: #f9eeee !important;
     }
     .text-primary-custom {
         color: #940000 !important;
@@ -15,12 +15,21 @@
     div, .card, .session-card, .day-header, .time-badge, .alert, .btn {
         border-radius: 0 !important;
     }
+    body, .container-fluid, .card, .session-card, .btn {
+        font-family: "Century Gothic", "CenturyGothic", "AppleGothic", sans-serif;
+    }
     .session-card {
         border: 1px solid #e0e0e0;
         padding: 15px;
         margin-bottom: 15px;
         transition: all 0.3s ease;
         background: white;
+    }
+    .session-card.widget-card {
+        border-radius: 12px !important;
+        border: 1px solid #e7e7e7;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+        padding: 18px;
     }
     .session-card:hover {
         box-shadow: 0 4px 12px rgba(148, 0, 0, 0.15);
@@ -41,30 +50,46 @@
         border-width: 2px;
     }
     .day-header {
-        background: #940000 !important;
-        color: white;
+        background: #f9eeee !important;
+        color: #7a1f1f;
         padding: 15px;
         margin-bottom: 20px;
         font-weight: 600;
     }
     .time-badge {
-        background: #940000;
-        color: white;
+        background: #f2dede;
+        color: #7a1f1f;
         padding: 5px 12px;
         font-size: 0.85rem;
         font-weight: 600;
     }
+    .sessions-hero {
+        background: linear-gradient(135deg, #fff2f2 0%, #f7dede 100%);
+        border: 1px solid #e8c8c8;
+        color: #7a1f1f;
+    }
     .btn-session-action {
-        background: #940000 !important;
-        color: white !important;
-        border: none;
-        padding: 8px 20px;
+        background: white !important;
+        color: #940000 !important;
+        border: 1px solid #940000;
+        padding: 8px 14px;
         font-weight: 600;
-        transition: all 0.3s;
+        transition: all 0.2s ease-in-out;
     }
     .btn-session-action:hover {
-        background: #940000 !important;
-        color: white !important;
+        background: #f8f8f8 !important;
+        color: #940000 !important;
+        border-color: #940000;
+    }
+    .session-card.widget-card .btn {
+        border-radius: 8px !important;
+        width: 100%;
+    }
+    .session-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 12px;
     }
     
     /* Tabs styling */
@@ -103,7 +128,7 @@
         <div class="col-12">
             <!-- Page Header -->
             <div class="card border-0 shadow-sm mb-4">
-                <div class="card-body bg-primary-custom text-white">
+                <div class="card-body sessions-hero">
                     <h4 class="mb-0">
                         <i class="bi bi-clock-history"></i> My Sessions
                     </h4>
@@ -262,7 +287,7 @@
                                         @endphp
                                         
                                         <div class="col-md-6 col-lg-4 mb-3">
-                                            <div class="session-card {{ $isSessionTime ? 'active' : '' }}">
+                                            <div class="session-card widget-card {{ $isSessionTime ? 'active' : '' }}">
                                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                                     <div>
                                                         <span class="time-badge">
@@ -303,11 +328,10 @@
                                                     {{ $session->subclass->class->class_name ?? '' }} - {{ $session->subclass->subclass_name ?? '' }}
                                                 </p>
                                                 
-                                                <div class="mt-3" style="display: flex; flex-direction: row; gap: 8px; flex-wrap: wrap;">
+                                                <div class="session-actions">
                                                     <button 
                                                         class="btn btn-session-action btn-sm" 
                                                         onclick="collectAttendance({{ $session->session_timetableID }}, '{{ $dayDate->format('Y-m-d') }}')"
-                                                        style="flex: 1; min-width: 120px;"
                                                     >
                                                         <i class="bi bi-clipboard-check"></i> Collect Attendance
                                                     </button>
@@ -329,7 +353,6 @@
                                                     <button 
                                                         class="btn btn-session-action btn-sm" 
                                                         onclick="assignTask({{ $session->session_timetableID }}, '{{ $dayDate->format('Y-m-d') }}', '{{ $startTimeStr }}', '{{ $endTimeStr }}')"
-                                                        style="flex: 1; min-width: 120px;"
                                                     >
                                                         <i class="bi bi-journal-plus"></i> Assign Task
                                                     </button>
@@ -337,7 +360,6 @@
                                                     <button 
                                                         class="btn btn-session-action btn-sm" 
                                                         onclick="openLessonPlan({{ $session->session_timetableID }}, '{{ $session->day }}', '{{ $startTimeStr }}', '{{ $endTimeStr }}', '{{ addslashes($subjectName) }}', '{{ addslashes($className) }}', '{{ $dayDate->format('Y-m-d') }}')"
-                                                        style="flex: 1; min-width: 120px;"
                                                     >
                                                         <i class="bi bi-journal-text"></i> Lesson Plan
                                                     </button>
