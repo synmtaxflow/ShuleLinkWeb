@@ -4,6 +4,7 @@
 @include('includes.teacher_nav')
 @endif
 
+
 <style>
     body, .content, .card, .btn, .form-control, .form-select, .table, .list-group-item {
         font-family: "Century Gothic", Arial, sans-serif;
@@ -186,6 +187,7 @@
     .teachers-table {
         width: 100% !important;
         table-layout: fixed;
+        min-width: 900px;
     }
     .teachers-table th,
     .teachers-table td {
@@ -205,10 +207,19 @@
         white-space: nowrap;
     }
     .teachers-content .table-responsive {
-        overflow: visible;
+        overflow-x: auto;
     }
     .teachers-content .dropdown-menu {
         z-index: 1055;
+    }
+    .teachers-table .btn-group {
+        display: inline-flex;
+        flex-wrap: nowrap;
+        gap: 6px;
+    }
+    .teachers-table .btn-group .btn {
+        white-space: nowrap;
+        flex: 0 0 auto;
     }
     .actions-dropdown {
         position: relative;
@@ -249,52 +260,63 @@
 <div class="container-fluid mt-4">
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-primary-custom text-white">
-            <strong><i class="bi bi-people-fill"></i> Manage Teachers</strong>
+            <strong><i class="bi bi-people-fill"></i> Manage Teachers and Staff</strong>
         </div>
         <div class="card-body">
-            <ul class="nav nav-tabs mb-3" id="teachersStaffTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="teachers-tab" data-bs-toggle="tab" data-bs-target="#tab-teachers" data-toggle="tab" data-target="#tab-teachers" type="button" role="tab" aria-controls="tab-teachers" aria-selected="true">
-                <i class="bi bi-people-fill"></i> Manage Teachers
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="staff-tab" data-bs-toggle="tab" data-bs-target="#tab-staff" data-toggle="tab" data-target="#tab-staff" type="button" role="tab" aria-controls="tab-staff" aria-selected="false">
-                        <i class="bi bi-person-badge"></i> Manage Staff
-                    </button>
-                </li>
-            </ul>
-            <div class="tab-content" id="teachersStaffTabsContent">
-                <div class="tab-pane fade show active" id="tab-teachers" role="tabpanel" aria-labelledby="teachers-tab">
-                    <div class="row">
+            <div class="row">
                 <div class="col-sm-4">
-                    <div class="list-group teachers-menu">
-                        <a class="list-group-item active" data-target="#section-teachers">
-                            <i class="bi bi-people-fill"></i> Teachers List
-                        </a>
-                        <a class="list-group-item" data-target="#section-add-teacher" data-permission="register_teacher">
-                <i class="bi bi-person-plus"></i> Add New Teacher
-                        </a>
-                        <a class="list-group-item" data-target="#section-assign-role" data-permission="assign_role_teacher">
-                            <i class="bi bi-person-badge"></i> Assign Roles
-                        </a>
-                        <a class="list-group-item" data-target="#section-view-roles" data-permission="view_teachers_roles">
-                            <i class="bi bi-eye"></i> View Teachers Roles
-                        </a>
-                        <a class="list-group-item" data-target="#section-manage-roles" data-permission="manage_roles_permissions">
-                            <i class="bi bi-shield-check"></i> Manage Roles & Permissions
-                        </a>
-                </div>
-                    <div class="card border-primary-custom mt-3">
-                        <div class="card-body">
-                            <div class="section-title">Guide</div>
-                            <div class="muted-help">
-                                - Use Teachers List to view, edit, or send to fingerprint.<br>
-                                - Add New Teacher registers a teacher profile.<br>
-                                - Assign Roles controls access permissions.
-            </div>
-        </div>
-    </div>
+                    <div style="max-height: 65vh; overflow-y: auto;">
+                        <div class="section-title mb-2">Teacher Management</div>
+                        <div class="list-group teachers-menu">
+                            <a class="list-group-item active" data-target="#section-teachers">
+                                <i class="bi bi-people-fill"></i> Teachers List
+                            </a>
+                            <a class="list-group-item" data-target="#section-add-teacher" data-permission="register_teacher">
+                    <i class="bi bi-person-plus"></i> Add New Teacher
+                            </a>
+                            <a class="list-group-item" data-target="#section-assign-role" data-permission="assign_role_teacher">
+                                <i class="bi bi-person-badge"></i> Assign Roles
+                            </a>
+                            <a class="list-group-item" data-target="#section-view-roles" data-permission="view_teachers_roles">
+                                <i class="bi bi-eye"></i> View Teachers Roles
+                            </a>
+                            <a class="list-group-item" data-target="#section-manage-roles" data-permission="manage_roles_permissions">
+                                <i class="bi bi-shield-check"></i> Manage Roles & Permissions
+                            </a>
+                        </div>
+
+                        <div class="section-title mt-4 mb-2">Staff Management</div>
+                        <div class="list-group staff-menu">
+                            <a class="list-group-item" data-target="#section-staff">
+                                <i class="bi bi-people-fill"></i> Staff List
+                            </a>
+                            <a class="list-group-item" data-target="#section-add-staff">
+                                <i class="bi bi-person-plus"></i> Add New Staff
+                            </a>
+                            <a class="list-group-item" data-target="#section-assign-position">
+                                <i class="bi bi-person-badge"></i> Assign Position to Staff
+                            </a>
+                            <a class="list-group-item" data-target="#section-view-positions">
+                                <i class="bi bi-eye"></i> View Staff Positions
+                            </a>
+                            <a class="list-group-item" data-target="#section-manage-positions">
+                                <i class="bi bi-shield-check"></i> Manage Positions and Permission
+                            </a>
+                        </div>
+                        <div class="card border-primary-custom mt-3">
+                            <div class="card-body">
+                                <div class="section-title">Guide</div>
+                                <div class="muted-help">
+                                    - Use Teachers List to view, edit, or send to fingerprint.<br>
+                                    - Add New Teacher registers a teacher profile.<br>
+                                    - Assign Roles controls access permissions.<br>
+                                    - Add staff members like Secretary, Accountant, etc.<br>
+                                    - Positions define permissions for staff users.<br>
+                                    - Assign a position after adding staff.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-md-8 teachers-content">
                     <div id="section-teachers" class="teacher-section">
@@ -803,6 +825,573 @@
                         </div>
                     </div>
 
+                    <div id="section-staff" class="staff-section d-none">
+                        <div class="section-title">Staff List</div>
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table id="staffTable" class="table table-hover align-middle mb-0 teachers-table" style="width:100%">
+                                        <thead>
+                                            <tr>
+                                                <th>Image</th>
+                                                <th>Full Name</th>
+                                                <th>Position</th>
+                                                <th>Phone</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @forelse(($otherStaff ?? []) as $staffMember)
+                                                <tr>
+                                                    <td>
+                                                        @php
+                                                            $staffImgPath = $staffMember->image
+                                                                ? asset('userImages/' . $staffMember->image)
+                                                                : ($staffMember->gender == 'Female'
+                                                                    ? asset('images/female.png')
+                                                                    : asset('images/male.png'));
+                                                        @endphp
+                                                        <img src="{{ $staffImgPath }}" class="rounded-circle" style="width: 50px; height: 50px; object-fit: cover; border: 3px solid #940000;" alt="Staff">
+                                                    </td>
+                                                    <td><strong>{{ $staffMember->first_name ?? '' }} {{ $staffMember->last_name ?? '' }}</strong></td>
+                                                    <td>{{ $staffMember->profession->name ?? 'Not assigned' }}</td>
+                                                    <td>{{ $staffMember->phone_number ?? '-' }}</td>
+                                                    <td>
+                                                        <span class="badge bg-secondary">{{ $staffMember->status ?? 'Active' }}</span>
+                                                    </td>
+                                                    <td>
+                                                        <div class="actions-dropdown">
+                                                            <button class="btn btn-sm btn-outline-primary js-actions-toggle" type="button" aria-expanded="false">
+                                                                Actions
+                                                            </button>
+                                                            <ul class="actions-menu">
+                                                                <li>
+                                                                    <button class="dropdown-item view-staff-btn" data-staff-id="{{ $staffMember->id }}">
+                                                                        <i class="bi bi-eye-fill"></i> View Details
+                                                                    </button>
+                                                                </li>
+                                                                <li>
+                                                                    <button class="dropdown-item edit-staff-btn" data-staff-id="{{ $staffMember->id }}">
+                                                                        <i class="bi bi-pencil-square"></i> Edit
+                                                                    </button>
+                                                                </li>
+                                                                <li>
+                                                                    <button class="dropdown-item assign-position-btn" data-staff-id="{{ $staffMember->id }}">
+                                                                        <i class="bi bi-person-badge"></i> Assign Position
+                                                                    </button>
+                                                                </li>
+                                                                <li>
+                                                                    <button class="dropdown-item send-staff-to-fingerprint-btn" data-staff-id="{{ $staffMember->id }}" data-staff-name="{{ $staffMember->first_name }}">
+                                                                        <i class="bi bi-fingerprint"></i> Send to Fingerprint
+                                                                    </button>
+                                                                </li>
+                                                                <li>
+                                                                    <button class="dropdown-item text-danger delete-staff-btn" data-staff-id="{{ $staffMember->id }}">
+                                                                        <i class="bi bi-trash"></i> Delete
+                                                                    </button>
+                                                                </li>
+                                                            </ul>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="6" class="text-center py-5">
+                                                        <i class="bi bi-inbox" style="font-size: 48px; color: #940000;"></i>
+                                                        <p class="mt-3 mb-0 text-muted">No staff found. Click "Add New Staff" to get started.</p>
+                                                    </td>
+                                                </tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                                @if(($otherStaff ?? collect())->count() > 0)
+                                    <div class="d-none" id="staffDetailsStore">
+                                        @foreach(($otherStaff ?? []) as $staffMember)
+                                            @php
+                                                $staffImgPath = $staffMember->image
+                                                    ? asset('userImages/' . $staffMember->image)
+                                                    : ($staffMember->gender == 'Female'
+                                                        ? asset('images/female.png')
+                                                        : asset('images/male.png'));
+                                            @endphp
+                                            <div class="staff-full-details" data-staff-id="{{ $staffMember->id }}">
+                                                <div class="p-3">
+                                                    <div class="school-details-card">
+                                                        <div class="school-header">
+                                                            <div class="d-flex align-items-center">
+                                                                <div class="school-logo-preview me-3">
+                                                                    <img src="{{ $staffImgPath }}" alt="{{ $staffMember->first_name }} {{ $staffMember->last_name }}">
+                                                                </div>
+                                                                <div>
+                                                                    <h3 class="school-title">{{ $staffMember->first_name }} {{ $staffMember->middle_name }} {{ $staffMember->last_name }}</h3>
+                                                                    <small class="text-muted">Employee: {{ $staffMember->employee_number }}</small>
+                                                                </div>
+                                                            </div>
+                                                            <span class="badge {{ strtolower($staffMember->status ?? 'active') == 'active' ? 'bg-success' : 'bg-secondary' }}">
+                                                                {{ $staffMember->status ?? 'Active' }}
+                                                            </span>
+                                                        </div>
+                                                        <div class="school-info-grid">
+                                                            <div class="info-item">
+                                                                <i class="bi bi-gender-ambiguous"></i>
+                                                                <div class="info-item-content">
+                                                                    <div class="info-item-label">Gender</div>
+                                                                    <div class="info-item-value">{{ $staffMember->gender }}</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="info-item">
+                                                                <i class="bi bi-briefcase"></i>
+                                                                <div class="info-item-content">
+                                                                    <div class="info-item-label">Position</div>
+                                                                    <div class="info-item-value">{{ $staffMember->profession->name ?? 'Not assigned' }}</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="info-item">
+                                                                <i class="bi bi-person-vcard"></i>
+                                                                <div class="info-item-content">
+                                                                    <div class="info-item-label">National ID</div>
+                                                                    <div class="info-item-value">{{ $staffMember->national_id }}</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="info-item">
+                                                                <i class="bi bi-person-badge"></i>
+                                                                <div class="info-item-content">
+                                                                    <div class="info-item-label">Employee Number</div>
+                                                                    <div class="info-item-value">{{ $staffMember->employee_number }}</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="info-item">
+                                                                <i class="bi bi-envelope"></i>
+                                                                <div class="info-item-content">
+                                                                    <div class="info-item-label">Email</div>
+                                                                    <div class="info-item-value">{{ $staffMember->email }}</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="info-item">
+                                                                <i class="bi bi-telephone"></i>
+                                                                <div class="info-item-content">
+                                                                    <div class="info-item-label">Phone Number</div>
+                                                                    <div class="info-item-value">{{ $staffMember->phone_number }}</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="info-item">
+                                                                <i class="bi bi-fingerprint"></i>
+                                                                <div class="info-item-content">
+                                                                    <div class="info-item-label">Fingerprint ID</div>
+                                                                    <div class="info-item-value">{{ $staffMember->fingerprint_id ?? 'Not assigned' }}</div>
+                                                                </div>
+                                                            </div>
+                                                            @if($staffMember->qualification)
+                                                            <div class="info-item">
+                                                                <i class="bi bi-mortarboard"></i>
+                                                                <div class="info-item-content">
+                                                                    <div class="info-item-label">Qualification</div>
+                                                                    <div class="info-item-value">{{ $staffMember->qualification }}</div>
+                                                                </div>
+                                                            </div>
+                                                            @endif
+                                                            @if($staffMember->specialization)
+                                                            <div class="info-item">
+                                                                <i class="bi bi-book"></i>
+                                                                <div class="info-item-content">
+                                                                    <div class="info-item-label">Specialization</div>
+                                                                    <div class="info-item-value">{{ $staffMember->specialization }}</div>
+                                                                </div>
+                                                            </div>
+                                                            @endif
+                                                            @if($staffMember->experience)
+                                                            <div class="info-item">
+                                                                <i class="bi bi-clock-history"></i>
+                                                                <div class="info-item-content">
+                                                                    <div class="info-item-label">Experience</div>
+                                                                    <div class="info-item-value">{{ $staffMember->experience }}</div>
+                                                                </div>
+                                                            </div>
+                                                            @endif
+                                                            @if($staffMember->date_of_birth)
+                                                            <div class="info-item">
+                                                                <i class="bi bi-calendar-event"></i>
+                                                                <div class="info-item-content">
+                                                                    <div class="info-item-label">Date of Birth</div>
+                                                                    <div class="info-item-value">{{ date('d M Y', strtotime($staffMember->date_of_birth)) }}</div>
+                                                                </div>
+                                                            </div>
+                                                            @endif
+                                                            @if($staffMember->date_hired)
+                                                            <div class="info-item">
+                                                                <i class="bi bi-calendar-check"></i>
+                                                                <div class="info-item-content">
+                                                                    <div class="info-item-label">Date Hired</div>
+                                                                    <div class="info-item-value">{{ date('d M Y', strtotime($staffMember->date_hired)) }}</div>
+                                                                </div>
+                                                            </div>
+                                                            @endif
+                                                            @if($staffMember->address)
+                                                            <div class="info-item">
+                                                                <i class="bi bi-geo-alt"></i>
+                                                                <div class="info-item-content">
+                                                                    <div class="info-item-label">Address</div>
+                                                                    <div class="info-item-value">{{ $staffMember->address }}</div>
+                                                                </div>
+                                                            </div>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="section-add-staff" class="staff-section d-none">
+                        <div class="section-title">Add New Staff</div>
+                        <div class="card border-primary-custom">
+                            <div class="card-body">
+                                <form id="staffForm" enctype="multipart/form-data">
+                                    @csrf
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-bold">First Name <span class="text-danger">*</span></label>
+                                            <input type="text" name="first_name" class="form-control" required>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-bold">Middle Name</label>
+                                            <input type="text" name="middle_name" class="form-control">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-bold">Last Name <span class="text-danger">*</span></label>
+                                            <input type="text" name="last_name" class="form-control" required>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-bold">Gender <span class="text-danger">*</span></label>
+                                            <select name="gender" class="form-select" required>
+                                                <option value="">Select Gender</option>
+                                                <option value="Male">Male</option>
+                                                <option value="Female">Female</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-bold">Email <span class="text-danger">*</span></label>
+                                            <input type="email" name="email" class="form-control" required>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-bold">Phone Number <span class="text-danger">*</span></label>
+                                            <input type="text"
+                                                   name="phone_number"
+                                                   class="form-control"
+                                                   id="staff_phone_number"
+                                                   pattern="^255\d{9}$"
+                                                   placeholder="255614863345"
+                                                   required
+                                                   maxlength="12">
+                                            <small class="text-muted">Must start with 255 followed by 9 digits (12 digits total)</small>
+                                            <div class="invalid-feedback" id="staff_phone_error" style="display: none;">
+                                                Phone number must have 12 digits: start with 255 followed by 9 digits
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-bold">National ID <span class="text-danger">*</span></label>
+                                            <input type="text" name="national_id" class="form-control" required>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-bold">Employee Number <span class="text-danger">*</span></label>
+                                            <input type="text" name="employee_number" class="form-control" required>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-bold">Position</label>
+                                            <select name="profession_id" class="form-select">
+                                                <option value="">Choose position...</option>
+                                                @foreach(($staffProfessions ?? []) as $profession)
+                                                    <option value="{{ $profession->id }}">{{ $profession->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-bold">Bank Account Number</label>
+                                            <input type="text" name="bank_account_number" class="form-control" placeholder="e.g., 1234567890">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-bold">Qualification</label>
+                                            <input type="text" name="qualification" class="form-control">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-bold">Specialization</label>
+                                            <input type="text" name="specialization" class="form-control">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-bold">Experience</label>
+                                            <input type="text" name="experience" class="form-control">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-bold">Date of Birth</label>
+                                            <input type="date" name="date_of_birth" class="form-control">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-bold">Date Hired</label>
+                                            <input type="date" name="date_hired" class="form-control">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-bold">Status</label>
+                                            <select name="status" class="form-select">
+                                                <option value="Active">Active</option>
+                                                <option value="On Leave">On Leave</option>
+                                                <option value="Retired">Retired</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <label class="form-label fw-bold">Address</label>
+                                            <input type="text" name="address" class="form-control" placeholder="Full address">
+                                        </div>
+                                        <div class="col-md-12">
+                                            <label class="form-label fw-bold">Staff Image</label>
+                                            <input type="file" name="image" class="form-control" accept="image/*">
+                                            <small class="text-muted">Supported formats: JPG, PNG (Max: 2MB)</small>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-end gap-2 mt-3">
+                                        <button type="button" class="btn btn-secondary js-staff-section-link" data-target="#section-staff">
+                                            <i class="bi bi-x-circle"></i> Back
+                                        </button>
+                                        <button type="submit" class="btn btn-primary-custom">
+                                            <i class="bi bi-save"></i> Save Staff
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="section-assign-position" class="staff-section d-none">
+                        <div class="section-title">Assign Position to Staff</div>
+                        <div class="card border-primary-custom">
+                            <div class="card-body">
+                                <form id="assignPositionForm">
+                                    @csrf
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Select Staff <span class="text-danger">*</span></label>
+                                        <select name="staff_id" id="assign_staff_id" class="form-select" required>
+                                            <option value="">Choose staff...</option>
+                                            @foreach(($otherStaff ?? []) as $staffMember)
+                                                <option value="{{ $staffMember->id }}">
+                                                    {{ $staffMember->first_name }} {{ $staffMember->last_name }} ({{ $staffMember->employee_number }})
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Select Position <span class="text-danger">*</span></label>
+                                        <select name="profession_id" id="assign_profession_id" class="form-select" required>
+                                            <option value="">Choose position...</option>
+                                            @foreach(($staffProfessions ?? []) as $profession)
+                                                <option value="{{ $profession->id }}">{{ $profession->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <button type="button" class="btn btn-secondary js-staff-section-link" data-target="#section-staff">
+                                            <i class="bi bi-x-circle"></i> Back
+                                        </button>
+                                        <button type="submit" class="btn btn-primary-custom">
+                                            <i class="bi bi-save"></i> Assign Position
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="section-view-positions" class="staff-section d-none">
+                        <div class="section-title">View Staff Positions</div>
+                        <div class="card border-primary-custom">
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-striped teachers-table" id="staffPositionsTable">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Image</th>
+                                                <th>Staff Name</th>
+                                                <th>Position</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @forelse(($otherStaff ?? []) as $staffMember)
+                                                @php
+                                                    $staffImgPath = $staffMember->image
+                                                        ? asset('userImages/' . $staffMember->image)
+                                                        : ($staffMember->gender == 'Female'
+                                                            ? asset('images/female.png')
+                                                            : asset('images/male.png'));
+                                                @endphp
+                                                <tr>
+                                                    <td>
+                                                        <img src="{{ $staffImgPath }}" class="rounded-circle" style="width: 50px; height: 50px; object-fit: cover; border: 3px solid #940000;" alt="Staff">
+                                                    </td>
+                                                    <td><strong>{{ $staffMember->first_name ?? '' }} {{ $staffMember->last_name ?? '' }}</strong></td>
+                                                    <td>{{ $staffMember->profession->name ?? 'Not assigned' }}</td>
+                                                    <td>
+                                                        <div class="actions-dropdown">
+                                                            <button class="btn btn-sm btn-outline-primary js-actions-toggle" type="button" aria-expanded="false">
+                                                                Actions
+                                                            </button>
+                                                            <ul class="actions-menu">
+                                                                <li>
+                                                                    <button class="dropdown-item assign-position-btn" data-staff-id="{{ $staffMember->id }}">
+                                                                        <i class="bi bi-arrow-repeat"></i> Change Position
+                                                                    </button>
+                                                                </li>
+                                                                <li>
+                                                                    <button class="dropdown-item text-danger remove-position-btn"
+                                                                            data-staff-id="{{ $staffMember->id }}"
+                                                                            data-staff-name="{{ $staffMember->first_name }} {{ $staffMember->last_name }}"
+                                                                            data-position-name="{{ $staffMember->profession->name ?? '' }}"
+                                                                            {{ $staffMember->profession_id ? '' : 'disabled' }}>
+                                                                        <i class="bi bi-trash"></i> Remove Position
+                                                                    </button>
+                                                                </li>
+                                                            </ul>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="4" class="text-center py-4">
+                                                        <i class="bi bi-inbox" style="font-size: 48px; color: #940000;"></i>
+                                                        <p class="text-muted mt-3 mb-0">No staff found. Add a staff member to get started.</p>
+                                                    </td>
+                                                </tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="section-manage-positions" class="staff-section d-none">
+                        <div class="section-title">Manage Positions and Permission</div>
+                        <div class="card border-primary-custom">
+                            <div class="card-body">
+                                <form id="addStaffPositionForm" class="mb-4">
+                                    @csrf
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Position Name <span class="text-danger">*</span></label>
+                                            <input type="text" name="name" class="form-control" placeholder="e.g., Secretary, Accountant" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Description</label>
+                                            <input type="text" name="description" class="form-control" placeholder="Optional">
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <label class="form-label fw-bold mb-2">Assign Permissions <span class="text-danger">*</span></label>
+                                        <div class="border rounded p-3" style="max-height: 320px; overflow-y: auto;">
+                                            @php
+                                                $staffPermissionCategories = [
+                                                    'Examination Management' => 'examination',
+                                                    'Classes Management' => 'classes',
+                                                    'Subject Management' => 'subject',
+                                                    'Result Management' => 'result',
+                                                    'Attendance Management' => 'attendance',
+                                                    'Student Management' => 'student',
+                                                    'Parent Management' => 'parent',
+                                                    'Timetable Management' => 'timetable',
+                                                    'Teacher Management' => 'teacher',
+                                                    'Fees Management' => 'fees',
+                                                    'Accommodation Management' => 'accommodation',
+                                                    'Library Management' => 'library',
+                                                    'Calendar Management' => 'calendar',
+                                                    'Fingerprint Settings' => 'fingerprint',
+                                                    'Task Management' => 'task',
+                                                    'SMS Information' => 'sms',
+                                                    'Revenue Management' => 'revenue',
+                                                    'Expenses Management' => 'expenses',
+                                                    'Resources Management' => 'resources',
+                                                ];
+                                                $staffPermissionActions = ['create', 'update', 'delete', 'read_only'];
+                                            @endphp
+                                            @foreach($staffPermissionCategories as $categoryName => $categoryKey)
+                                                <div class="mb-3">
+                                                    <div class="fw-bold mb-2">{{ $categoryName }}</div>
+                                                    <div class="row g-2">
+                                                        @foreach($staffPermissionActions as $action)
+                                                            @php $permissionName = $categoryKey . '_' . $action; @endphp
+                                                            <div class="col-md-6">
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input staff-permission-checkbox" type="checkbox" name="permissions[]" value="{{ $permissionName }}" id="staff_perm_{{ md5($permissionName) }}">
+                                                                    <label class="form-check-label" for="staff_perm_{{ md5($permissionName) }}">
+                                                                        {{ ucfirst(str_replace('_', ' ', $action)) }}
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-end mt-3">
+                                        <button type="submit" class="btn btn-primary-custom">
+                                            <i class="bi bi-save"></i> Create Position
+                                        </button>
+                                    </div>
+                                </form>
+
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-striped teachers-table" id="staffPositionsManageTable">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Position Name</th>
+                                                <th>Permissions</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach(($staffProfessions ?? []) as $profession)
+                                                <tr>
+                                                    <td><strong>{{ $profession->name }}</strong></td>
+                                                    <td>
+                                                        <button class="btn btn-sm btn-outline-primary view-staff-permissions-btn"
+                                                                data-position-id="{{ $profession->id }}"
+                                                                data-position-name="{{ $profession->name }}">
+                                                            <i class="bi bi-eye"></i> View Permissions
+                                                        </button>
+                                                    </td>
+                                                    <td>
+                                                        <div class="btn-group" role="group">
+                                                            <button class="btn btn-sm btn-primary text-white edit-staff-position-btn"
+                                                                    data-position-id="{{ $profession->id }}"
+                                                                    data-position-name="{{ $profession->name }}"
+                                                                    data-position-description="{{ $profession->description }}">
+                                                                <i class="bi bi-pencil-square"></i> Edit Name
+                                                            </button>
+                                                            <button class="btn btn-sm btn-warning text-dark edit-staff-permissions-btn"
+                                                                    data-position-id="{{ $profession->id }}"
+                                                                    data-position-name="{{ $profession->name }}">
+                                                                <i class="bi bi-pencil"></i> Edit Permissions
+                                                            </button>
+                                                            <button class="btn btn-sm btn-danger delete-staff-position-btn"
+                                                                    data-position-id="{{ $profession->id }}"
+                                                                    data-position-name="{{ $profession->name }}">
+                                                                <i class="bi bi-trash"></i> Delete
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div id="section-manage-roles" class="teacher-section d-none">
                         <div class="section-title">Manage Roles & Permissions</div>
                         <div class="card border-primary-custom">
@@ -846,36 +1435,11 @@
                                                         <tr>
                                                             <td><strong>{{ $role->role_name ?? $role->name }}</strong></td>
                                                             <td>
-                                                                @php
-                                                                    $rolePermissions = collect();
-                                                                    if (method_exists($role, 'permissions')) {
-                                                                        try {
-                                                                            $perms = $role->permissions;
-                                                                            if ($perms instanceof \Illuminate\Database\Eloquent\Relations\Relation) {
-                                                                                $rolePermissions = $perms->get();
-                                                                            } elseif ($perms instanceof \Illuminate\Support\Collection) {
-                                                                                $rolePermissions = $perms;
-                                                                            } elseif (is_array($perms)) {
-                                                                                $rolePermissions = collect($perms);
-                                                                            } elseif (is_object($perms) && method_exists($perms, 'toArray')) {
-                                                                                $rolePermissions = collect($perms->toArray());
-                                                                            } else {
-                                                                                $rolePermissions = collect();
-                                                                            }
-                                                                        } catch (\Exception $e) {
-                                                                            $rolePermissions = collect();
-                                                                        }
-                                                                    }
-                                                                @endphp
-                                                                @if($rolePermissions && $rolePermissions->count() > 0)
-                                                                    <div class="d-flex flex-wrap gap-1">
-                                                                        @foreach($rolePermissions as $permission)
-                                                                            <span class="badge bg-info">{{ $permission->name ?? 'N/A' }}</span>
-                                                                        @endforeach
-                                                                    </div>
-                                                                @else
-                                                                    <span class="text-muted">No permissions</span>
-                                                                @endif
+                                                                <button class="btn btn-sm btn-outline-primary view-role-permissions-btn"
+                                                                        data-role-id="{{ $role->id }}"
+                                                                        data-role-name="{{ $role->role_name ?? $role->name }}">
+                                                                    <i class="bi bi-eye"></i> View Permissions
+                                                                </button>
                                                             </td>
                                                             <td>
                                                                 <div class="btn-group" role="group">
@@ -962,576 +1526,6 @@
                     </div>
                     </div>
                 </div>
-                <div class="tab-pane fade" id="tab-staff" role="tabpanel" aria-labelledby="staff-tab">
-                    <div class="row">
-                        <div class="col-sm-4">
-                            <div class="list-group staff-menu">
-                                <a class="list-group-item active" data-target="#section-staff">
-                                    <i class="bi bi-people-fill"></i> Staff List
-                                </a>
-                                <a class="list-group-item" data-target="#section-add-staff">
-                                    <i class="bi bi-person-plus"></i> Add New Staff
-                                </a>
-                                <a class="list-group-item" data-target="#section-assign-position">
-                                    <i class="bi bi-person-badge"></i> Assign Position
-                                </a>
-                                <a class="list-group-item" data-target="#section-view-positions">
-                                    <i class="bi bi-eye"></i> View Staff Positions
-                                </a>
-                                <a class="list-group-item" data-target="#section-manage-positions">
-                                    <i class="bi bi-shield-check"></i> Manage Positions & Permissions
-                                </a>
-                            </div>
-                            <div class="card border-primary-custom mt-3">
-                                <div class="card-body">
-                                    <div class="section-title">Guide</div>
-                                    <div class="muted-help">
-                                        - Add staff members like Secretary, Accountant, etc.<br>
-                                        - Positions define permissions for staff users.<br>
-                                        - Assign a position after adding staff.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-8 teachers-content">
-                            <div id="section-staff" class="staff-section">
-                                <div class="section-title">Staff List</div>
-                                <div class="card border-0 shadow-sm">
-                                    <div class="card-body">
-                                        <div class="table-responsive">
-                                            <table id="staffTable" class="table table-hover align-middle mb-0 teachers-table" style="width:100%">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Image</th>
-                                                        <th>Full Name</th>
-                                                        <th>Position</th>
-                                                        <th>Phone</th>
-                                                        <th>Status</th>
-                                                        <th>Actions</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @forelse(($otherStaff ?? []) as $staffMember)
-                                                        <tr>
-                                                            <td>
-                                                                @php
-                                                                    $staffImgPath = $staffMember->image
-                                                                        ? asset('userImages/' . $staffMember->image)
-                                                                        : ($staffMember->gender == 'Female'
-                                                                            ? asset('images/female.png')
-                                                                            : asset('images/male.png'));
-                                                                @endphp
-                                                                <img src="{{ $staffImgPath }}" class="rounded-circle" style="width: 50px; height: 50px; object-fit: cover; border: 3px solid #940000;" alt="Staff">
-                                                            </td>
-                                                            <td><strong>{{ $staffMember->first_name ?? '' }} {{ $staffMember->last_name ?? '' }}</strong></td>
-                                                            <td>{{ $staffMember->profession->name ?? 'Not assigned' }}</td>
-                                                            <td>{{ $staffMember->phone_number ?? '-' }}</td>
-                                                            <td>
-                                                                <span class="badge bg-secondary">{{ $staffMember->status ?? 'Active' }}</span>
-                                                            </td>
-                                                            <td>
-                                                                <div class="actions-dropdown">
-                                                                    <button class="btn btn-sm btn-outline-primary js-actions-toggle" type="button" aria-expanded="false">
-                                                                        Actions
-                                                                    </button>
-                                                                    <ul class="actions-menu">
-                                                                        <li>
-                                                                            <button class="dropdown-item view-staff-btn" data-staff-id="{{ $staffMember->id }}">
-                                                                                <i class="bi bi-eye-fill"></i> View Details
-                                                                            </button>
-                                                                        </li>
-                                                                        <li>
-                                                                            <button class="dropdown-item edit-staff-btn" data-staff-id="{{ $staffMember->id }}">
-                                                                                <i class="bi bi-pencil-square"></i> Edit
-                                                                            </button>
-                                                                        </li>
-                                                                        <li>
-                                                                            <button class="dropdown-item assign-position-btn" data-staff-id="{{ $staffMember->id }}">
-                                                                                <i class="bi bi-person-badge"></i> Assign Position
-                                                                            </button>
-                                                                        </li>
-                                                                        <li>
-                                                                            <button class="dropdown-item send-staff-to-fingerprint-btn" data-staff-id="{{ $staffMember->id }}" data-staff-name="{{ $staffMember->first_name }}">
-                                                                                <i class="bi bi-fingerprint"></i> Send to Fingerprint
-                                                                            </button>
-                                                                        </li>
-                                                                        <li>
-                                                                            <button class="dropdown-item text-danger delete-staff-btn" data-staff-id="{{ $staffMember->id }}">
-                                                                                <i class="bi bi-trash"></i> Delete
-                                                                            </button>
-                                                                        </li>
-                                                                    </ul>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td colspan="6" style="display:none;">
-                                                                <div style="display:none;" class="staff-full-details" data-staff-id="{{ $staffMember->id }}">
-                                                                    <div class="p-3">
-                                                                        <div class="school-details-card">
-                                                                            <div class="school-header">
-                                                                                <div class="d-flex align-items-center">
-                                                                                    <div class="school-logo-preview me-3">
-                                                                                        <img src="{{ $staffImgPath }}" alt="{{ $staffMember->first_name }} {{ $staffMember->last_name }}">
-                                                                                    </div>
-                                                                                    <div>
-                                                                                        <h3 class="school-title">{{ $staffMember->first_name }} {{ $staffMember->middle_name }} {{ $staffMember->last_name }}</h3>
-                                                                                        <small class="text-muted">Employee: {{ $staffMember->employee_number }}</small>
-                                                                                    </div>
-                                                                                </div>
-                                                                                <span class="badge {{ strtolower($staffMember->status ?? 'active') == 'active' ? 'bg-success' : 'bg-secondary' }}">
-                                                                                    {{ $staffMember->status ?? 'Active' }}
-                                                                                </span>
-                                                                            </div>
-                                                                            <div class="school-info-grid">
-                                                                                <div class="info-item">
-                                                                                    <i class="bi bi-gender-ambiguous"></i>
-                                                                                    <div class="info-item-content">
-                                                                                        <div class="info-item-label">Gender</div>
-                                                                                        <div class="info-item-value">{{ $staffMember->gender }}</div>
-                                                                                    </div>
-                                                                                </div>
-                                                                                <div class="info-item">
-                                                                                    <i class="bi bi-briefcase"></i>
-                                                                                    <div class="info-item-content">
-                                                                                        <div class="info-item-label">Position</div>
-                                                                                        <div class="info-item-value">{{ $staffMember->profession->name ?? 'Not assigned' }}</div>
-                                                                                    </div>
-                                                                                </div>
-                                                                                <div class="info-item">
-                                                                                    <i class="bi bi-person-vcard"></i>
-                                                                                    <div class="info-item-content">
-                                                                                        <div class="info-item-label">National ID</div>
-                                                                                        <div class="info-item-value">{{ $staffMember->national_id }}</div>
-                                                                                    </div>
-                                                                                </div>
-                                                                                <div class="info-item">
-                                                                                    <i class="bi bi-person-badge"></i>
-                                                                                    <div class="info-item-content">
-                                                                                        <div class="info-item-label">Employee Number</div>
-                                                                                        <div class="info-item-value">{{ $staffMember->employee_number }}</div>
-                                                                                    </div>
-                                                                                </div>
-                                                                                <div class="info-item">
-                                                                                    <i class="bi bi-envelope"></i>
-                                                                                    <div class="info-item-content">
-                                                                                        <div class="info-item-label">Email</div>
-                                                                                        <div class="info-item-value">{{ $staffMember->email }}</div>
-                                                                                    </div>
-                                                                                </div>
-                                                                                <div class="info-item">
-                                                                                    <i class="bi bi-telephone"></i>
-                                                                                    <div class="info-item-content">
-                                                                                        <div class="info-item-label">Phone Number</div>
-                                                                                        <div class="info-item-value">{{ $staffMember->phone_number }}</div>
-                                                                                    </div>
-                                                                                </div>
-                                                                                <div class="info-item">
-                                                                                    <i class="bi bi-fingerprint"></i>
-                                                                                    <div class="info-item-content">
-                                                                                        <div class="info-item-label">Fingerprint ID</div>
-                                                                                        <div class="info-item-value">{{ $staffMember->fingerprint_id ?? 'Not assigned' }}</div>
-                                                                                    </div>
-                                                                                </div>
-                                                                                @if($staffMember->qualification)
-                                                                                <div class="info-item">
-                                                                                    <i class="bi bi-mortarboard"></i>
-                                                                                    <div class="info-item-content">
-                                                                                        <div class="info-item-label">Qualification</div>
-                                                                                        <div class="info-item-value">{{ $staffMember->qualification }}</div>
-                                                                                    </div>
-                                                                                </div>
-                                                                                @endif
-                                                                                @if($staffMember->specialization)
-                                                                                <div class="info-item">
-                                                                                    <i class="bi bi-book"></i>
-                                                                                    <div class="info-item-content">
-                                                                                        <div class="info-item-label">Specialization</div>
-                                                                                        <div class="info-item-value">{{ $staffMember->specialization }}</div>
-                                                                                    </div>
-                                                                                </div>
-                                                                                @endif
-                                                                                @if($staffMember->experience)
-                                                                                <div class="info-item">
-                                                                                    <i class="bi bi-clock-history"></i>
-                                                                                    <div class="info-item-content">
-                                                                                        <div class="info-item-label">Experience</div>
-                                                                                        <div class="info-item-value">{{ $staffMember->experience }}</div>
-                                                                                    </div>
-                                                                                </div>
-                                                                                @endif
-                                                                                @if($staffMember->date_of_birth)
-                                                                                <div class="info-item">
-                                                                                    <i class="bi bi-calendar-event"></i>
-                                                                                    <div class="info-item-content">
-                                                                                        <div class="info-item-label">Date of Birth</div>
-                                                                                        <div class="info-item-value">{{ date('d M Y', strtotime($staffMember->date_of_birth)) }}</div>
-                                                                                    </div>
-                                                                                </div>
-                                                                                @endif
-                                                                                @if($staffMember->date_hired)
-                                                                                <div class="info-item">
-                                                                                    <i class="bi bi-calendar-check"></i>
-                                                                                    <div class="info-item-content">
-                                                                                        <div class="info-item-label">Date Hired</div>
-                                                                                        <div class="info-item-value">{{ date('d M Y', strtotime($staffMember->date_hired)) }}</div>
-                                                                                    </div>
-                                                                                </div>
-                                                                                @endif
-                                                                                @if($staffMember->address)
-                                                                                <div class="info-item">
-                                                                                    <i class="bi bi-geo-alt"></i>
-                                                                                    <div class="info-item-content">
-                                                                                        <div class="info-item-label">Address</div>
-                                                                                        <div class="info-item-value">{{ $staffMember->address }}</div>
-                                                                                    </div>
-                                                                                </div>
-                                                                                @endif
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    @empty
-                                                        <tr>
-                                                            <td colspan="6" class="text-center py-5">
-                                                                <i class="bi bi-inbox" style="font-size: 48px; color: #940000;"></i>
-                                                                <p class="mt-3 mb-0 text-muted">No staff found. Click "Add New Staff" to get started.</p>
-                                                            </td>
-                                                        </tr>
-                                                    @endforelse
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div id="section-add-staff" class="staff-section d-none">
-                                <div class="section-title">Add New Staff</div>
-                                <div class="card border-primary-custom">
-                                    <div class="card-body">
-                                        <form id="staffForm" enctype="multipart/form-data">
-                                            @csrf
-                                            <div class="row g-3">
-                                                <div class="col-md-4">
-                                                    <label class="form-label fw-bold">First Name <span class="text-danger">*</span></label>
-                                                    <input type="text" name="first_name" class="form-control" required>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <label class="form-label fw-bold">Middle Name</label>
-                                                    <input type="text" name="middle_name" class="form-control">
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <label class="form-label fw-bold">Last Name <span class="text-danger">*</span></label>
-                                                    <input type="text" name="last_name" class="form-control" required>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <label class="form-label fw-bold">Gender <span class="text-danger">*</span></label>
-                                                    <select name="gender" class="form-select" required>
-                                                        <option value="">Select Gender</option>
-                                                        <option value="Male">Male</option>
-                                                        <option value="Female">Female</option>
-                                                    </select>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <label class="form-label fw-bold">Email <span class="text-danger">*</span></label>
-                                                    <input type="email" name="email" class="form-control" required>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <label class="form-label fw-bold">Phone Number <span class="text-danger">*</span></label>
-                                                    <input type="text"
-                                                           name="phone_number"
-                                                           class="form-control"
-                                                           id="staff_phone_number"
-                                                           pattern="^255\d{9}$"
-                                                           placeholder="255614863345"
-                                                           required
-                                                           maxlength="12">
-                                                    <small class="text-muted">Must start with 255 followed by 9 digits (12 digits total)</small>
-                                                    <div class="invalid-feedback" id="staff_phone_error" style="display: none;">
-                                                        Phone number must have 12 digits: start with 255 followed by 9 digits
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <label class="form-label fw-bold">National ID <span class="text-danger">*</span></label>
-                                                    <input type="text" name="national_id" class="form-control" required>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <label class="form-label fw-bold">Employee Number <span class="text-danger">*</span></label>
-                                                    <input type="text" name="employee_number" class="form-control" required>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <label class="form-label fw-bold">Position</label>
-                                                    <select name="profession_id" class="form-select">
-                                                        <option value="">Choose position...</option>
-                                                        @foreach(($staffProfessions ?? []) as $profession)
-                                                            <option value="{{ $profession->id }}">{{ $profession->name }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <label class="form-label fw-bold">Bank Account Number</label>
-                                                    <input type="text" name="bank_account_number" class="form-control" placeholder="e.g., 1234567890">
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <label class="form-label fw-bold">Qualification</label>
-                                                    <input type="text" name="qualification" class="form-control">
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <label class="form-label fw-bold">Specialization</label>
-                                                    <input type="text" name="specialization" class="form-control">
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <label class="form-label fw-bold">Experience</label>
-                                                    <input type="text" name="experience" class="form-control">
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <label class="form-label fw-bold">Date of Birth</label>
-                                                    <input type="date" name="date_of_birth" class="form-control">
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <label class="form-label fw-bold">Date Hired</label>
-                                                    <input type="date" name="date_hired" class="form-control">
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <label class="form-label fw-bold">Status</label>
-                                                    <select name="status" class="form-select">
-                                                        <option value="Active">Active</option>
-                                                        <option value="On Leave">On Leave</option>
-                                                        <option value="Retired">Retired</option>
-                                                    </select>
-                                                </div>
-                                                <div class="col-md-12">
-                                                    <label class="form-label fw-bold">Address</label>
-                                                    <input type="text" name="address" class="form-control" placeholder="Full address">
-                                                </div>
-                                                <div class="col-md-12">
-                                                    <label class="form-label fw-bold">Staff Image</label>
-                                                    <input type="file" name="image" class="form-control" accept="image/*">
-                                                    <small class="text-muted">Supported formats: JPG, PNG (Max: 2MB)</small>
-                                                </div>
-                                            </div>
-                                            <div class="d-flex justify-content-end gap-2 mt-3">
-                                                <button type="button" class="btn btn-secondary js-staff-section-link" data-target="#section-staff">
-                                                    <i class="bi bi-x-circle"></i> Back
-                                                </button>
-                                                <button type="submit" class="btn btn-primary-custom">
-                                                    <i class="bi bi-save"></i> Save Staff
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div id="section-assign-position" class="staff-section d-none">
-                                <div class="section-title">Assign Position</div>
-                                <div class="card border-primary-custom">
-                                    <div class="card-body">
-                                        <form id="assignPositionForm">
-                                            @csrf
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">Select Staff <span class="text-danger">*</span></label>
-                                                <select name="staff_id" id="assign_staff_id" class="form-select" required>
-                                                    <option value="">Choose staff...</option>
-                                                    @foreach(($otherStaff ?? []) as $staffMember)
-                                                        <option value="{{ $staffMember->id }}">
-                                                            {{ $staffMember->first_name }} {{ $staffMember->last_name }} ({{ $staffMember->employee_number }})
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">Select Position <span class="text-danger">*</span></label>
-                                                <select name="profession_id" id="assign_profession_id" class="form-select" required>
-                                                    <option value="">Choose position...</option>
-                                                    @foreach(($staffProfessions ?? []) as $profession)
-                                                        <option value="{{ $profession->id }}">{{ $profession->name }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            <div class="d-flex justify-content-end gap-2">
-                                                <button type="button" class="btn btn-secondary js-staff-section-link" data-target="#section-staff">
-                                                    <i class="bi bi-x-circle"></i> Back
-                                                </button>
-                                                <button type="submit" class="btn btn-primary-custom">
-                                                    <i class="bi bi-save"></i> Assign Position
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div id="section-view-positions" class="staff-section d-none">
-                                <div class="section-title">Staff Positions</div>
-                                <div class="card border-primary-custom">
-                                    <div class="card-body">
-                                        <div class="table-responsive">
-                                            <table class="table table-hover table-striped teachers-table" id="staffPositionsTable">
-                                                <thead class="table-light">
-                                                    <tr>
-                                                        <th>Position Name</th>
-                                                        <th>Permissions</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @forelse(($staffProfessions ?? []) as $profession)
-                                                        <tr>
-                                                            <td><strong>{{ $profession->name }}</strong></td>
-                                                            <td>
-                                                                @if($profession->permissions && $profession->permissions->count() > 0)
-                                                                    <div class="d-flex flex-wrap gap-1">
-                                                                        @foreach($profession->permissions as $permission)
-                                                                            <span class="badge bg-info">{{ $permission->name }}</span>
-                                                                        @endforeach
-                                                                    </div>
-                                                                @else
-                                                                    <span class="text-muted">No permissions</span>
-                                                                @endif
-                                                            </td>
-                                                        </tr>
-                                                    @empty
-                                                        <tr>
-                                                            <td colspan="2" class="text-center py-4">
-                                                                <i class="bi bi-inbox" style="font-size: 48px; color: #940000;"></i>
-                                                                <p class="text-muted mt-3 mb-0">No positions found. Add a position to get started.</p>
-                                                            </td>
-                                                        </tr>
-                                                    @endforelse
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div id="section-manage-positions" class="staff-section d-none">
-                                <div class="section-title">Manage Positions & Permissions</div>
-                                <div class="card border-primary-custom">
-                                    <div class="card-body">
-                                        <form id="addStaffPositionForm" class="mb-4">
-                                            @csrf
-                                            <div class="row g-3">
-                                                <div class="col-md-6">
-                                                    <label class="form-label fw-bold">Position Name <span class="text-danger">*</span></label>
-                                                    <input type="text" name="name" class="form-control" placeholder="e.g., Secretary, Accountant" required>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <label class="form-label fw-bold">Description</label>
-                                                    <input type="text" name="description" class="form-control" placeholder="Optional">
-                                                </div>
-                                            </div>
-                                            <div class="mt-3">
-                                                <label class="form-label fw-bold mb-2">Assign Permissions <span class="text-danger">*</span></label>
-                                                <div class="border rounded p-3" style="max-height: 320px; overflow-y: auto;">
-                                                    @php
-                                                        $staffPermissionCategories = [
-                                                            'Examination Management' => 'examination',
-                                                            'Classes Management' => 'classes',
-                                                            'Subject Management' => 'subject',
-                                                            'Result Management' => 'result',
-                                                            'Attendance Management' => 'attendance',
-                                                            'Student Management' => 'student',
-                                                            'Parent Management' => 'parent',
-                                                            'Timetable Management' => 'timetable',
-                                                            'Teacher Management' => 'teacher',
-                                                            'Fees Management' => 'fees',
-                                                            'Accommodation Management' => 'accommodation',
-                                                            'Library Management' => 'library',
-                                                            'Calendar Management' => 'calendar',
-                                                            'Fingerprint Settings' => 'fingerprint',
-                                                            'Task Management' => 'task',
-                                                            'SMS Information' => 'sms',
-                                                            'Revenue Management' => 'revenue',
-                                                            'Expenses Management' => 'expenses',
-                                                            'Resources Management' => 'resources',
-                                                        ];
-                                                        $staffPermissionActions = ['create', 'update', 'delete', 'read_only'];
-                                                    @endphp
-                                                    @foreach($staffPermissionCategories as $categoryName => $categoryKey)
-                                                        <div class="mb-3">
-                                                            <div class="fw-bold mb-2">{{ $categoryName }}</div>
-                                                            <div class="row g-2">
-                                                                @foreach($staffPermissionActions as $action)
-                                                                    @php $permissionName = $categoryKey . '_' . $action; @endphp
-                                                                    <div class="col-md-6">
-                                                                        <div class="form-check">
-                                                                            <input class="form-check-input staff-permission-checkbox" type="checkbox" name="permissions[]" value="{{ $permissionName }}" id="staff_perm_{{ md5($permissionName) }}">
-                                                                            <label class="form-check-label" for="staff_perm_{{ md5($permissionName) }}">
-                                                                                {{ ucfirst(str_replace('_', ' ', $action)) }}
-                                                                            </label>
-                                                                        </div>
-                                                                    </div>
-                                                                @endforeach
-                                                            </div>
-                                                        </div>
-                                                    @endforeach
-                                                </div>
-                                            </div>
-                                            <div class="d-flex justify-content-end mt-3">
-                                                <button type="submit" class="btn btn-primary-custom">
-                                                    <i class="bi bi-save"></i> Create Position
-                                                </button>
-                                            </div>
-                                        </form>
-
-                                        <div class="table-responsive">
-                                            <table class="table table-hover table-striped teachers-table" id="staffPositionsManageTable">
-                                                <thead class="table-light">
-                                                    <tr>
-                                                        <th>Position Name</th>
-                                                        <th>Permissions</th>
-                                                        <th>Actions</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @foreach(($staffProfessions ?? []) as $profession)
-                                                        <tr>
-                                                            <td><strong>{{ $profession->name }}</strong></td>
-                                                            <td>
-                                                                @if($profession->permissions && $profession->permissions->count() > 0)
-                                                                    <div class="d-flex flex-wrap gap-1">
-                                                                        @foreach($profession->permissions as $permission)
-                                                                            <span class="badge bg-info">{{ $permission->name }}</span>
-                                                                        @endforeach
-                                                                    </div>
-                                                                @else
-                                                                    <span class="text-muted">No permissions</span>
-                                                                @endif
-                                                            </td>
-                                                            <td>
-                                                                <div class="btn-group" role="group">
-                                                                    <button class="btn btn-sm btn-primary text-white edit-staff-position-btn"
-                                                                            data-position-id="{{ $profession->id }}"
-                                                                            data-position-name="{{ $profession->name }}"
-                                                                            data-position-description="{{ $profession->description }}">
-                                                                        <i class="bi bi-pencil-square"></i> Edit Name
-                                                                    </button>
-                                                                    <button class="btn btn-sm btn-warning text-dark edit-staff-permissions-btn"
-                                                                            data-position-id="{{ $profession->id }}"
-                                                                            data-position-name="{{ $profession->name }}">
-                                                                        <i class="bi bi-pencil"></i> Edit Permissions
-                                                                    </button>
-                                                                    <button class="btn btn-sm btn-danger delete-staff-position-btn"
-                                                                            data-position-id="{{ $profession->id }}"
-                                                                            data-position-name="{{ $profession->name }}">
-                                                                        <i class="bi bi-trash"></i> Delete
-                                                                    </button>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    @endforeach
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -1619,6 +1613,56 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+{{-- View Role Permissions Modal --}}
+<div class="modal fade" id="viewRolePermissionsModal" tabindex="-1" aria-labelledby="viewRolePermissionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary-custom text-white">
+                <h5 class="modal-title" id="viewRolePermissionsModalLabel">
+                    <i class="bi bi-eye"></i> Role Permissions
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2 fw-bold">Role: <span id="view_role_permissions_name"></span></div>
+                <div id="viewRolePermissionsContent" class="border rounded p-3" style="max-height: 360px; overflow-y: auto;">
+                    <div class="text-muted">No permissions</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- View Staff Position Permissions Modal --}}
+<div class="modal fade" id="viewStaffPermissionsModal" tabindex="-1" aria-labelledby="viewStaffPermissionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary-custom text-white">
+                <h5 class="modal-title" id="viewStaffPermissionsModalLabel">
+                    <i class="bi bi-eye"></i> Position Permissions
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2 fw-bold">Position: <span id="view_staff_permissions_name"></span></div>
+                <div id="viewStaffPermissionsContent" class="border rounded p-3" style="max-height: 360px; overflow-y: auto;">
+                    <div class="text-muted">No permissions</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Close
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -2557,7 +2601,7 @@
             if (!targetId) {
                 return;
             }
-            $('.teacher-section').addClass('d-none');
+            $('.teacher-section, .staff-section').addClass('d-none');
             $('#' + targetId).removeClass('d-none');
         }
 
@@ -2601,7 +2645,7 @@
                 return false;
             }
 
-            $('.teachers-menu .list-group-item').removeClass('active');
+            $('.teachers-menu .list-group-item, .staff-menu .list-group-item').removeClass('active');
             $(this).addClass('active');
 
             if (target) {
@@ -2627,7 +2671,7 @@
             if (!targetId) {
                 return;
             }
-            $('.staff-section').addClass('d-none');
+            $('.teacher-section, .staff-section').addClass('d-none');
             $('#' + targetId).removeClass('d-none');
         }
 
@@ -2635,7 +2679,7 @@
             e.preventDefault();
             var target = $(this).data('target');
 
-            $('.staff-menu .list-group-item').removeClass('active');
+            $('.teachers-menu .list-group-item, .staff-menu .list-group-item').removeClass('active');
             $(this).addClass('active');
 
             if (target) {
@@ -2680,41 +2724,7 @@
             }
         }
 
-        $(document).on('click', '#staff-tab', function(e) {
-            e.preventDefault();
-            setActiveTopTab('tab-staff');
-            if (typeof bootstrap !== 'undefined' && typeof bootstrap.Tab === 'function') {
-                var tab = new bootstrap.Tab(this);
-                tab.show();
-            } else if ($.fn.tab) {
-                $(this).tab('show');
-            }
-        });
-
-        $(document).on('click', '#teachers-tab', function(e) {
-            e.preventDefault();
-            setActiveTopTab('tab-teachers');
-            if (typeof bootstrap !== 'undefined' && typeof bootstrap.Tab === 'function') {
-                var tab = new bootstrap.Tab(this);
-                tab.show();
-            } else if ($.fn.tab) {
-                $(this).tab('show');
-            }
-        });
-
-        document.addEventListener('click', function(event) {
-            var staffBtn = event.target.closest('#staff-tab');
-            var teacherBtn = event.target.closest('#teachers-tab');
-            if (staffBtn) {
-                event.preventDefault();
-                setActiveTopTab('tab-staff');
-                return;
-            }
-            if (teacherBtn) {
-                event.preventDefault();
-                setActiveTopTab('tab-teachers');
-            }
-        });
+        // Tab navigation handled via server-side links.
 
         $(document).on('click', '.js-actions-toggle', function(e) {
             e.preventDefault();
@@ -2746,7 +2756,6 @@
 
         // Ensure initial section is visible
         showTeacherSection('section-teachers');
-        showStaffSection('section-staff');
 
         // Staff table
         var staffHasData = $('#staffTable tbody tr').filter(function() {
@@ -3063,6 +3072,88 @@
                         text: 'Failed to load staff data.'
                     });
                 }
+            });
+        });
+
+        // Remove Staff Position
+        $(document).on('click', '.remove-position-btn', function(e) {
+            e.preventDefault();
+            if ($(this).is(':disabled')) {
+                return;
+            }
+            var staffId = $(this).data('staff-id');
+            var staffName = $(this).data('staff-name') || 'this staff member';
+            var positionName = $(this).data('position-name') || 'current position';
+
+            Swal.fire({
+                icon: 'warning',
+                title: 'Remove Position?',
+                html: 'Remove <strong>' + positionName + '</strong> from <strong>' + staffName + '</strong>?<br><br><small class="text-muted">The staff member will be unassigned from any position.</small>',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, remove'
+            }).then(function(result) {
+                if (!result.isConfirmed) {
+                    return;
+                }
+                $.ajax({
+                    url: "{{ route('get_other_staff', ':id') }}".replace(':id', staffId),
+                    type: "GET",
+                    success: function(response) {
+                        var staff = response.staff;
+                        var formData = {
+                            _token: $('input[name="_token"]').first().val(),
+                            staff_id: staff.id,
+                            first_name: staff.first_name,
+                            middle_name: staff.middle_name || '',
+                            last_name: staff.last_name,
+                            gender: staff.gender,
+                            national_id: staff.national_id,
+                            employee_number: staff.employee_number,
+                            email: staff.email,
+                            phone_number: staff.phone_number,
+                            profession_id: null,
+                            bank_account_number: staff.bank_account_number || '',
+                            qualification: staff.qualification || '',
+                            specialization: staff.specialization || '',
+                            experience: staff.experience || '',
+                            date_of_birth: staff.date_of_birth || '',
+                            date_hired: staff.date_hired || '',
+                            address: staff.address || '',
+                            status: staff.status || 'Active'
+                        };
+
+                        $.ajax({
+                            url: "{{ route('update_other_staff') }}",
+                            type: "POST",
+                            data: formData,
+                            success: function(resp) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Removed',
+                                    text: resp.success || 'Position removed successfully!'
+                                }).then(function() {
+                                    location.reload();
+                                });
+                            },
+                            error: function(xhr) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: xhr.responseJSON?.error || 'Failed to remove position.'
+                                });
+                            }
+                        });
+                    },
+                    error: function(xhr) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: xhr.responseJSON?.error || 'Failed to load staff.'
+                        });
+                    }
+                });
             });
         });
 
@@ -4755,6 +4846,108 @@
                         title: 'Error',
                         text: 'Failed to load role data.'
                     });
+                }
+            });
+        });
+
+        function renderPermissionsList(permissions) {
+            if (!Array.isArray(permissions) || permissions.length === 0) {
+                return '<div class="text-muted">No permissions</div>';
+            }
+
+            var grouped = {};
+            permissions.forEach(function(permission) {
+                var rawName = permission && permission.name ? permission.name : (permission || '');
+                if (!rawName) {
+                    return;
+                }
+                var parts = rawName.split('_');
+                var category = parts[0] || 'other';
+                var action = parts.slice(1).join('_') || rawName;
+                if (!grouped[category]) {
+                    grouped[category] = [];
+                }
+                grouped[category].push(action);
+            });
+
+            var html = '';
+            Object.keys(grouped).sort().forEach(function(categoryKey) {
+                var title = categoryKey.replace(/_/g, ' ');
+                title = title.charAt(0).toUpperCase() + title.slice(1);
+                var actions = grouped[categoryKey]
+                    .map(function(action) {
+                        return action.replace(/_/g, ' ');
+                    })
+                    .sort();
+                html += '<div class="mb-3">';
+                html += '<div class="fw-bold mb-1">' + title + '</div>';
+                html += '<div class="text-muted small">' + actions.join(', ') + '</div>';
+                html += '</div>';
+            });
+
+            return html || '<div class="text-muted">No permissions</div>';
+        }
+
+        // View Role Permissions
+        $(document).on('click', '.view-role-permissions-btn', function(e) {
+            e.preventDefault();
+            var roleId = $(this).data('role-id');
+            var roleName = $(this).data('role-name');
+
+            $('#view_role_permissions_name').text(roleName || 'Role');
+            $('#viewRolePermissionsContent').html('<div class="text-center"><div class="spinner-border text-primary-custom" role="status"></div></div>');
+
+            if (typeof bootstrap !== 'undefined') {
+                var viewRoleModal = new bootstrap.Modal(document.getElementById('viewRolePermissionsModal'));
+                viewRoleModal.show();
+            } else {
+                $('#viewRolePermissionsModal').modal('show');
+            }
+
+            $.ajax({
+                url: "{{ route('get_role_with_permissions', ':id') }}".replace(':id', roleId),
+                type: "GET",
+                success: function(response) {
+                    var permissions = [];
+                    if (response && response.role && Array.isArray(response.role.permissions)) {
+                        permissions = response.role.permissions;
+                    }
+                    $('#viewRolePermissionsContent').html(renderPermissionsList(permissions));
+                },
+                error: function() {
+                    $('#viewRolePermissionsContent').html('<div class="text-muted">No permissions</div>');
+                }
+            });
+        });
+
+        // View Staff Position Permissions
+        $(document).on('click', '.view-staff-permissions-btn', function(e) {
+            e.preventDefault();
+            var positionId = $(this).data('position-id');
+            var positionName = $(this).data('position-name');
+
+            $('#view_staff_permissions_name').text(positionName || 'Position');
+            $('#viewStaffPermissionsContent').html('<div class="text-center"><div class="spinner-border text-primary-custom" role="status"></div></div>');
+
+            if (typeof bootstrap !== 'undefined') {
+                var viewStaffModal = new bootstrap.Modal(document.getElementById('viewStaffPermissionsModal'));
+                viewStaffModal.show();
+            } else {
+                $('#viewStaffPermissionsModal').modal('show');
+            }
+
+            $.ajax({
+                url: "{{ route('get_staff_profession_with_permissions', ':id') }}".replace(':id', positionId),
+                type: "GET",
+                success: function(response) {
+                    var permissions = [];
+                    if (response && response.profession && Array.isArray(response.profession.permissions)) {
+                        permissions = response.profession.permissions;
+                    }
+                    $('#viewStaffPermissionsContent').html(renderPermissionsList(permissions));
+                },
+                error: function() {
+                    $('#viewStaffPermissionsContent').html('<div class="text-muted">No permissions</div>');
                 }
             });
         });

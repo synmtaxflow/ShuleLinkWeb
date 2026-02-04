@@ -286,7 +286,15 @@ class ManageTeachersController extends Controller
             ->with('permissions')
             ->get();
 
-        return view('Admin.manage_teachers', compact('teachers', 'roles', 'teachersWithRoles', 'permissions', 'school', 'otherStaff', 'staffProfessions'));
+        return view('Admin.manage_teachers', compact(
+            'teachers',
+            'roles',
+            'teachersWithRoles',
+            'permissions',
+            'school',
+            'otherStaff',
+            'staffProfessions'
+        ));
     }
 
     public function save_teacher_role(Request $request)
