@@ -1,5 +1,5 @@
 <!-- Student Registration Modal -->
-<div class="modal fade" id="registrationModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="registrationModal" tabindex="-1" aria-hidden="true" onclick="if(event.target===this){var m=document.getElementById('registrationModal');if(m){m.style.display='none';m.classList.remove('show');m.setAttribute('aria-hidden','true');}document.body.classList.remove('modal-open');document.body.style.removeProperty('padding-right');document.querySelectorAll('.modal-backdrop').forEach(function(b){b.remove();});var rb=document.getElementById('regBackdrop');if(rb)rb.remove();}">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 95vw; width: 95vw;">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header" style="background: white; border-bottom: 1px solid #e9ecef; color: #212529;">
@@ -390,7 +390,7 @@
                 <button type="button" class="btn btn-secondary" id="prevBtn" style="display:none;">
                     <i class="bi bi-chevron-left"></i> Previous
                 </button>
-                <button type="button" class="btn btn-secondary" id="registrationModalCancelBtn" data-bs-dismiss="modal">
+                <button type="button" onclick="(function(){var m=document.getElementById('registrationModal');if(m){m.style.display='none';m.classList.remove('show');m.setAttribute('aria-hidden','true');}document.body.classList.remove('modal-open');document.body.style.removeProperty('padding-right');document.querySelectorAll('.modal-backdrop').forEach(function(b){b.remove();});var rb=document.getElementById('regBackdrop');if(rb)rb.remove();})();" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="bi bi-x-lg"></i> Cancel
                 </button>
                 <button type="button" class="btn" id="nextBtn" style="background-color: #f5f5f5; color: #212529; border: 1px solid #e9ecef;">
@@ -608,6 +608,42 @@ document.addEventListener('DOMContentLoaded', function() {
         currentStep = step;
     };
 
+    function hideRegistrationModal() {
+        const regEl = document.getElementById('registrationModal');
+        if (!regEl) return;
+
+        if (window.bootstrap && typeof bootstrap.Modal === 'function') {
+            const inst = bootstrap.Modal.getInstance(regEl) || new bootstrap.Modal(regEl);
+            inst.hide();
+            return;
+        }
+
+        if (window.jQuery) {
+            try {
+                jQuery('#registrationModal').modal('hide');
+                return;
+            } catch (e) {
+                // Fallback below
+            }
+        }
+
+        regEl.classList.remove('show');
+        regEl.style.display = 'none';
+        regEl.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('padding-right');
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        const regBackdrop = document.getElementById('regBackdrop');
+        if (regBackdrop) regBackdrop.remove();
+    }
+
+    function forceCloseRegistrationModal() {
+        if (typeof window.hideModal === 'function') {
+            window.hideModal('registrationModal');
+        }
+        hideRegistrationModal();
+    }
+
     // If on preview (step 5), close acts like "Previous"
     const closeBtn = document.getElementById('registrationModalCloseBtn');
     const cancelBtn = document.getElementById('registrationModalCancelBtn');
@@ -618,8 +654,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 e.preventDefault();
                 e.stopPropagation();
                 showStep(currentStep - 1);
+                return;
             }
+            e.preventDefault();
+            e.stopPropagation();
+            forceCloseRegistrationModal();
         }, true);
+    });
+
+    // Safety net: close on any dismiss click inside modal
+    document.addEventListener('click', (e) => {
+        const dismissBtn = e.target.closest('#registrationModal [data-bs-dismiss="modal"]');
+        if (!dismissBtn) return;
+        if (currentStep === totalSteps) {
+            e.preventDefault();
+            e.stopPropagation();
+            showStep(currentStep - 1);
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        forceCloseRegistrationModal();
     });
 
     // Generate admission number on form load
@@ -1770,6 +1825,19 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     }, 100);
+
+    window.closeRegistrationModalById = function() {
+        const modal = document.getElementById('registrationModal');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.remove('show');
+        }
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('padding-right');
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        const regBackdrop = document.getElementById('regBackdrop');
+        if (regBackdrop) regBackdrop.remove();
+    };
 
     // Initialize - show step 1
     showStep(1);

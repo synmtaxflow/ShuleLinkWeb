@@ -375,11 +375,13 @@
 
 <script>
 // Make sure functions are globally accessible
+let currentSubjectSessions = [];
 function loadSessionsBySubject() {
     const subjectID = $('#subjectSelector').val();
     console.log('Loading sessions for subjectID:', subjectID);
     
     if (!subjectID) {
+        currentSubjectSessions = [];
         $('#sessionsList').html(`
             <div class="text-center text-muted py-5">
                 <i class="bi bi-info-circle" style="font-size: 3rem;"></i>
@@ -424,56 +426,42 @@ function loadSessionsBySubject() {
             }
             
             if (response.success && response.sessions && Array.isArray(response.sessions) && response.sessions.length > 0) {
-                let html = '<div class="row">';
-                
-                response.sessions.forEach(function(session) {
-                    const startTime = formatTime(session.start_time);
-                    const endTime = formatTime(session.end_time);
-                    const subjectName = session.subject_name || 'N/A';
-                    const className = session.class_name || 'N/A';
-                    const subclassName = session.subclass_name || '';
-                    const day = session.day || 'N/A';
-                    
-                    html += `
-                        <div class="col-md-6 col-lg-4 mb-3">
-                            <div class="session-card">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <span class="time-badge">
-                                        <i class="bi bi-clock"></i> ${startTime} - ${endTime}
-                                    </span>
-                                </div>
-                                <h6 class="mb-2" style="font-weight: bold;">
-                                    <i class="bi bi-book text-primary-custom"></i> ${subjectName}
-                                </h6>
-                                <p class="mb-2 text-muted">
-                                    <i class="bi bi-people"></i> ${className}${subclassName ? ' - ' + subclassName : ''}
-                                </p>
-                                <p class="mb-2 text-muted">
-                                    <i class="bi bi-calendar"></i> ${day}
-                                </p>
-                                <p class="mb-2 text-muted small" id="sessionDates_${session.session_timetableID}">
-                                    <i class="bi bi-calendar3"></i> <span class="text-info">Loading dates...</span>
-                                </p>
-                                <button 
-                                    class="btn btn-session-action btn-sm btn-block" 
-                                    onclick="openLessonPlanModal(${session.session_timetableID}, '${day}', '${session.start_time}', '${session.end_time}', '${subjectName.replace(/'/g, "\\'")}', '${className.replace(/'/g, "\\'")}')"
-                                >
-                                    <i class="bi bi-journal-text"></i> My Lesson Plan
-                                </button>
-                            </div>
+                currentSubjectSessions = response.sessions.filter(s => s && s.session_timetableID);
+
+                const firstSession = currentSubjectSessions[0];
+                if (!firstSession) {
+                    $('#sessionsList').html(`
+                        <div class="text-center text-muted py-5">
+                            <i class="bi bi-exclamation-circle" style="font-size: 3rem;"></i>
+                            <p class="mt-3">No valid session found for this subject</p>
                         </div>
-                    `;
-                });
-                
-                html += '</div>';
-                $('#sessionsList').html(html);
-                
-                // Load dates for each session
-                response.sessions.forEach(function(session) {
-                    if (session.session_timetableID) {
-                    loadSessionDates(session.session_timetableID);
-                    }
-                });
+                    `);
+                    return;
+                }
+
+                const startTime = formatTime(firstSession.start_time);
+                const endTime = formatTime(firstSession.end_time);
+                const subjectName = firstSession.subject_name || 'N/A';
+                const className = firstSession.class_name || 'N/A';
+                const subclassName = firstSession.subclass_name || '';
+                const day = firstSession.day || 'N/A';
+
+                $('#sessionsList').html(`
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-info-circle" style="font-size: 2.5rem;"></i>
+                        <p class="mt-3 mb-1">Session selected automatically for this subject.</p>
+                        <small>${subjectName} | ${className}${subclassName ? ' - ' + subclassName : ''} | ${day} | ${startTime} - ${endTime}</small>
+                    </div>
+                `);
+
+                openLessonPlanModal(
+                    firstSession.session_timetableID,
+                    day,
+                    firstSession.start_time,
+                    firstSession.end_time,
+                    subjectName.replace(/'/g, "\\'"),
+                    className.replace(/'/g, "\\'")
+                );
             } else {
                 const errorMsg = response.error || response.message || 'No session available for this subject';
                 $('#sessionsList').html(`
@@ -1499,7 +1487,7 @@ function loadLessonPlansForManage() {
     const filterType = $('#manageFilterType').val();
     let url = '{{ route("teacher.get_lesson_plans_by_filter") }}';
     let data = {
-        session_timetableID: currentSessionData.sessionTimetableID,
+        session_timetableID: currentSessionData?.sessionTimetableID,
         filter_type: filterType
     };
     
@@ -1566,13 +1554,49 @@ function loadLessonPlansForManage() {
         </div>
     `);
     
-    $.ajax({
-        url: url,
-        method: 'GET',
-        data: data,
-        success: function(response) {
-            if (response.success && response.lesson_plans && response.lesson_plans.length > 0) {
-                renderManageLessonPlansList(response.lesson_plans);
+    const sessionsForManage = Array.isArray(currentSubjectSessions) && currentSubjectSessions.length > 0
+        ? currentSubjectSessions
+        : (currentSessionData?.sessionTimetableID ? [currentSessionData] : []);
+
+    if (sessionsForManage.length === 0) {
+        $('#manageLessonPlanContent').html(`
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle"></i> Please select a subject first.
+            </div>
+        `);
+        return;
+    }
+
+    const requests = sessionsForManage.map(session => {
+        return $.ajax({
+            url: url,
+            method: 'GET',
+            data: {
+                ...data,
+                session_timetableID: session.session_timetableID || session.sessionTimetableID
+            }
+        });
+    });
+
+    $.when.apply($, requests)
+        .done(function() {
+            const responses = requests.length === 1 ? [arguments[0]] : Array.from(arguments).map(arg => arg[0]);
+            const allPlans = [];
+            responses.forEach(response => {
+                if (response && response.success && Array.isArray(response.lesson_plans)) {
+                    allPlans.push(...response.lesson_plans);
+                }
+            });
+            const uniquePlans = [];
+            const seen = new Set();
+            allPlans.forEach(plan => {
+                if (!plan || seen.has(plan.lesson_planID)) return;
+                seen.add(plan.lesson_planID);
+                uniquePlans.push(plan);
+            });
+
+            if (uniquePlans.length > 0) {
+                renderManageLessonPlansList(uniquePlans);
             } else {
                 $('#manageLessonPlanContent').html(`
                     <div class="alert alert-info">
@@ -1580,16 +1604,15 @@ function loadLessonPlansForManage() {
                     </div>
                 `);
             }
-        },
-        error: function(xhr) {
+        })
+        .fail(function(xhr) {
             const error = xhr.responseJSON?.error || 'Failed to load lesson plans';
             $('#manageLessonPlanContent').html(`
                 <div class="alert alert-danger">
                     <i class="bi bi-x-circle"></i> ${error}
                 </div>
             `);
-        }
-    });
+        });
 }
 
 function renderManageLessonPlansList(lessonPlans) {
@@ -2881,7 +2904,7 @@ function loadLessonPlansByFilter() {
     const filterType = $('#filterType').val();
     let url = '{{ route("teacher.get_lesson_plans_by_filter") }}';
     let data = {
-        session_timetableID: currentSessionData.sessionTimetableID,
+        session_timetableID: currentSessionData?.sessionTimetableID,
         filter_type: filterType
     };
     
@@ -2934,13 +2957,49 @@ function loadLessonPlansByFilter() {
         </div>
     `);
     
-    $.ajax({
-        url: url,
-        method: 'GET',
-        data: data,
-        success: function(response) {
-            if (response.success && response.lesson_plans && response.lesson_plans.length > 0) {
-                renderLessonPlansList(response.lesson_plans);
+    const sessionsForView = Array.isArray(currentSubjectSessions) && currentSubjectSessions.length > 0
+        ? currentSubjectSessions
+        : (currentSessionData?.sessionTimetableID ? [currentSessionData] : []);
+
+    if (sessionsForView.length === 0) {
+        $('#viewLessonPlanContent').html(`
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle"></i> Please select a subject first.
+            </div>
+        `);
+        return;
+    }
+
+    const requests = sessionsForView.map(session => {
+        return $.ajax({
+            url: url,
+            method: 'GET',
+            data: {
+                ...data,
+                session_timetableID: session.session_timetableID || session.sessionTimetableID
+            }
+        });
+    });
+
+    $.when.apply($, requests)
+        .done(function() {
+            const responses = requests.length === 1 ? [arguments[0]] : Array.from(arguments).map(arg => arg[0]);
+            const allPlans = [];
+            responses.forEach(response => {
+                if (response && response.success && Array.isArray(response.lesson_plans)) {
+                    allPlans.push(...response.lesson_plans);
+                }
+            });
+            const uniquePlans = [];
+            const seen = new Set();
+            allPlans.forEach(plan => {
+                if (!plan || seen.has(plan.lesson_planID)) return;
+                seen.add(plan.lesson_planID);
+                uniquePlans.push(plan);
+            });
+
+            if (uniquePlans.length > 0) {
+                renderLessonPlansList(uniquePlans);
             } else {
                 $('#viewLessonPlanContent').html(`
                     <div class="alert alert-info">
@@ -2948,16 +3007,15 @@ function loadLessonPlansByFilter() {
                     </div>
                 `);
             }
-        },
-        error: function(xhr) {
+        })
+        .fail(function(xhr) {
             const error = xhr.responseJSON?.error || 'Failed to load lesson plans';
             $('#viewLessonPlanContent').html(`
                 <div class="alert alert-danger">
                     <i class="bi bi-x-circle"></i> ${error}
                 </div>
             `);
-        }
-    });
+        });
 }
 
 function renderLessonPlansList(lessonPlans) {

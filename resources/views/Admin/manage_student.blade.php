@@ -831,7 +831,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" onclick="document.getElementById('registrationModal').style.display = 'none'  ;" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary-custom">
                         <i class="bi bi-check-circle"></i> Register Student
                     </button>
