@@ -384,9 +384,8 @@
                             </a>
                             <ul id="userManagement" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
                                 <li><a href="{{ route('school') }}" class="nav-link"><i class="fa fa-building"></i> School</a></li>
-                                <li><a href="{{ route('manageTeachers') }}" class="nav-link"><i class="fa fa-users"></i> Teachers</a></li>
+                                <li><a href="{{ route('manageTeachers') }}" class="nav-link"><i class="fa fa-users"></i> Teachers And Staff</a></li>
                                 <li><a href="{{ route('manage_student') }}" class="nav-link"><i class="fa fa-user"></i> Students</a></li>
-                                <li><a href="{{ route('manage_other_staff') }}" class="nav-link"><i class="fa fa-user-circle"></i> Other Staff</a></li>
                                 <li><a href="{{ route('admin.school_visitors') }}" class="nav-link"><i class="fa fa-id-badge"></i> School Visitors</a></li>
                             </ul>
                         </li>
