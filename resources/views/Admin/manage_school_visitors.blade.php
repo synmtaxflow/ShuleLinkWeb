@@ -1,4 +1,20 @@
+@php($watchmanOnly = $watchmanOnly ?? false)
+@php($todayRoute = $watchmanOnly ? route('watchman.school_visitors.today') : route('admin.school_visitors.today'))
+@php($storeRoute = $watchmanOnly ? route('watchman.school_visitors.store') : route('admin.school_visitors.store'))
+
+@if(!$watchmanOnly)
+@if($user_type == 'Admin')
 @include('includes.Admin_nav')
+@elseif($user_type == 'Staff')
+@include('includes.staff_nav')
+@else
+@include('includes.teacher_nav')
+@endif
+@else
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+@endif
 
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
@@ -56,13 +72,47 @@
         0% { left: -40%; }
         100% { left: 100%; }
     }
+    .watchman-only .content {
+        padding: 0 12px 16px;
+    }
+    .watchman-only .card {
+        margin-bottom: 16px;
+    }
+    .watchman-only .table-responsive {
+        overflow-x: auto;
+    }
+    .watchman-only .table {
+        min-width: 720px;
+    }
+    @media (max-width: 768px) {
+        .breadcrumbs {
+            padding: 0 12px;
+        }
+        .page-title h1 {
+            font-size: 1.1rem;
+        }
+        .card-body {
+            padding: 12px;
+        }
+        .visitor-tabs .nav-link {
+            font-size: 0.9rem;
+            padding: 8px 10px;
+        }
+        .signature-box {
+            height: 60px;
+        }
+        .btn {
+            font-size: 0.9rem;
+        }
+    }
 </style>
 
+<div class="{{ $watchmanOnly ? 'watchman-only' : '' }}">
 <div class="breadcrumbs">
     <div class="col-sm-6">
         <div class="page-header float-left">
             <div class="page-title">
-                <h1>School Visitors</h1>
+                <h1>{{ $watchmanOnly ? 'Wageni wa Shule' : 'School Visitors' }}</h1>
             </div>
         </div>
     </div>
@@ -70,27 +120,34 @@
 
 <div class="content mt-3">
     <div class="card">
-        <div class="card-header bg-primary-custom text-white">
-            <strong>School Visitors Management</strong>
+        <div class="card-header bg-primary-custom text-white d-flex justify-content-between align-items-center">
+            <strong>{{ $watchmanOnly ? 'Usajili wa Wageni wa Shule' : 'School Visitors Management' }}</strong>
+            @if($watchmanOnly)
+                <a href="{{ route('logout') }}" class="btn btn-light btn-sm">
+                    <i class="fa fa-sign-out"></i> Toka
+                </a>
+            @endif
         </div>
         <div class="card-body">
             <ul class="nav nav-tabs visitor-tabs mb-3">
                 <li class="nav-item">
                     <a class="nav-link active" data-target="#section-record-visitors" href="#">
-                        <i class="fa fa-pencil-square-o"></i> Record School Visitor
+                        <i class="fa fa-pencil-square-o"></i> {{ $watchmanOnly ? 'Sajili Mgeni wa Shule' : 'Record School Visitor' }}
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-target="#section-view-visitors" href="#">
-                        <i class="fa fa-list"></i> View / Manage Visitors
-                    </a>
-                </li>
+                @unless($watchmanOnly)
+                    <li class="nav-item">
+                        <a class="nav-link" data-target="#section-view-visitors" href="#">
+                            <i class="fa fa-list"></i> View / Manage Visitors
+                        </a>
+                    </li>
+                @endunless
             </ul>
             <div>
                 <div id="section-record-visitors" class="visitor-section">
-                        <div class="section-title">Record Visitors (Today)</div>
+                        <div class="section-title">{{ $watchmanOnly ? 'Sajili Wageni (Leo)' : 'Record Visitors (Today)' }}</div>
                         <div class="form-loading" id="recordLoading">
-                            <span><i class="fa fa-spinner fa-spin text-primary-custom"></i> Loading...</span>
+                            <span><i class="fa fa-spinner fa-spin text-primary-custom"></i> {{ $watchmanOnly ? 'Inapakia...' : 'Loading...' }}</span>
                             <div class="form-progress"></div>
                         </div>
                         <form id="visitorForm">
@@ -98,32 +155,33 @@
                                 <table class="table table-bordered" id="visitorTable">
                                     <thead class="bg-primary-custom text-white">
                                         <tr>
-                                            <th>Date</th>
-                                            <th>Name</th>
-                                            <th>Phone / Email</th>
-                                            <th>Occupation / Institution</th>
-                                            <th>Reason for Visit</th>
-                                    <th>Signature</th>
-                                    <th>Action</th>
+                                            <th>{{ $watchmanOnly ? 'Tarehe' : 'Date' }}</th>
+                                            <th>{{ $watchmanOnly ? 'Jina' : 'Name' }}</th>
+                                            <th>{{ $watchmanOnly ? 'Simu / Barua pepe' : 'Phone / Email' }}</th>
+                                            <th>{{ $watchmanOnly ? 'Kazi / Taasisi' : 'Occupation / Institution' }}</th>
+                                            <th>{{ $watchmanOnly ? 'Sababu ya Ziara' : 'Reason for Visit' }}</th>
+                                    <th>{{ $watchmanOnly ? 'Sahihi' : 'Signature' }}</th>
+                                    <th>{{ $watchmanOnly ? 'Kitendo' : 'Action' }}</th>
                                         </tr>
                                     </thead>
                                     <tbody id="visitorTableBody">
                                         <tr>
-                                    <td colspan="7" class="text-center text-muted">Loading...</td>
+                                    <td colspan="7" class="text-center text-muted">{{ $watchmanOnly ? 'Inapakia...' : 'Loading...' }}</td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
                             <div class="d-flex align-items-center justify-content-between">
                                 <button type="button" class="btn btn-light" id="addVisitorRow">
-                                    <i class="fa fa-plus"></i> Add Row
+                                    <i class="fa fa-plus"></i> {{ $watchmanOnly ? 'Ongeza Mstari' : 'Add Row' }}
                                 </button>
                                 <button type="submit" class="btn btn-primary-custom">
-                                    <i class="fa fa-save"></i> Save Visitors
+                                    <i class="fa fa-save"></i> {{ $watchmanOnly ? 'Hifadhi Wageni' : 'Save Visitors' }}
                                 </button>
                             </div>
                         </form>
                 </div>
+                @unless($watchmanOnly)
                 <div id="section-view-visitors" class="visitor-section" style="display:none;">
                         <div class="section-title">View / Manage Visitors</div>
                     <div class="form-loading" id="viewLoading">
@@ -181,11 +239,14 @@
                         Selected recipients: <span id="smsRecipientCountInline">0</span>
                     </div>
                 </div>
+                @endunless
             </div>
         </div>
     </div>
 </div>
+</div>
 
+@unless($watchmanOnly)
 <div class="modal fade" id="editVisitorModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -248,11 +309,28 @@
         </div>
     </div>
 </div>
+@endunless
 
-@include('includes.footer')
+@unless($watchmanOnly)
+    @include('includes.footer')
+@endunless
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    const watchmanOnly = @json($watchmanOnly);
+    const labels = watchmanOnly ? {
+        saved: 'Imehifadhiwa',
+        successTitle: 'Imefanikiwa',
+        failedTitle: 'Imeshindikana',
+        failedSave: 'Imeshindikana kuhifadhi wageni.',
+        loading: 'Inapakia...'
+    } : {
+        saved: 'Saved',
+        successTitle: 'Success',
+        failedTitle: 'Failed',
+        failedSave: 'Failed to save visitors.',
+        loading: 'Loading...'
+    };
     const menuLinks = document.querySelectorAll('.visitor-tabs .nav-link');
     const sections = document.querySelectorAll('.visitor-section');
 
@@ -381,7 +459,7 @@
                 <td>
                     ${item.signature ? `<img src="${item.signature}" alt="Signature" style="max-height:50px;">` : 'N/A'}
                 </td>
-                <td><span class="text-muted">Saved</span></td>
+                <td><span class="text-muted">${labels.saved}</span></td>
             `;
             tbody.appendChild(row);
         });
@@ -393,7 +471,7 @@
     function loadTodayVisitors() {
         const loading = document.getElementById('recordLoading');
         if (loading) loading.style.display = 'flex';
-        fetch(`{{ route('admin.school_visitors.today') }}`, {
+        fetch(`{{ $todayRoute }}`, {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
         .then(res => res.json())
@@ -437,7 +515,7 @@
         const formData = new FormData(e.target);
         const loading = document.getElementById('recordLoading');
         if (loading) loading.style.display = 'flex';
-        fetch(`{{ route('admin.school_visitors.store') }}`, {
+        fetch(`{{ $storeRoute }}`, {
             method: 'POST',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
@@ -448,14 +526,14 @@
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                Swal.fire({ icon: 'success', title: 'Success', text: data.message, confirmButtonColor: '#940000' });
+                Swal.fire({ icon: 'success', title: labels.successTitle, text: data.message, confirmButtonColor: '#940000' });
                 loadTodayVisitors();
             } else {
-                Swal.fire({ icon: 'error', title: 'Failed', text: data.message || 'Failed to save visitors.', confirmButtonColor: '#940000' });
+                Swal.fire({ icon: 'error', title: labels.failedTitle, text: data.message || labels.failedSave, confirmButtonColor: '#940000' });
             }
         })
         .catch(() => {
-            Swal.fire({ icon: 'error', title: 'Failed', text: 'Failed to save visitors.', confirmButtonColor: '#940000' });
+            Swal.fire({ icon: 'error', title: labels.failedTitle, text: labels.failedSave, confirmButtonColor: '#940000' });
         })
         .finally(() => {
             if (loading) loading.style.display = 'none';
@@ -567,10 +645,13 @@
         document.body.classList.remove('modal-open');
     }
 
-    document.getElementById('visitorFilterForm').addEventListener('submit', (e) => {
-        e.preventDefault();
-        loadVisitorList();
-    });
+    const visitorFilterForm = document.getElementById('visitorFilterForm');
+    if (visitorFilterForm) {
+        visitorFilterForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            loadVisitorList();
+        });
+    }
 
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('edit-visitor')) {
@@ -615,59 +696,80 @@
         }
     });
 
-    document.getElementById('editVisitorForm').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        fetch(`{{ route('admin.school_visitors.update') }}`, {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            },
-            body: formData
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                Swal.fire({ icon: 'success', title: 'Updated', text: data.message, confirmButtonColor: '#940000' });
-                closeModal('editVisitorModal');
-                loadVisitorList();
-            } else {
-                Swal.fire({ icon: 'error', title: 'Failed', text: data.message || 'Update failed.', confirmButtonColor: '#940000' });
-            }
-        })
-        .catch(() => Swal.fire({ icon: 'error', title: 'Failed', text: 'Update failed.', confirmButtonColor: '#940000' }));
-    });
-
-    document.getElementById('selectAllVisitors').addEventListener('change', (e) => {
-        document.querySelectorAll('.visitor-checkbox').forEach(cb => {
-            cb.checked = e.target.checked;
+    const editVisitorForm = document.getElementById('editVisitorForm');
+    if (editVisitorForm) {
+        editVisitorForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            fetch(`{{ route('admin.school_visitors.update') }}`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({ icon: 'success', title: 'Updated', text: data.message, confirmButtonColor: '#940000' });
+                    closeModal('editVisitorModal');
+                    loadVisitorList();
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Failed', text: data.message || 'Update failed.', confirmButtonColor: '#940000' });
+                }
+            })
+            .catch(() => Swal.fire({ icon: 'error', title: 'Failed', text: 'Update failed.', confirmButtonColor: '#940000' }));
         });
-        const count = document.querySelectorAll('.visitor-checkbox:checked').length;
-        document.getElementById('smsRecipientCount').textContent = count;
-        document.getElementById('smsRecipientCountInline').textContent = count;
-    });
+    }
 
-    document.getElementById('openSmsModal').addEventListener('click', (e) => {
-        e.preventDefault();
-        const selected = document.querySelectorAll('.visitor-checkbox:checked');
-        document.getElementById('smsRecipientCount').textContent = selected.length;
-        document.getElementById('smsRecipientCountInline').textContent = selected.length;
-        const defaultPrefix = '{{ $schoolName ?? 'School' }}: ';
-        document.getElementById('smsMessage').value = defaultPrefix;
-        document.getElementById('smsCharCount').textContent = defaultPrefix.length;
-        openModal('smsModal');
-    });
+    const selectAllVisitors = document.getElementById('selectAllVisitors');
+    if (selectAllVisitors) {
+        selectAllVisitors.addEventListener('change', (e) => {
+            document.querySelectorAll('.visitor-checkbox').forEach(cb => {
+                cb.checked = e.target.checked;
+            });
+            const count = document.querySelectorAll('.visitor-checkbox:checked').length;
+            const smsRecipientCount = document.getElementById('smsRecipientCount');
+            const smsRecipientCountInline = document.getElementById('smsRecipientCountInline');
+            if (smsRecipientCount) smsRecipientCount.textContent = count;
+            if (smsRecipientCountInline) smsRecipientCountInline.textContent = count;
+        });
+    }
 
-    document.getElementById('selectAllBtn').addEventListener('click', () => {
-        const checkboxes = document.querySelectorAll('.visitor-checkbox');
-        const allSelected = Array.from(checkboxes).every(cb => cb.checked);
-        checkboxes.forEach(cb => { cb.checked = !allSelected; });
-        document.getElementById('selectAllVisitors').checked = !allSelected;
-        const count = document.querySelectorAll('.visitor-checkbox:checked').length;
-        document.getElementById('smsRecipientCount').textContent = count;
-        document.getElementById('smsRecipientCountInline').textContent = count;
-    });
+    const openSmsModal = document.getElementById('openSmsModal');
+    if (openSmsModal) {
+        openSmsModal.addEventListener('click', (e) => {
+            e.preventDefault();
+            const selected = document.querySelectorAll('.visitor-checkbox:checked');
+            const smsRecipientCount = document.getElementById('smsRecipientCount');
+            const smsRecipientCountInline = document.getElementById('smsRecipientCountInline');
+            if (smsRecipientCount) smsRecipientCount.textContent = selected.length;
+            if (smsRecipientCountInline) smsRecipientCountInline.textContent = selected.length;
+            const defaultPrefix = '{{ $schoolName ?? 'School' }}: ';
+            const smsMessage = document.getElementById('smsMessage');
+            const smsCharCount = document.getElementById('smsCharCount');
+            if (smsMessage) smsMessage.value = defaultPrefix;
+            if (smsCharCount) smsCharCount.textContent = defaultPrefix.length;
+            openModal('smsModal');
+        });
+    }
+
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', () => {
+            const checkboxes = document.querySelectorAll('.visitor-checkbox');
+            const allSelected = Array.from(checkboxes).every(cb => cb.checked);
+            checkboxes.forEach(cb => { cb.checked = !allSelected; });
+            const selectAllVisitorsBox = document.getElementById('selectAllVisitors');
+            if (selectAllVisitorsBox) selectAllVisitorsBox.checked = !allSelected;
+            const count = document.querySelectorAll('.visitor-checkbox:checked').length;
+            const smsRecipientCount = document.getElementById('smsRecipientCount');
+            const smsRecipientCountInline = document.getElementById('smsRecipientCountInline');
+            if (smsRecipientCount) smsRecipientCount.textContent = count;
+            if (smsRecipientCountInline) smsRecipientCountInline.textContent = count;
+        });
+    }
 
     document.addEventListener('change', (e) => {
         if (e.target.classList.contains('visitor-checkbox')) {
@@ -679,40 +781,47 @@
         }
     });
 
-    document.getElementById('smsMessage').addEventListener('input', (e) => {
-        document.getElementById('smsCharCount').textContent = e.target.value.length;
-    });
+    const smsMessage = document.getElementById('smsMessage');
+    if (smsMessage) {
+        smsMessage.addEventListener('input', (e) => {
+            const smsCharCount = document.getElementById('smsCharCount');
+            if (smsCharCount) smsCharCount.textContent = e.target.value.length;
+        });
+    }
 
-    document.getElementById('smsForm').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const selected = Array.from(document.querySelectorAll('.visitor-checkbox:checked')).map(cb => cb.value);
-        if (selected.length === 0) {
-            Swal.fire({ icon: 'warning', title: 'Select recipients', text: 'Please select at least one visitor.', confirmButtonColor: '#940000' });
-            return;
-        }
-        const message = document.getElementById('smsMessage').value.trim();
-        Swal.fire({ icon: 'info', title: 'Sending...', text: 'Please wait', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-        fetch(`{{ route('admin.school_visitors.sms') }}`, {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ message, visitor_ids: selected }),
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                Swal.fire({ icon: 'success', title: 'Sent', text: data.message, confirmButtonColor: '#940000' });
-                closeModal('smsModal');
-                loadVisitorList();
-            } else {
-                Swal.fire({ icon: 'error', title: 'Failed', text: data.message || 'SMS failed.', confirmButtonColor: '#940000' });
+    const smsForm = document.getElementById('smsForm');
+    if (smsForm) {
+        smsForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const selected = Array.from(document.querySelectorAll('.visitor-checkbox:checked')).map(cb => cb.value);
+            if (selected.length === 0) {
+                Swal.fire({ icon: 'warning', title: 'Select recipients', text: 'Please select at least one visitor.', confirmButtonColor: '#940000' });
+                return;
             }
-        })
-        .catch(() => Swal.fire({ icon: 'error', title: 'Failed', text: 'SMS failed.', confirmButtonColor: '#940000' }));
-    });
+            const message = document.getElementById('smsMessage').value.trim();
+            Swal.fire({ icon: 'info', title: 'Sending...', text: 'Please wait', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            fetch(`{{ route('admin.school_visitors.sms') }}`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message, visitor_ids: selected }),
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({ icon: 'success', title: 'Sent', text: data.message, confirmButtonColor: '#940000' });
+                    closeModal('smsModal');
+                    loadVisitorList();
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Failed', text: data.message || 'SMS failed.', confirmButtonColor: '#940000' });
+                }
+            })
+            .catch(() => Swal.fire({ icon: 'error', title: 'Failed', text: 'SMS failed.', confirmButtonColor: '#940000' }));
+        });
+    }
 
     loadTodayVisitors();
 </script>

@@ -29,6 +29,8 @@ use App\Http\Controllers\GradeDefinitionController;
 use App\Http\Controllers\PricingController;
 use App\Http\Controllers\OnlineApplicationController;
 use App\Http\Controllers\StudentRegistrationController;
+use App\Http\Controllers\WatchmanController;
+use App\Http\Controllers\StaffController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 
@@ -105,6 +107,12 @@ Route::post('api/parent/attendance', [ParentsContoller::class, 'apiGetParentAtte
 
 // teachers Management Routes
 Route::get('manageTeachers', [ManageTeachersController::class, 'manageTeachers'])->name('manageTeachers');
+Route::get('manage_watchman', [WatchmanController::class, 'manage'])->name('manage_watchman');
+Route::post('save_watchman', [WatchmanController::class, 'store'])->name('save_watchman');
+Route::get('watchmanDashboard', [WatchmanController::class, 'dashboard'])->name('watchmanDashboard');
+Route::get('watchman/visitors', [WatchmanController::class, 'visitors'])->name('watchman.visitors');
+Route::get('watchman/school-visitors/today', [WatchmanController::class, 'todayVisitors'])->name('watchman.school_visitors.today');
+Route::post('watchman/school-visitors/store', [WatchmanController::class, 'storeVisitors'])->name('watchman.school_visitors.store');
 Route::post('save_teachers', [ManageTeachersController::class, 'save_teachers'])->name('save_teachers');
 Route::get('get_teacher/{id}', [ManageTeachersController::class, 'get_teacher'])->name('get_teacher');
 Route::post('update_teacher', [ManageTeachersController::class, 'update_teacher'])->name('update_teacher');
@@ -214,6 +222,8 @@ Route::get('get_subject_students/{classSubjectID}', [TeachersController::class, 
 Route::get('get_subject_results/{classSubjectID}', [TeachersController::class, 'getSubjectResults'])->name('get_subject_results');
 Route::get('get_subject_results/{classSubjectID}/{examID}', [TeachersController::class, 'getSubjectResults'])->name('get_subject_results_by_exam');
 Route::get('get_examinations_for_subject/{classSubjectID}', [TeachersController::class, 'getExaminationsForSubject'])->name('get_examinations_for_subject');
+Route::get('get_exam_allowed_classes/{examID}', [ManageExaminationController::class, 'getExamAllowedClasses'])->name('get_exam_allowed_classes');
+Route::get('get_exam_paper_question_data/{classSubjectID}/{examID}', [TeachersController::class, 'getExamPaperQuestionData'])->name('get_exam_paper_question_data');
 Route::get('check_exam_paper_status/{examID}/{classSubjectID}', [TeachersController::class, 'checkExamPaperStatus'])->name('check_exam_paper_status');
 Route::post('dismiss_exam_rejection_notification', [TeachersController::class, 'dismissExamRejectionNotification'])->name('dismiss_exam_rejection_notification');
 Route::post('save_subject_results', [TeachersController::class, 'saveSubjectResults'])->name('save_subject_results');
@@ -227,6 +237,18 @@ Route::post('get_teachers_for_subject', [TeachersController::class, 'getTeachers
 Route::post('send_message_to_teachers', [TeachersController::class, 'sendMessageToTeachers'])->name('send_message_to_teachers');
 Route::get('download_excel_template/{classSubjectID}/{examID}', [TeachersController::class, 'downloadExcelTemplate'])->name('download_excel_template');
 Route::post('upload_excel_results', [TeachersController::class, 'uploadExcelResults'])->name('upload_excel_results');
+
+// Staff Routes
+Route::get('staffDashboard', [StaffController::class, 'staffDashboard'])->name('staffDashboard');
+Route::get('staff/suggestions', [StaffController::class, 'suggestions'])->name('staff.suggestions');
+Route::get('staff/incidents', [StaffController::class, 'incidents'])->name('staff.incidents');
+Route::post('staff/feedback', [StaffController::class, 'storeStaffFeedback'])->name('staff.feedback.store');
+Route::get('staff/permissions', [StaffController::class, 'permissions'])->name('staff.permissions');
+Route::post('staff/permissions', [StaffController::class, 'storeStaffPermission'])->name('staff.permissions.store');
+Route::get('staff/leave', [StaffController::class, 'leave'])->name('staff.leave');
+Route::get('staff/payroll', [StaffController::class, 'payroll'])->name('staff.payroll');
+Route::get('staff/profile', [StaffController::class, 'profile'])->name('staff.profile');
+Route::post('staff/profile/update', [StaffController::class, 'updateProfile'])->name('staff.profile.update');
 
 // Users Roles Routes
 Route::post('save_teacher_role', [ManageTeachersController::class, 'save_teacher_role'])->name('save_teacher_role');
@@ -379,6 +401,10 @@ Route::get('admin/suggestions', [AdminController::class, 'manageTeacherFeedbackA
 Route::get('admin/incidents', [AdminController::class, 'manageTeacherFeedbackAdmin'])->name('admin.incidents');
 Route::post('admin/feedback/approve', [AdminController::class, 'approveTeacherFeedback'])->name('admin.feedback.approve');
 Route::post('admin/feedback/reject', [AdminController::class, 'rejectTeacherFeedback'])->name('admin.feedback.reject');
+Route::get('admin/staff-suggestions', [AdminController::class, 'manageStaffFeedbackAdmin'])->name('admin.staff.suggestions');
+Route::get('admin/staff-incidents', [AdminController::class, 'manageStaffFeedbackAdmin'])->name('admin.staff.incidents');
+Route::post('admin/staff-feedback/approve', [AdminController::class, 'approveStaffFeedback'])->name('admin.staff.feedback.approve');
+Route::post('admin/staff-feedback/reject', [AdminController::class, 'rejectStaffFeedback'])->name('admin.staff.feedback.reject');
 Route::get('admin/performance', [AdminController::class, 'performanceDashboard'])->name('admin.performance');
 Route::post('admin/performance/teacher/term', [AdminController::class, 'teacherTermPerformance'])->name('admin.performance.teacher.term');
 Route::post('admin/performance/teacher/exam', [AdminController::class, 'teacherExamPerformance'])->name('admin.performance.teacher.exam');
@@ -445,10 +471,15 @@ Route::post('move_student_hall/{examHallID}', [ManageExaminationController::clas
 
 // Result Management Routes
 Route::get('manageResults', [ResultManagementController::class, 'index'])->name('manageResults');
+Route::get('admin/subject-analysis', [ResultManagementController::class, 'subjectAnalysis'])->name('admin.subject_analysis');
+Route::get('admin/get-class-subjects', [ResultManagementController::class, 'getClassSubjectsForAnalysis'])->name('admin.get_class_subjects_for_analysis');
 
 // Exam Papers Routes
 Route::post('store_exam_paper', [ManageExaminationController::class, 'storeExamPaper'])->name('store_exam_paper');
 Route::post('update_exam_paper/{examPaperID}', [ManageExaminationController::class, 'updateExamPaper'])->name('update_exam_paper');
+Route::get('get_exam_paper_questions/{examPaperID}', [ManageExaminationController::class, 'getExamPaperQuestions'])->name('get_exam_paper_questions');
+Route::post('update_exam_paper_questions/{examPaperID}', [ManageExaminationController::class, 'updateExamPaperQuestions'])->name('update_exam_paper_questions');
+Route::post('mark_exam_paper_notifications_read', [ManageExaminationController::class, 'markExamPaperNotificationsRead'])->name('mark_exam_paper_notifications_read');
 Route::get('get_exam_papers/{examID}', [ManageExaminationController::class, 'getExamPapers'])->name('get_exam_papers');
 Route::post('approve_reject_exam_paper/{examPaperID}', [ManageExaminationController::class, 'approveRejectExamPaper'])->name('approve_reject_exam_paper');
 Route::get('get_my_exam_papers', [ManageExaminationController::class, 'getMyExamPapers'])->name('get_my_exam_papers');

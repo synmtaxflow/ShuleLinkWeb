@@ -203,8 +203,9 @@ class AdminController extends Controller
     public function taskManagement()
     {
         $user = Session::get('user_type');
-        if (!$user || $user !== 'Admin') {
-            return redirect()->route('login')->with('error', 'Unauthorized access');
+        $taskPermissions = ['task_create', 'task_update', 'task_delete', 'task_read_only'];
+        if (!$user || ($user !== 'Admin' && ! $this->staffHasAnyPermission($taskPermissions))) {
+            return redirect()->back()->with('error', 'Unauthorized access');
         }
 
         $schoolID = Session::get('schoolID');
@@ -228,7 +229,8 @@ class AdminController extends Controller
     {
         try {
             $user = Session::get('user_type');
-            if (!$user || $user !== 'Admin') {
+            $taskPermissions = ['task_create', 'task_update', 'task_delete', 'task_read_only'];
+            if (!$user || ($user !== 'Admin' && ! $this->staffHasAnyPermission($taskPermissions))) {
                 return response()->json(['success' => false, 'error' => 'Unauthorized access'], 403);
             }
 
@@ -697,8 +699,9 @@ class AdminController extends Controller
         $user = Session::get('user_type');
         $schoolID = Session::get('schoolID');
 
-        if (!$user || $user !== 'Admin') {
-            return redirect()->route('login')->with('error', 'Unauthorized access');
+        $revenuePermissions = ['revenue_create', 'revenue_update', 'revenue_delete', 'revenue_read_only'];
+        if (!$user || ($user !== 'Admin' && ! $this->staffHasAnyPermission($revenuePermissions))) {
+            return redirect()->back()->with('error', 'Unauthorized access');
         }
 
         $revenueSources = \App\Models\RevenueSource::where('schoolID', $schoolID)
@@ -890,8 +893,9 @@ class AdminController extends Controller
         $user = Session::get('user_type');
         $schoolID = Session::get('schoolID');
 
-        if (!$user || $user !== 'Admin') {
-            return redirect()->route('login')->with('error', 'Unauthorized access');
+        $expensePermissions = ['expenses_create', 'expenses_update', 'expenses_delete', 'expenses_read_only'];
+        if (!$user || ($user !== 'Admin' && ! $this->staffHasAnyPermission($expensePermissions))) {
+            return redirect()->back()->with('error', 'Unauthorized access');
         }
 
         $year = request()->input('year', date('Y'));
@@ -1138,8 +1142,9 @@ class AdminController extends Controller
         $user = Session::get('user_type');
         $schoolID = Session::get('schoolID');
 
-        if (!$user || $user !== 'Admin') {
-            return redirect()->route('login')->with('error', 'Unauthorized access');
+        $resourcePermissions = ['resources_create', 'resources_update', 'resources_delete', 'resources_read_only'];
+        if (!$user || ($user !== 'Admin' && ! $this->staffHasAnyPermission($resourcePermissions))) {
+            return redirect()->back()->with('error', 'Unauthorized access');
         }
 
         $resources = \App\Models\SchoolResource::where('schoolID', $schoolID)
@@ -1323,8 +1328,9 @@ class AdminController extends Controller
         $user = Session::get('user_type');
         $schoolID = Session::get('schoolID');
 
-        if (!$user || $user !== 'Admin') {
-            return redirect()->route('login')->with('error', 'Unauthorized access');
+        $resourcePermissions = ['resources_create', 'resources_update', 'resources_delete', 'resources_read_only'];
+        if (!$user || ($user !== 'Admin' && ! $this->staffHasAnyPermission($resourcePermissions))) {
+            return redirect()->back()->with('error', 'Unauthorized access');
         }
 
         $resources = \App\Models\SchoolResource::where('schoolID', $schoolID)
@@ -1739,7 +1745,9 @@ class AdminController extends Controller
 
         $feedback = $feedback->map(function ($item) use ($teacherMap) {
             $teacher = $teacherMap->get($item->teacherID);
-            $item->teacher_name = $teacher ? trim(($teacher->first_name ?? '') . ' ' . ($teacher->last_name ?? '')) : 'Teacher';
+            $name = $teacher ? trim(($teacher->first_name ?? '') . ' ' . ($teacher->last_name ?? '')) : 'Teacher';
+            $item->teacher_name = $name;
+            $item->person_name = $name;
             return $item;
         });
 
@@ -1775,7 +1783,167 @@ class AdminController extends Controller
             'dateFrom' => $dateFrom,
             'dateTo' => $dateTo,
             'teacherName' => $teacherName,
+            'adminFeedbackContext' => 'teacher',
         ]);
+    }
+
+    public function manageStaffFeedbackAdmin(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        $tab = $request->query('tab');
+        $section = $request->query('section', 'view');
+        if (!$tab) {
+            $routeName = optional($request->route())->getName();
+            $tab = $routeName === 'admin.staff.incidents' ? 'incidents' : 'suggestions';
+        }
+
+        $dateFrom = $request->query('date_from');
+        $dateTo = $request->query('date_to');
+        $staffName = $request->query('staff_name');
+
+        $feedbackQuery = \App\Models\StaffFeedback::where('schoolID', $schoolID);
+
+        if ($dateFrom) {
+            $feedbackQuery->whereDate('created_at', '>=', $dateFrom);
+        }
+        if ($dateTo) {
+            $feedbackQuery->whereDate('created_at', '<=', $dateTo);
+        }
+
+        $staffMap = \App\Models\OtherStaff::where('schoolID', $schoolID)
+            ->get()
+            ->keyBy('id');
+
+        if ($staffName) {
+            $staffIds = $staffMap
+                ->filter(function ($staff) use ($staffName) {
+                    $fullName = trim(($staff->first_name ?? '') . ' ' . ($staff->last_name ?? ''));
+                    return stripos($fullName, $staffName) !== false;
+                })
+                ->keys()
+                ->toArray();
+
+            if (count($staffIds) === 0) {
+                $feedback = collect();
+            } else {
+                $feedbackQuery->whereIn('staffID', $staffIds);
+                $feedback = $feedbackQuery->orderBy('created_at', 'desc')->get();
+            }
+        } else {
+            $feedback = $feedbackQuery->orderBy('created_at', 'desc')->get();
+        }
+
+        $feedback = $feedback->map(function ($item) use ($staffMap) {
+            $staff = $staffMap->get($item->staffID);
+            $name = $staff ? trim(($staff->first_name ?? '') . ' ' . ($staff->last_name ?? '')) : 'Staff';
+            $item->person_name = $name;
+            return $item;
+        });
+
+        $suggestions = $feedback->where('type', 'suggestion')->values();
+        $incidents = $feedback->where('type', 'incident')->values();
+
+        $suggestionStats = [
+            'total' => $suggestions->count(),
+            'pending' => $suggestions->where('status', 'pending')->count(),
+            'approved' => $suggestions->where('status', 'approved')->count(),
+            'rejected' => $suggestions->where('status', 'rejected')->count(),
+        ];
+
+        $incidentStats = [
+            'total' => $incidents->count(),
+            'pending' => $incidents->where('status', 'pending')->count(),
+            'approved' => $incidents->where('status', 'approved')->count(),
+            'rejected' => $incidents->where('status', 'rejected')->count(),
+        ];
+
+        $readType = $tab === 'incidents' ? 'incident' : 'suggestion';
+        \App\Models\StaffFeedback::where('schoolID', $schoolID)
+            ->where('type', $readType)
+            ->update(['is_read_by_admin' => true]);
+
+        return view('Admin.manage_teacher_feedback', [
+            'activeTab' => $tab,
+            'activeSection' => $section,
+            'suggestions' => $suggestions,
+            'incidents' => $incidents,
+            'suggestionStats' => $suggestionStats,
+            'incidentStats' => $incidentStats,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'staffName' => $staffName,
+            'adminFeedbackContext' => 'staff',
+        ]);
+    }
+
+    public function approveStaffFeedback(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        $validated = $request->validate([
+            'feedbackID' => 'required|integer',
+            'admin_response' => 'nullable|string',
+            'response_due_date' => 'nullable|date',
+        ]);
+
+        $feedback = \App\Models\StaffFeedback::where('feedbackID', $validated['feedbackID'])
+            ->where('schoolID', $schoolID)
+            ->first();
+
+        if (!$feedback) {
+            return response()->json(['success' => false, 'message' => 'Feedback not found'], 404);
+        }
+
+        $feedback->status = 'approved';
+        $feedback->admin_response = $validated['admin_response'] ?? null;
+        $feedback->response_due_date = $validated['response_due_date'] ?? null;
+        $feedback->responded_at = now();
+        $feedback->is_read_by_staff = false;
+        $feedback->save();
+
+        return response()->json(['success' => true, 'message' => 'Feedback approved successfully.']);
+    }
+
+    public function rejectStaffFeedback(Request $request)
+    {
+        $user = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$user || $user !== 'Admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        $validated = $request->validate([
+            'feedbackID' => 'required|integer',
+            'admin_response' => 'nullable|string',
+        ]);
+
+        $feedback = \App\Models\StaffFeedback::where('feedbackID', $validated['feedbackID'])
+            ->where('schoolID', $schoolID)
+            ->first();
+
+        if (!$feedback) {
+            return response()->json(['success' => false, 'message' => 'Feedback not found'], 404);
+        }
+
+        $feedback->status = 'rejected';
+        $feedback->admin_response = $validated['admin_response'] ?? null;
+        $feedback->responded_at = now();
+        $feedback->is_read_by_staff = false;
+        $feedback->save();
+
+        return response()->json(['success' => true, 'message' => 'Feedback rejected successfully.']);
     }
 
     public function performanceDashboard()
@@ -2350,9 +2518,9 @@ class AdminController extends Controller
         $dateTo = $request->get('date_to');
         $search = trim($request->get('search', ''));
 
-        $query = PermissionRequest::with(['teacher', 'student', 'parent'])
+        $query = PermissionRequest::with(['teacher', 'student', 'parent', 'staff'])
             ->where('schoolID', $schoolID)
-            ->where('requester_type', $tab === 'student' ? 'student' : 'teacher');
+            ->where('requester_type', $tab === 'student' ? 'student' : ($tab === 'staff' ? 'staff' : 'teacher'));
 
         if ($dateFrom && $dateTo) {
             $query->whereBetween('created_at', [$dateFrom, Carbon::parse($dateTo)->endOfDay()]);
@@ -2364,6 +2532,12 @@ class AdminController extends Controller
                     $q->where('first_name', 'like', "%{$search}%")
                         ->orWhere('last_name', 'like', "%{$search}%")
                         ->orWhere('admission_number', 'like', "%{$search}%");
+                });
+            } elseif ($tab === 'staff') {
+                $query->whereHas('staff', function ($q) use ($search) {
+                    $q->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('employee_number', 'like', "%{$search}%");
                 });
             } else {
                 $query->whereHas('teacher', function ($q) use ($search) {
@@ -2389,6 +2563,24 @@ class AdminController extends Controller
             ->where('is_read_by_admin', false)
             ->count();
 
+        $tabCounts = [
+            'teacher' => PermissionRequest::where('schoolID', $schoolID)
+                ->where('requester_type', 'teacher')
+                ->where('status', 'pending')
+                ->where('is_read_by_admin', false)
+                ->count(),
+            'student' => PermissionRequest::where('schoolID', $schoolID)
+                ->where('requester_type', 'student')
+                ->where('status', 'pending')
+                ->where('is_read_by_admin', false)
+                ->count(),
+            'staff' => PermissionRequest::where('schoolID', $schoolID)
+                ->where('requester_type', 'staff')
+                ->where('status', 'pending')
+                ->where('is_read_by_admin', false)
+                ->count(),
+        ];
+
         PermissionRequest::where('schoolID', $schoolID)->update(['is_read_by_admin' => true]);
 
         if ($request->ajax() || $request->expectsJson()) {
@@ -2397,7 +2589,10 @@ class AdminController extends Controller
                 if ($tab === 'student' && $permission->student) {
                     $requesterName = trim(($permission->student->first_name ?? '') . ' ' . ($permission->student->last_name ?? ''));
                 }
-                if ($tab !== 'student' && $permission->teacher) {
+                if ($tab === 'staff' && $permission->staff) {
+                    $requesterName = trim(($permission->staff->first_name ?? '') . ' ' . ($permission->staff->last_name ?? ''));
+                }
+                if ($tab === 'teacher' && $permission->teacher) {
                     $requesterName = trim(($permission->teacher->first_name ?? '') . ' ' . ($permission->teacher->last_name ?? ''));
                 }
                 return [
@@ -2433,6 +2628,7 @@ class AdminController extends Controller
             'pendingCount' => $pendingCount,
             'approvedCount' => $approvedCount,
             'rejectedCount' => $rejectedCount,
+            'tabCounts' => $tabCounts,
         ]);
     }
 
@@ -2574,6 +2770,7 @@ class AdminController extends Controller
 
         $schoolID = Session::get('schoolID');
         $schoolName = School::where('schoolID', $schoolID)->value('school_name') ?? 'School';
+        Session::put('visitors_last_seen', now()->toDateTimeString());
 
         return view('Admin.manage_school_visitors', [
             'schoolName' => $schoolName,
@@ -2967,8 +3164,9 @@ class AdminController extends Controller
         $user = Session::get('user_type');
         $schoolID = Session::get('schoolID');
 
-        if (!$user || $user !== 'Admin') {
-            return redirect()->route('login')->with('error', 'Unauthorized access');
+        $resourcePermissions = ['resources_create', 'resources_update', 'resources_delete', 'resources_read_only'];
+        if (!$user || ($user !== 'Admin' && ! $this->staffHasAnyPermission($resourcePermissions))) {
+            return redirect()->back()->with('error', 'Unauthorized access');
         }
 
         return view('Admin.resource_report', compact('schoolID'));
@@ -2979,8 +3177,9 @@ class AdminController extends Controller
         $user = Session::get('user_type');
         $schoolID = Session::get('schoolID');
 
-        if (!$user || $user !== 'Admin') {
-            return redirect()->route('login')->with('error', 'Unauthorized access');
+        $resourcePermissions = ['resources_create', 'resources_update', 'resources_delete', 'resources_read_only'];
+        if (!$user || ($user !== 'Admin' && ! $this->staffHasAnyPermission($resourcePermissions))) {
+            return redirect()->back()->with('error', 'Unauthorized access');
         }
 
         return view('Admin.usage_report', compact('schoolID'));

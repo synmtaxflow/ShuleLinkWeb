@@ -6,9 +6,13 @@ use App\Models\ClassModel;
 use App\Models\ClassSubject;
 use App\Models\Examination;
 use App\Models\ExamPaper;
+use App\Models\ExamPaperNotification;
+use App\Models\ExamPaperQuestion;
+use App\Models\ExamPaperOptionalRange;
 use App\Models\Result;
 use App\Models\ResultApproval;
 use App\Models\Role;
+use App\Models\School;
 use App\Models\Student;
 use App\Models\Subclass;
 use App\Models\SubjectElector;
@@ -61,6 +65,8 @@ class ManageExaminationController extends Controller
 
         // Get schoolID from session
         $schoolID = Session::get('schoolID');
+        $school = School::find($schoolID);
+        $schoolType = $school && $school->school_type ? $school->school_type : 'Secondary';
 
         // Get examinations with upload_paper = true for this school
         // Include scheduled, ongoing, and awaiting_results statuses
@@ -92,7 +98,54 @@ class ManageExaminationController extends Controller
             'examinations' => $examinations,
             'myExamPapers' => $myExamPapers,
             'rejectionNotifications' => $rejectionNotifications,
+            'schoolType' => $schoolType,
         ]);
+    }
+
+    public function getExamAllowedClasses($examID)
+    {
+        $userType = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (! $userType || ! $schoolID) {
+            return response()->json(['error' => 'Unauthorized access'], 401);
+        }
+
+        try {
+            $exam = Examination::where('examID', $examID)
+                ->where('schoolID', $schoolID)
+                ->first();
+
+            if (! $exam) {
+                return response()->json(['error' => 'Examination not found'], 404);
+            }
+
+            $allowedClassIds = [];
+
+            if (($exam->exam_category ?? '') === 'special_exams') {
+                $allowedClassIds = DB::table('exam_halls')
+                    ->where('examID', $examID)
+                    ->distinct()
+                    ->pluck('classID')
+                    ->toArray();
+            } else {
+                $allowedClassIds = ClassModel::where('schoolID', $schoolID)
+                    ->pluck('classID')
+                    ->toArray();
+
+                $exceptClassIds = $exam->except_class_ids ?? [];
+                if (! empty($exceptClassIds)) {
+                    $allowedClassIds = array_values(array_diff($allowedClassIds, $exceptClassIds));
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'allowed_class_ids' => $allowedClassIds,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to load exam classes'], 500);
+        }
     }
 
     private function hasPermission($permissionName)
@@ -132,6 +185,27 @@ class ManageExaminationController extends Controller
                 ->exists();
 
             return $hasPermission;
+        }
+
+        // For staff, check profession permissions
+        if ($userType === 'Staff') {
+            $staffID = Session::get('staffID');
+            if (!$staffID) {
+                return false;
+            }
+
+            $professionId = DB::table('other_staff')
+                ->where('id', $staffID)
+                ->value('profession_id');
+
+            if (!$professionId) {
+                return false;
+            }
+
+            return DB::table('staff_permissions')
+                ->where('profession_id', $professionId)
+                ->where('name', $permissionName)
+                ->exists();
         }
 
         return false;
@@ -3786,7 +3860,130 @@ class ManageExaminationController extends Controller
             'class_subjectID' => 'required|exists:class_subjects,class_subjectID',
             'upload_type' => 'required|in:upload',
             'file' => 'required|file|mimes:pdf,doc,docx|max:10240',
+            'optional_ranges' => 'nullable|array',
+            'optional_ranges.*' => 'integer|min:1|max:100',
+            'optional_required_counts' => 'nullable|array',
+            'optional_required_counts.*' => 'integer|min:1|max:100',
         ]);
+
+        $school = School::find(Session::get('schoolID'));
+        $schoolType = $school && $school->school_type ? strtolower($school->school_type) : 'secondary';
+        $requiresQuestionFormat = $schoolType === 'secondary';
+
+        if ($requiresQuestionFormat) {
+            $validator->after(function ($validator) use ($request) {
+                $descriptions = $request->input('question_descriptions', []);
+                $marks = $request->input('question_marks', []);
+                $optionals = $request->input('question_optional', []);
+                $optionalRanges = $request->input('optional_ranges', []);
+                $optionalRequiredCounts = $request->input('optional_required_counts', []);
+                $optionalEnabled = is_array($optionalRanges) && count($optionalRanges) > 0;
+                $optionalTotals = [];
+                if ($optionalEnabled) {
+                    foreach ($optionalRanges as $rangeNumber => $totalMarks) {
+                        $rangeNumber = (int) $rangeNumber;
+                        $totalMarks = (int) $totalMarks;
+                        if ($rangeNumber <= 0 || $totalMarks <= 0 || $totalMarks >= 100) {
+                            $validator->errors()->add('optional_ranges', 'Optional range total marks must be between 1 and 99.');
+                            return;
+                        }
+                        $optionalTotals[$rangeNumber] = $totalMarks;
+                    }
+                }
+
+                if (! is_array($descriptions) || count($descriptions) === 0) {
+                    $validator->errors()->add('question_descriptions', 'Please add at least one question format.');
+                    return;
+                }
+
+                if (! is_array($marks) || count($marks) === 0) {
+                    $validator->errors()->add('question_marks', 'Please provide marks for each question.');
+                    return;
+                }
+
+                if (count($descriptions) !== count($marks)) {
+                    $validator->errors()->add('question_marks', 'Question descriptions and marks do not match.');
+                    return;
+                }
+
+                $requiredTotal = 0;
+                $optionalSum = 0;
+                foreach ($descriptions as $index => $description) {
+                    $description = trim((string) $description);
+                    $markValue = $marks[$index] ?? null;
+                    $optionalRange = isset($optionals[$index]) ? (int) $optionals[$index] : 0;
+                    $isOptional = $optionalRange > 0;
+
+                    if ($description === '') {
+                        $validator->errors()->add("question_descriptions.{$index}", 'Question description is required.');
+                        return;
+                    }
+
+                    if (! is_numeric($markValue) || (int) $markValue <= 0) {
+                        $validator->errors()->add("question_marks.{$index}", 'Each question must have a valid marks value.');
+                        return;
+                    }
+
+                    if ($isOptional) {
+                        $optionalSum += (int) $markValue;
+                    } else {
+                        $requiredTotal += (int) $markValue;
+                    }
+                }
+
+                if ($optionalEnabled) {
+                    $optionalSumByRange = [];
+                    $optionalCountByRange = [];
+                    foreach ($descriptions as $index => $description) {
+                        $rangeNumber = isset($optionals[$index]) ? (int) $optionals[$index] : 0;
+                        if ($rangeNumber > 0) {
+                            $optionalSumByRange[$rangeNumber] = ($optionalSumByRange[$rangeNumber] ?? 0) + (int) ($marks[$index] ?? 0);
+                            $optionalCountByRange[$rangeNumber] = ($optionalCountByRange[$rangeNumber] ?? 0) + 1;
+                        }
+                    }
+
+                    $optionalTotalSum = array_sum($optionalTotals);
+                    if ($optionalTotalSum > 100) {
+                        $validator->errors()->add('optional_ranges', 'Optional range totals cannot exceed 100.');
+                        return;
+                    }
+
+                    foreach ($optionalRequiredCounts as $rangeNumber => $requiredCount) {
+                        $rangeNumber = (int) $rangeNumber;
+                        $requiredCount = (int) $requiredCount;
+                        if ($requiredCount <= 0) {
+                            $validator->errors()->add('optional_required_counts', 'Required optional questions must be at least 1.');
+                            return;
+                        }
+                        $available = $optionalCountByRange[$rangeNumber] ?? 0;
+                        if ($requiredCount > $available) {
+                            $validator->errors()->add('optional_required_counts', "Required optional questions exceed available questions for range {$rangeNumber}.");
+                            return;
+                        }
+                    }
+
+                    foreach ($optionalTotals as $rangeNumber => $rangeTotal) {
+                        $sum = $optionalSumByRange[$rangeNumber] ?? 0;
+                        if ($sum < $rangeTotal) {
+                            $validator->errors()->add('question_marks', "Optional range {$rangeNumber} total must be at least {$rangeTotal}.");
+                            return;
+                        }
+                    }
+
+                    if ($requiredTotal > (100 - $optionalTotalSum)) {
+                        $validator->errors()->add('question_marks', 'Required questions exceed allowed total.');
+                        return;
+                    }
+                    if (($requiredTotal + $optionalTotalSum) !== 100) {
+                        $validator->errors()->add('question_marks', 'Required total plus optional totals must be exactly 100.');
+                        return;
+                    }
+                } else if (($requiredTotal + $optionalSum) !== 100) {
+                    $validator->errors()->add('question_marks', 'Total marks must be exactly 100.');
+                    return;
+                }
+            });
+        }
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
@@ -3814,8 +4011,17 @@ class ManageExaminationController extends Controller
             return response()->json(['error' => 'You can only upload exam papers for examinations with upload paper enabled'], 422);
         }
 
-        // Allow multiple exam papers to be uploaded for the same subject
-        // Teachers can upload new papers even if they have existing ones
+        $existingPaper = ExamPaper::where('examID', $request->examID)
+            ->where('class_subjectID', $request->class_subjectID)
+            ->where('teacherID', $teacherID)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if ($existingPaper && $existingPaper->status !== 'rejected') {
+            return response()->json([
+                'error' => 'You already submitted this exam paper. Please use the edit option to update.',
+            ], 422);
+        }
 
         try {
             DB::beginTransaction();
@@ -3832,10 +4038,93 @@ class ManageExaminationController extends Controller
             $filePath = $file->storeAs('exam_papers', $fileName, 'public');
             $examPaper->file_path = $filePath;
             $examPaper->question_content = null;
+            $examPaper->optional_question_total = null;
 
             $examPaper->save();
 
+            if ($requiresQuestionFormat) {
+                $descriptions = $request->input('question_descriptions', []);
+                $marks = $request->input('question_marks', []);
+                $optionals = $request->input('question_optional', []);
+                $optionalRanges = $request->input('optional_ranges', []);
+                $optionalRequiredCounts = $request->input('optional_required_counts', []);
+                $optionalTotals = [];
+                if (is_array($optionalRanges)) {
+                    foreach ($optionalRanges as $rangeNumber => $totalMarks) {
+                        $rangeNumber = (int) $rangeNumber;
+                        $totalMarks = (int) $totalMarks;
+                        if ($rangeNumber > 0 && $totalMarks > 0) {
+                            $optionalTotals[$rangeNumber] = $totalMarks;
+                        }
+                    }
+                }
+                $optionalRequiredMap = [];
+                if (is_array($optionalRequiredCounts)) {
+                    foreach ($optionalRequiredCounts as $rangeNumber => $requiredCount) {
+                        $rangeNumber = (int) $rangeNumber;
+                        $requiredCount = (int) $requiredCount;
+                        if ($rangeNumber > 0 && $requiredCount > 0) {
+                            $optionalRequiredMap[$rangeNumber] = $requiredCount;
+                        }
+                    }
+                }
+
+                foreach ($descriptions as $index => $description) {
+                    $markValue = $marks[$index] ?? null;
+                    ExamPaperQuestion::create([
+                        'exam_paperID' => $examPaper->exam_paperID,
+                        'question_number' => $index + 1,
+                        'is_optional' => isset($optionals[$index]) ? (int) $optionals[$index] > 0 : false,
+                        'optional_range_number' => isset($optionals[$index]) && (int) $optionals[$index] > 0 ? (int) $optionals[$index] : null,
+                        'question_description' => trim((string) $description),
+                        'marks' => (int) $markValue,
+                    ]);
+                }
+
+                foreach ($optionalTotals as $rangeNumber => $totalMarks) {
+                    ExamPaperOptionalRange::create([
+                        'exam_paperID' => $examPaper->exam_paperID,
+                        'range_number' => $rangeNumber,
+                        'total_marks' => $totalMarks,
+                        'required_questions' => $optionalRequiredMap[$rangeNumber] ?? 1,
+                    ]);
+                }
+            }
+
+            ExamPaperNotification::create([
+                'schoolID' => Session::get('schoolID'),
+                'exam_paperID' => $examPaper->exam_paperID,
+                'teacherID' => $teacherID,
+                'is_read' => false,
+            ]);
+
             DB::commit();
+
+            // Send SMS to school phone for approval notification
+            try {
+                $school = \App\Models\School::find(Session::get('schoolID'));
+                $schoolPhone = $school ? $school->phone : null;
+                if ($schoolPhone) {
+                    $teacherName = trim(($classSubject->teacher->first_name ?? '') . ' ' . ($classSubject->teacher->last_name ?? ''));
+                    $subjectName = $classSubject->subject->subject_name ?? 'somo';
+                    $mainClass = $classSubject->class->class_name ?? ($classSubject->subclass->class->class_name ?? 'N/A');
+                    $subclassName = $classSubject->subclass->subclass_name ?? '';
+                    $classDisplay = trim($mainClass . ' ' . $subclassName);
+                    $examName = $examination->exam_name ?? 'Mtihani';
+                    $dateText = now()->format('Y-m-d H:i');
+
+                    $smsMessage = "New exam paper {$examName} uploaded by teacher: {$teacherName}, subject: {$subjectName}, class: {$classDisplay}, date: {$dateText}. Login to approve now.";
+
+                    $smsService = new SmsService();
+                    $smsResult = $smsService->sendSms($schoolPhone, $smsMessage);
+
+                    if (!($smsResult['success'] ?? false)) {
+                        Log::warning("Failed to send school SMS for exam paper {$examPaper->exam_paperID}: " . ($smsResult['message'] ?? 'Unknown error'));
+                    }
+                }
+            } catch (\Exception $smsException) {
+                Log::error('Error sending school SMS for exam paper: '.$smsException->getMessage());
+            }
 
             return response()->json([
                 'success' => 'Exam paper submitted successfully. Waiting for approval.',
@@ -3896,7 +4185,9 @@ class ManageExaminationController extends Controller
             $query->where('class_subjectID', $class_subjectID);
         }
 
-        $examPapers = $query->orderBy('created_at', 'desc')->get();
+        $examPapers = $query->orderBy('created_at', 'desc')
+            ->with(['questions', 'optionalRanges'])
+            ->get();
 
         return response()->json([
             'success' => true,
@@ -4069,6 +4360,192 @@ class ManageExaminationController extends Controller
 
             return response()->json(['error' => 'Failed to update exam paper'], 500);
         }
+    }
+
+    public function getExamPaperQuestions($examPaperID)
+    {
+        $teacherID = Session::get('teacherID');
+        $userType = Session::get('user_type');
+
+        if ($userType !== 'Teacher' || ! $teacherID) {
+            return response()->json(['error' => 'Access denied'], 403);
+        }
+
+        try {
+            $examPaper = ExamPaper::where('exam_paperID', $examPaperID)
+                ->where('teacherID', $teacherID)
+                ->firstOrFail();
+
+            $questions = ExamPaperQuestion::where('exam_paperID', $examPaper->exam_paperID)
+                ->orderBy('question_number')
+                ->get([
+                    'exam_paper_questionID',
+                    'question_number',
+                    'question_description',
+                    'marks',
+                    'is_optional',
+                    'optional_range_number',
+                ]);
+
+            $optionalRanges = ExamPaperOptionalRange::where('exam_paperID', $examPaper->exam_paperID)
+                ->orderBy('range_number')
+                ->get(['range_number', 'total_marks']);
+
+            return response()->json([
+                'success' => true,
+                'questions' => $questions,
+                'optional_ranges' => $optionalRanges,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to load questions'], 500);
+        }
+    }
+
+    public function updateExamPaperQuestions(Request $request, $examPaperID)
+    {
+        $teacherID = Session::get('teacherID');
+        $userType = Session::get('user_type');
+
+        if ($userType !== 'Teacher' || ! $teacherID) {
+            return response()->json(['error' => 'Access denied'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'question_descriptions' => 'required|array|min:1',
+            'question_descriptions.*' => 'required|string|max:500',
+            'question_marks' => 'required|array|min:1',
+            'question_marks.*' => 'required|integer|min:1|max:100',
+            'question_optional' => 'nullable|array',
+            'optional_ranges' => 'nullable|array',
+            'optional_ranges.*' => 'integer|min:1|max:100',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        try {
+            $examPaper = ExamPaper::where('exam_paperID', $examPaperID)
+                ->where('teacherID', $teacherID)
+                ->firstOrFail();
+
+            if ($examPaper->status !== 'wait_approval') {
+                return response()->json(['error' => 'You can only edit questions for pending papers'], 422);
+            }
+
+            $descriptions = $request->input('question_descriptions', []);
+            $marks = $request->input('question_marks', []);
+            $optionals = $request->input('question_optional', []);
+            $optionalRanges = $request->input('optional_ranges', []);
+            $optionalTotals = [];
+
+            if (is_array($optionalRanges)) {
+                foreach ($optionalRanges as $rangeNumber => $totalMarks) {
+                    $rangeNumber = (int) $rangeNumber;
+                    $totalMarks = (int) $totalMarks;
+                    if ($rangeNumber > 0 && $totalMarks > 0 && $totalMarks < 100) {
+                        $optionalTotals[$rangeNumber] = $totalMarks;
+                    }
+                }
+            }
+
+            $optionalTotalSum = array_sum($optionalTotals);
+            if ($optionalTotalSum > 100) {
+                return response()->json(['error' => 'Optional range totals cannot exceed 100.'], 422);
+            }
+
+            $requiredTotal = 0;
+            $optionalSumByRange = [];
+            $optionalCountByRange = [];
+            foreach ($descriptions as $index => $description) {
+                $markValue = $marks[$index] ?? null;
+                $rangeNumber = isset($optionals[$index]) ? (int) $optionals[$index] : 0;
+                $markValue = (int) $markValue;
+                if ($rangeNumber > 0) {
+                    $optionalSumByRange[$rangeNumber] = ($optionalSumByRange[$rangeNumber] ?? 0) + $markValue;
+                    $optionalCountByRange[$rangeNumber] = ($optionalCountByRange[$rangeNumber] ?? 0) + 1;
+                } else {
+                    $requiredTotal += $markValue;
+                }
+            }
+
+            $optionalRequiredCounts = $request->input('optional_required_counts', []);
+            if (is_array($optionalRequiredCounts)) {
+                foreach ($optionalRequiredCounts as $rangeNumber => $requiredCount) {
+                    $rangeNumber = (int) $rangeNumber;
+                    $requiredCount = (int) $requiredCount;
+                    $available = $optionalCountByRange[$rangeNumber] ?? 0;
+                    if ($requiredCount > $available) {
+                        return response()->json(['error' => "Required optional questions exceed available questions for range {$rangeNumber}."], 422);
+                    }
+                }
+            }
+
+            foreach ($optionalTotals as $rangeNumber => $rangeTotal) {
+                $sum = $optionalSumByRange[$rangeNumber] ?? 0;
+                if ($sum < $rangeTotal) {
+                    return response()->json(['error' => "Optional range {$rangeNumber} total must be at least {$rangeTotal}."], 422);
+                }
+            }
+
+            if ($requiredTotal > (100 - $optionalTotalSum)) {
+                return response()->json(['error' => 'Required questions exceed allowed total.'], 422);
+            }
+
+            if (($requiredTotal + $optionalTotalSum) !== 100) {
+                return response()->json(['error' => 'Required total plus optional totals must be exactly 100.'], 422);
+            }
+
+            DB::beginTransaction();
+
+            ExamPaperQuestion::where('exam_paperID', $examPaper->exam_paperID)->delete();
+            ExamPaperOptionalRange::where('exam_paperID', $examPaper->exam_paperID)->delete();
+
+            foreach ($descriptions as $index => $description) {
+                $rangeNumber = isset($optionals[$index]) ? (int) $optionals[$index] : 0;
+                ExamPaperQuestion::create([
+                    'exam_paperID' => $examPaper->exam_paperID,
+                    'question_number' => $index + 1,
+                    'is_optional' => $rangeNumber > 0,
+                    'optional_range_number' => $rangeNumber > 0 ? $rangeNumber : null,
+                    'question_description' => trim((string) $description),
+                    'marks' => (int) ($marks[$index] ?? 0),
+                ]);
+            }
+
+            foreach ($optionalTotals as $rangeNumber => $totalMarks) {
+                ExamPaperOptionalRange::create([
+                    'exam_paperID' => $examPaper->exam_paperID,
+                    'range_number' => $rangeNumber,
+                    'total_marks' => $totalMarks,
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => 'Exam paper questions updated successfully.',
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Failed to update exam paper questions'], 500);
+        }
+    }
+
+    public function markExamPaperNotificationsRead()
+    {
+        $userType = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if ($userType !== 'Admin' || ! $schoolID) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        ExamPaperNotification::where('schoolID', $schoolID)
+            ->where('is_read', false)
+            ->update(['is_read' => true]);
+
+        return response()->json(['success' => true]);
     }
 
     /**

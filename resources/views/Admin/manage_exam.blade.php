@@ -1,10 +1,10 @@
 @if($user_type == 'Admin')
 @include('includes.Admin_nav')
+@elseif($user_type == 'Staff')
+@include('includes.staff_nav')
 @else
 @include('includes.teacher_nav')
 @endif
-
-
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
 <style>
@@ -41,6 +41,42 @@
         transform: translateY(-8px);
         box-shadow: 0 8px 24px rgba(148, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1) !important;
         transition: all 0.3s ease;
+    }
+    .exam-widget-card {
+        border-radius: 12px;
+        border: 1px solid #f1d7d7;
+        box-shadow: 0 6px 16px rgba(148, 0, 0, 0.08);
+        font-family: "Century Gothic", "Segoe UI", Tahoma, sans-serif;
+        background-color: #ffffff;
+    }
+    .exam-widget-title {
+        color: #940000;
+        font-weight: 600;
+        font-size: 1.05rem;
+    }
+    .exam-widget-meta {
+        color: #6c757d;
+        font-size: 0.85rem;
+    }
+    .exam-widget-action {
+        border: 1px solid #940000;
+        color: #940000;
+        background: #ffffff;
+        border-radius: 8px;
+        padding: 0.35rem 0.75rem;
+        font-size: 0.85rem;
+        min-width: 120px;
+    }
+    .exam-widget-status {
+        border: 1px solid #f1d7d7;
+        background-color: #fff7f7;
+        color: #940000;
+        font-weight: 600;
+        border-radius: 10px;
+    }
+    .manage-exam-wrapper,
+    .manage-exam-wrapper * {
+        font-family: "Century Gothic", "Segoe UI", Tahoma, sans-serif;
     }
     .nav-tabs .nav-link.active {
         background-color: #940000;
@@ -186,7 +222,7 @@
 <!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
-<div class="container-fluid mt-4">
+<div class="container-fluid mt-4 manage-exam-wrapper">
     <div class="row">
         <div class="col-12">
             @if(session('success'))
@@ -4229,6 +4265,44 @@ function loadExamPapers(examID, search = '', status = '') {
                         `;
 
                         // Display papers for this subclass
+                        function renderQuestionFormats(paper) {
+                            if (!paper.questions || paper.questions.length === 0) {
+                                return '<div class="text-muted small">No question formats provided.</div>';
+                            }
+
+                            const optionalRanges = paper.optional_ranges || [];
+                            let optionalSummary = '';
+                            if (optionalRanges.length > 0) {
+                                const rangeLabels = optionalRanges.map(r => `Opt ${r.range_number}: ${r.total_marks}`).join(' | ');
+                                optionalSummary = `<div class="small text-muted mb-2"><strong>Optional Totals:</strong> ${rangeLabels}</div>`;
+                            }
+
+                            const questionsHtml = paper.questions
+                                .sort((a, b) => (a.question_number || 0) - (b.question_number || 0))
+                                .map(q => {
+                                    const optLabel = q.is_optional ? ` <span class="badge badge-warning">Opt ${q.optional_range_number || ''}</span>` : '';
+                                    return `
+                                        <div class="d-flex justify-content-between align-items-center border-bottom py-1">
+                                            <div>
+                                                <strong>Qn ${q.question_number}:</strong> ${q.question_description}${optLabel}
+                                            </div>
+                                            <div class="text-primary"><strong>${q.marks}</strong></div>
+                                        </div>
+                                    `;
+                                }).join('');
+
+                            return `
+                                <div class="mt-3 p-3 border rounded bg-light">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <strong class="text-primary-custom"><i class="bi bi-list-check"></i> Question Formats</strong>
+                                        <span class="badge badge-info">Total 100</span>
+                                    </div>
+                                    ${optionalSummary}
+                                    ${questionsHtml}
+                                </div>
+                            `;
+                        }
+
                         group.papers.forEach(function(paper) {
                             const subjectName = paper.class_subject?.subject?.subject_name || 'N/A';
                             const teacherName = paper.teacher ? (paper.teacher.first_name + ' ' + paper.teacher.last_name) : 'N/A';
@@ -4274,6 +4348,7 @@ function loadExamPapers(examID, search = '', status = '') {
                                             <p class="mb-0 text-muted">
                                                 <small><i class="bi bi-calendar"></i> Uploaded: ${new Date(paper.created_at).toLocaleString()}</small>
                                             </p>
+                                            ${renderQuestionFormats(paper)}
                                         </div>
                                         <div class="col-md-4 text-right">
                                             ${hasPermission('view_exam_papers') ? `

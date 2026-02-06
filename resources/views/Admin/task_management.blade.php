@@ -1,4 +1,10 @@
+@if($user_type == 'Admin')
 @include('includes.Admin_nav')
+@elseif($user_type == 'Staff')
+@include('includes.staff_nav')
+@else
+@include('includes.teacher_nav')
+@endif
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 <meta name="csrf-token" content="{{ csrf_token() }}">

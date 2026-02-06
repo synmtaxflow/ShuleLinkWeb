@@ -1,5 +1,7 @@
 @if($user_type == 'Admin')
 @include('includes.Admin_nav')
+@elseif($user_type == 'Staff')
+@include('includes.staff_nav')
 @else
 @include('includes.teacher_nav')
 @endif

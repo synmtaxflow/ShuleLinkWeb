@@ -18,6 +18,7 @@ class ExamPaper extends Model
         'teacherID',
         'file_path',
         'question_content',
+        'optional_question_total',
         'upload_type',
         'status',
         'rejection_reason',
@@ -43,6 +44,16 @@ class ExamPaper extends Model
     public function teacher()
     {
         return $this->belongsTo(Teacher::class, 'teacherID', 'id');
+    }
+
+    public function questions()
+    {
+        return $this->hasMany(ExamPaperQuestion::class, 'exam_paperID', 'exam_paperID');
+    }
+
+    public function optionalRanges()
+    {
+        return $this->hasMany(ExamPaperOptionalRange::class, 'exam_paperID', 'exam_paperID');
     }
 }
 

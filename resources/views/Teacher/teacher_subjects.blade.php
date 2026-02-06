@@ -468,6 +468,16 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
+const isSecondarySchool = @json(strtolower($schoolType ?? 'Secondary')) === 'secondary';
+const questionColspan = isSecondarySchool ? 7 : 6;
+let examQuestionData = {
+    questions: [],
+    marksByStudent: {},
+    maxTotal: 0,
+    optionalTotal: 0,
+    optionalRanges: []
+};
+
 $(document).ready(function() {
     $.ajaxSetup({
         headers: {
@@ -583,6 +593,229 @@ function getGradeCellClass(grade) {
         return 'bg-danger text-white';
     }
     return 'bg-info text-white';
+}
+
+function resetQuestionData() {
+    examQuestionData = {
+        questions: [],
+        marksByStudent: {},
+        maxTotal: 0,
+        optionalTotal: 0,
+        optionalRanges: []
+    };
+    if (isSecondarySchool) {
+        $('.question-details-row').addClass('d-none').removeClass('loaded');
+        $('.question-detail-container').html('<div class="text-muted small">Select examination to load question formats.</div>');
+    }
+}
+
+function loadExamQuestionData(classSubjectID, examID) {
+    if (!isSecondarySchool) {
+        return;
+    }
+
+    resetQuestionData();
+
+    if (!examID) {
+        return;
+    }
+
+    $.ajax({
+        url: `/get_exam_paper_question_data/${classSubjectID}/${examID}`,
+        method: 'GET',
+        success: function(response) {
+            if (!response.success) {
+                return;
+            }
+
+            examQuestionData.questions = response.questions || [];
+            examQuestionData.marksByStudent = response.marks_by_student || {};
+            examQuestionData.maxTotal = response.max_total || 0;
+            examQuestionData.optionalTotal = response.optional_total || 0;
+            examQuestionData.optionalRanges = response.optional_ranges || [];
+
+            if (examQuestionData.questions.length === 0) {
+                $('.question-detail-container').html(
+                    '<div class="alert alert-warning mb-0">' +
+                    '<i class="bi bi-exclamation-triangle"></i> No approved exam paper question formats found for this subject.' +
+                    '</div>'
+                );
+                return;
+            }
+
+            updateTotalsFromCache();
+        },
+        error: function() {
+            $('.question-detail-container').html(
+                '<div class="alert alert-danger mb-0">' +
+                '<i class="bi bi-exclamation-triangle"></i> Failed to load question formats.' +
+                '</div>'
+            );
+        }
+    });
+}
+
+function buildQuestionDetails(studentID) {
+    if (!isSecondarySchool) {
+        return '';
+    }
+
+    if (!examQuestionData.questions || examQuestionData.questions.length === 0) {
+        return `
+            <div class="alert alert-warning mb-0">
+                <i class="bi bi-exclamation-triangle"></i> No question formats available.
+            </div>
+        `;
+    }
+
+    let html = '<div class="question-list">';
+    examQuestionData.questions.forEach(function(question) {
+        const existingMarks = examQuestionData.marksByStudent[studentID] &&
+            examQuestionData.marksByStudent[studentID][question.exam_paper_questionID] !== undefined
+            ? examQuestionData.marksByStudent[studentID][question.exam_paper_questionID]
+            : '';
+        let optionalTag = '';
+        if (question.is_optional) {
+            const rangeLabel = question.optional_range_number ? `Opt ${question.optional_range_number}` : 'Optional';
+            optionalTag = `<span class="badge badge-warning ml-2">${rangeLabel}</span>`;
+        }
+        html += `
+            <div class="form-row align-items-end mb-2">
+                <div class="col-md-2">
+                    <label class="small text-muted mb-1">Qn ${question.question_number}</label>
+                </div>
+                <div class="col-md-6">
+                    <div class="small font-weight-bold">${question.question_description} ${optionalTag}</div>
+                    <div class="small text-muted">Max: ${question.marks}</div>
+                </div>
+                <div class="col-md-4">
+                    ${question.is_optional ? `
+                        <div class="form-check mb-1">
+                            <input class="form-check-input optional-select" type="checkbox"
+                                   data-student="${studentID}"
+                                   data-question-id="${question.exam_paper_questionID}"
+                                   data-optional-range="${question.optional_range_number || 0}">
+                            <label class="form-check-label small">Selected</label>
+                        </div>
+                    ` : ''}
+                    <input type="number"
+                           class="form-control form-control-sm question-mark-input"
+                           data-student="${studentID}"
+                           data-question-id="${question.exam_paper_questionID}"
+                           data-optional="${question.is_optional ? 1 : 0}"
+                           data-optional-range="${question.optional_range_number || 0}"
+                           data-max="${question.marks}"
+                           min="0"
+                           max="${question.marks}"
+                           step="0.01"
+                           value="${existingMarks}"
+                           ${question.is_optional ? 'disabled' : ''}>
+                    <div class="text-danger small question-max-warning d-none"></div>
+                </div>
+            </div>
+        `;
+    });
+    html += `
+        </div>
+        <div class="text-muted small mt-2">
+            Total: <span class="student-question-total" data-student="${studentID}">0</span> / ${examQuestionData.maxTotal || 100}
+        </div>
+        ${examQuestionData.optionalTotal > 0 ? `
+            <div class="text-muted small">
+                Optional Total: ${examQuestionData.optionalTotal}
+            </div>
+        ` : ''}
+        <div class="text-danger small optional-total-warning d-none" data-student="${studentID}"></div>
+    `;
+
+    return html;
+}
+
+function updateTotalsFromCache() {
+    if (!isSecondarySchool || !examQuestionData.marksByStudent) {
+        return;
+    }
+
+    Object.keys(examQuestionData.marksByStudent).forEach(function(studentID) {
+        const questionMarks = examQuestionData.marksByStudent[studentID] || {};
+        let total = 0;
+        let hasMarks = false;
+        Object.keys(questionMarks).forEach(function(questionId) {
+            const value = parseFloat(questionMarks[questionId]);
+            if (!isNaN(value)) {
+                total += value;
+                hasMarks = true;
+            }
+        });
+
+        if (hasMarks) {
+            const displayTotal = Number.isInteger(total) ? total : total.toFixed(2);
+            $(`#marks_${studentID}`).val(displayTotal);
+            autoCalculateGrade(studentID);
+        }
+    });
+}
+
+function updateStudentTotal(studentID) {
+    let total = 0;
+    let requiredTotal = 0;
+    let optionalTotal = 0;
+    let optionalTotalsByRange = {};
+    let hasMarks = false;
+    const optionalSelectedByRange = {};
+    $(`.question-mark-input[data-student="${studentID}"]`).each(function() {
+        const value = parseFloat($(this).val());
+        const isOptional = $(this).data('optional') == 1;
+        const rangeNumber = parseInt($(this).data('optional-range'), 10);
+        if (!isNaN(value)) {
+            total += value;
+            if (isOptional) {
+                optionalTotal += value;
+                if (rangeNumber > 0) {
+                    optionalTotalsByRange[rangeNumber] = (optionalTotalsByRange[rangeNumber] || 0) + value;
+                }
+            } else {
+                requiredTotal += value;
+            }
+            hasMarks = true;
+        }
+    });
+
+    $(`.optional-select[data-student="${studentID}"]`).each(function() {
+        const rangeNumber = parseInt($(this).data('optional-range'), 10);
+        if (rangeNumber > 0 && $(this).is(':checked')) {
+            optionalSelectedByRange[rangeNumber] = (optionalSelectedByRange[rangeNumber] || 0) + 1;
+        }
+    });
+
+    const $optionalWarning = $(`.optional-total-warning[data-student="${studentID}"]`);
+    const rangeExceeded = Object.keys(optionalTotalsByRange).some(function(range) {
+        const sum = optionalTotalsByRange[range];
+        const rangeTotal = (examQuestionData.optionalRanges || []).find(r => r.range_number == range);
+        return rangeTotal && sum > parseFloat(rangeTotal.total_marks);
+    });
+
+    const selectionExceeded = Object.keys(optionalSelectedByRange).some(function(range) {
+        const selected = optionalSelectedByRange[range];
+        const rangeMeta = (examQuestionData.optionalRanges || []).find(r => r.range_number == range);
+        const requiredCount = rangeMeta ? parseInt(rangeMeta.required_questions || 0, 10) : 0;
+        return requiredCount > 0 && selected > requiredCount;
+    });
+
+    if (selectionExceeded) {
+        $optionalWarning.text('Optional questions selected exceed required count.').removeClass('d-none');
+    } else if (rangeExceeded) {
+        $optionalWarning.text('Optional marks exceed allowed range total.').removeClass('d-none');
+    } else if (examQuestionData.optionalTotal > 0 && optionalTotal > examQuestionData.optionalTotal) {
+        $optionalWarning.text('Optional marks exceed allowed total.').removeClass('d-none');
+    } else {
+        $optionalWarning.addClass('d-none').text('');
+    }
+
+    const displayTotal = Number.isInteger(total) ? total : total.toFixed(2);
+    $(`.student-question-total[data-student="${studentID}"]`).text(hasMarks ? displayTotal : 0);
+    $(`#marks_${studentID}`).val(hasMarks ? displayTotal : '');
+    autoCalculateGrade(studentID);
 }
 
 // View Students
@@ -844,6 +1077,7 @@ function loadResultsForExam(classSubjectID, examID) {
 function editResults(classSubjectID) {
     // Clear exam data cache when opening modal
     window.examDataCache = {};
+    resetQuestionData();
     
     // First check if there are any examinations with enter_result = true
     $.ajax({
@@ -918,22 +1152,29 @@ function editResults(classSubjectID) {
                                             <i class="bi bi-info-circle"></i> Only examinations with "Enter Result" enabled can be edited.
                                         </small>
                                     </div>
-                                    <div class="alert alert-info mt-3">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div>
-                                                <i class="bi bi-file-earmark-excel"></i>
-                                                <strong>Excel Import/Export:</strong> Download template, fill in results, then upload.
-                                            </div>
-                                            <div>
-                                                <button type="button" class="btn btn-sm btn-success" onclick="downloadExcelTemplate(${classSubjectID})" id="downloadExcelBtn" disabled>
-                                                    <i class="bi bi-download"></i> Download Excel Template
-                                                </button>
-                                                <button type="button" class="btn btn-sm btn-primary" onclick="showUploadExcelModal(${classSubjectID})" id="uploadExcelBtn" disabled>
-                                                    <i class="bi bi-upload"></i> Upload Excel
-                                                </button>
+                                    ${isSecondarySchool ? `
+                                        <div class="alert alert-warning mt-3">
+                                            <i class="bi bi-exclamation-triangle"></i>
+                                            Question-based results are enabled. Excel import/export is disabled.
+                                        </div>
+                                    ` : `
+                                        <div class="alert alert-info mt-3">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <i class="bi bi-file-earmark-excel"></i>
+                                                    <strong>Excel Import/Export:</strong> Download template, fill in results, then upload.
+                                                </div>
+                                                <div>
+                                                    <button type="button" class="btn btn-sm btn-success" onclick="downloadExcelTemplate(${classSubjectID})" id="downloadExcelBtn" disabled>
+                                                        <i class="bi bi-download"></i> Download Excel Template
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-primary" onclick="showUploadExcelModal(${classSubjectID})" id="uploadExcelBtn" disabled>
+                                                        <i class="bi bi-upload"></i> Upload Excel
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    `}
                                     <div class="table-responsive mt-3">
                                         <table class="table table-hover">
                                             <thead class="bg-primary-custom text-white">
@@ -941,6 +1182,7 @@ function editResults(classSubjectID) {
                                                     <th>#</th>
                                                     <th>Student Name</th>
                                                     <th>Admission No.</th>
+                                                    ${isSecondarySchool ? '<th class="text-center"><i class="bi bi-list-check"></i></th>' : ''}
                                                     <th>Marks</th>
                                                     <th>Grade</th>
                                                     <th>Remark</th>
@@ -956,13 +1198,21 @@ function editResults(classSubjectID) {
                                             <td>${index + 1}</td>
                                             <td>${student.first_name} ${student.middle_name || ''} ${student.last_name}</td>
                                             <td>${student.admission_number || 'N/A'}</td>
+                                            ${isSecondarySchool ? `
+                                                <td class="text-center">
+                                                    <button type="button" class="btn btn-sm btn-outline-primary toggle-question-btn" data-student="${student.studentID}" title="Add result questions">
+                                                        <i class="bi bi-list-check"></i>
+                                                    </button>
+                                                </td>
+                                            ` : ''}
                                             <td>
                                                 <input type="number" class="form-control form-control-sm marks-input"
                                                        name="marks[${student.studentID}]"
                                                        id="marks_${student.studentID}"
                                                        data-student="${student.studentID}"
                                                        step="0.01" min="0" max="100" placeholder="0.00"
-                                                       oninput="autoCalculateGrade(${student.studentID})">
+                                                       oninput="autoCalculateGrade(${student.studentID})"
+                                                       ${isSecondarySchool ? 'readonly' : ''}>
                                             </td>
                                             <td>
                                                 <input type="text" class="form-control form-control-sm grade-input"
@@ -979,6 +1229,15 @@ function editResults(classSubjectID) {
                                                        placeholder="Remark" readonly>
                                             </td>
                                         </tr>
+                                        ${isSecondarySchool ? `
+                                            <tr class="question-details-row d-none" id="question_details_${student.studentID}" data-student="${student.studentID}">
+                                                <td colspan="${questionColspan}">
+                                                    <div class="question-detail-container" data-student="${student.studentID}">
+                                                        <div class="text-muted small">Select examination to load question formats.</div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ` : ''}
                                     `;
                                 });
                             }
@@ -1093,6 +1352,7 @@ function addResults(classSubjectID, isEdit = false) {
 
     // Clear exam data cache when opening modal
     window.examDataCache = {};
+    resetQuestionData();
 
     // Get students and examinations for this subject
     $.ajax({
@@ -1137,22 +1397,29 @@ function addResults(classSubjectID, isEdit = false) {
                                     <i class="bi bi-info-circle"></i> Only examinations with "Enter Result" enabled can be used.
                                 </small>
                             </div>
-                            <div class="alert alert-info mt-3">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <i class="bi bi-file-earmark-excel"></i>
-                                        <strong>Excel Import/Export:</strong> Download template, fill in results, then upload.
-                                    </div>
-                                    <div>
-                                        <button type="button" class="btn btn-sm btn-success" onclick="downloadExcelTemplate(${classSubjectID})" id="downloadExcelBtn" disabled>
-                                            <i class="bi bi-download"></i> Download Excel Template
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-primary" onclick="showUploadExcelModal(${classSubjectID})" id="uploadExcelBtn" disabled>
-                                            <i class="bi bi-upload"></i> Upload Excel
-                                        </button>
+                            ${isSecondarySchool ? `
+                                <div class="alert alert-warning mt-3">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    Question-based results are enabled. Excel import/export is disabled.
+                                </div>
+                            ` : `
+                                <div class="alert alert-info mt-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="bi bi-file-earmark-excel"></i>
+                                            <strong>Excel Import/Export:</strong> Download template, fill in results, then upload.
+                                        </div>
+                                        <div>
+                                            <button type="button" class="btn btn-sm btn-success" onclick="downloadExcelTemplate(${classSubjectID})" id="downloadExcelBtn" disabled>
+                                                <i class="bi bi-download"></i> Download Excel Template
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="showUploadExcelModal(${classSubjectID})" id="uploadExcelBtn" disabled>
+                                                <i class="bi bi-upload"></i> Upload Excel
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            `}
                             <div class="table-responsive mt-3">
                                 <table class="table table-hover">
                                     <thead class="bg-primary-custom text-white">
@@ -1160,6 +1427,7 @@ function addResults(classSubjectID, isEdit = false) {
                                             <th>#</th>
                                             <th>Student Name</th>
                                             <th>Admission No.</th>
+                                            ${isSecondarySchool ? '<th class="text-center"><i class="bi bi-list-check"></i></th>' : ''}
                                             <th>Marks</th>
                                             <th>Grade</th>
                                             <th>Remark</th>
@@ -1175,13 +1443,21 @@ function addResults(classSubjectID, isEdit = false) {
                                     <td>${index + 1}</td>
                                     <td>${student.first_name} ${student.middle_name || ''} ${student.last_name}</td>
                                     <td>${student.admission_number || 'N/A'}</td>
+                                    ${isSecondarySchool ? `
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-sm btn-outline-primary toggle-question-btn" data-student="${student.studentID}" title="Add result questions">
+                                                <i class="bi bi-list-check"></i>
+                                            </button>
+                                        </td>
+                                    ` : ''}
                                     <td>
                                         <input type="number" class="form-control form-control-sm marks-input"
                                                name="marks[${student.studentID}]"
                                                id="marks_${student.studentID}"
                                                data-student="${student.studentID}"
                                                step="0.01" min="0" max="100" placeholder="0.00"
-                                               oninput="autoCalculateGrade(${student.studentID})">
+                                               oninput="autoCalculateGrade(${student.studentID})"
+                                               ${isSecondarySchool ? 'readonly' : ''}>
                                     </td>
                                     <td>
                                         <input type="text" class="form-control form-control-sm grade-input"
@@ -1198,6 +1474,15 @@ function addResults(classSubjectID, isEdit = false) {
                                                placeholder="Remark" readonly>
                                     </td>
                                 </tr>
+                                ${isSecondarySchool ? `
+                                    <tr class="question-details-row d-none" id="question_details_${student.studentID}" data-student="${student.studentID}">
+                                        <td colspan="${questionColspan}">
+                                            <div class="question-detail-container" data-student="${student.studentID}">
+                                                <div class="text-muted small">Select examination to load question formats.</div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ` : ''}
                             `;
                         });
                     }
@@ -1272,21 +1557,117 @@ $(document).on('submit', '#resultsForm', function(e) {
 
     const results = [];
 
-    $('.marks-input').each(function() {
-        const studentID = $(this).data('student');
-        const marks = $(this).val();
-        const grade = $(`.grade-input[data-student="${studentID}"]`).val();
-        const remark = $(`.remark-input[data-student="${studentID}"]`).val();
+    if (isSecondarySchool) {
+        if (!examQuestionData.questions || examQuestionData.questions.length === 0) {
+            Swal.fire({
+                title: 'Warning!',
+                text: 'No question formats found for this examination.',
+                icon: 'warning',
+                confirmButtonColor: '#940000'
+            });
+            return;
+        }
 
-        if (marks || grade || remark) {
+        let hasValidationError = false;
+        $('.marks-input').each(function() {
+            const studentID = $(this).data('student');
+            const questionMarks = examQuestionData.marksByStudent[studentID] || {};
+            const optionalRanges = examQuestionData.optionalRanges || [];
+            const hasAnyMarks = Object.keys(questionMarks).length > 0;
+            const selectedOptionalCounts = {};
+
+            $(`.optional-select[data-student="${studentID}"]:checked`).each(function() {
+                const rangeNumber = parseInt($(this).data('optional-range'), 10);
+                if (rangeNumber > 0) {
+                    selectedOptionalCounts[rangeNumber] = (selectedOptionalCounts[rangeNumber] || 0) + 1;
+                }
+            });
+
+            if (!hasAnyMarks) {
+                return;
+            }
+
+            let total = 0;
+            const questionPayload = [];
+            const selectedOptionalIds = {};
+
+            $(`.optional-select[data-student="${studentID}"]:checked`).each(function() {
+                selectedOptionalIds[$(this).data('question-id')] = true;
+            });
+
+            for (let i = 0; i < examQuestionData.questions.length; i++) {
+                const question = examQuestionData.questions[i];
+                const value = questionMarks[question.exam_paper_questionID];
+                const isOptional = question.is_optional;
+                const isSelectedOptional = selectedOptionalIds[question.exam_paper_questionID] === true;
+
+                if (isOptional && !isSelectedOptional) {
+                    continue;
+                }
+
+                if (value === undefined || value === null || value === '') {
+                    hasValidationError = true;
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Please fill all question marks for each student before saving.',
+                        icon: 'error',
+                        confirmButtonColor: '#940000'
+                    });
+                    return false;
+                }
+
+                const numericValue = parseFloat(value);
+                if (isNaN(numericValue) || numericValue < 0 || numericValue > parseFloat(question.marks)) {
+                    hasValidationError = true;
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Question marks must not exceed the allowed maximum.',
+                        icon: 'error',
+                        confirmButtonColor: '#940000'
+                    });
+                    return false;
+                }
+
+                total += numericValue;
+                questionPayload.push({
+                    question_id: question.exam_paper_questionID,
+                    marks: numericValue
+                });
+            }
+
+            const displayTotal = Number.isInteger(total) ? total : total.toFixed(2);
+            $(`#marks_${studentID}`).val(displayTotal);
+            autoCalculateGrade(studentID);
+
             results.push({
                 studentID: studentID,
-                marks: marks || null,
-                grade: grade || null,
-                remark: remark || null
+                marks: total,
+                grade: $(`.grade-input[data-student="${studentID}"]`).val() || null,
+                remark: $(`.remark-input[data-student="${studentID}"]`).val() || null,
+                question_marks: questionPayload
             });
+        });
+
+        if (hasValidationError) {
+            return;
         }
-    });
+    } else {
+        $('.marks-input').each(function() {
+            const studentID = $(this).data('student');
+            const marks = $(this).val();
+            const grade = $(`.grade-input[data-student="${studentID}"]`).val();
+            const remark = $(`.remark-input[data-student="${studentID}"]`).val();
+
+            if (marks || grade || remark) {
+                results.push({
+                    studentID: studentID,
+                    marks: marks || null,
+                    grade: grade || null,
+                    remark: remark || null
+                });
+            }
+        });
+    }
 
     if (results.length === 0) {
         Swal.fire({
@@ -1408,6 +1789,7 @@ function handleExamSelection(classSubjectID, examID) {
         $('#downloadExcelBtn').prop('disabled', true);
         $('#uploadExcelBtn').prop('disabled', true);
         disableResultsForm();
+        resetQuestionData();
         return;
     }
 
@@ -1424,6 +1806,7 @@ function handleExamSelection(classSubjectID, examID) {
             $('#downloadExcelBtn').prop('disabled', true);
             $('#uploadExcelBtn').prop('disabled', true);
             showResultsStatusError('You are not allowed to enter results for this examination. Result entry has been disabled.');
+            resetQuestionData();
             return;
         }
 
@@ -1435,6 +1818,7 @@ function handleExamSelection(classSubjectID, examID) {
         
         // Load existing results after enabling form
         loadExistingResults(classSubjectID, examID);
+        loadExamQuestionData(classSubjectID, examID);
     } else {
         // Fallback: try to get exam data from option attributes
         const selectedOption = $(`#exam_id option[value="${examID}"]`);
@@ -1445,6 +1829,7 @@ function handleExamSelection(classSubjectID, examID) {
             $('#downloadExcelBtn').prop('disabled', true);
             $('#uploadExcelBtn').prop('disabled', true);
             showResultsStatusError('You are not allowed to enter results for this examination. Result entry has been disabled.');
+            resetQuestionData();
             return;
         }
 
@@ -1453,6 +1838,7 @@ function handleExamSelection(classSubjectID, examID) {
         $('#uploadExcelBtn').prop('disabled', false);
         $('.results-status-error').remove();
         loadExistingResults(classSubjectID, examID);
+        loadExamQuestionData(classSubjectID, examID);
     }
 }
 
@@ -1463,6 +1849,7 @@ function disableResultsForm() {
         'cursor': 'not-allowed',
         'color': '#dc3545'
     });
+    $('.question-mark-input, .toggle-question-btn').prop('disabled', true);
     $('#resultsForm button[type="submit"]').prop('disabled', true);
 }
 
@@ -1474,6 +1861,10 @@ function enableResultsForm() {
         'color': ''
     });
     $('.grade-input, .remark-input').prop('readonly', true); // Keep readonly for grade and remark
+    if (isSecondarySchool) {
+        $('.marks-input').prop('readonly', true);
+    }
+    $('.question-mark-input, .toggle-question-btn').prop('disabled', false);
     $('#resultsForm button[type="submit"]').prop('disabled', false);
 }
 
@@ -1490,6 +1881,131 @@ function showResultsStatusError(message) {
     `;
     $('#resultsTableBody').closest('.table-responsive').before(errorHtml);
 }
+
+// Toggle question details per student
+$(document).on('click', '.toggle-question-btn', function() {
+    if (examQuestionData.questions.length === 0) {
+        Swal.fire({
+            title: 'No Question Formats',
+            text: 'Please select an examination with approved question formats first.',
+            icon: 'warning',
+            confirmButtonColor: '#940000'
+        });
+        return;
+    }
+    const studentID = $(this).data('student');
+    const $detailRow = $(`#question_details_${studentID}`);
+    if ($detailRow.length === 0) {
+        return;
+    }
+
+    if (!$detailRow.hasClass('loaded')) {
+        $detailRow.find('.question-detail-container').html(buildQuestionDetails(studentID));
+        $detailRow.addClass('loaded');
+        $detailRow.find('.optional-select').each(function() {
+            const questionId = $(this).data('question-id');
+            const hasMark = examQuestionData.marksByStudent[studentID] &&
+                examQuestionData.marksByStudent[studentID][questionId] !== undefined &&
+                examQuestionData.marksByStudent[studentID][questionId] !== '';
+            if (hasMark) {
+                $(this).prop('checked', true);
+                const $input = $detailRow.find(`.question-mark-input[data-question-id="${questionId}"]`);
+                $input.prop('disabled', false);
+            }
+        });
+        updateStudentTotal(studentID);
+    }
+
+    $detailRow.toggleClass('d-none');
+});
+
+$(document).on('change', '.optional-select', function() {
+    const $checkbox = $(this);
+    const studentID = $checkbox.data('student');
+    const rangeNumber = parseInt($checkbox.data('optional-range'), 10);
+    const questionId = $checkbox.data('question-id');
+    const $input = $(`.question-mark-input[data-student="${studentID}"][data-question-id="${questionId}"]`);
+    const rangeMeta = (examQuestionData.optionalRanges || []).find(r => r.range_number == rangeNumber);
+    const requiredCount = rangeMeta ? parseInt(rangeMeta.required_questions || 0, 10) : 0;
+    const selectedCount = $(`.optional-select[data-student="${studentID}"][data-optional-range="${rangeNumber}"]:checked`).length;
+
+    if (requiredCount > 0 && selectedCount > requiredCount) {
+        $checkbox.prop('checked', false);
+        Swal.fire({
+            title: 'Optional Limit',
+            text: `Question needed to opt is ${requiredCount}. You exceed the limit.`,
+            icon: 'warning',
+            confirmButtonColor: '#940000'
+        });
+        return;
+    }
+
+    if ($checkbox.is(':checked')) {
+        $input.prop('disabled', false);
+    } else {
+        $input.val('');
+        $input.prop('disabled', true);
+        if (examQuestionData.marksByStudent[studentID]) {
+            delete examQuestionData.marksByStudent[studentID][questionId];
+        }
+    }
+    updateStudentTotal(studentID);
+});
+
+// Question marks input handler
+$(document).on('input', '.question-mark-input', function() {
+    const $input = $(this);
+    const max = parseFloat($input.data('max'));
+    let value = parseFloat($input.val());
+    const $warning = $input.siblings('.question-max-warning');
+    const isOptional = $input.data('optional') == 1;
+    const rangeNumber = parseInt($input.data('optional-range'), 10);
+
+    if (!isNaN(value) && value > max) {
+        value = max;
+        $input.val(max);
+        $warning.text(`Max ${max}`).removeClass('d-none');
+    } else {
+        $warning.addClass('d-none').text('');
+    }
+
+    const studentID = $input.data('student');
+    const questionId = $input.data('question-id');
+
+    if (!examQuestionData.marksByStudent[studentID]) {
+        examQuestionData.marksByStudent[studentID] = {};
+    }
+
+    if (isOptional && rangeNumber > 0) {
+        let optionalSum = 0;
+        $(`.question-mark-input[data-student="${studentID}"]`).each(function() {
+            if (parseInt($(this).data('optional-range'), 10) === rangeNumber) {
+                const val = parseFloat($(this).val());
+                if (!isNaN(val)) {
+                    optionalSum += val;
+                }
+            }
+        });
+
+        const rangeTotal = (examQuestionData.optionalRanges || []).find(r => r.range_number == rangeNumber);
+        const rangeLimit = rangeTotal ? parseFloat(rangeTotal.total_marks) : 0;
+
+        if (rangeLimit > 0 && optionalSum > rangeLimit) {
+            const otherSum = optionalSum - (isNaN(value) ? 0 : value);
+            const remaining = Math.max(rangeLimit - otherSum, 0);
+            $input.val(remaining);
+            value = remaining;
+        }
+    }
+
+    if ($input.val() === '') {
+        delete examQuestionData.marksByStudent[studentID][questionId];
+    } else {
+        examQuestionData.marksByStudent[studentID][questionId] = $input.val();
+    }
+
+    updateStudentTotal(studentID);
+});
 
 // Helper function to check if in edit mode
 function checkIfEditMode(examID, classSubjectID) {

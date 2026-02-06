@@ -7,6 +7,7 @@ use App\Models\Teacher;
 use App\Models\ParentModel;
 use App\Models\OtherStaff;
 use App\Models\User;
+use App\Models\Watchman;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Session;
@@ -29,6 +30,8 @@ class Auth extends Controller
                 return redirect()->route('teachersDashboard');
             } elseif ($userType === 'Staff') {
                 return redirect()->route('staffDashboard');
+            } elseif ($userType === 'Watchman') {
+                return redirect()->route('watchman.visitors');
             }
         }
 
@@ -169,6 +172,29 @@ class Auth extends Controller
 
                 return redirect()->route('staffDashboard')
                     ->with('success', 'You have logged in successfully as Staff!');
+                break;
+
+            case 'Watchman':
+                $watchman = Watchman::where('phone_number', $username)->first();
+
+                if (!$watchman) {
+                    return redirect()->back()
+                        ->with('error', 'Watchman record not found.')
+                        ->withInput($request->only('username'));
+                }
+
+                Session::put('schoolID', $watchman->schoolID);
+                Session::put('watchmanID', $watchman->id);
+                Session::put('user_type', $userLogin->user_type);
+                Session::put('userID', $userLogin->id);
+                Session::put('user_name', $userLogin->name);
+                Session::put('user_email', $userLogin->email);
+                Session::put('watchman_name', $watchman->first_name . ' ' . $watchman->last_name);
+
+                $request->session()->regenerate();
+
+                return redirect()->route('watchman.visitors')
+                    ->with('success', 'You have logged in successfully as Watchman!');
                 break;
 
             case 'parent':

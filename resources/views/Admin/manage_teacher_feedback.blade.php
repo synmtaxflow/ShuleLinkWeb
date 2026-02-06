@@ -1,5 +1,21 @@
+@php
+    $user_type = $user_type ?? session('user_type', 'Admin');
+    $adminFeedbackContext = $adminFeedbackContext ?? 'teacher';
+    $personLabel = $adminFeedbackContext === 'staff' ? 'Staff' : 'Teacher';
+    $suggestionsRoute = $adminFeedbackContext === 'staff' ? 'admin.staff.suggestions' : 'admin.suggestions';
+    $incidentsRoute = $adminFeedbackContext === 'staff' ? 'admin.staff.incidents' : 'admin.incidents';
+    $approveRoute = $adminFeedbackContext === 'staff' ? 'admin.staff.feedback.approve' : 'admin.feedback.approve';
+    $rejectRoute = $adminFeedbackContext === 'staff' ? 'admin.staff.feedback.reject' : 'admin.feedback.reject';
+    $nameFilterKey = $adminFeedbackContext === 'staff' ? 'staff_name' : 'teacher_name';
+    $nameFilterValue = $adminFeedbackContext === 'staff'
+        ? ($staffName ?? request('staff_name'))
+        : ($teacherName ?? request('teacher_name'));
+@endphp
+
 @if($user_type == 'Admin')
 @include('includes.Admin_nav')
+@elseif($user_type == 'Staff')
+@include('includes.staff_nav')
 @else
 @include('includes.teacher_nav')
 @endif
@@ -133,7 +149,7 @@
 <div class="content mt-3">
     <div class="card">
         <div class="card-header bg-primary-custom text-white">
-            <strong>Teacher Suggestions & Incidents (Admin)</strong>
+            <strong>{{ $personLabel }} Suggestions & Incidents (Admin)</strong>
         </div>
         <div class="card-body feedback-body">
             @if(session('success'))
@@ -188,7 +204,7 @@
                 <div class="col-md-8">
                     <div class="feedback-section" data-section="view" data-tab="suggestions">
                         <div class="section-title">Suggestions</div>
-                        <form method="GET" action="{{ route('admin.suggestions') }}" class="mb-3 js-filter-form" data-tab="suggestions" data-section="view">
+                        <form method="GET" action="{{ route($suggestionsRoute) }}" class="mb-3 js-filter-form" data-tab="suggestions" data-section="view">
                             <div class="form-row">
                                 <div class="col-sm-4 mb-2">
                                     <label for="admin_suggestion_from">From</label>
@@ -199,8 +215,8 @@
                                     <input type="date" class="form-control" id="admin_suggestion_to" name="date_to" value="{{ $dateTo ?? request('date_to') }}">
                                 </div>
                                 <div class="col-sm-4 mb-2">
-                                    <label for="admin_suggestion_teacher">Teacher</label>
-                                    <input type="text" class="form-control" id="admin_suggestion_teacher" name="teacher_name" value="{{ $teacherName ?? request('teacher_name') }}" placeholder="Search teacher">
+                                    <label for="admin_suggestion_person">{{ $personLabel }}</label>
+                                    <input type="text" class="form-control" id="admin_suggestion_person" name="{{ $nameFilterKey }}" value="{{ $nameFilterValue }}" placeholder="Search {{ strtolower($personLabel) }}">
                                 </div>
                                 <div class="col-sm-12 mb-2 d-flex align-items-end">
                                     <button class="btn btn-primary-custom w-100" type="submit">
@@ -215,7 +231,7 @@
                                     <thead class="bg-primary-custom text-white">
                                         <tr>
                                             <th>Date</th>
-                                            <th>Teacher</th>
+                                            <th>{{ $personLabel }}</th>
                                             <th>Message</th>
                                             <th>Status</th>
                                             <th>Action</th>
@@ -225,7 +241,7 @@
                                         @foreach($suggestions as $suggestion)
                                             <tr>
                                                 <td>{{ \Carbon\Carbon::parse($suggestion->created_at)->format('Y-m-d') }}</td>
-                                                <td>{{ $suggestion->teacher_name ?? 'Teacher' }}</td>
+                                                <td>{{ $suggestion->person_name ?? $personLabel }}</td>
                                                 <td>{{ $suggestion->message }}</td>
                                                 <td>
                                                     @if($suggestion->status === 'approved')
@@ -272,7 +288,7 @@
 
                     <div class="feedback-section d-none" data-section="view" data-tab="incidents">
                         <div class="section-title">Incidents</div>
-                        <form method="GET" action="{{ route('admin.incidents') }}" class="mb-3 js-filter-form" data-tab="incidents" data-section="view">
+                        <form method="GET" action="{{ route($incidentsRoute) }}" class="mb-3 js-filter-form" data-tab="incidents" data-section="view">
                             <div class="form-row">
                                 <div class="col-sm-4 mb-2">
                                     <label for="admin_incident_from">From</label>
@@ -283,8 +299,8 @@
                                     <input type="date" class="form-control" id="admin_incident_to" name="date_to" value="{{ $dateTo ?? request('date_to') }}">
                                 </div>
                                 <div class="col-sm-4 mb-2">
-                                    <label for="admin_incident_teacher">Teacher</label>
-                                    <input type="text" class="form-control" id="admin_incident_teacher" name="teacher_name" value="{{ $teacherName ?? request('teacher_name') }}" placeholder="Search teacher">
+                                    <label for="admin_incident_person">{{ $personLabel }}</label>
+                                    <input type="text" class="form-control" id="admin_incident_person" name="{{ $nameFilterKey }}" value="{{ $nameFilterValue }}" placeholder="Search {{ strtolower($personLabel) }}">
                                 </div>
                                 <div class="col-sm-12 mb-2 d-flex align-items-end">
                                     <button class="btn btn-primary-custom w-100" type="submit">
@@ -299,7 +315,7 @@
                                     <thead class="bg-primary-custom text-white">
                                         <tr>
                                             <th>Date</th>
-                                            <th>Teacher</th>
+                                            <th>{{ $personLabel }}</th>
                                             <th>Message</th>
                                             <th>Status</th>
                                             <th>Action</th>
@@ -309,7 +325,7 @@
                                         @foreach($incidents as $incident)
                                             <tr>
                                                 <td>{{ \Carbon\Carbon::parse($incident->created_at)->format('Y-m-d') }}</td>
-                                                <td>{{ $incident->teacher_name ?? 'Teacher' }}</td>
+                                                <td>{{ $incident->person_name ?? $personLabel }}</td>
                                                 <td>{{ $incident->message }}</td>
                                                 <td>
                                                     @if($incident->status === 'approved')
@@ -356,7 +372,7 @@
 
                     <div class="feedback-section d-none" data-section="report" data-tab="suggestions">
                         <div class="section-title">Suggestions Report</div>
-                        <form method="GET" action="{{ route('admin.suggestions') }}" class="mb-3 js-filter-form" data-tab="suggestions" data-section="report">
+                        <form method="GET" action="{{ route($suggestionsRoute) }}" class="mb-3 js-filter-form" data-tab="suggestions" data-section="report">
                             <div class="form-row">
                                 <div class="col-sm-4 mb-2">
                                     <label for="admin_report_suggestion_from">From</label>
@@ -367,8 +383,8 @@
                                     <input type="date" class="form-control" id="admin_report_suggestion_to" name="date_to" value="{{ $dateTo ?? request('date_to') }}">
                                 </div>
                                 <div class="col-sm-4 mb-2">
-                                    <label for="admin_report_suggestion_teacher">Teacher</label>
-                                    <input type="text" class="form-control" id="admin_report_suggestion_teacher" name="teacher_name" value="{{ $teacherName ?? request('teacher_name') }}" placeholder="Search teacher">
+                                    <label for="admin_report_suggestion_person">{{ $personLabel }}</label>
+                                    <input type="text" class="form-control" id="admin_report_suggestion_person" name="{{ $nameFilterKey }}" value="{{ $nameFilterValue }}" placeholder="Search {{ strtolower($personLabel) }}">
                                 </div>
                                 <div class="col-sm-12 mb-2 d-flex align-items-end">
                                     <button class="btn btn-primary-custom w-100" type="submit">
@@ -387,7 +403,7 @@
 
                     <div class="feedback-section d-none" data-section="report" data-tab="incidents">
                         <div class="section-title">Incidents Report</div>
-                        <form method="GET" action="{{ route('admin.incidents') }}" class="mb-3 js-filter-form" data-tab="incidents" data-section="report">
+                        <form method="GET" action="{{ route($incidentsRoute) }}" class="mb-3 js-filter-form" data-tab="incidents" data-section="report">
                             <div class="form-row">
                                 <div class="col-sm-4 mb-2">
                                     <label for="admin_report_incident_from">From</label>
@@ -398,8 +414,8 @@
                                     <input type="date" class="form-control" id="admin_report_incident_to" name="date_to" value="{{ $dateTo ?? request('date_to') }}">
                                 </div>
                                 <div class="col-sm-4 mb-2">
-                                    <label for="admin_report_incident_teacher">Teacher</label>
-                                    <input type="text" class="form-control" id="admin_report_incident_teacher" name="teacher_name" value="{{ $teacherName ?? request('teacher_name') }}" placeholder="Search teacher">
+                                    <label for="admin_report_incident_person">{{ $personLabel }}</label>
+                                    <input type="text" class="form-control" id="admin_report_incident_person" name="{{ $nameFilterKey }}" value="{{ $nameFilterValue }}" placeholder="Search {{ strtolower($personLabel) }}">
                                 </div>
                                 <div class="col-sm-12 mb-2 d-flex align-items-end">
                                     <button class="btn btn-primary-custom w-100" type="submit">
@@ -433,7 +449,7 @@
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <form method="POST" action="{{ route('admin.feedback.approve') }}" id="approveForm">
+            <form method="POST" action="{{ route($approveRoute) }}" id="approveForm">
                 @csrf
                 <div class="modal-body">
                     <input type="hidden" name="feedbackID" id="approve_feedback_id">
@@ -465,7 +481,7 @@
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <form method="POST" action="{{ route('admin.feedback.reject') }}" id="rejectForm">
+            <form method="POST" action="{{ route($rejectRoute) }}" id="rejectForm">
                 @csrf
                 <div class="modal-body">
                     <input type="hidden" name="feedbackID" id="reject_feedback_id">

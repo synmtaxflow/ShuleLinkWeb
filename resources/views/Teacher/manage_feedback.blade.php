@@ -1,5 +1,16 @@
+@php
+    $user_type = $user_type ?? session('user_type', 'Teacher');
+    $feedbackContext = $feedbackContext ?? ($user_type === 'Staff' ? 'staff' : 'teacher');
+    $feedbackLabel = $feedbackContext === 'staff' ? 'Staff' : 'Teacher';
+    $suggestionsRoute = $feedbackContext === 'staff' ? 'staff.suggestions' : 'teacher.suggestions';
+    $incidentsRoute = $feedbackContext === 'staff' ? 'staff.incidents' : 'teacher.incidents';
+    $storeRoute = $feedbackContext === 'staff' ? 'staff.feedback.store' : 'teacher.feedback.store';
+@endphp
+
 @if($user_type == 'Admin')
 @include('includes.Admin_nav')
+@elseif($user_type == 'Staff')
+@include('includes.staff_nav')
 @else
 @include('includes.teacher_nav')
 @endif
@@ -124,7 +135,7 @@
 <div class="content mt-3">
     <div class="card">
         <div class="card-header bg-primary-custom text-white">
-            <strong>Teacher Suggestions & Incidents</strong>
+            <strong>{{ $feedbackLabel }} Suggestions & Incidents</strong>
         </div>
         <div class="card-body feedback-body">
             @if(session('success'))
@@ -195,7 +206,7 @@
                 <div class="col-md-8">
                     <div class="feedback-section" data-section="send" data-tab="suggestions">
                         <div class="section-title">Send Your Suggestion</div>
-                        <form method="POST" action="{{ route('teacher.feedback.store') }}" id="suggestionForm">
+                        <form method="POST" action="{{ route($storeRoute) }}" id="suggestionForm">
                             @csrf
                             <input type="hidden" name="type" value="suggestion">
                             <div class="form-group mb-3">
@@ -210,7 +221,7 @@
 
                     <div class="feedback-section d-none" data-section="send" data-tab="incidents">
                         <div class="section-title">Report an Incident</div>
-                        <form method="POST" action="{{ route('teacher.feedback.store') }}" id="incidentForm">
+                        <form method="POST" action="{{ route($storeRoute) }}" id="incidentForm">
                             @csrf
                             <input type="hidden" name="type" value="incident">
                             <div class="form-group mb-3">
@@ -225,7 +236,7 @@
 
                     <div class="feedback-section d-none" data-section="view" data-tab="suggestions">
                         <div class="section-title">My Suggestions</div>
-                        <form method="GET" action="{{ route('teacher.suggestions') }}" class="mb-3 js-filter-form" data-tab="suggestions" data-section="view">
+                        <form method="GET" action="{{ route($suggestionsRoute) }}" class="mb-3 js-filter-form" data-tab="suggestions" data-section="view">
                             <div class="form-row">
                                 <div class="col-sm-4 mb-2">
                                     <label for="suggestion_from">From</label>
@@ -289,7 +300,7 @@
 
                     <div class="feedback-section d-none" data-section="view" data-tab="incidents">
                         <div class="section-title">My Incidents</div>
-                        <form method="GET" action="{{ route('teacher.incidents') }}" class="mb-3 js-filter-form" data-tab="incidents" data-section="view">
+                        <form method="GET" action="{{ route($incidentsRoute) }}" class="mb-3 js-filter-form" data-tab="incidents" data-section="view">
                             <div class="form-row">
                                 <div class="col-sm-4 mb-2">
                                     <label for="incident_from">From</label>
@@ -353,7 +364,7 @@
 
                     <div class="feedback-section d-none" data-section="report" data-tab="suggestions">
                         <div class="section-title">Suggestions Report</div>
-                        <form method="GET" action="{{ route('teacher.suggestions') }}" class="mb-3 js-filter-form" data-tab="suggestions" data-section="report">
+                        <form method="GET" action="{{ route($suggestionsRoute) }}" class="mb-3 js-filter-form" data-tab="suggestions" data-section="report">
                             <div class="form-row">
                                 <div class="col-sm-4 mb-2">
                                     <label for="report_suggestion_from">From</label>
@@ -410,7 +421,7 @@
 
                     <div class="feedback-section d-none" data-section="report" data-tab="incidents">
                         <div class="section-title">Incidents Report</div>
-                        <form method="GET" action="{{ route('teacher.incidents') }}" class="mb-3 js-filter-form" data-tab="incidents" data-section="report">
+                        <form method="GET" action="{{ route($incidentsRoute) }}" class="mb-3 js-filter-form" data-tab="incidents" data-section="report">
                             <div class="form-row">
                                 <div class="col-sm-4 mb-2">
                                     <label for="report_incident_from">From</label>

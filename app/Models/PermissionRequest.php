@@ -16,6 +16,7 @@ class PermissionRequest extends Model
         'schoolID',
         'requester_type',
         'teacherID',
+        'staffID',
         'studentID',
         'parentID',
         'time_mode',
@@ -46,6 +47,11 @@ class PermissionRequest extends Model
     public function teacher()
     {
         return $this->belongsTo(Teacher::class, 'teacherID', 'id');
+    }
+
+    public function staff()
+    {
+        return $this->belongsTo(OtherStaff::class, 'staffID', 'id');
     }
 
     public function student()

@@ -20,8 +20,9 @@ class CalendarController extends Controller
         $userType = Session::get('user_type');
         $schoolID = Session::get('schoolID');
 
-        if (!$schoolID || $userType !== 'Admin') {
-            return redirect()->route('login')->with('error', 'Access denied');
+        $calendarPermissions = ['calendar_create', 'calendar_update', 'calendar_delete', 'calendar_read_only'];
+        if (!$schoolID || ($userType !== 'Admin' && ! $this->staffHasAnyPermission($calendarPermissions))) {
+            return redirect()->back()->with('error', 'Access denied');
         }
 
         $currentYear = request()->get('year', date('Y'));
@@ -98,7 +99,7 @@ class CalendarController extends Controller
         $userType = Session::get('user_type');
         $schoolID = Session::get('schoolID');
 
-        if (!$schoolID || $userType !== 'Admin') {
+        if (!$schoolID || ($userType !== 'Admin' && ! $this->staffHasPermission('calendar_create'))) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
@@ -218,7 +219,7 @@ class CalendarController extends Controller
         $userType = Session::get('user_type');
         $schoolID = Session::get('schoolID');
 
-        if (!$schoolID || $userType !== 'Admin') {
+        if (!$schoolID || ($userType !== 'Admin' && ! $this->staffHasPermission('calendar_update'))) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
@@ -261,7 +262,7 @@ class CalendarController extends Controller
         $userType = Session::get('user_type');
         $schoolID = Session::get('schoolID');
 
-        if (!$schoolID || $userType !== 'Admin') {
+        if (!$schoolID || ($userType !== 'Admin' && ! $this->staffHasPermission('calendar_delete'))) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
@@ -292,7 +293,7 @@ class CalendarController extends Controller
         $userType = Session::get('user_type');
         $schoolID = Session::get('schoolID');
 
-        if (!$schoolID || $userType !== 'Admin') {
+        if (!$schoolID || ($userType !== 'Admin' && ! $this->staffHasPermission('calendar_create'))) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
@@ -354,7 +355,7 @@ class CalendarController extends Controller
         $userType = Session::get('user_type');
         $schoolID = Session::get('schoolID');
 
-        if (!$schoolID || $userType !== 'Admin') {
+        if (!$schoolID || ($userType !== 'Admin' && ! $this->staffHasPermission('calendar_update'))) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
@@ -400,7 +401,7 @@ class CalendarController extends Controller
         $userType = Session::get('user_type');
         $schoolID = Session::get('schoolID');
 
-        if (!$schoolID || $userType !== 'Admin') {
+        if (!$schoolID || ($userType !== 'Admin' && ! $this->staffHasPermission('calendar_delete'))) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 

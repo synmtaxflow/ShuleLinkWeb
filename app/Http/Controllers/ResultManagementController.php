@@ -12,6 +12,10 @@ use App\Models\Subclass;
 use App\Models\SchoolSubject;
 use App\Models\ClassSubject;
 use App\Models\GradeDefinition;
+use App\Models\ExamPaper;
+use App\Models\ExamPaperQuestion;
+use App\Models\ExamPaperQuestionMark;
+use App\Models\ExamPaperOptionalRange;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
@@ -1216,6 +1220,223 @@ class ResultManagementController extends Controller
             'user_type' => $userType, // Pass user type for navigation
             'error' => null, // No error if we reach here
         ]);
+    }
+
+    public function subjectAnalysis(Request $request)
+    {
+        $schoolID = Session::get('schoolID');
+        if (! $schoolID) {
+            return redirect()->route('login')->with('error', 'Access denied');
+        }
+
+        $year = $request->get('year', '');
+        $term = $request->get('term', '');
+        $examID = $request->get('examID', '');
+        $classID = $request->get('classID', '');
+        $subclassID = $request->get('subclassID', '');
+        $subjectID = $request->get('subjectID', '');
+        $allSubclasses = $request->get('all_subclasses', '') === '1';
+
+        $availableYears = Examination::where('schoolID', $schoolID)
+            ->distinct()
+            ->orderBy('year', 'desc')
+            ->pluck('year')
+            ->toArray();
+
+        $classes = ClassModel::where('schoolID', $schoolID)
+            ->where('status', 'Active')
+            ->orderBy('class_name')
+            ->get();
+
+        $subjects = SchoolSubject::where('schoolID', $schoolID)
+            ->where('status', 'Active')
+            ->orderBy('subject_name')
+            ->get();
+
+        $examsQuery = Examination::where('schoolID', $schoolID);
+        if ($year) {
+            $examsQuery->where('year', $year);
+        }
+        if ($term) {
+            $examsQuery->where('term', $term);
+        }
+        $exams = $examsQuery->orderBy('start_date', 'desc')->get();
+
+        $analysisData = [];
+        if ($examID) {
+            $classSubjectsQuery = ClassSubject::with(['subject', 'class', 'subclass'])
+                ->where('status', 'Active');
+
+            if ($classID) {
+                $classSubjectsQuery->where('classID', $classID);
+            }
+
+            if ($subclassID && ! $allSubclasses) {
+                $classSubjectsQuery->where('subclassID', $subclassID);
+            }
+
+            if ($subjectID) {
+                $classSubjectsQuery->where('subjectID', $subjectID);
+            }
+
+            $classSubjects = $classSubjectsQuery->get();
+
+            foreach ($classSubjects as $classSubject) {
+                $classSubjectID = $classSubject->class_subjectID;
+                $subjectName = $classSubject->subject->subject_name ?? 'N/A';
+                $className = $classSubject->class->class_name ?? 'N/A';
+                $subclassName = $classSubject->subclass->subclass_name ?? '';
+                $classDisplay = trim($className.' '.$subclassName);
+
+                $results = Result::with(['student'])
+                    ->where('examID', $examID)
+                    ->where('class_subjectID', $classSubjectID)
+                    ->get();
+
+                $studentsQuery = Student::where('status', 'Active');
+                if ($classSubject->subclassID) {
+                    $studentsQuery->where('subclassID', $classSubject->subclassID);
+                } elseif ($classSubject->classID) {
+                    $subclassIds = Subclass::where('classID', $classSubject->classID)
+                        ->pluck('subclassID')
+                        ->toArray();
+                    $studentsQuery->whereIn('subclassID', $subclassIds);
+                }
+                $students = $studentsQuery->get();
+
+                $resultsByStudent = $results->keyBy('studentID');
+                $resultRows = $students->map(function ($student) use ($resultsByStudent) {
+                    $result = $resultsByStudent->get($student->studentID);
+                    return [
+                        'student' => $student,
+                        'marks' => $result ? $result->marks : null,
+                        'grade' => $result ? $result->grade : null,
+                        'remark' => $result ? $result->remark : null,
+                        'result_id' => $result ? $result->resultID : null,
+                    ];
+                });
+
+                $examPaper = ExamPaper::where('examID', $examID)
+                    ->where('class_subjectID', $classSubjectID)
+                    ->where('status', 'approved')
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+
+                $questions = collect();
+                $optionalRanges = collect();
+                $questionStats = [];
+                $studentQuestionMarks = [];
+                $bestQuestion = null;
+                $worstQuestion = null;
+
+                if ($examPaper) {
+                    $questions = ExamPaperQuestion::where('exam_paperID', $examPaper->exam_paperID)
+                        ->orderBy('question_number')
+                        ->get();
+                    $optionalRanges = ExamPaperOptionalRange::where('exam_paperID', $examPaper->exam_paperID)
+                        ->orderBy('range_number')
+                        ->get();
+
+                    $marks = ExamPaperQuestionMark::where('examID', $examID)
+                        ->where('class_subjectID', $classSubjectID)
+                        ->get();
+
+                    foreach ($marks as $mark) {
+                        $studentQuestionMarks[$mark->studentID][$mark->exam_paper_questionID] = $mark->marks;
+                    }
+
+                    foreach ($questions as $question) {
+                        $questionMarks = $marks->where('exam_paper_questionID', $question->exam_paper_questionID)
+                            ->pluck('marks')
+                            ->filter(function ($value) {
+                                return $value !== null;
+                            });
+                        $avg = $questionMarks->count() > 0 ? $questionMarks->avg() : 0;
+                        $percent = $question->marks > 0 ? round(($avg / $question->marks) * 100, 1) : 0;
+
+                        $questionStats[] = [
+                            'question' => $question,
+                            'average' => round($avg, 2),
+                            'percent' => $percent,
+                        ];
+                    }
+
+                    if (!empty($questionStats)) {
+                        $bestQuestion = collect($questionStats)->sortByDesc('percent')->first();
+                        $worstQuestion = collect($questionStats)->sortBy('percent')->first();
+                    }
+                }
+
+                $analysisData[] = [
+                    'class_subjectID' => $classSubjectID,
+                    'subject_name' => $subjectName,
+                    'class_display' => $classDisplay,
+                    'results' => $results,
+                    'result_rows' => $resultRows,
+                    'questions' => $questions,
+                    'optional_ranges' => $optionalRanges,
+                    'question_stats' => $questionStats,
+                    'best_question' => $bestQuestion,
+                    'worst_question' => $worstQuestion,
+                    'student_question_marks' => $studentQuestionMarks,
+                ];
+            }
+        }
+
+        $groupedAnalysis = collect($analysisData)->groupBy('class_display');
+
+        return view('Admin.subject_analysis', compact(
+            'availableYears',
+            'classes',
+            'subjects',
+            'exams',
+            'analysisData',
+            'groupedAnalysis',
+            'year',
+            'term',
+            'examID',
+            'classID',
+            'subclassID',
+            'subjectID',
+            'allSubclasses'
+        ));
+    }
+
+    public function getClassSubjectsForAnalysis(Request $request)
+    {
+        try {
+            $schoolID = Session::get('schoolID');
+            $classID = $request->input('classID');
+            $subclassID = $request->input('subclassID');
+
+            if (!$schoolID || !$classID) {
+                return response()->json(['success' => false, 'error' => 'Class ID and school ID required']);
+            }
+
+            $query = DB::table('class_subjects')
+                ->join('school_subjects', 'class_subjects.subjectID', '=', 'school_subjects.subjectID')
+                ->join('classes', 'class_subjects.classID', '=', 'classes.classID')
+                ->where('classes.schoolID', $schoolID)
+                ->where('class_subjects.status', 'Active')
+                ->where('school_subjects.status', 'Active')
+                ->where('class_subjects.classID', $classID);
+
+            if ($subclassID) {
+                $query->where(function ($subQuery) use ($subclassID) {
+                    $subQuery->where('class_subjects.subclassID', $subclassID)
+                        ->orWhereNull('class_subjects.subclassID');
+                });
+            }
+
+            $subjects = $query->select(
+                'school_subjects.subjectID',
+                'school_subjects.subject_name'
+            )->distinct()->orderBy('school_subjects.subject_name')->get();
+
+            return response()->json(['success' => true, 'subjects' => $subjects]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+        }
     }
 
     /**

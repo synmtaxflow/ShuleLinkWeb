@@ -9,6 +9,9 @@ use App\Models\Student;
 use App\Models\Examination;
 use App\Models\School;
 use App\Models\ExamPaper;
+use App\Models\ExamPaperQuestion;
+use App\Models\ExamPaperQuestionMark;
+use App\Models\ExamPaperOptionalRange;
 use App\Models\GradeDefinition;
 use App\Models\ClassModel;
 use App\Models\Teacher;
@@ -2953,7 +2956,11 @@ class TeachersController extends Controller
             })
             ->values(); // Re-index array after filtering
 
-        return view('Teacher.teacher_subjects', compact('classSubjects'));
+        $schoolID = Session::get('schoolID');
+        $school = $schoolID ? School::find($schoolID) : null;
+        $schoolType = $school && $school->school_type ? $school->school_type : 'Secondary';
+
+        return view('Teacher.teacher_subjects', compact('classSubjects', 'schoolType'));
     }
 
     public function schemeOfWork()
@@ -4028,10 +4035,117 @@ class TeachersController extends Controller
         }
     }
 
+    public function getExamPaperQuestionData($classSubjectID, $examID)
+    {
+        try {
+            $teacherID = Session::get('teacherID');
+            $schoolID = Session::get('schoolID');
+
+            if (!$teacherID || !$schoolID) {
+                return response()->json([
+                    'error' => 'Unauthorized access.'
+                ], 401);
+            }
+
+            // Verify teacher owns this class subject and both ClassSubject and Subject have status = Active
+            $classSubject = ClassSubject::where('class_subjectID', $classSubjectID)
+                ->where('teacherID', $teacherID)
+                ->where('status', 'Active')
+                ->whereHas('subject', function($query) {
+                    $query->where('status', 'Active');
+                })
+                ->first();
+
+            if (!$classSubject) {
+                return response()->json([
+                    'error' => 'Class subject not found or unauthorized access.'
+                ], 404);
+            }
+
+            $school = School::find($schoolID);
+            $schoolType = $school && $school->school_type ? strtolower($school->school_type) : 'secondary';
+
+            if ($schoolType !== 'secondary') {
+                return response()->json([
+                    'success' => true,
+                    'questions' => [],
+                    'marks_by_student' => [],
+                    'max_total' => 0,
+                ], 200);
+            }
+
+            $examPaper = ExamPaper::where('class_subjectID', $classSubjectID)
+                ->where('examID', $examID)
+                ->where('teacherID', $teacherID)
+                ->where('status', 'approved')
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            if (!$examPaper) {
+                return response()->json([
+                    'success' => true,
+                    'questions' => [],
+                    'marks_by_student' => [],
+                    'max_total' => 0,
+                    'message' => 'No approved exam paper with question formats found.',
+                ], 200);
+            }
+
+            $questions = ExamPaperQuestion::where('exam_paperID', $examPaper->exam_paperID)
+                ->orderBy('question_number')
+                ->get([
+                    'exam_paper_questionID',
+                    'question_number',
+                    'is_optional',
+                    'optional_range_number',
+                    'question_description',
+                    'marks',
+                ]);
+
+            $optionalRanges = ExamPaperOptionalRange::where('exam_paperID', $examPaper->exam_paperID)
+                ->orderBy('range_number')
+                ->get(['range_number', 'total_marks', 'required_questions']);
+            $optionalTotal = $optionalRanges->sum('total_marks');
+            $requiredTotal = $questions->where('is_optional', false)->sum('marks');
+            $maxTotal = $optionalTotal > 0 ? ($requiredTotal + $optionalTotal) : $questions->sum('marks');
+
+            $marksByStudent = [];
+            if ($questions->count() > 0) {
+                $questionIds = $questions->pluck('exam_paper_questionID')->toArray();
+                $marks = ExamPaperQuestionMark::whereIn('exam_paper_questionID', $questionIds)
+                    ->where('examID', $examID)
+                    ->where('class_subjectID', $classSubjectID)
+                    ->get(['studentID', 'exam_paper_questionID', 'marks']);
+
+                foreach ($marks as $mark) {
+                    $studentID = $mark->studentID;
+                    if (!isset($marksByStudent[$studentID])) {
+                        $marksByStudent[$studentID] = [];
+                    }
+                    $marksByStudent[$studentID][$mark->exam_paper_questionID] = $mark->marks;
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'questions' => $questions,
+                'marks_by_student' => $marksByStudent,
+                'max_total' => $maxTotal,
+                'optional_total' => $optionalTotal,
+                'optional_ranges' => $optionalRanges,
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'An error occurred: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function saveSubjectResults(Request $request)
     {
         try {
             $teacherID = Session::get('teacherID');
+            $schoolID = Session::get('schoolID');
 
             if (!$teacherID) {
                 return response()->json([
@@ -4047,6 +4161,9 @@ class TeachersController extends Controller
                 'results.*.marks' => 'nullable|numeric|min:0|max:100',
                 'results.*.grade' => 'nullable|string|max:10',
                 'results.*.remark' => 'nullable|string|max:255',
+                'results.*.question_marks' => 'nullable|array',
+                'results.*.question_marks.*.question_id' => 'required_with:results.*.question_marks|exists:exam_paper_questions,exam_paper_questionID',
+                'results.*.question_marks.*.marks' => 'nullable|numeric|min:0',
             ]);
 
             if ($validator->fails()) {
@@ -4114,6 +4231,57 @@ class TeachersController extends Controller
                 }
             }
 
+            $school = $schoolID ? School::find($schoolID) : null;
+            $schoolType = $school && $school->school_type ? strtolower($school->school_type) : 'secondary';
+            $requiresQuestionMarks = $schoolType === 'secondary';
+
+            $examPaper = null;
+            $questions = collect();
+            $questionMap = [];
+            $optionalQuestionIds = [];
+            $maxTotalMarks = 0;
+            $optionalTotal = 0;
+            $requiredMax = 0;
+
+            if ($requiresQuestionMarks) {
+                $examPaper = ExamPaper::where('class_subjectID', $request->class_subjectID)
+                    ->where('examID', $request->examID)
+                    ->where('teacherID', $teacherID)
+                    ->where('status', 'approved')
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+
+                if (!$examPaper) {
+                    return response()->json([
+                        'error' => 'No approved exam paper with question formats found for this subject and examination.'
+                    ], 422);
+                }
+
+                $questions = ExamPaperQuestion::where('exam_paperID', $examPaper->exam_paperID)
+                    ->get();
+
+                if ($questions->isEmpty()) {
+                    return response()->json([
+                        'error' => 'No question formats found for this exam paper.'
+                    ], 422);
+                }
+
+                $optionalRanges = ExamPaperOptionalRange::where('exam_paperID', $examPaper->exam_paperID)
+                    ->orderBy('range_number')
+                    ->get();
+                $optionalTotal = $optionalRanges->sum('total_marks');
+
+                foreach ($questions as $question) {
+                    $questionMap[$question->exam_paper_questionID] = $question->marks;
+                    if ($question->is_optional) {
+                        $optionalQuestionIds[] = $question->exam_paper_questionID;
+                    } else {
+                        $requiredMax += (float) $question->marks;
+                    }
+                    $maxTotalMarks += (float) $question->marks;
+                }
+            }
+
             DB::beginTransaction();
 
             $savedCount = 0;
@@ -4124,12 +4292,126 @@ class TeachersController extends Controller
                     ->where('class_subjectID', $request->class_subjectID)
                     ->first();
 
+                $finalMarks = $resultData['marks'] ?? null;
+                $finalGrade = $resultData['grade'] ?? null;
+                $finalRemark = $resultData['remark'] ?? null;
+
+                if ($requiresQuestionMarks) {
+                    $questionMarks = $resultData['question_marks'] ?? [];
+                    if (!is_array($questionMarks) || count($questionMarks) === 0) {
+                        continue;
+                    }
+
+                    $totalMarks = 0;
+                    $optionalSum = 0;
+                    $questionIds = [];
+                    $optionalSelectedCountByRange = [];
+                    $providedQuestionIds = [];
+
+                    foreach ($questionMarks as $questionMark) {
+                        $questionId = $questionMark['question_id'] ?? null;
+                        $markValue = $questionMark['marks'] ?? null;
+
+                        if (!$questionId || !array_key_exists($questionId, $questionMap)) {
+                            DB::rollBack();
+                            return response()->json([
+                                'error' => 'Invalid question format selected.'
+                            ], 422);
+                        }
+
+                        if ($markValue === '' || $markValue === null || !is_numeric($markValue)) {
+                            DB::rollBack();
+                            return response()->json([
+                                'error' => 'Please enter valid marks for all question formats.'
+                            ], 422);
+                        }
+
+                        $markValue = (float) $markValue;
+                        $maxMarks = (float) $questionMap[$questionId];
+
+                        if ($markValue < 0 || $markValue > $maxMarks) {
+                            DB::rollBack();
+                            return response()->json([
+                                'error' => 'Question marks cannot exceed the allowed maximum.'
+                            ], 422);
+                        }
+
+                        $totalMarks += $markValue;
+                        if (in_array($questionId, $optionalQuestionIds, true)) {
+                            $optionalSum += $markValue;
+                            $rangeNumber = $questions->firstWhere('exam_paper_questionID', $questionId)->optional_range_number ?? null;
+                            if ($rangeNumber) {
+                                $optionalSelectedCountByRange[$rangeNumber] = ($optionalSelectedCountByRange[$rangeNumber] ?? 0) + 1;
+                            }
+                        }
+                        $questionIds[] = $questionId;
+                        $providedQuestionIds[] = $questionId;
+                    }
+
+                    foreach ($optionalRanges as $range) {
+                        $rangeNumber = $range->range_number;
+                        $requiredCount = (int) ($range->required_questions ?? 0);
+                        $selectedCount = $optionalSelectedCountByRange[$rangeNumber] ?? 0;
+                        if ($requiredCount > 0 && $selectedCount > $requiredCount) {
+                            DB::rollBack();
+                            return response()->json([
+                                'error' => "Optional range {$rangeNumber} requires at most {$requiredCount} questions."
+                            ], 422);
+                        }
+                    }
+
+                    if ($optionalTotal > 0 && $optionalSum > $optionalTotal) {
+                        DB::rollBack();
+                        return response()->json([
+                            'error' => 'Optional question marks exceed the allowed optional total.'
+                        ], 422);
+                    }
+
+                    $allowedTotal = $optionalTotal > 0 ? ($requiredMax + $optionalTotal) : $maxTotalMarks;
+
+                    if ($totalMarks > $allowedTotal) {
+                        DB::rollBack();
+                        return response()->json([
+                            'error' => 'Total question marks cannot exceed the maximum total.'
+                        ], 422);
+                    }
+
+                    $finalMarks = $totalMarks;
+                    $gradeRemark = $this->calculateGradeAndRemarkFromMarks($finalMarks);
+                    $finalGrade = $gradeRemark['grade'];
+                    $finalRemark = $gradeRemark['remark'];
+
+                    // Remove any previous question marks not submitted
+                    ExamPaperQuestionMark::where('studentID', $resultData['studentID'])
+                        ->where('examID', $request->examID)
+                        ->where('class_subjectID', $request->class_subjectID)
+                        ->whereNotIn('exam_paper_questionID', $questionIds)
+                        ->delete();
+
+                    foreach ($questionMarks as $questionMark) {
+                        $questionId = $questionMark['question_id'];
+                        $markValue = (float) $questionMark['marks'];
+
+                        ExamPaperQuestionMark::updateOrCreate(
+                            [
+                                'exam_paper_questionID' => $questionId,
+                                'studentID' => $resultData['studentID'],
+                            ],
+                            [
+                                'examID' => $request->examID,
+                                'class_subjectID' => $request->class_subjectID,
+                                'marks' => $markValue,
+                            ]
+                        );
+                    }
+                }
+
                 if ($result) {
                     // Update existing result
                     $result->update([
-                        'marks' => $resultData['marks'] ?? $result->marks,
-                        'grade' => $resultData['grade'] ?? $result->grade,
-                        'remark' => $resultData['remark'] ?? $result->remark,
+                        'marks' => $finalMarks ?? $result->marks,
+                        'grade' => $finalGrade ?? $result->grade,
+                        'remark' => $finalRemark ?? $result->remark,
                     ]);
                 } else {
                     // Create new result
@@ -4140,9 +4422,9 @@ class TeachersController extends Controller
                             'examID' => $request->examID,
                             'class_subjectID' => $request->class_subjectID,
                             'subclassID' => $student->subclassID,
-                            'marks' => $resultData['marks'] ?? null,
-                            'grade' => $resultData['grade'] ?? null,
-                            'remark' => $resultData['remark'] ?? null,
+                            'marks' => $finalMarks ?? null,
+                            'grade' => $finalGrade ?? null,
+                            'remark' => $finalRemark ?? null,
                         ]);
                     }
                 }
@@ -4162,6 +4444,30 @@ class TeachersController extends Controller
                 'error' => 'An error occurred: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    private function calculateGradeAndRemarkFromMarks($marks)
+    {
+        if ($marks === null || $marks === '' || !is_numeric($marks)) {
+            return ['grade' => null, 'remark' => null];
+        }
+
+        $marksNum = (float) $marks;
+
+        if ($marksNum >= 75) {
+            return ['grade' => 'A', 'remark' => 'Excellent'];
+        }
+        if ($marksNum >= 65) {
+            return ['grade' => 'B', 'remark' => 'Very Good'];
+        }
+        if ($marksNum >= 45) {
+            return ['grade' => 'C', 'remark' => 'Good'];
+        }
+        if ($marksNum >= 30) {
+            return ['grade' => 'D', 'remark' => 'Pass'];
+        }
+
+        return ['grade' => 'F', 'remark' => 'Fail'];
     }
 
     /**
@@ -10701,9 +11007,15 @@ class TeachersController extends Controller
 
         if ($school && $school->phone) {
             $teacherName = $teacher ? trim(($teacher->first_name ?? '') . ' ' . ($teacher->last_name ?? '')) : 'Teacher';
-            $reasonLabel = ucfirst($validated['reason_type']);
+            $reasonLabel = $validated['reason_description'];
             $schoolName = $school->school_name ?? 'School';
-            $smsService->sendSms($school->phone, "{$schoolName}: New permission request by {$teacherName}. Reason: {$reasonLabel}. Please review.");
+            $periodLabel = 'N/A';
+            if ($validated['time_mode'] === 'days') {
+                $periodLabel = ($validated['start_date'] ?? '') . ' to ' . ($validated['end_date'] ?? '');
+            } else {
+                $periodLabel = ($validated['start_time'] ?? '') . ' to ' . ($validated['end_time'] ?? '');
+            }
+            $smsService->sendSms($school->phone, "{$schoolName}: New permission request by {$teacherName}. Period: {$periodLabel}. Reason: {$reasonLabel}. Please review.");
         }
 
         if ($request->ajax() || $request->expectsJson()) {

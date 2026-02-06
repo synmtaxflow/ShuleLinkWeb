@@ -52,12 +52,12 @@
     }
 @endphp
 
-<div class="card border shadow-sm h-100">
+<div class="card exam-widget-card h-100">
     <div class="card-body p-3">
         <!-- Header -->
         <div class="mb-3">
-            <h6 class="mb-1 fw-bold text-dark">{{ $exam->exam_name }}</h6>
-            <small class="text-muted">
+            <h6 class="mb-1 exam-widget-title">{{ $exam->exam_name }}</h6>
+            <small class="exam-widget-meta">
                 @if($exam->term)
                     {{ ucfirst(str_replace('_', ' ', $exam->term)) }} • 
                 @endif
@@ -76,7 +76,7 @@
         <!-- Status Badge -->
         @if($statusMessage)
         <div class="mb-2">
-            <span class="badge bg-{{ $statusClass }} text-white w-100 py-2">
+            <span class="badge exam-widget-status w-100 py-2">
                 <i class="bi bi-{{ $statusClass == 'warning' ? 'hourglass-split' : ($statusClass == 'success' ? 'check-circle' : 'calendar-event') }}"></i> 
                 {{ $statusMessage }}
             </span>
@@ -110,30 +110,27 @@
                                ($teacherPermissions ?? collect())->contains('examination_delete');
                 @endphp
                 @if($canView)
-                <button class="btn btn-sm p-2" onclick="viewExamMore({{ $exam->examID }});" title="View More" 
-                        style="min-width: 45px; height: 45px; background-color: #e3f2fd; border: 1px solid #2196f3; color: #1976d2; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
-                    <i class="bi bi-eye" style="font-size: 1.3rem;"></i>
+                <button class="btn exam-widget-action" onclick="viewExamMore({{ $exam->examID }});" title="View More">
+                    <i class="bi bi-eye"></i> View More
                 </button>
                 @endif
                 
                 <!-- View Exam Papers -->
                 @if(($user_type ?? '') == 'Admin' || ($teacherPermissions ?? collect())->contains('view_exam_papers'))
-                <button class="btn btn-sm p-2 view-exam-papers-btn" 
+                <button class="btn exam-widget-action view-exam-papers-btn"
                         data-exam-id="{{ $exam->examID }}"
                         data-exam-name="{{ $exam->exam_name }}"
-                        title="View Exam Papers" 
-                        style="min-width: 45px; height: 45px; background-color: #f3e5f5; border: 1px solid #9c27b0; color: #7b1fa2; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
-                    <i class="bi bi-file-earmark-text" style="font-size: 1.3rem;"></i>
+                        title="View Exam Papers">
+                    <i class="bi bi-file-earmark-text"></i> Exam Papers
                 </button>
                 @endif
                 
                 <!-- View Exam Halls -->
-                <button class="btn btn-sm p-2 view-exam-halls-btn" 
+                <button class="btn exam-widget-action view-exam-halls-btn"
                         data-exam-id="{{ $exam->examID }}"
                         data-exam-name="{{ $exam->exam_name }}"
-                        title="View Exam Halls" 
-                        style="min-width: 45px; height: 45px; background-color: #fff3e0; border: 1px solid #ff9800; color: #e65100; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
-                    <i class="bi bi-building" style="font-size: 1.3rem;"></i>
+                        title="View Exam Halls">
+                    <i class="bi bi-building"></i> Exam Halls
                 </button>
                 
                 <!-- Edit -->
@@ -141,43 +138,39 @@
                     $canUpdate = ($user_type ?? '') == 'Admin' || ($teacherPermissions ?? collect())->contains('examination_update');
                 @endphp
                 @if($canUpdate)
-                <button class="btn btn-sm p-2" onclick="editExam({{ $exam->examID }});" title="Edit" 
-                        style="min-width: 45px; height: 45px; background-color: #e0f2f1; border: 1px solid #009688; color: #00695c; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
-                    <i class="bi bi-pencil" style="font-size: 1.3rem;"></i>
+                <button class="btn exam-widget-action" onclick="editExam({{ $exam->examID }});" title="Edit">
+                    <i class="bi bi-pencil"></i> Edit
                 </button>
                 @endif
                 
                 <!-- Allow Enter Result - Update action -->
                 @if($canUpdate)
-                <button class="btn btn-sm p-2 toggle-enter-result-btn" 
+                <button class="btn exam-widget-action toggle-enter-result-btn" 
                         data-exam-id="{{ $exam->examID }}"
                         data-current-value="{{ $exam->enter_result ? 'true' : 'false' }}"
-                        title="{{ $exam->enter_result ? 'Disallow Enter Result' : 'Allow Enter Result' }}"
-                        style="min-width: 45px; height: 45px; background-color: {{ $exam->enter_result ? '#e8f5e9' : '#f5f5f5' }}; border: 1px solid {{ $exam->enter_result ? '#4caf50' : '#9e9e9e' }}; color: {{ $exam->enter_result ? '#2e7d32' : '#616161' }}; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
-                    <i class="bi {{ $exam->enter_result ? 'bi-check-circle' : 'bi-x-circle' }}" style="font-size: 1.3rem;"></i>
+                        title="{{ $exam->enter_result ? 'Disallow Enter Result' : 'Allow Enter Result' }}">
+                    <i class="bi {{ $exam->enter_result ? 'bi-check-circle' : 'bi-x-circle' }}"></i> Enter Result
                 </button>
                 @endif
                 
                 <!-- Publish Result - Update action -->
                 @if($canUpdate)
-                <button class="btn btn-sm p-2 toggle-publish-result-btn" 
+                <button class="btn exam-widget-action toggle-publish-result-btn" 
                         data-exam-id="{{ $exam->examID }}"
                         data-current-value="{{ $exam->publish_result ? 'true' : 'false' }}"
-                        title="{{ $exam->publish_result ? 'Unpublish Result' : 'Publish Result' }}"
-                        style="min-width: 45px; height: 45px; background-color: {{ $exam->publish_result ? '#fff3e0' : '#f5f5f5' }}; border: 1px solid {{ $exam->publish_result ? '#ff9800' : '#9e9e9e' }}; color: {{ $exam->publish_result ? '#e65100' : '#616161' }}; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
-                    <i class="bi {{ $exam->publish_result ? 'bi-eye' : 'bi-eye-slash' }}" style="font-size: 1.3rem;"></i>
+                        title="{{ $exam->publish_result ? 'Unpublish Result' : 'Publish Result' }}">
+                    <i class="bi {{ $exam->publish_result ? 'bi-eye' : 'bi-eye-slash' }}"></i> Publish
                 </button>
                 @endif
                 
                 <!-- Auto Shift Students - Update action -->
                 @if($canUpdate)
                     @if(($exam->student_shifting_status ?? 'none') !== 'none')
-                    <button class="btn btn-sm p-2 auto-shift-students-btn" 
+                    <button class="btn exam-widget-action auto-shift-students-btn" 
                             data-exam-id="{{ $exam->examID }}"
                             data-shifting-status="{{ $exam->student_shifting_status }}"
-                            title="Auto Shift Students ({{ ucfirst($exam->student_shifting_status) }})"
-                            style="min-width: 45px; height: 45px; background-color: #e8f5e9; border: 1px solid #4caf50; color: #2e7d32; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
-                        <i class="bi bi-arrow-right-circle" style="font-size: 1.3rem;"></i>
+                            title="Auto Shift Students ({{ ucfirst($exam->student_shifting_status) }})">
+                        <i class="bi bi-arrow-right-circle"></i> Auto Shift
                     </button>
                     @endif
                 @endif
@@ -185,23 +178,21 @@
                 <!-- Unshift Students - Update action -->
                 @if($canUpdate)
                     @if(($exam->student_shifting_status ?? 'none') !== 'none')
-                    <button class="btn btn-sm p-2 unshift-students-btn" 
+                    <button class="btn exam-widget-action unshift-students-btn" 
                             data-exam-id="{{ $exam->examID }}"
-                            title="Unshift Students (Revert to Previous Classes)"
-                            style="min-width: 45px; height: 45px; background-color: #fff3e0; border: 1px solid #ff9800; color: #e65100; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
-                        <i class="bi bi-arrow-left-circle" style="font-size: 1.3rem;"></i>
+                            title="Unshift Students (Revert to Previous Classes)">
+                        <i class="bi bi-arrow-left-circle"></i> Unshift
                     </button>
                     @endif
                 @endif
                 
                 <!-- Toggle Upload Paper - Update action -->
                 @if($canUpdate)
-                <button class="btn btn-sm p-2 toggle-upload-paper-btn" 
+                <button class="btn exam-widget-action toggle-upload-paper-btn" 
                         data-exam-id="{{ $exam->examID }}"
                         data-current-value="{{ ($exam->upload_paper ?? true) ? 'true' : 'false' }}"
-                        title="{{ ($exam->upload_paper ?? true) ? 'Disallow Upload Paper' : 'Allow Upload Paper' }}"
-                        style="min-width: 45px; height: 45px; background-color: {{ ($exam->upload_paper ?? true) ? '#e1f5fe' : '#f5f5f5' }}; border: 1px solid {{ ($exam->upload_paper ?? true) ? '#0288d1' : '#9e9e9e' }}; color: {{ ($exam->upload_paper ?? true) ? '#01579b' : '#616161' }}; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
-                    <i class="bi {{ ($exam->upload_paper ?? true) ? 'bi-file-earmark-arrow-up' : 'bi-file-earmark-x' }}" style="font-size: 1.3rem;"></i>
+                        title="{{ ($exam->upload_paper ?? true) ? 'Disallow Upload Paper' : 'Allow Upload Paper' }}">
+                    <i class="bi {{ ($exam->upload_paper ?? true) ? 'bi-file-earmark-arrow-up' : 'bi-file-earmark-x' }}"></i> Upload Paper
                 </button>
                 @endif
                 
@@ -210,9 +201,8 @@
                     $canDelete = ($user_type ?? '') == 'Admin' || ($teacherPermissions ?? collect())->contains('examination_delete');
                 @endphp
                 @if($canDelete)
-                <button class="btn btn-sm p-2" onclick="deleteExam({{ $exam->examID }}, '{{ addslashes($exam->exam_name) }}');" title="Delete" 
-                        style="min-width: 45px; height: 45px; background-color: #ffebee; border: 1px solid #f44336; color: #c62828; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
-                    <i class="bi bi-trash" style="font-size: 1.3rem;"></i>
+                <button class="btn exam-widget-action" onclick="deleteExam({{ $exam->examID }}, '{{ addslashes($exam->exam_name) }}');" title="Delete">
+                    <i class="bi bi-trash"></i> Delete
                 </button>
                 @endif
             </div>

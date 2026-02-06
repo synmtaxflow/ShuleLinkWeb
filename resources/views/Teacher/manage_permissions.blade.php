@@ -1,4 +1,18 @@
+@php
+    $user_type = $user_type ?? session('user_type', 'Teacher');
+    $permissionContext = $permissionContext ?? ($user_type === 'Staff' ? 'staff' : 'teacher');
+    $permissionLabel = $permissionContext === 'staff' ? 'Staff' : 'Teacher';
+    $permissionListRoute = $permissionContext === 'staff' ? 'staff.permissions' : 'teacher.permissions';
+    $permissionStoreRoute = $permissionContext === 'staff' ? 'staff.permissions.store' : 'teacher.permissions.store';
+@endphp
+
+@if($user_type == 'Admin')
+@include('includes.Admin_nav')
+@elseif($user_type == 'Staff')
+@include('includes.staff_nav')
+@else
 @include('includes.teacher_nav')
+@endif
 
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
@@ -61,7 +75,7 @@
 <div class="content mt-3">
     <div class="card">
         <div class="card-header bg-primary-custom text-white">
-            <strong>Teacher Permissions</strong>
+            <strong>{{ $permissionLabel }} Permissions</strong>
         </div>
         <div class="card-body">
             <div class="form-loading" id="teacherTabLoading">
@@ -70,12 +84,12 @@
             </div>
             <ul class="nav nav-tabs permission-tabs mb-3">
                 <li class="nav-item">
-                    <a class="nav-link {{ $activeTab === 'request' ? 'active' : '' }}" href="{{ route('teacher.permissions', ['tab' => 'request']) }}">
+                    <a class="nav-link {{ $activeTab === 'request' ? 'active' : '' }}" href="{{ route($permissionListRoute, ['tab' => 'request']) }}">
                         Request Permission
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ $activeTab === 'pending' ? 'active' : '' }}" href="{{ route('teacher.permissions', ['tab' => 'pending']) }}">
+                    <a class="nav-link {{ $activeTab === 'pending' ? 'active' : '' }}" href="{{ route($permissionListRoute, ['tab' => 'pending']) }}">
                         Pending Requests
                         @if($unreadPendingCount > 0)
                             <span class="badge-count">{{ $unreadPendingCount }}</span>
@@ -83,7 +97,7 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ $activeTab === 'approved' ? 'active' : '' }}" href="{{ route('teacher.permissions', ['tab' => 'approved']) }}">
+                    <a class="nav-link {{ $activeTab === 'approved' ? 'active' : '' }}" href="{{ route($permissionListRoute, ['tab' => 'approved']) }}">
                         Completed Requests
                         @if($unreadApprovedCount > 0)
                             <span class="badge-count">{{ $unreadApprovedCount }}</span>
@@ -91,7 +105,7 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ $activeTab === 'rejected' ? 'active' : '' }}" href="{{ route('teacher.permissions', ['tab' => 'rejected']) }}">
+                    <a class="nav-link {{ $activeTab === 'rejected' ? 'active' : '' }}" href="{{ route($permissionListRoute, ['tab' => 'rejected']) }}">
                         Rejected Requests
                         @if($unreadRejectedCount > 0)
                             <span class="badge-count">{{ $unreadRejectedCount }}</span>
@@ -102,7 +116,7 @@
 
             @if($activeTab === 'request')
                 <div class="section-title">Request Permission</div>
-                <form method="POST" action="{{ route('teacher.permissions.store') }}" id="teacherPermissionForm">
+                <form method="POST" action="{{ route($permissionStoreRoute) }}" id="teacherPermissionForm">
                     @csrf
                     <div class="form-group mb-3">
                         <label>Time Mode</label>

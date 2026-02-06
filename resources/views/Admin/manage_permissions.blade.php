@@ -1,4 +1,10 @@
+@if($user_type == 'Admin')
 @include('includes.Admin_nav')
+@elseif($user_type == 'Staff')
+@include('includes.staff_nav')
+@else
+@include('includes.teacher_nav')
+@endif
 
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
@@ -69,11 +75,25 @@
                 <li class="nav-item">
                     <a class="nav-link {{ $activeTab === 'teacher' ? 'active' : '' }}" href="{{ route('admin.hr.permission', ['tab' => 'teacher']) }}">
                         Teacher Permission
+                        @if(!empty($tabCounts['teacher']))
+                            <span class="badge-count">{{ $tabCounts['teacher'] }}</span>
+                        @endif
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ $activeTab === 'staff' ? 'active' : '' }}" href="{{ route('admin.hr.permission', ['tab' => 'staff']) }}">
+                        Staff Permission
+                        @if(!empty($tabCounts['staff']))
+                            <span class="badge-count">{{ $tabCounts['staff'] }}</span>
+                        @endif
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {{ $activeTab === 'student' ? 'active' : '' }}" href="{{ route('admin.hr.permission', ['tab' => 'student']) }}">
                         Student Permission
+                        @if(!empty($tabCounts['student']))
+                            <span class="badge-count">{{ $tabCounts['student'] }}</span>
+                        @endif
                     </a>
                 </li>
             </ul>
@@ -121,6 +141,8 @@
                                 <td>
                                     @if($activeTab === 'student')
                                         {{ $permission->student ? trim(($permission->student->first_name ?? '') . ' ' . ($permission->student->last_name ?? '')) : 'N/A' }}
+                                    @elseif($activeTab === 'staff')
+                                        {{ $permission->staff ? trim(($permission->staff->first_name ?? '') . ' ' . ($permission->staff->last_name ?? '')) : 'N/A' }}
                                     @else
                                         {{ $permission->teacher ? trim(($permission->teacher->first_name ?? '') . ' ' . ($permission->teacher->last_name ?? '')) : 'N/A' }}
                                     @endif

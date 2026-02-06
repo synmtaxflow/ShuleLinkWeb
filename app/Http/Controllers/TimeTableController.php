@@ -69,6 +69,27 @@ class TimeTableController extends Controller
             return $hasPermission;
         }
 
+        // For staff, check profession permissions
+        if ($userType === 'Staff') {
+            $staffID = Session::get('staffID');
+            if (!$staffID) {
+                return false;
+            }
+
+            $professionId = DB::table('other_staff')
+                ->where('id', $staffID)
+                ->value('profession_id');
+
+            if (!$professionId) {
+                return false;
+            }
+
+            return DB::table('staff_permissions')
+                ->where('profession_id', $professionId)
+                ->where('name', $permissionName)
+                ->exists();
+        }
+
         return false;
     }
 

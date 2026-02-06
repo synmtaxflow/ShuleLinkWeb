@@ -32,9 +32,9 @@ class SMS_InformationController extends Controller
 
     public function sms_notification()
     {
-      $userType = Session::get('user_type');
+      $user_type = Session::get('user_type');
       $schoolID = Session::get('schoolID');
-        if (!$userType || !$schoolID) {
+        if (!$user_type || !$schoolID) {
             return redirect()->route('login')->with('error', 'Access denied');
         }
 
@@ -47,7 +47,7 @@ class SMS_InformationController extends Controller
             ->orderBy('class_name')
             ->get();
 
-        return view('Admin.manage_sms_updates', compact('school', 'classes'));
+        return view('Admin.manage_sms_updates', compact('school', 'classes', 'user_type'));
     }
 
     /**

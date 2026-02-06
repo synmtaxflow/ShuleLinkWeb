@@ -1,3 +1,9 @@
+@php
+    $user_type = $user_type ?? Session::get('user_type');
+@endphp
+@if($user_type == 'Staff')
+@include('includes.staff_nav')
+@else
 <!doctype html>
 <html class="no-js" lang="en">
 <head>
@@ -106,6 +112,21 @@
 
 #left-panel .dropdown-toggle.menu-active i {
     color: #666666 !important;
+}
+
+/* Header icon styling */
+.header-icon-muted {
+    color: rgba(148, 0, 0, 0.7) !important;
+    font-size: 1.1rem;
+}
+.notification-count {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    font-size: 0.7rem;
+    line-height: 1;
+    padding: 3px 5px;
+    border-radius: 10px;
 }
 
 /* Rangi ya jina la "Teacher" na maandishi ya ndani ya sidebar */
@@ -385,6 +406,7 @@
                             <ul id="userManagement" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
                                 <li><a href="{{ route('school') }}" class="nav-link"><i class="fa fa-building"></i> School</a></li>
                                 <li><a href="{{ route('manageTeachers') }}" class="nav-link"><i class="fa fa-users"></i> Teachers And Staff</a></li>
+                                <li><a href="{{ route('manage_watchman') }}" class="nav-link"><i class="fa fa-shield"></i> Watchman</a></li>
                                 <li><a href="{{ route('manage_student') }}" class="nav-link"><i class="fa fa-user"></i> Students</a></li>
                                 <li><a href="{{ route('admin.school_visitors') }}" class="nav-link"><i class="fa fa-id-badge"></i> School Visitors</a></li>
                             </ul>
@@ -401,6 +423,7 @@
                                 <li><a href="{{ route('manage_fees') }}" class="nav-link"><i class="fa fa-money"></i> Fees</a></li>
                                 <li><a href="{{ route('manage_library') }}" class="nav-link"><i class="fa fa-book"></i> Library</a></li>
                                 <li><a href="{{ route('manageResults') }}" class="nav-link"><i class="fa fa-trophy"></i> Results</a></li>
+                                <li><a href="{{ route('admin.subject_analysis') }}" class="nav-link"><i class="fa fa-line-chart"></i> Subject Analysis</a></li>
                                 <li><a href="{{ route('manageExamination') }}" class="nav-link"><i class="fa fa-pencil-square-o"></i> Examinations</a></li>
                                 <li><a href="{{ route('manageAttendance') }}" class="nav-link"><i class="fa fa-check-square-o"></i> Attendance</a></li>
                             </ul>
@@ -467,12 +490,22 @@
                                     $schoolID = Session::get('schoolID');
                                     $unreadSuggestions = 0;
                                     $unreadIncidents = 0;
+                                    $unreadStaffSuggestions = 0;
+                                    $unreadStaffIncidents = 0;
                                     if ($schoolID) {
                                         $unreadSuggestions = \App\Models\TeacherFeedback::where('schoolID', $schoolID)
                                             ->where('type', 'suggestion')
                                             ->where('is_read_by_admin', false)
                                             ->count();
                                         $unreadIncidents = \App\Models\TeacherFeedback::where('schoolID', $schoolID)
+                                            ->where('type', 'incident')
+                                            ->where('is_read_by_admin', false)
+                                            ->count();
+                                        $unreadStaffSuggestions = \App\Models\StaffFeedback::where('schoolID', $schoolID)
+                                            ->where('type', 'suggestion')
+                                            ->where('is_read_by_admin', false)
+                                            ->count();
+                                        $unreadStaffIncidents = \App\Models\StaffFeedback::where('schoolID', $schoolID)
                                             ->where('type', 'incident')
                                             ->where('is_read_by_admin', false)
                                             ->count();
@@ -491,6 +524,22 @@
                                         <i class="fa fa-exclamation-triangle"></i> Incidents
                                         @if($unreadIncidents > 0)
                                             <span class="badge badge-danger ml-1">{{ $unreadIncidents }}</span>
+                                        @endif
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{{ \Illuminate\Support\Facades\Route::has('admin.staff.suggestions') ? route('admin.staff.suggestions') : '#' }}" class="nav-link">
+                                        <i class="fa fa-lightbulb-o"></i> Staff Suggestions
+                                        @if($unreadStaffSuggestions > 0)
+                                            <span class="badge badge-danger ml-1">{{ $unreadStaffSuggestions }}</span>
+                                        @endif
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{{ \Illuminate\Support\Facades\Route::has('admin.staff.incidents') ? route('admin.staff.incidents') : '#' }}" class="nav-link">
+                                        <i class="fa fa-exclamation-triangle"></i> Staff Incidents
+                                        @if($unreadStaffIncidents > 0)
+                                            <span class="badge badge-danger ml-1">{{ $unreadStaffIncidents }}</span>
                                         @endif
                                     </a>
                                 </li>
@@ -545,79 +594,135 @@
             <div class="header-menu">
 
                 <div class="col-sm-7">
-                    <a id="menuToggle" class="menutoggle pull-left"><i class="fa fa fa-tasks"></i></a>
+                    <a id="menuToggle" class="menutoggle pull-left"><i class="fa fa fa-tasks header-icon-muted"></i></a>
                     <div class="header-left">
-                        <button class="search-trigger"><i class="fa fa-search"></i></button>
-                        <div class="form-inline">
-                            <form class="search-form">
-                                <input class="form-control mr-sm-2" type="text" placeholder="Search ..." aria-label="Search">
-                                <button class="search-close" type="submit"><i class="fa fa-close"></i></button>
-                            </form>
-                        </div>
+                        <div class="form-inline"></div>
 
                         <div class="dropdown for-notification">
-                            <button class="btn btn-secondary dropdown-toggle" type="button" id="notification" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <i class="fa fa-bell"></i>
-                                <span class="count bg-danger">5</span>
+                            @php
+                                $isAdmin = Session::get('user_type') === 'Admin';
+                                $schoolID = Session::get('schoolID');
+                                $lastSeen = Session::get('visitors_last_seen');
+                                $lastSeenAt = $lastSeen ? \Carbon\Carbon::parse($lastSeen) : \Carbon\Carbon::createFromTimestamp(0);
+                                $newVisitorCount = 0;
+                                $recentVisitors = collect();
+
+                                if ($isAdmin && $schoolID) {
+                                    $newVisitorQuery = \Illuminate\Support\Facades\DB::table('school_visitors')
+                                        ->where('schoolID', $schoolID)
+                                        ->where('created_at', '>', $lastSeenAt);
+                                    $newVisitorCount = $newVisitorQuery->count();
+                                    $recentVisitors = $newVisitorQuery
+                                        ->orderBy('created_at', 'desc')
+                                        ->limit(5)
+                                        ->get();
+                                }
+                            @endphp
+                            <button class="btn btn-secondary dropdown-toggle position-relative" type="button" id="notification" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fa fa-bell-o header-icon-muted"></i>
+                                @if($newVisitorCount > 0)
+                                    <span class="count bg-danger notification-count">{{ $newVisitorCount }}</span>
+                                @endif
                             </button>
                             <div class="dropdown-menu" aria-labelledby="notification">
-                                <p class="red">You have 3 Notification</p>
-                                <a class="dropdown-item media bg-flat-color-1" href="#">
-                                <i class="fa fa-check"></i>
-                                <p>Server #1 overloaded.</p>
-                            </a>
-                                <a class="dropdown-item media bg-flat-color-4" href="#">
-                                <i class="fa fa-info"></i>
-                                <p>Server #2 overloaded.</p>
-                            </a>
-                                <a class="dropdown-item media bg-flat-color-5" href="#">
-                                <i class="fa fa-warning"></i>
-                                <p>Server #3 overloaded.</p>
-                            </a>
+                                <p class="red">New Visitors: {{ $newVisitorCount }}</p>
+                                @if($newVisitorCount === 0)
+                                    <span class="dropdown-item text-muted">No new visitor notifications.</span>
+                                @else
+                                    @foreach($recentVisitors as $visitor)
+                                        @php
+                                            $created = \Carbon\Carbon::parse($visitor->created_at);
+                                            $timeLabel = $created->isToday()
+                                                ? $created->diffForHumans()
+                                                : $created->format('d M Y');
+                                        @endphp
+                                        <a class="dropdown-item media" href="{{ route('admin.school_visitors') }}">
+                                            <i class="fa fa-user"></i>
+                                            <p>
+                                                {{ $visitor->name }}<br>
+                                                <small>{{ $visitor->reason ?? 'N/A' }} | {{ $visitor->contact ?? 'N/A' }}</small>
+                                                <span class="time float-right">{{ $timeLabel }}</span>
+                                            </p>
+                                        </a>
+                                    @endforeach
+                                @endif
                             </div>
                         </div>
 
                         <div class="dropdown for-message">
+                            @php
+                                $isAdmin = Session::get('user_type') === 'Admin';
+                                $schoolID = Session::get('schoolID');
+                                $examPaperNotificationCount = 0;
+                                $examPaperNotifications = collect();
+
+                                if ($isAdmin && $schoolID) {
+                                    $teacherHasPhoto = \Illuminate\Support\Facades\Schema::hasColumn('teachers', 'photo');
+                                    $examPaperNotificationCount = \App\Models\ExamPaperNotification::where('schoolID', $schoolID)
+                                        ->where('is_read', false)
+                                        ->count();
+
+                                    $examPaperNotifications = \Illuminate\Support\Facades\DB::table('exam_paper_notifications')
+                                        ->join('exam_papers', 'exam_paper_notifications.exam_paperID', '=', 'exam_papers.exam_paperID')
+                                        ->join('examinations', 'exam_papers.examID', '=', 'examinations.examID')
+                                        ->join('class_subjects', 'exam_papers.class_subjectID', '=', 'class_subjects.class_subjectID')
+                                        ->join('school_subjects', 'class_subjects.subjectID', '=', 'school_subjects.subjectID')
+                                        ->leftJoin('subclasses', 'class_subjects.subclassID', '=', 'subclasses.subclassID')
+                                        ->leftJoin('classes', 'class_subjects.classID', '=', 'classes.classID')
+                                        ->join('teachers', 'exam_paper_notifications.teacherID', '=', 'teachers.id')
+                                        ->where('exam_paper_notifications.schoolID', $schoolID)
+                                        ->orderBy('exam_paper_notifications.created_at', 'desc')
+                                        ->limit(5);
+
+                                    $selectColumns = [
+                                            'exam_paper_notifications.exam_paper_notificationID',
+                                            'exam_paper_notifications.created_at',
+                                            'examinations.exam_name',
+                                            'school_subjects.subject_name',
+                                            'classes.class_name',
+                                            'subclasses.subclass_name',
+                                            'teachers.first_name',
+                                            'teachers.last_name',
+                                        ];
+                                    if ($teacherHasPhoto) {
+                                        $selectColumns[] = 'teachers.photo';
+                                    }
+
+                                    $examPaperNotifications = $examPaperNotifications->get($selectColumns);
+                                }
+                            @endphp
                             <button class="btn btn-secondary dropdown-toggle" type="button"
                                 id="message"
                                 data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <i class="ti-email"></i>
-                                <span class="count bg-primary">9</span>
+                                <i class="ti-email header-icon-muted"></i>
+                                @if($examPaperNotificationCount > 0)
+                                    <span class="count bg-primary" id="examPaperNotificationCount">{{ $examPaperNotificationCount }}</span>
+                                @endif
                             </button>
-                            <div class="dropdown-menu" aria-labelledby="message">
-                                <p class="red">You have 4 Mails</p>
-                                <a class="dropdown-item media bg-flat-color-1" href="#">
-                                <span class="photo media-left"><img alt="avatar" src="{{ asset('images/avatar/1.jpg') }}"></span>
-                                <span class="message media-body">
-                                    <span class="name float-left">Jonathan Smith</span>
-                                    <span class="time float-right">Just now</span>
-                                        <p>Hello, this is an example msg</p>
-                                </span>
-                            </a>
-                                <a class="dropdown-item media bg-flat-color-4" href="#">
-                                <span class="photo media-left"><img alt="avatar" src="{{ asset('images/avatar/2.jpg') }}"></span>
-                                <span class="message media-body">
-                                    <span class="name float-left">Jack Sanders</span>
-                                    <span class="time float-right">5 minutes ago</span>
-                                        <p>Lorem ipsum dolor sit amet, consectetur</p>
-                                </span>
-                            </a>
-                                <a class="dropdown-item media bg-flat-color-5" href="#">
-                                <span class="photo media-left"><img alt="avatar" src="{{ asset('images/avatar/3.jpg') }}"></span>
-                                <span class="message media-body">
-                                    <span class="name float-left">Cheryl Wheeler</span>
-                                    <span class="time float-right">10 minutes ago</span>
-                                        <p>Hello, this is an example msg</p>
-                                </span>
-                            </a>
-                                <a class="dropdown-item media bg-flat-color-3" href="#">
-                                <span class="photo media-left"><img alt="avatar" src="{{ asset('images/avatar/4.jpg') }}"></span>
-                                <span class="message media-body">
-                                    <span class="name float-left">Rachel Santos</span>
-                                    <span class="time float-right">15 minutes ago</span>
-                                        <p>Lorem ipsum dolor sit amet, consectetur</p>
-                                </span>
-                            </a>
+                            <div class="dropdown-menu" aria-labelledby="message" id="examPaperNotificationsMenu">
+                                <p class="red">Exam Paper Notifications</p>
+                                @if($examPaperNotifications->isEmpty())
+                                    <span class="dropdown-item text-muted">No new exam paper notifications.</span>
+                                @else
+                                    @foreach($examPaperNotifications as $note)
+                                        @php
+                                            $created = \Carbon\Carbon::parse($note->created_at);
+                                            $timeLabel = $created->isToday() ? $created->diffForHumans() : $created->format('d M Y');
+                                            $teacherName = trim(($note->first_name ?? '') . ' ' . ($note->last_name ?? ''));
+                                            $classDisplay = trim(($note->class_name ?? '') . ' ' . ($note->subclass_name ?? ''));
+                                            $photoUrl = (!empty($note->photo ?? null)) ? asset('userImages/'.$note->photo) : asset('images/avatar/1.jpg');
+                                        @endphp
+                                        <a class="dropdown-item media" href="{{ route('manageExamination') }}">
+                                            <span class="photo media-left"><img alt="avatar" src="{{ $photoUrl }}"></span>
+                                            <span class="message media-body">
+                                                <span class="name float-left">{{ $teacherName }}</span>
+                                                <span class="time float-right">{{ $timeLabel }}</span>
+                                                <p>New exam paper: {{ $note->exam_name }} | {{ $note->subject_name }} | {{ $classDisplay }}</p>
+                                            </span>
+                                        </a>
+                                    @endforeach
+                                @endif
+                                <a class="dropdown-item text-center" href="{{ route('manageExamination') }}">View all exam papers</a>
                             </div>
                         </div>
                     </div>
@@ -997,18 +1102,44 @@ function initializeMenuDropdowns() {
     });
 }
 
+function initializeExamPaperNotifications() {
+    if (typeof window.jQuery === 'undefined') {
+        setTimeout(initializeExamPaperNotifications, 100);
+        return;
+    }
+    var $ = window.jQuery;
+    $('#message').off('show.bs.dropdown.examPaper').on('show.bs.dropdown.examPaper', function() {
+        $.ajax({
+            url: '{{ route("mark_exam_paper_notifications_read") }}',
+            method: 'POST',
+            data: { _token: $('meta[name="csrf-token"]').attr('content') },
+            success: function() {
+                $('#examPaperNotificationCount').remove();
+            }
+        });
+    });
+}
+
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', initializeMenuDropdowns);
+document.addEventListener('DOMContentLoaded', function() {
+    initializeMenuDropdowns();
+    initializeExamPaperNotifications();
+});
 
 // Also re-initialize when page is shown (for back/forward navigation)
 window.addEventListener('pageshow', function(event) {
     if (event.persisted) {
         initializeMenuDropdowns();
+        initializeExamPaperNotifications();
     }
 });
 
 // Re-initialize after a short delay to ensure everything is loaded
-setTimeout(initializeMenuDropdowns, 500);
+setTimeout(function() {
+    initializeMenuDropdowns();
+    initializeExamPaperNotifications();
+}, 500);
 
 })(window.jQuery);
 </script>
+@endif
