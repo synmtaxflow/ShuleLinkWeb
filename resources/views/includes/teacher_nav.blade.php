@@ -664,25 +664,19 @@
             <div class="header-menu">
 
                 <div class="col-sm-7">
-                    <a id="menuToggle" class="menutoggle pull-left"><i class="fa fa fa-tasks"></i></a>
+                    <a id="menuToggle" class="menutoggle pull-left"><i class="fa fa fa-tasks header-icon-muted"></i></a>
                     <div class="header-left">
-                        <button class="search-trigger"><i class="fa fa-search"></i></button>
-                        <div class="form-inline">
-                            <form class="search-form">
-                                <input class="form-control mr-sm-2" type="text" placeholder="Search ..." aria-label="Search">
-                                <button class="search-close" type="submit"><i class="fa fa-close"></i></button>
-                            </form>
-                        </div>
+                        <div class="form-inline"></div>
 
                         <div class="dropdown for-notification">
                             @php
                                 $notifications = $teacherNotifications ?? collect();
                                 $notificationCount = $notifications->count();
                             @endphp
-                            <button class="btn btn-secondary dropdown-toggle" type="button" id="notification" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <i class="fa fa-bell"></i>
+                            <button class="btn btn-secondary dropdown-toggle position-relative" type="button" id="notification" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fa fa-bell-o header-icon-muted"></i>
                                 @if($notificationCount > 0)
-                                    <span class="count bg-danger">{{ $notificationCount }}</span>
+                                    <span class="count bg-danger notification-count">{{ $notificationCount }}</span>
                                 @endif
                             </button>
                             <div class="dropdown-menu" aria-labelledby="notification" style="max-width: 400px; min-width: 300px;">
@@ -729,10 +723,10 @@
                         </div>
 
                         <div class="dropdown for-message">
-                            <button class="btn btn-secondary dropdown-toggle" type="button"
+                            <button class="btn btn-secondary dropdown-toggle position-relative" type="button"
                                 id="message"
                                 data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <i class="ti-email"></i>
+                                <i class="ti-email header-icon-muted"></i>
                                 <span class="count bg-primary">9</span>
                             </button>
                             <div class="dropdown-menu" aria-labelledby="message">
@@ -788,12 +782,12 @@
                         </a>
 
                         <div class="user-menu dropdown-menu">
-                            <a class="nav-link" href="#"><i class="fa fa-user"></i> My Profile</a>
-
-                            <a class="nav-link" href="#"><i class="fa fa-user"></i> Notifications <span class="count">13</span></a>
-
-                            <a class="nav-link" href="#"><i class="fa fa-cog"></i> Settings</a>
-
+                            <a class="nav-link" href="{{ route('teacher.profile') }}">
+                                <i class="fa fa-user"></i> View Profile
+                            </a>
+                            <a class="nav-link" href="{{ route('teacher.profile') }}#change-password">
+                                <i class="fa fa-lock"></i> Change Password
+                            </a>
                             <a class="nav-link" href="{{ route('logout') }}"><i class="fa fa-power-off"></i> Logout</a>
                         </div>
                     </div>
@@ -1011,16 +1005,57 @@ function initializeMenuDropdowns() {
     });
 }
 
+function loadScriptOnce(src, onLoad) {
+    if (document.querySelector('script[src="' + src + '"]')) {
+        if (typeof onLoad === 'function') {
+            onLoad();
+        }
+        return;
+    }
+    var script = document.createElement('script');
+    script.src = src;
+    script.onload = function() {
+        if (typeof onLoad === 'function') {
+            onLoad();
+        }
+    };
+    document.head.appendChild(script);
+}
+
+function ensureJqueryAndBootstrap(callback) {
+    if (window.jQuery && window.jQuery.fn && typeof window.jQuery.fn.collapse === 'function') {
+        callback();
+        return;
+    }
+
+    if (!window.jQuery) {
+        loadScriptOnce('https://code.jquery.com/jquery-3.6.0.min.js', function() {
+            if (window.jQuery && window.jQuery.fn && typeof window.jQuery.fn.collapse === 'function') {
+                callback();
+            } else {
+                loadScriptOnce('https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js', callback);
+            }
+        });
+        return;
+    }
+
+    loadScriptOnce('https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js', callback);
+}
+
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', initializeMenuDropdowns);
+document.addEventListener('DOMContentLoaded', function() {
+    ensureJqueryAndBootstrap(initializeMenuDropdowns);
+});
 
 // Also re-initialize when page is shown (for back/forward navigation)
 window.addEventListener('pageshow', function(event) {
     if (event.persisted) {
-        initializeMenuDropdowns();
+        ensureJqueryAndBootstrap(initializeMenuDropdowns);
     }
 });
 
 // Re-initialize after a short delay to ensure everything is loaded
-setTimeout(initializeMenuDropdowns, 500);
+setTimeout(function() {
+    ensureJqueryAndBootstrap(initializeMenuDropdowns);
+}, 500);
 </script>

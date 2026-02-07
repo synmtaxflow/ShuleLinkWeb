@@ -122,6 +122,7 @@
                         data-exam-name="{{ $exam->exam_name }}"
                         title="View Exam Papers">
                     <i class="bi bi-file-earmark-text"></i> Exam Papers
+                    <span class="badge badge-danger ml-1 d-none exam-paper-count" data-exam-id="{{ $exam->examID }}"></span>
                 </button>
                 @endif
                 

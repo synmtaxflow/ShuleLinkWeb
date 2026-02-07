@@ -170,6 +170,86 @@
         opacity: 0.5;
     }
 
+    /* Student Widgets */
+    .students-widget-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    .students-widget-grid .student-widget {
+        flex: 1 1 calc(33.333% - 20px);
+        max-width: calc(33.333% - 20px);
+    }
+
+    @media (max-width: 1200px) {
+        .students-widget-grid .student-widget {
+            flex: 1 1 calc(50% - 20px);
+            max-width: calc(50% - 20px);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .students-widget-grid .student-widget {
+            flex: 1 1 100%;
+            max-width: 100%;
+        }
+    }
+
+    .student-widget {
+        width: 320px;
+        background: #ffffff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+        font-family: "Century Gothic", Arial, sans-serif;
+    }
+
+    .student-widget-header {
+        background: #940000;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .student-widget-header img {
+        width: 110px;
+        height: 110px;
+        border-radius: 50%;
+        border: 4px solid #fff;
+        object-fit: cover;
+    }
+
+    .student-widget-body {
+        padding: 15px;
+        text-align: center;
+    }
+
+    .student-widget-body h3 {
+        color: #940000;
+        margin-bottom: 5px;
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .student-widget-body .form {
+        font-weight: bold;
+        color: #444;
+        margin-bottom: 10px;
+    }
+
+    .student-widget-body .info p {
+        margin: 6px 0;
+        font-size: 14px;
+    }
+
+    .student-widget-actions {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+    }
+
     /* Manual Modal Styles (when Bootstrap JS is not loaded) */
     .modal {
         position: fixed;
@@ -280,7 +360,7 @@
         z-index: 1;
     }
 
-    .search-input-wrapper #searchInput {
+    .search-input-wrapper #studentSearchInput {
         padding-left: 40px;
         border-radius: 8px;
         border: 1px solid #ced4da;
@@ -289,13 +369,13 @@
         font-size: 0.95rem;
     }
 
-    .search-input-wrapper #searchInput:focus {
+    .search-input-wrapper #studentSearchInput:focus {
         border-color: #940000;
         box-shadow: 0 0 0 0.2rem rgba(148, 0, 0, 0.25);
         outline: none;
     }
 
-    .search-input-wrapper #searchInput::placeholder {
+    .search-input-wrapper #studentSearchInput::placeholder {
         color: #adb5bd;
         font-style: italic;
     }
@@ -597,6 +677,7 @@
     <!-- Filters Section -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
+
             <!-- Filters Section -->
             <div class="row g-3 mb-4">
                 <div class="col-md-3">
@@ -687,27 +768,21 @@
                     </div>
                 </div>
 
-    <!-- Students Table Section -->
+    <!-- Students Widgets Section -->
     <div class="card border-0 shadow-sm">
         <div class="card-body">
-                    <div class="table-responsive">
-                <table id="studentsTable" class="table table-hover table-striped align-middle mb-0" style="width:100%">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Image</th>
-                                    <th>Admission Number</th>
-                                    <th>Full Name</th>
-                                    <th>Class</th>
-                                    <th>Gender</th>
-                                    <th>Parent</th>
-                            <th>Fingerprint ID</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Data will be loaded via AJAX -->
-                            </tbody>
-                        </table>
+            <!-- Search Input (Moved here) -->
+             <div class="mb-4">
+                 <div class="search-input-wrapper">
+                    <i class="bi bi-search"></i>
+                    <input type="text" class="form-control" id="studentSearchInput" placeholder="Search by Admission No, Name, Class...">
+                </div>
+            </div>
+            <div id="studentsWidgetGrid" class="students-widget-grid">
+                <div class="no-data-message">
+                    <i class="bi bi-people fs-1 text-muted"></i>
+                    <p class="text-muted mt-2">Loading students...</p>
+                </div>
             </div>
         </div>
     </div>
@@ -1139,8 +1214,8 @@
     const canDelete = {{ ($canDelete ?? false) ? 'true' : 'false' }};
 
     $(document).ready(function() {
-        let studentsTable;
         let currentStatus = 'Active';
+        let currentStudentsData = [];
 
         // Handle Register New Student Button Click
         $('#addStudentBtn').on('click', function(e) {
@@ -1320,12 +1395,7 @@
             // Update currentStatus
             currentStatus = status;
 
-            // Show loading state
-            let tableContainer = $('#studentsTable').closest('.table-responsive');
-            let existingNoData = tableContainer.find('.no-data-message');
-            if (existingNoData.length) {
-                existingNoData.remove();
-            }
+            $('#studentsWidgetGrid').html('<div class="no-data-message text-center py-5"><i class="bi bi-hourglass-split" style="font-size: 3rem; color: #6c757d;"></i><p class="text-muted mt-2">Loading students...</p></div>');
 
             $.ajax({
                 url: '{{ route("get_students_list") }}',
@@ -1342,134 +1412,17 @@
                     console.log('Response received:', response);
 
                     if (response.success) {
-                        let table = $('#studentsTable').DataTable();
-                        if (!table) {
-                            console.error('Table not found: studentsTable');
-                            return;
-                        }
-
-                        table.clear();
-
                         if (response.students && response.students.length > 0) {
-                            console.log('Adding', response.students.length, 'students to table');
-                            response.students.forEach(function(student) {
-                                let imageHtml = '<img src="' + student.photo + '" alt="' + student.full_name + '" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">';
-
-                                // Fingerprint ID display
-                                let fingerprintIdHtml = '';
-                                if (student.fingerprint_id) {
-                                    fingerprintIdHtml = '<span class="badge bg-success"><i class="bi bi-fingerprint"></i> ' + student.fingerprint_id + '</span>';
-                                } else {
-                                    fingerprintIdHtml = '<span class="badge bg-secondary"><i class="bi bi-dash"></i> No ID</span>';
-                                }
-
-                                // Actions buttons - show edit/delete for Active students
-                                let actionsHtml = '<div class="btn-group" role="group" style="gap: 5px;">' +
-                                        '<button class="btn btn-sm btn-info view-student-btn" data-student-id="' + student.studentID + '" title="View More Details" style="padding: 5px 10px;">' +
-                                        '<i class="bi bi-eye"></i>' +
-                                        '</button>';
-
-                                // Edit button - only if user has update permission and student is Active
-                                if (canUpdate && status === 'Active') {
-                                        actionsHtml += '<button class="btn btn-sm btn-warning edit-student-btn" data-student-id="' + student.studentID + '" title="Edit Student" style="padding: 5px 10px;">' +
-                                            '<i class="bi bi-pencil-square"></i>' +
-                                            '</button>';
-                                    }
-
-                                // Only show fingerprint button if student doesn't have fingerprint_id and is Active
-                                if (status === 'Active') {
-                                    if (!student.fingerprint_id) {
-                                        actionsHtml += '<a href="#" class="btn btn-sm btn-success text-white send-student-to-fingerprint-btn" data-student-id="' + student.studentID + '" data-student-name="' + (student.first_name || student.full_name || '') + '" data-fingerprint-id="' + (student.fingerprint_id || '') + '" title="Send to Fingerprint Device" style="padding: 5px 10px;">' +
-                                            '<i class="bi bi-fingerprint"></i>' +
-                                            '</a>';
-                                    } else if (!student.sent_to_device) {
-                                        // Show "Register to Device" button if fingerprint_id exists but not sent to device
-                                        actionsHtml += '<button class="btn btn-sm btn-success text-white register-student-to-device-btn" data-student-id="' + student.studentID + '" data-student-name="' + (student.first_name || student.full_name || '') + '" data-fingerprint-id="' + (student.fingerprint_id || '') + '" title="Register to Device" style="padding: 5px 10px;">' +
-                                            '<i class="bi bi-device-hdd"></i>' +
-                                            '</button>';
-                                    }
-                                    }
-
-                                    actionsHtml += '<button class="btn btn-sm btn-primary generate-id-btn" data-student-id="' + student.studentID + '" title="Generate Student ID Card" style="padding: 5px 10px;">' +
-                                        '<i class="bi bi-card-text"></i>' +
-                                        '</button>';
-
-                                // Delete button - only if user has delete permission and student is Active
-                                if (canDelete && status === 'Active') {
-                                        actionsHtml += '<button class="btn btn-sm btn-danger delete-student-btn" data-student-id="' + student.studentID + '" data-student-name="' + student.full_name + '" title="Delete Student" style="padding: 5px 10px;">' +
-                                            '<i class="bi bi-trash"></i>' +
-                                            '</button>';
-                                    }
-
-                                    actionsHtml += '</div>';
-
-                                // Add red alarm icon if student has health conditions - support both boolean and integer values
-                                let healthAlarmIcon = '';
-                                let hasHealthCondition = false;
-                                
-                                // Check all health condition fields
-                                if ((student.is_disabled === true || student.is_disabled == 1 || student.is_disabled === "1") ||
-                                    (student.has_epilepsy === true || student.has_epilepsy == 1 || student.has_epilepsy === "1") ||
-                                    (student.has_allergies === true || student.has_allergies == 1 || student.has_allergies === "1") ||
-                                    (student.has_disability === true || student.has_disability == 1 || student.has_disability === "1") ||
-                                    (student.has_chronic_illness === true || student.has_chronic_illness == 1 || student.has_chronic_illness === "1")) {
-                                    hasHealthCondition = true;
-                                }
-                                
-                                if (hasHealthCondition) {
-                                    healthAlarmIcon = ' <i class="bi bi-exclamation-triangle-fill text-danger" title="Health Condition Alert"></i>';
-                                }
-
-                                table.row.add([
-                                    imageHtml,
-                                    student.admission_number,
-                                    student.full_name + healthAlarmIcon,
-                                    student.class,
-                                    student.gender,
-                                    student.parent_name,
-                                    fingerprintIdHtml,
-                                    actionsHtml
-                                ]);
-                            });
-
-                            // Remove any existing no-data message
-                            tableContainer.find('.no-data-message').remove();
+                            currentStudentsData = response.students;
+                            renderStudentWidgets(response.students, status);
                         } else {
-                            console.log('No students found for status:', status);
-
-                            // Show "No data available" message
-                            let noDataHtml = '<div class="no-data-message text-center py-5">' +
-                                '<i class="bi bi-inbox" style="font-size: 3rem; color: #6c757d;"></i>' +
-                                '<h5 class="mt-3 text-muted">No Data Available</h5>' +
-                                '<p class="text-muted">No students found matching the selected filters.</p>' +
-                                '</div>';
-
-                            tableContainer.find('.no-data-message').remove();
-                            tableContainer.append(noDataHtml);
+                            currentStudentsData = [];
+                            $('#studentsWidgetGrid').html('<div class="no-data-message text-center py-5"><i class="bi bi-inbox" style="font-size: 3rem; color: #6c757d;"></i><h5 class="mt-3 text-muted">No Data Available</h5><p class="text-muted">No students found matching the selected filters.</p></div>');
                         }
 
-                        table.draw();
-                        
-                        // Load statistics after loading students
                         loadStatistics();
                     } else {
-                        let table = $('#studentsTable').DataTable();
-                        if (table) {
-                            table.clear();
-                            table.draw();
-                        }
-
-                        // Show no data message
-                        let tableContainer = $('#studentsTable').closest('.table-responsive');
-                        let noDataHtml = '<div class="no-data-message text-center py-5">' +
-                            '<i class="bi bi-inbox" style="font-size: 3rem; color: #6c757d;"></i>' +
-                            '<h5 class="mt-3 text-muted">No Data Available</h5>' +
-                            '<p class="text-muted">Failed to load students.</p>' +
-                            '</div>';
-                        tableContainer.find('.no-data-message').remove();
-                        tableContainer.append(noDataHtml);
-                        
-                        // Load statistics even when no data
+                        $('#studentsWidgetGrid').html('<div class="no-data-message text-center py-5"><i class="bi bi-inbox" style="font-size: 3rem; color: #6c757d;"></i><h5 class="mt-3 text-muted">No Data Available</h5><p class="text-muted">Failed to load students.</p></div>');
                         loadStatistics();
                     }
                 },
@@ -1496,24 +1449,13 @@
                         }
                     }
 
-                    // Clear table on error
-                    let table = $('#studentsTable').DataTable();
-                    let tableContainer = $('#studentsTable').closest('.table-responsive');
-
-                    if (table) {
-                        table.clear();
-                        table.draw();
-                    }
-
-                    // Show no data message
                     let noDataHtml = '<div class="no-data-message text-center py-5">' +
                         '<i class="bi bi-exclamation-triangle" style="font-size: 3rem; color: #dc3545;"></i>' +
                         '<h5 class="mt-3 text-danger">Error Loading Data</h5>' +
                         '<p class="text-muted">' + errorMessage + '</p>' +
                         '<button class="btn btn-sm btn-primary mt-2" onclick="location.reload()">Refresh Page</button>' +
                         '</div>';
-                    tableContainer.find('.no-data-message').remove();
-                    tableContainer.append(noDataHtml);
+                    $('#studentsWidgetGrid').html(noDataHtml);
                     
                     // Load statistics even on error
                     loadStatistics();
@@ -1521,27 +1463,119 @@
             });
         }
 
-        // Initialize DataTable
-        function initializeTables() {
-            studentsTable = $('#studentsTable').DataTable({
-                "order": [[2, "asc"]],
-                "pageLength": 25,
-                "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-                "autoWidth": false,
-                "responsive": false,
-                "language": {
-                    "search": "Search:",
-                    "lengthMenu": "Show _MENU_ records per page",
-                    "info": "Showing _START_ to _END_ of _TOTAL_ records",
-                    "infoEmpty": "No records available",
-                    "infoFiltered": "(filtered from _MAX_ total records)",
-                    "zeroRecords": "No matching records found"
-                },
-                "columnDefs": [
-                    { "orderable": false, "targets": [0, 6, 7] }
-                ]
+        function renderStudentWidgets(students, status) {
+            let html = '';
+            // currentStudentsData = students || []; // Removed to prevent overwriting master list during search
+            students.forEach(function(student) {
+                let fingerprintIdHtml = '';
+                if (student.fingerprint_id) {
+                    fingerprintIdHtml = '<span class="badge bg-success"><i class="bi bi-fingerprint"></i> ' + student.fingerprint_id + '</span>';
+                } else {
+                    fingerprintIdHtml = '<span class="badge bg-secondary"><i class="bi bi-dash"></i> No ID</span>';
+                }
+
+                let actionsHtml = '<div class="student-widget-actions">' +
+                        '<button class="btn btn-sm btn-info view-student-btn" data-student-id="' + student.studentID + '" title="View More Details">' +
+                        '<i class="bi bi-eye"></i>' +
+                        '</button>';
+
+                if (canUpdate && status === 'Active') {
+                        actionsHtml += '<button class="btn btn-sm btn-warning edit-student-btn" data-student-id="' + student.studentID + '" title="Edit Student">' +
+                            '<i class="bi bi-pencil-square"></i>' +
+                            '</button>';
+                    }
+
+                if (status === 'Active') {
+                    if (!student.fingerprint_id) {
+                        actionsHtml += '<a href="#" class="btn btn-sm btn-success text-white send-student-to-fingerprint-btn" data-student-id="' + student.studentID + '" data-student-name="' + (student.first_name || student.full_name || '') + '" data-fingerprint-id="' + (student.fingerprint_id || '') + '" title="Send to Fingerprint Device">' +
+                            '<i class="bi bi-fingerprint"></i>' +
+                            '</a>';
+                    } else if (!student.sent_to_device) {
+                        actionsHtml += '<button class="btn btn-sm btn-success text-white register-student-to-device-btn" data-student-id="' + student.studentID + '" data-student-name="' + (student.first_name || student.full_name || '') + '" data-fingerprint-id="' + (student.fingerprint_id || '') + '" title="Register to Device">' +
+                            '<i class="bi bi-device-hdd"></i>' +
+                            '</button>';
+                    }
+                    actionsHtml += '<button class="btn btn-sm btn-primary generate-id-btn" data-student-id="' + student.studentID + '" title="Generate Student ID Card">' +
+                        '<i class="bi bi-card-text"></i>' +
+                        '</button>';
+                }
+
+                if (canDelete && status === 'Active') {
+                        actionsHtml += '<button class="btn btn-sm btn-danger delete-student-btn" data-student-id="' + student.studentID + '" data-student-name="' + student.full_name + '" title="Delete Student">' +
+                            '<i class="bi bi-trash"></i>' +
+                            '</button>';
+                    }
+
+                actionsHtml += '</div>';
+
+                let healthAlarmIcon = '';
+                let hasHealthCondition = false;
+                if ((student.is_disabled === true || student.is_disabled == 1 || student.is_disabled === "1") ||
+                    (student.has_epilepsy === true || student.has_epilepsy == 1 || student.has_epilepsy === "1") ||
+                    (student.has_allergies === true || student.has_allergies == 1 || student.has_allergies === "1") ||
+                    (student.has_disability === true || student.has_disability == 1 || student.has_disability === "1") ||
+                    (student.has_chronic_illness === true || student.has_chronic_illness == 1 || student.has_chronic_illness === "1")) {
+                    hasHealthCondition = true;
+                }
+                if (hasHealthCondition) {
+                    healthAlarmIcon = ' <i class="bi bi-exclamation-triangle-fill text-danger" title="Health Condition Alert"></i>';
+                }
+
+                html += '<div class="student-widget">' +
+                        '<div class="student-widget-header">' +
+                            '<img src="' + student.photo + '" alt="' + student.full_name + '">' +
+                        '</div>' +
+                        '<div class="student-widget-body">' +
+                            '<h3>' + (student.full_name || '-') + healthAlarmIcon + '</h3>' +
+                            '<p class="form">' + (student.class || '-') + '</p>' +
+                            '<div class="info">' +
+                                '<p><strong>Admission:</strong> ' + (student.admission_number || '-') + '</p>' +
+                                '<p><strong>Gender:</strong> ' + (student.gender || '-') + '</p>' +
+                                '<p><strong>Parent:</strong> ' + (student.parent_name || '-') + '</p>' +
+                                '<p><strong>Fingerprint:</strong> ' + fingerprintIdHtml + '</p>' +
+                            '</div>' +
+                            actionsHtml +
+                        '</div>' +
+                    '</div>';
             });
+
+            $('#studentsWidgetGrid').html(html);
         }
+
+        // Client-side Search Implementation
+        $('#studentSearchInput').on('keyup', function() {
+            let searchTerm = $(this).val().toLowerCase().trim();
+            
+            if (searchTerm.length === 0) {
+                // If search is empty, show all students from current context (master list)
+                if (currentStudentsData.length > 0) {
+                    renderStudentWidgets(currentStudentsData, currentStatus);
+                } else {
+                     $('#studentsWidgetGrid').html('<div class="no-data-message text-center py-5"><i class="bi bi-inbox" style="font-size: 3rem; color: #6c757d;"></i><h5 class="mt-3 text-muted">No Data Available</h5><p class="text-muted">No students found matching the selected filters.</p></div>');
+                }
+                return;
+            }
+            
+            let filteredStudents = currentStudentsData.filter(function(student) {
+                // Construct search string
+                let textToSearch = [
+                    student.full_name || '',
+                    student.admission_number || '',
+                    student.class || '',
+                    student.parent_name || '',
+                    student.fingerprint_id || '',
+                    student.gender || ''
+                ].join(' ').toLowerCase();
+                
+                return textToSearch.includes(searchTerm);
+            });
+            
+            if (filteredStudents.length > 0) {
+                renderStudentWidgets(filteredStudents, currentStatus);
+            } else {
+                 $('#studentsWidgetGrid').html('<div class="no-data-message text-center py-5"><i class="bi bi-search" style="font-size: 3rem; color: #6c757d;"></i><h5 class="mt-3 text-muted">No Matches Found</h5><p class="text-muted">No students found matching "' + $(this).val() + '"</p></div>');
+            }
+        });
 
 
         // Function to load statistics
@@ -3251,11 +3285,7 @@ Would you like to try direct registration anyway, or use the manual method?`;
             let gender = $('#genderFilter').val() || '';
             let health = $('#healthFilter').val() || '';
 
-            // Get current table data from DataTable
-            let table = $('#studentsTable').DataTable();
-            
-            // Check if table is initialized
-            if (!table) {
+            if (!currentStudentsData || currentStudentsData.length === 0) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'No Data',
@@ -3265,22 +3295,16 @@ Would you like to try direct registration anyway, or use the manual method?`;
                 return;
             }
 
-            // Get all rows data
-            let tableData = [];
-            table.rows({ search: 'applied' }).every(function() {
-                let rowData = this.data();
-                tableData.push(rowData);
+            let tableData = currentStudentsData.map(function(student) {
+                return [
+                    student.admission_number || '',
+                    student.full_name || '',
+                    student.class || '',
+                    student.gender || '',
+                    student.parent_name || '',
+                    student.fingerprint_id || ''
+                ];
             });
-
-            if (tableData.length === 0) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'No Data',
-                    text: 'No students data to export. Please load students first.',
-                    confirmButtonColor: '#940000'
-                });
-                return;
-            }
 
             // Show loading
             Swal.fire({
@@ -3467,7 +3491,6 @@ Would you like to try direct registration anyway, or use the manual method?`;
         
         // Initialize on page load
         loadFormData(subclassID || null);
-        initializeTables();
         loadClassesForFilter();
         loadAllSubclassesForFilter();
         

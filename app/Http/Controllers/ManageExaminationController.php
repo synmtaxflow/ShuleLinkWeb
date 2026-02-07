@@ -3859,7 +3859,8 @@ class ManageExaminationController extends Controller
             'examID' => 'required|exists:examinations,examID',
             'class_subjectID' => 'required|exists:class_subjects,class_subjectID',
             'upload_type' => 'required|in:upload',
-            'file' => 'required|file|mimes:pdf,doc,docx|max:10240',
+            'file' => 'nullable|file|mimes:pdf,doc,docx|max:10240',
+            'existing_exam_paper_id' => 'nullable|integer',
             'optional_ranges' => 'nullable|array',
             'optional_ranges.*' => 'integer|min:1|max:100',
             'optional_required_counts' => 'nullable|array',
@@ -3985,6 +3986,10 @@ class ManageExaminationController extends Controller
             });
         }
 
+        if (! $request->filled('existing_exam_paper_id') && ! $request->hasFile('file')) {
+            $validator->errors()->add('file', 'Please upload a file or select an existing upload.');
+        }
+
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
@@ -4026,6 +4031,36 @@ class ManageExaminationController extends Controller
         try {
             DB::beginTransaction();
 
+            $reusePaper = null;
+            if ($request->filled('existing_exam_paper_id')) {
+                $reusePaper = ExamPaper::where('exam_paperID', $request->existing_exam_paper_id)
+                    ->where('teacherID', $teacherID)
+                    ->where('examID', $request->examID)
+                    ->where('status', '!=', 'rejected')
+                    ->first();
+
+                if (! $reusePaper) {
+                    DB::rollBack();
+                    return response()->json(['error' => 'Selected existing upload is not available.'], 422);
+                }
+
+                $reuseClassSubject = ClassSubject::with(['subject', 'class', 'subclass'])
+                    ->where('class_subjectID', $reusePaper->class_subjectID)
+                    ->first();
+
+                if (! $reuseClassSubject) {
+                    DB::rollBack();
+                    return response()->json(['error' => 'Existing upload class subject not found.'], 422);
+                }
+
+                $sameSubject = $reuseClassSubject->subjectID == $classSubject->subjectID;
+                $sameClass = $reuseClassSubject->classID == $classSubject->classID;
+                if (! $sameSubject || ! $sameClass) {
+                    DB::rollBack();
+                    return response()->json(['error' => 'Existing upload must be from the same subject and class.'], 422);
+                }
+            }
+
             $examPaper = new ExamPaper;
             $examPaper->examID = $request->examID;
             $examPaper->class_subjectID = $request->class_subjectID;
@@ -4033,10 +4068,14 @@ class ManageExaminationController extends Controller
             $examPaper->upload_type = 'upload';
             $examPaper->status = 'wait_approval';
 
-            $file = $request->file('file');
-            $fileName = time().'_'.$file->getClientOriginalName();
-            $filePath = $file->storeAs('exam_papers', $fileName, 'public');
-            $examPaper->file_path = $filePath;
+            if ($request->hasFile('file')) {
+                $file = $request->file('file');
+                $fileName = time().'_'.$file->getClientOriginalName();
+                $filePath = $file->storeAs('exam_papers', $fileName, 'public');
+                $examPaper->file_path = $filePath;
+            } elseif ($reusePaper && $reusePaper->file_path) {
+                $examPaper->file_path = $reusePaper->file_path;
+            }
             $examPaper->question_content = null;
             $examPaper->optional_question_total = null;
 
@@ -4048,6 +4087,23 @@ class ManageExaminationController extends Controller
                 $optionals = $request->input('question_optional', []);
                 $optionalRanges = $request->input('optional_ranges', []);
                 $optionalRequiredCounts = $request->input('optional_required_counts', []);
+
+                if (empty($descriptions) && $reusePaper) {
+                    $reuseQuestions = ExamPaperQuestion::where('exam_paperID', $reusePaper->exam_paperID)
+                        ->orderBy('question_number')
+                        ->get();
+                    $reuseRanges = ExamPaperOptionalRange::where('exam_paperID', $reusePaper->exam_paperID)
+                        ->orderBy('range_number')
+                        ->get();
+
+                    $descriptions = $reuseQuestions->pluck('question_description')->toArray();
+                    $marks = $reuseQuestions->pluck('marks')->toArray();
+                    $optionals = $reuseQuestions->map(function ($q) {
+                        return $q->optional_range_number ? (int) $q->optional_range_number : 0;
+                    })->toArray();
+                    $optionalRanges = $reuseRanges->pluck('total_marks', 'range_number')->toArray();
+                    $optionalRequiredCounts = $reuseRanges->pluck('required_questions', 'range_number')->toArray();
+                }
                 $optionalTotals = [];
                 if (is_array($optionalRanges)) {
                     foreach ($optionalRanges as $rangeNumber => $totalMarks) {
@@ -4124,6 +4180,25 @@ class ManageExaminationController extends Controller
                 }
             } catch (\Exception $smsException) {
                 Log::error('Error sending school SMS for exam paper: '.$smsException->getMessage());
+            }
+
+            // Send confirmation SMS to teacher
+            try {
+                $teacherPhone = $classSubject->teacher->phone_number ?? null;
+                if ($teacherPhone) {
+                    $subjectName = $classSubject->subject->subject_name ?? 'subject';
+                    $examName = $examination->exam_name ?? 'exam';
+                    $teacherSms = "You have successfully submitted your exam paper. Subject: {$subjectName}, Exam: {$examName}. Please wait for approval.";
+
+                    $smsService = new SmsService();
+                    $smsResult = $smsService->sendSms($teacherPhone, $teacherSms);
+
+                    if (!($smsResult['success'] ?? false)) {
+                        Log::warning("Failed to send teacher SMS for exam paper {$examPaper->exam_paperID}: " . ($smsResult['message'] ?? 'Unknown error'));
+                    }
+                }
+            } catch (\Exception $smsException) {
+                Log::error('Error sending teacher SMS for exam paper: '.$smsException->getMessage());
             }
 
             return response()->json([
@@ -4389,7 +4464,7 @@ class ManageExaminationController extends Controller
 
             $optionalRanges = ExamPaperOptionalRange::where('exam_paperID', $examPaper->exam_paperID)
                 ->orderBy('range_number')
-                ->get(['range_number', 'total_marks']);
+                ->get(['range_number', 'total_marks', 'required_questions']);
 
             return response()->json([
                 'success' => true,
@@ -4398,6 +4473,47 @@ class ManageExaminationController extends Controller
             ]);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to load questions'], 500);
+        }
+    }
+
+    public function getTeacherExamPaperSummary($examID)
+    {
+        $teacherID = Session::get('teacherID');
+        $userType = Session::get('user_type');
+
+        if ($userType !== 'Teacher' || ! $teacherID) {
+            return response()->json(['error' => 'Access denied'], 403);
+        }
+
+        try {
+            $papers = ExamPaper::where('examID', $examID)
+                ->where('teacherID', $teacherID)
+                ->with(['classSubject.subject', 'classSubject.class', 'classSubject.subclass'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            $payload = $papers->map(function ($paper) {
+                $className = $paper->classSubject->class->class_name ?? '';
+                $subclassName = $paper->classSubject->subclass->subclass_name ?? '';
+                $classDisplay = trim($className.' '.$subclassName);
+
+                return [
+                    'exam_paperID' => $paper->exam_paperID,
+                    'class_subjectID' => $paper->class_subjectID,
+                    'subjectID' => $paper->classSubject->subject->subjectID ?? null,
+                    'classID' => $paper->classSubject->class->classID ?? null,
+                    'subclassID' => $paper->classSubject->subclass->subclassID ?? null,
+                    'class_display' => $classDisplay ?: ($className ?: 'N/A'),
+                    'status' => $paper->status,
+                ];
+            })->values();
+
+            return response()->json([
+                'success' => true,
+                'exam_papers' => $payload,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to load exam papers'], 500);
         }
     }
 
@@ -4544,6 +4660,65 @@ class ManageExaminationController extends Controller
         ExamPaperNotification::where('schoolID', $schoolID)
             ->where('is_read', false)
             ->update(['is_read' => true]);
+
+        return response()->json(['success' => true]);
+    }
+
+    public function getExamPaperNotificationCount()
+    {
+        $userType = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if ($userType !== 'Admin' || ! $schoolID) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $count = ExamPaperNotification::where('schoolID', $schoolID)
+            ->where('is_read', false)
+            ->count();
+
+        return response()->json(['success' => true, 'count' => $count]);
+    }
+
+    public function getExamPaperNotificationCountsByExam()
+    {
+        $userType = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if ($userType !== 'Admin' || ! $schoolID) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $counts = DB::table('exam_paper_notifications')
+            ->join('exam_papers', 'exam_paper_notifications.exam_paperID', '=', 'exam_papers.exam_paperID')
+            ->where('exam_paper_notifications.schoolID', $schoolID)
+            ->where('exam_paper_notifications.is_read', 0)
+            ->groupBy('exam_papers.examID')
+            ->select('exam_papers.examID', DB::raw('COUNT(*) as count'))
+            ->pluck('count', 'exam_papers.examID');
+
+        return response()->json(['success' => true, 'counts' => $counts]);
+    }
+
+    public function markExamPaperNotificationsReadForExam($examID)
+    {
+        $userType = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if ($userType !== 'Admin' || ! $schoolID) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $examPaperIds = ExamPaper::where('examID', $examID)
+            ->pluck('exam_paperID')
+            ->toArray();
+
+        if (! empty($examPaperIds)) {
+            ExamPaperNotification::where('schoolID', $schoolID)
+                ->whereIn('exam_paperID', $examPaperIds)
+                ->where('is_read', false)
+                ->update(['is_read' => true]);
+        }
 
         return response()->json(['success' => true]);
     }

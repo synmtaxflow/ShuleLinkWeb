@@ -61,4 +61,24 @@ class Book extends Model
     {
         return $this->hasMany(BookBorrow::class, 'bookID', 'bookID')->where('status', 'borrowed');
     }
+
+    public function losses()
+    {
+        return $this->hasMany(BookLoss::class, 'bookID', 'bookID');
+    }
+
+    public function damages()
+    {
+        return $this->hasMany(BookDamage::class, 'bookID', 'bookID');
+    }
+
+    public function activeLosses()
+    {
+        return $this->hasMany(BookLoss::class, 'bookID', 'bookID')->where('status', 'lost');
+    }
+
+    public function activeDamages()
+    {
+        return $this->hasMany(BookDamage::class, 'bookID', 'bookID')->where('status', 'damaged');
+    }
 }

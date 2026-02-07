@@ -218,6 +218,8 @@ Route::get('teacher/exam-attendance/{classSubjectID}', [TeachersController::clas
 Route::get('teacher/get-terms-for-year', [TeachersController::class, 'getTermsForYear'])->name('teacher.get_terms_for_year');
 Route::get('teacher/get-exams-for-year-term', [TeachersController::class, 'getExamsForYearTerm'])->name('teacher.get_exams_for_year_term');
 Route::get('teacher/get-exam-attendance-data', [TeachersController::class, 'getExamAttendanceData'])->name('teacher.get_exam_attendance_data');
+Route::get('teacher/profile', [TeachersController::class, 'profile'])->name('teacher.profile');
+Route::post('teacher/change-password', [TeachersController::class, 'changePassword'])->name('teacher.change_password');
 Route::get('get_subject_students/{classSubjectID}', [TeachersController::class, 'getSubjectStudents'])->name('get_subject_students');
 Route::get('get_subject_results/{classSubjectID}', [TeachersController::class, 'getSubjectResults'])->name('get_subject_results');
 Route::get('get_subject_results/{classSubjectID}/{examID}', [TeachersController::class, 'getSubjectResults'])->name('get_subject_results_by_exam');
@@ -473,6 +475,7 @@ Route::post('move_student_hall/{examHallID}', [ManageExaminationController::clas
 Route::get('manageResults', [ResultManagementController::class, 'index'])->name('manageResults');
 Route::get('admin/subject-analysis', [ResultManagementController::class, 'subjectAnalysis'])->name('admin.subject_analysis');
 Route::get('admin/get-class-subjects', [ResultManagementController::class, 'getClassSubjectsForAnalysis'])->name('admin.get_class_subjects_for_analysis');
+Route::post('admin/send-subject-analysis-comment', [ResultManagementController::class, 'sendSubjectAnalysisComment'])->name('admin.send_subject_analysis_comment');
 
 // Exam Papers Routes
 Route::post('store_exam_paper', [ManageExaminationController::class, 'storeExamPaper'])->name('store_exam_paper');
@@ -480,7 +483,11 @@ Route::post('update_exam_paper/{examPaperID}', [ManageExaminationController::cla
 Route::get('get_exam_paper_questions/{examPaperID}', [ManageExaminationController::class, 'getExamPaperQuestions'])->name('get_exam_paper_questions');
 Route::post('update_exam_paper_questions/{examPaperID}', [ManageExaminationController::class, 'updateExamPaperQuestions'])->name('update_exam_paper_questions');
 Route::post('mark_exam_paper_notifications_read', [ManageExaminationController::class, 'markExamPaperNotificationsRead'])->name('mark_exam_paper_notifications_read');
+Route::get('admin/exam-paper-notifications-count', [ManageExaminationController::class, 'getExamPaperNotificationCount'])->name('admin.exam_paper_notifications_count');
+Route::get('admin/exam-paper-notifications-by-exam', [ManageExaminationController::class, 'getExamPaperNotificationCountsByExam'])->name('admin.exam_paper_notifications_by_exam');
+Route::post('admin/mark-exam-paper-notifications-read/{examID}', [ManageExaminationController::class, 'markExamPaperNotificationsReadForExam'])->name('admin.mark_exam_paper_notifications_read_exam');
 Route::get('get_exam_papers/{examID}', [ManageExaminationController::class, 'getExamPapers'])->name('get_exam_papers');
+Route::get('teacher/get-exam-paper-summary/{examID}', [ManageExaminationController::class, 'getTeacherExamPaperSummary'])->name('teacher.get_exam_paper_summary');
 Route::post('approve_reject_exam_paper/{examPaperID}', [ManageExaminationController::class, 'approveRejectExamPaper'])->name('approve_reject_exam_paper');
 Route::get('get_my_exam_papers', [ManageExaminationController::class, 'getMyExamPapers'])->name('get_my_exam_papers');
 Route::get('download_exam_paper/{examPaperID}', [ManageExaminationController::class, 'downloadExamPaper'])->name('download_exam_paper');
@@ -556,6 +563,8 @@ Route::get('student_fingerprint_attendance_details/{studentID}', [ManageAttendan
 //library routes
 Route::get('manage_library', [LibraryController::class, 'manage_library'])->name('manage_library');
 Route::get('get_books', [LibraryController::class, 'get_books'])->name('get_books');
+Route::get('check_isbn', [LibraryController::class, 'check_isbn'])->name('check_isbn');
+Route::get('get_book_by_isbn', [LibraryController::class, 'get_book_by_isbn'])->name('get_book_by_isbn');
 Route::get('get_subjects_by_class', [LibraryController::class, 'get_subjects_by_class'])->name('get_subjects_by_class');
 Route::post('store_book', [LibraryController::class, 'store_book'])->name('store_book');
 Route::post('update_book/{bookID}', [LibraryController::class, 'update_book'])->name('update_book');
@@ -565,6 +574,14 @@ Route::post('return_book/{borrowID}', [LibraryController::class, 'return_book'])
 Route::get('get_book_borrows', [LibraryController::class, 'get_book_borrows'])->name('get_book_borrows');
 Route::get('get_book_statistics', [LibraryController::class, 'get_book_statistics'])->name('get_book_statistics');
 Route::get('get_students', [LibraryController::class, 'get_students'])->name('get_students');
+Route::get('get_book_losses', [LibraryController::class, 'get_book_losses'])->name('get_book_losses');
+Route::post('store_book_loss', [LibraryController::class, 'store_book_loss'])->name('store_book_loss');
+Route::get('get_book_damages', [LibraryController::class, 'get_book_damages'])->name('get_book_damages');
+Route::post('store_book_damage', [LibraryController::class, 'store_book_damage'])->name('store_book_damage');
+Route::post('send_parent_message', [LibraryController::class, 'send_parent_message'])->name('send_parent_message');
+Route::post('update_book_loss_payment/{lossID}', [LibraryController::class, 'update_book_loss_payment'])->name('update_book_loss_payment');
+Route::post('update_book_damage_payment/{damageID}', [LibraryController::class, 'update_book_damage_payment'])->name('update_book_damage_payment');
+Route::get('get_library_students', [LibraryController::class, 'get_library_students'])->name('get_library_students');
 
 //fees routes
 Route::get('manage_fees', [FeesController::class, 'manage_fees'])->name('manage_fees');

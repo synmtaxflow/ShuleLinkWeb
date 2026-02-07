@@ -179,7 +179,10 @@
                                                         ? ($subject->subclass->classID ?? null)
                                                         : ($subject->classID ?? ($subject->class->classID ?? null));
                                                 @endphp
-                                                <option value="{{ $subject->class_subjectID }}" data-class-id="{{ $subjectClassId }}">
+                                                <option value="{{ $subject->class_subjectID }}"
+                                                        data-class-id="{{ $subjectClassId }}"
+                                                        data-subject-id="{{ $subject->subjectID }}"
+                                                        data-subclass-id="{{ $subject->subclass ? $subject->subclass->subclassID : '' }}">
                                                     {{ $subjectName }}@if($classDisplay) ({{ $classDisplay }})@endif
                                                 </option>
                                             @endforeach
@@ -198,6 +201,17 @@
                                 </div>
 
                                 @if(strtolower($schoolType ?? 'Secondary') === 'secondary')
+                                    <div class="row">
+                                        <div class="col-md-12 mb-3">
+                                            <label for="existing_upload_main" class="form-label">
+                                                <i class="bi bi-files"></i> Use Existing Upload (Optional)
+                                            </label>
+                                            <select class="form-control" id="existing_upload_main">
+                                                <option value="">Do not use existing upload</option>
+                                            </select>
+                                            <small class="text-muted">Only available for the same subject and class.</small>
+                                        </div>
+                                    </div>
                                     <div class="card border-primary-custom mt-3" id="question-format-main">
                                         <div class="card-body">
                                             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -436,7 +450,10 @@
                                         ? ($subject->subclass->classID ?? null)
                                         : ($subject->classID ?? ($subject->class->classID ?? null));
                                 @endphp
-                                <option value="{{ $subject->class_subjectID }}" data-class-id="{{ $subjectClassId }}">
+                                <option value="{{ $subject->class_subjectID }}"
+                                        data-class-id="{{ $subjectClassId }}"
+                                        data-subject-id="{{ $subject->subjectID }}"
+                                        data-subclass-id="{{ $subject->subclass ? $subject->subclass->subclassID : '' }}">
                                     {{ $subjectName }}@if($classDisplay) ({{ $classDisplay }})@endif
                                 </option>
                             @endforeach
@@ -448,7 +465,14 @@
                         <small class="form-text text-muted">Maximum file size: 10MB. Allowed formats: PDF, DOC, DOCX</small>
                     </div>
 
-                    @if(strtolower($schoolType ?? 'Secondary') === 'secondary')
+                        @if(strtolower($schoolType ?? 'Secondary') === 'secondary')
+                        <div class="form-group mb-3">
+                            <label for="existing_upload_modal">Use Existing Upload (Optional)</label>
+                            <select class="form-control" id="existing_upload_modal">
+                                <option value="">Do not use existing upload</option>
+                            </select>
+                            <small class="text-muted">Only available for the same subject and class.</small>
+                        </div>
                         <div class="card border-primary-custom mt-3" id="question-format-modal">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -575,6 +599,7 @@
 $(document).ready(function() {
     const examinations = @json($examinations ?? []);
     let allowedClassIds = [];
+    let existingExamPapers = [];
     const isSecondarySchool = @json(strtolower($schoolType ?? 'Secondary')) === 'secondary';
 
     function buildQuestionRow(targetId) {
@@ -800,6 +825,7 @@ $(document).ready(function() {
             const classId = $(this).data('class-id');
             const isAllowed = allowedClassIds.length === 0 || (classId && allowedClassIds.includes(classId));
 
+            $(this).data('allowed', isAllowed);
             $(this).prop('disabled', !isAllowed).prop('hidden', !isAllowed);
             if (isAllowed) {
                 visibleCount++;
@@ -811,12 +837,156 @@ $(document).ready(function() {
         }
     }
 
+    function applyExistingUploadStatus(selectId) {
+        const $select = $(selectId);
+        $select.find('option').each(function(index) {
+            if (index === 0) {
+                return;
+            }
+            const $option = $(this);
+            const originalText = $option.data('original-text') || $option.text();
+            if (!$option.data('original-text')) {
+                $option.data('original-text', originalText);
+            }
+
+            const classSubjectID = String($option.val());
+            const already = existingExamPapers.find(paper => String(paper.class_subjectID) === classSubjectID && paper.status !== 'rejected');
+            const allowed = $option.data('allowed') !== false;
+
+            if (already) {
+                $option.text(`${originalText} - Already uploaded`);
+                $option.prop('disabled', true).addClass('text-muted');
+            } else {
+                $option.text(originalText);
+                $option.removeClass('text-muted');
+                if (allowed && !$option.prop('hidden')) {
+                    $option.prop('disabled', false);
+                }
+            }
+        });
+
+        const selectedOption = $select.find('option:selected');
+        if (selectedOption.length && selectedOption.prop('disabled')) {
+            $select.val('');
+        }
+    }
+
+    function refreshExistingUploadOptions(isModal) {
+        const $subjectSelect = isModal ? $('#modal_class_subject') : $('#class_subject');
+        const $examSelect = isModal ? $('#modal_selected_exam') : $('#selected_exam');
+        const $reuseSelect = isModal ? $('#existing_upload_modal') : $('#existing_upload_main');
+
+        if (!isSecondarySchool || $reuseSelect.length === 0) {
+            return;
+        }
+
+        const examID = $examSelect.val();
+        const classSubjectID = $subjectSelect.val();
+        const $selectedOption = $subjectSelect.find('option:selected');
+        const subjectID = $selectedOption.data('subject-id');
+        const classID = $selectedOption.data('class-id');
+
+        $reuseSelect.empty().append('<option value="">Do not use existing upload</option>');
+
+        if (!examID || !classSubjectID || !subjectID || !classID) {
+            $reuseSelect.prop('disabled', true);
+            return;
+        }
+
+        const matches = existingExamPapers.filter(paper => {
+            return String(paper.subjectID) === String(subjectID)
+                && String(paper.classID) === String(classID)
+                && String(paper.class_subjectID) !== String(classSubjectID)
+                && paper.status !== 'rejected';
+        });
+
+        matches.forEach(paper => {
+            const label = `${paper.class_display} (${paper.status})`;
+            $reuseSelect.append(`<option value="${paper.exam_paperID}">${label}</option>`);
+        });
+
+        $reuseSelect.prop('disabled', matches.length === 0);
+    }
+
+    function applyExistingQuestions(targetId, data) {
+        const $container = $(targetId);
+        const $wrapper = $(`.optional-ranges-wrapper[data-wrapper-for="${targetId}"]`);
+
+        $wrapper.empty();
+        $container.empty();
+
+        if (Array.isArray(data.optional_ranges)) {
+            const sortedRanges = data.optional_ranges.slice().sort(function(a, b) {
+                return (a.range_number || 0) - (b.range_number || 0);
+            });
+            sortedRanges.forEach(function(range) {
+                addOptionalRange(targetId);
+                const $lastRange = $wrapper.find('.optional-range-item').last();
+                $lastRange.find('.optional-total-input').val(range.total_marks);
+                if (range.required_questions !== undefined && range.required_questions !== null) {
+                    $lastRange.find('.optional-required-input').val(range.required_questions);
+                }
+            });
+        }
+
+        if (Array.isArray(data.questions)) {
+            data.questions.forEach(function(question) {
+                $container.append(buildQuestionRow(targetId));
+                const $row = $container.find('.question-row').last();
+                $row.find('.question-description').val(question.question_description);
+                $row.find('.question-marks').val(question.marks);
+                $row.find('.question-optional').val(question.optional_range_number ? String(question.optional_range_number) : '0');
+            });
+        }
+
+        refreshQuestionNumbers($container);
+        updateTotalMarks($container);
+        toggleRemoveButtons($container);
+    }
+
+    function fetchExistingPapers(examID) {
+        existingExamPapers = [];
+
+        if (!examID) {
+            applyExistingUploadStatus('#class_subject');
+            applyExistingUploadStatus('#modal_class_subject');
+            refreshExistingUploadOptions(false);
+            refreshExistingUploadOptions(true);
+            return;
+        }
+
+        $.ajax({
+            url: `/teacher/get-exam-paper-summary/${examID}`,
+            method: 'GET',
+            success: function(response) {
+                if (response.success && Array.isArray(response.exam_papers)) {
+                    existingExamPapers = response.exam_papers;
+                } else {
+                    existingExamPapers = [];
+                }
+                applyExistingUploadStatus('#class_subject');
+                applyExistingUploadStatus('#modal_class_subject');
+                refreshExistingUploadOptions(false);
+                refreshExistingUploadOptions(true);
+            },
+            error: function() {
+                existingExamPapers = [];
+                applyExistingUploadStatus('#class_subject');
+                applyExistingUploadStatus('#modal_class_subject');
+                refreshExistingUploadOptions(false);
+                refreshExistingUploadOptions(true);
+            }
+        });
+    }
+
     function fetchAllowedClasses(examID) {
         allowedClassIds = [];
 
         if (!examID) {
             filterSubjectsByAllowedClasses('#class_subject');
             filterSubjectsByAllowedClasses('#modal_class_subject');
+            applyExistingUploadStatus('#class_subject');
+            applyExistingUploadStatus('#modal_class_subject');
             return;
         }
 
@@ -832,22 +1002,84 @@ $(document).ready(function() {
 
                 filterSubjectsByAllowedClasses('#class_subject');
                 filterSubjectsByAllowedClasses('#modal_class_subject');
+                applyExistingUploadStatus('#class_subject');
+                applyExistingUploadStatus('#modal_class_subject');
             },
             error: function() {
                 allowedClassIds = [];
                 filterSubjectsByAllowedClasses('#class_subject');
                 filterSubjectsByAllowedClasses('#modal_class_subject');
+                applyExistingUploadStatus('#class_subject');
+                applyExistingUploadStatus('#modal_class_subject');
             }
         });
     }
 
     $('#selected_exam').on('change', function() {
         fetchAllowedClasses($(this).val());
+        fetchExistingPapers($(this).val());
     });
 
     $('#modal_selected_exam').on('change', function() {
         fetchAllowedClasses($(this).val());
+        fetchExistingPapers($(this).val());
     });
+
+    $('#class_subject').on('change', function() {
+        refreshExistingUploadOptions(false);
+    });
+
+    $('#modal_class_subject').on('change', function() {
+        refreshExistingUploadOptions(true);
+    });
+
+    function toggleFileRequirement(isModal, useExisting) {
+        const $fileInput = isModal ? $('#modal_exam_file') : $('#exam_file');
+        if (useExisting) {
+            $fileInput.prop('required', false);
+        } else {
+            $fileInput.prop('required', true);
+        }
+    }
+
+    $('#existing_upload_main').on('change', function() {
+        const paperId = $(this).val();
+        toggleFileRequirement(false, !!paperId);
+        if (!paperId) {
+            return;
+        }
+        $.ajax({
+            url: `/get_exam_paper_questions/${paperId}`,
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    applyExistingQuestions('#question-rows-main', response);
+                }
+            }
+        });
+    });
+
+    $('#existing_upload_modal').on('change', function() {
+        const paperId = $(this).val();
+        toggleFileRequirement(true, !!paperId);
+        if (!paperId) {
+            return;
+        }
+        $.ajax({
+            url: `/get_exam_paper_questions/${paperId}`,
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    applyExistingQuestions('#question-rows-modal', response);
+                }
+            }
+        });
+    });
+
+    const initialExam = $('#selected_exam').val();
+    if (initialExam) {
+        fetchExistingPapers(initialExam);
+    }
 
     // Submit form
     $('#uploadExamPaperForm').on('submit', function(e) {
@@ -863,6 +1095,7 @@ $(document).ready(function() {
     function submitExamPaper(form, isModal) {
         const examID = isModal ? $('#modal_selected_exam').val() : $('#selected_exam').val();
         const classSubjectID = isModal ? $('#modal_class_subject').val() : $('#class_subject').val();
+        const existingUploadId = isModal ? $('#existing_upload_modal').val() : $('#existing_upload_main').val();
 
         if (!examID) {
             Swal.fire('Error', 'Please select an examination', 'error');
@@ -882,7 +1115,7 @@ $(document).ready(function() {
         }
 
         const fileInput = isModal ? $('#modal_exam_file')[0] : $('#exam_file')[0];
-        if (fileInput.files.length === 0) {
+        if (!existingUploadId && fileInput.files.length === 0) {
             Swal.fire('Error', 'Please select a file to upload', 'error');
             return;
         }
@@ -973,7 +1206,12 @@ $(document).ready(function() {
         formData.append('examID', examID);
         formData.append('class_subjectID', classSubjectID);
         formData.append('upload_type', 'upload');
-        formData.append('file', fileInput.files[0]);
+        if (fileInput.files.length > 0) {
+            formData.append('file', fileInput.files[0]);
+        }
+        if (existingUploadId) {
+            formData.append('existing_exam_paper_id', existingUploadId);
+        }
         formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
 
         if (isSecondarySchool) {

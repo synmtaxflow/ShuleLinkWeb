@@ -657,9 +657,11 @@
                                 $examPaperNotifications = collect();
 
                                 if ($isAdmin && $schoolID) {
-                                    $teacherHasPhoto = \Illuminate\Support\Facades\Schema::hasColumn('teachers', 'photo');
-                                    $examPaperNotificationCount = \App\Models\ExamPaperNotification::where('schoolID', $schoolID)
-                                        ->where('is_read', false)
+                                    $teacherHasImage = \Illuminate\Support\Facades\Schema::hasColumn('teachers', 'image');
+                                    $teacherHasGender = \Illuminate\Support\Facades\Schema::hasColumn('teachers', 'gender');
+                                    $examPaperNotificationCount = \Illuminate\Support\Facades\DB::table('exam_paper_notifications')
+                                        ->where('schoolID', $schoolID)
+                                        ->where('is_read', 0)
                                         ->count();
 
                                     $examPaperNotifications = \Illuminate\Support\Facades\DB::table('exam_paper_notifications')
@@ -677,6 +679,7 @@
                                     $selectColumns = [
                                             'exam_paper_notifications.exam_paper_notificationID',
                                             'exam_paper_notifications.created_at',
+                                            'exam_paper_notifications.is_read',
                                             'examinations.exam_name',
                                             'school_subjects.subject_name',
                                             'classes.class_name',
@@ -684,8 +687,11 @@
                                             'teachers.first_name',
                                             'teachers.last_name',
                                         ];
-                                    if ($teacherHasPhoto) {
-                                        $selectColumns[] = 'teachers.photo';
+                                    if ($teacherHasImage) {
+                                        $selectColumns[] = 'teachers.image';
+                                    }
+                                    if ($teacherHasGender) {
+                                        $selectColumns[] = 'teachers.gender';
                                     }
 
                                     $examPaperNotifications = $examPaperNotifications->get($selectColumns);
@@ -710,12 +716,19 @@
                                             $timeLabel = $created->isToday() ? $created->diffForHumans() : $created->format('d M Y');
                                             $teacherName = trim(($note->first_name ?? '') . ' ' . ($note->last_name ?? ''));
                                             $classDisplay = trim(($note->class_name ?? '') . ' ' . ($note->subclass_name ?? ''));
-                                            $photoUrl = (!empty($note->photo ?? null)) ? asset('userImages/'.$note->photo) : asset('images/avatar/1.jpg');
+                                            $teacherGender = strtolower($note->gender ?? '');
+                                            $photoUrl = !empty($note->image ?? null)
+                                                ? asset('userImages/'.$note->image)
+                                                : ($teacherGender === 'female' ? asset('images/female.png') : asset('images/male.png'));
+                                            $isUnread = isset($note->is_read) ? !((int) $note->is_read === 1) : false;
                                         @endphp
                                         <a class="dropdown-item media" href="{{ route('manageExamination') }}">
                                             <span class="photo media-left"><img alt="avatar" src="{{ $photoUrl }}"></span>
                                             <span class="message media-body">
                                                 <span class="name float-left">{{ $teacherName }}</span>
+                                                @if($isUnread)
+                                                    <span class="badge badge-danger ml-2">New</span>
+                                                @endif
                                                 <span class="time float-right">{{ $timeLabel }}</span>
                                                 <p>New exam paper: {{ $note->exam_name }} | {{ $note->subject_name }} | {{ $classDisplay }}</p>
                                             </span>
@@ -1120,24 +1133,95 @@ function initializeExamPaperNotifications() {
     });
 }
 
+function updateExamPaperNotificationCount() {
+    if (typeof window.jQuery === 'undefined') {
+        return;
+    }
+    var $ = window.jQuery;
+    $.get('{{ route("admin.exam_paper_notifications_count") }}', function(response) {
+        if (!response || response.success !== true) {
+            return;
+        }
+        const count = parseInt(response.count || 0, 10);
+        const $button = $('#message');
+        const $badge = $('#examPaperNotificationCount');
+
+        if (count > 0) {
+            if ($badge.length) {
+                $badge.text(count);
+            } else {
+                $button.append(`<span class="count bg-primary" id="examPaperNotificationCount">${count}</span>`);
+            }
+        } else {
+            $badge.remove();
+        }
+    });
+}
+
+function loadScriptOnce(src, onLoad) {
+    if (document.querySelector('script[src="' + src + '"]')) {
+        if (typeof onLoad === 'function') {
+            onLoad();
+        }
+        return;
+    }
+    var script = document.createElement('script');
+    script.src = src;
+    script.onload = function() {
+        if (typeof onLoad === 'function') {
+            onLoad();
+        }
+    };
+    document.head.appendChild(script);
+}
+
+function ensureJqueryAndBootstrap(callback) {
+    if (window.jQuery && window.jQuery.fn && typeof window.jQuery.fn.collapse === 'function') {
+        callback();
+        return;
+    }
+
+    if (!window.jQuery) {
+        loadScriptOnce('https://code.jquery.com/jquery-3.6.0.min.js', function() {
+            if (window.jQuery && window.jQuery.fn && typeof window.jQuery.fn.collapse === 'function') {
+                callback();
+            } else {
+                loadScriptOnce('https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js', callback);
+            }
+        });
+        return;
+    }
+
+    loadScriptOnce('https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js', callback);
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    initializeMenuDropdowns();
-    initializeExamPaperNotifications();
+    ensureJqueryAndBootstrap(function() {
+        initializeMenuDropdowns();
+        initializeExamPaperNotifications();
+        updateExamPaperNotificationCount();
+    });
 });
 
 // Also re-initialize when page is shown (for back/forward navigation)
 window.addEventListener('pageshow', function(event) {
     if (event.persisted) {
-        initializeMenuDropdowns();
-        initializeExamPaperNotifications();
+        ensureJqueryAndBootstrap(function() {
+            initializeMenuDropdowns();
+            initializeExamPaperNotifications();
+            updateExamPaperNotificationCount();
+        });
     }
 });
 
 // Re-initialize after a short delay to ensure everything is loaded
 setTimeout(function() {
-    initializeMenuDropdowns();
-    initializeExamPaperNotifications();
+    ensureJqueryAndBootstrap(function() {
+        initializeMenuDropdowns();
+        initializeExamPaperNotifications();
+        updateExamPaperNotificationCount();
+    });
 }, 500);
 
 })(window.jQuery);

@@ -21,6 +21,9 @@
         border-radius: 10px;
         padding: 0.75rem;
     }
+    .analysis-class-title {
+        color: #000000;
+    }
 </style>
 
 <div class="container-fluid mt-4 subject-analysis-wrapper">
@@ -103,7 +106,7 @@
             @foreach($groupedAnalysis as $classDisplay => $subjects)
                 <div class="card analysis-card mb-4">
                     <div class="card-header bg-primary-custom text-white">
-                        <h5 class="mb-0">
+                        <h5 class="mb-0 analysis-class-title">
                             <i class="fa fa-users"></i> {{ $classDisplay ?: 'All Classes' }}
                         </h5>
                     </div>
@@ -116,7 +119,86 @@
                             </h5>
                         </div>
                         <div class="card-body">
+                        @php
+                            $teacher = $subjectGroup['teacher'] ?? null;
+                            $teacherName = $teacher
+                                ? trim(($teacher->first_name ?? '').' '.($teacher->middle_name ?? '').' '.($teacher->last_name ?? ''))
+                                : 'N/A';
+                            $teacherPhone = $teacher->phone_number ?? 'N/A';
+                            $teacherPhoto = $teacher && $teacher->image
+                                ? asset('userImages/'.$teacher->image)
+                                : asset('images/male.png');
+                            $overall = $subjectGroup['overall_stats'] ?? null;
+                        @endphp
+                        <div class="row mb-3">
+                            <div class="col-md-6 mb-2">
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ $teacherPhoto }}" alt="Teacher" class="rounded-circle" style="width: 42px; height: 42px; object-fit: cover;">
+                                    <div class="ml-2">
+                                        <div class="analysis-title">Teacher: {{ $teacherName }}</div>
+                                        <small class="text-muted">Phone: {{ $teacherPhone }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <div class="d-flex align-items-center justify-content-md-end">
+                                    <span class="mr-2">Overall:</span>
+                                    <span class="badge badge-{{ $overall['remark_class'] ?? 'secondary' }}">
+                                        {{ $overall['remark'] ?? 'N/A' }}
+                                    </span>
+                                </div>
+                                <div class="text-muted mt-1 text-md-right">
+                                    Pass: {{ $overall['pass'] ?? 0 }} |
+                                    Fail: {{ $overall['fail'] ?? 0 }} |
+                                    Answered: {{ $overall['answered'] ?? 0 }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mb-3">
+                            <div class="card-body p-3">
+                                <label class="mb-2">Send Comment to Teacher</label>
+                                <div class="input-group">
+                                    <textarea class="form-control subject-comment-text" rows="2" placeholder="Write comment based on subject performance..."></textarea>
+                                    <div class="input-group-append">
+                                        <button
+                                            class="btn btn-primary-custom send-subject-comment"
+                                            type="button"
+                                            data-teacher-id="{{ $teacher->id ?? '' }}"
+                                            data-class-subject-id="{{ $subjectGroup['class_subjectID'] }}"
+                                            data-exam-id="{{ $examID }}"
+                                        >
+                                            Send
+                                        </button>
+                                    </div>
+                                </div>
+                                <small class="text-muted d-block mt-1 comment-status"></small>
+                            </div>
+                        </div>
                         @if(!empty($subjectGroup['question_stats']))
+                            @php
+                                $subjectKey = $subjectGroup['class_subjectID'].'-'.preg_replace('/[^a-zA-Z0-9]/', '', strtolower($subjectGroup['subject_name']));
+                                $lineChartId = 'line-chart-'.$subjectKey;
+                                $barChartId = 'bar-chart-'.$subjectKey;
+                                $optionalSelections = [];
+                                foreach ($subjectGroup['questions'] as $question) {
+                                    if (!empty($question->is_optional)) {
+                                        $count = 0;
+                                        foreach ($subjectGroup['student_question_marks'] as $studentMarks) {
+                                            $mark = $studentMarks[$question->exam_paper_questionID] ?? null;
+                                            if ($mark !== null && $mark !== '') {
+                                                $count++;
+                                            }
+                                        }
+                                        $optionalSelections[] = [
+                                            'label' => 'Qn '.$question->question_number,
+                                            'count' => $count,
+                                        ];
+                                    }
+                                }
+                                $optionalSelections = collect($optionalSelections)->sortByDesc('count')->values()->all();
+                                $totalStudents = max(1, count($subjectGroup['result_rows']));
+                            @endphp
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <div class="question-stat">
@@ -138,16 +220,28 @@
                                 @foreach($subjectGroup['question_stats'] as $stat)
                                     <div class="d-flex justify-content-between border-bottom py-1">
                                         <span>Qn {{ $stat['question']->question_number }}: {{ $stat['question']->question_description }}</span>
-                                        <strong>{{ $stat['percent'] }}%</strong>
+                                        <strong>
+                                            {{ $stat['percent'] === null ? 'N/A' : ($stat['percent'] . '%') }}
+                                        </strong>
                                     </div>
                                 @endforeach
+                            </div>
+                            <div class="row mb-4">
+                                <div class="col-md-6 mb-3">
+                                    <h6 class="analysis-title">Pass vs Fail Trend</h6>
+                                    <canvas id="{{ $lineChartId }}" height="220"></canvas>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <h6 class="analysis-title">Optional Question Choices</h6>
+                                    <canvas id="{{ $barChartId }}" height="220"></canvas>
+                                </div>
                             </div>
                         @else
                             <div class="alert alert-info">No question formats found for this subject.</div>
                         @endif
 
                         <div class="table-responsive">
-                            <table class="table table-hover">
+                            <table class="table table-hover analysis-students-table">
                                 <thead class="bg-primary-custom text-white">
                                     <tr>
                                         <th>#</th>
@@ -183,12 +277,16 @@
                                             <td>{{ $grade }}</td>
                                             <td>{{ $remark }}</td>
                                             <td>
-                                                <button class="btn btn-sm btn-outline-primary" type="button" data-toggle="collapse" data-target="#{{ $detailId }}">
+                                                <button
+                                                    class="btn btn-sm btn-outline-primary toggle-student-details"
+                                                    type="button"
+                                                    data-target="#{{ $detailId }}"
+                                                >
                                                     View
                                                 </button>
                                             </td>
                                         </tr>
-                                        <tr class="collapse" id="{{ $detailId }}">
+                                        <tr class="student-detail-row d-none" id="{{ $detailId }}">
                                             <td colspan="7">
                                                 @if(!empty($subjectGroup['questions']))
                                                     <div class="table-responsive">
@@ -231,8 +329,105 @@
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap4.min.css">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap4.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
 $(document).ready(function() {
+    $(document).on('click', '.send-subject-comment', function() {
+        const $btn = $(this);
+        const teacherId = $btn.data('teacher-id');
+        const classSubjectId = $btn.data('class-subject-id');
+        const examId = $btn.data('exam-id');
+        const $wrapper = $btn.closest('.card-body');
+        const $text = $wrapper.find('.subject-comment-text');
+        const $status = $wrapper.find('.comment-status');
+        const message = ($text.val() || '').trim();
+
+        if (!teacherId) {
+            $status.text('Teacher not available.').removeClass('text-success').addClass('text-danger');
+            return;
+        }
+
+        if (!message) {
+            $status.text('Please write a comment first.').removeClass('text-success').addClass('text-danger');
+            return;
+        }
+
+        $status.text('Sending...').removeClass('text-danger text-success').addClass('text-muted');
+        $.ajax({
+            url: '{{ route("admin.send_subject_analysis_comment") }}',
+            method: 'POST',
+            data: {
+                _token: $('meta[name="csrf-token"]').attr('content'),
+                teacherID: teacherId,
+                class_subjectID: classSubjectId,
+                examID: examId,
+                message: message
+            },
+            success: function(response) {
+                if (response.success) {
+                    $status.text('Comment sent successfully.').removeClass('text-danger text-muted').addClass('text-success');
+                    $text.val('');
+                } else {
+                    $status.text('Failed to send comment.').removeClass('text-success text-muted').addClass('text-danger');
+                }
+            },
+            error: function(xhr) {
+                const err = xhr.responseJSON && (xhr.responseJSON.error || xhr.responseJSON.message) ? (xhr.responseJSON.error || xhr.responseJSON.message) : 'Failed to send comment.';
+                $status.text(err).removeClass('text-success text-muted').addClass('text-danger');
+            }
+        });
+    });
+    if ($.fn.DataTable) {
+        $('.analysis-students-table').each(function() {
+            const $table = $(this);
+            const detailMap = {};
+
+            $table.find('tr.student-detail-row').each(function() {
+                const detailId = $(this).attr('id');
+                detailMap[detailId] = $(this).find('td').first().html();
+                $(this).remove();
+            });
+
+            const dt = $table.DataTable({
+                pageLength: 5,
+                lengthMenu: [[5, 10, 25, 50], [5, 10, 25, 50]],
+                order: [],
+                columnDefs: [{ orderable: false, targets: -1 }]
+            });
+
+            $table.data('detailMap', detailMap);
+            $table.data('dtInstance', dt);
+        });
+    }
+
+    $(document).on('click', '.toggle-student-details', function() {
+        const $btn = $(this);
+        let targetId = $btn.data('target');
+        const $row = $btn.closest('tr');
+        const $table = $btn.closest('table');
+        const dt = $table.data('dtInstance');
+        const detailMap = $table.data('detailMap') || {};
+
+        if (typeof targetId === 'string' && targetId.charAt(0) === '#') {
+            targetId = targetId.substring(1);
+        }
+
+        if (!dt || !targetId || !detailMap[targetId]) {
+            return;
+        }
+
+        const row = dt.row($row);
+        if (row.child.isShown()) {
+            row.child.hide();
+        } else {
+            row.child(detailMap[targetId]).show();
+        }
+    });
     function loadSubclasses(classID, selectedId) {
         if (!classID) {
             $('#analysis_subclass').html('<option value="">All</option>');
@@ -332,6 +527,121 @@ $(document).ready(function() {
     $('#analysis_year, #analysis_term').on('change', function() {
         loadExams($('#analysis_year').val(), $('#analysis_term').val(), '');
     });
+
+    @if($examID && !empty($analysisData))
+        @foreach($groupedAnalysis as $classDisplay => $subjects)
+            @foreach($subjects as $subjectGroup)
+                @if(!empty($subjectGroup['question_stats']))
+                    @php
+                        $subjectKey = $subjectGroup['class_subjectID'].'-'.preg_replace('/[^a-zA-Z0-9]/', '', strtolower($subjectGroup['subject_name']));
+                        $lineChartId = 'line-chart-'.$subjectKey;
+                        $barChartId = 'bar-chart-'.$subjectKey;
+                    $lineLabels = [];
+                    $linePass = [];
+                    $lineFail = [];
+                    foreach ($subjectGroup['question_stats'] as $stat) {
+                        if ($stat['percent'] === null) {
+                            continue;
+                        }
+                        $lineLabels[] = 'Qn '.$stat['question']->question_number;
+                        $linePass[] = $stat['percent'];
+                        $lineFail[] = max(0, 100 - $stat['percent']);
+                    }
+                        $optionalSelections = [];
+                        foreach ($subjectGroup['questions'] as $question) {
+                            if (!empty($question->is_optional)) {
+                                $count = 0;
+                                foreach ($subjectGroup['student_question_marks'] as $studentMarks) {
+                                    $mark = $studentMarks[$question->exam_paper_questionID] ?? null;
+                                    if ($mark !== null && $mark !== '') {
+                                        $count++;
+                                    }
+                                }
+                                $optionalSelections[] = [
+                                    'label' => 'Qn '.$question->question_number,
+                                    'count' => $count,
+                                ];
+                            }
+                        }
+                        $optionalSelections = collect($optionalSelections)->sortByDesc('count')->values()->all();
+                        $barLabels = array_map(function ($item) { return $item['label']; }, $optionalSelections);
+                        $barCounts = array_map(function ($item) { return $item['count']; }, $optionalSelections);
+                        $totalStudents = max(1, count($subjectGroup['result_rows']));
+                    @endphp
+                    (function() {
+                        const lineCtx = document.getElementById(@json($lineChartId));
+                        if (lineCtx) {
+                            new Chart(lineCtx, {
+                                type: 'line',
+                                data: {
+                                    labels: @json($lineLabels),
+                                    datasets: [
+                                        {
+                                            label: 'Pass %',
+                                            data: @json($linePass),
+                                            borderColor: '#28a745',
+                                            backgroundColor: 'rgba(40, 167, 69, 0.15)',
+                                            tension: 0.3,
+                                            fill: true
+                                        },
+                                        {
+                                            label: 'Fail %',
+                                            data: @json($lineFail),
+                                            borderColor: '#dc3545',
+                                            backgroundColor: 'rgba(220, 53, 69, 0.15)',
+                                            tension: 0.3,
+                                            fill: true
+                                        }
+                                    ]
+                                },
+                                options: {
+                                    responsive: true,
+                                    plugins: {
+                                        tooltip: { mode: 'index', intersect: false }
+                                    },
+                                    scales: {
+                                        y: { min: 0, max: 100, ticks: { callback: v => v + '%' } }
+                                    }
+                                }
+                            });
+                        }
+
+                        const barCtx = document.getElementById(@json($barChartId));
+                        if (barCtx) {
+                            new Chart(barCtx, {
+                                type: 'bar',
+                                data: {
+                                    labels: @json($barLabels),
+                                    datasets: [{
+                                        label: 'Selected',
+                                        data: @json($barCounts),
+                                        backgroundColor: 'rgba(148, 0, 0, 0.6)'
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    plugins: {
+                                        tooltip: {
+                                            callbacks: {
+                                                label: function(context) {
+                                                    const count = context.raw || 0;
+                                                    const percent = Math.round((count / @json($totalStudents)) * 100);
+                                                    return `Selected by ${count} students (${percent}%)`;
+                                                }
+                                            }
+                                        }
+                                    },
+                                    scales: {
+                                        y: { beginAtZero: true }
+                                    }
+                                }
+                            });
+                        }
+                    })();
+                @endif
+            @endforeach
+        @endforeach
+    @endif
 
 });
 </script>

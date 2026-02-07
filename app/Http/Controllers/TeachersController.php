@@ -38,12 +38,12 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 use App\Services\SmsService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+use App\Models\User;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Hash;
-use App\Models\User;
 // PhpSpreadsheet will be used with fully qualified names if available
 
 class TeachersController extends Controller
@@ -1369,6 +1369,84 @@ class TeachersController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    public function profile()
+    {
+        $teacherID = Session::get('teacherID');
+        $schoolID = Session::get('schoolID');
+        $userType = Session::get('user_type');
+
+        if ($userType !== 'Teacher' || ! $teacherID || ! $schoolID) {
+            return redirect()->route('login')->with('error', 'Access denied');
+        }
+
+        $teacher = Teacher::where('id', $teacherID)
+            ->where('schoolID', $schoolID)
+            ->first();
+
+        if (! $teacher) {
+            return redirect()->back()->with('error', 'Teacher not found');
+        }
+
+        $user = User::where('name', $teacher->employee_number)->first();
+
+        return view('Teacher.profile', [
+            'teacher' => $teacher,
+            'user' => $user,
+        ]);
+    }
+
+    public function changePassword(Request $request)
+    {
+        $teacherID = Session::get('teacherID');
+        $schoolID = Session::get('schoolID');
+        $userType = Session::get('user_type');
+
+        if ($userType !== 'Teacher' || ! $teacherID || ! $schoolID) {
+            return redirect()->route('login')->with('error', 'Access denied');
+        }
+
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:6|confirmed',
+        ], [
+            'current_password.required' => 'Current password is required.',
+            'new_password.required' => 'New password is required.',
+            'new_password.min' => 'New password must be at least 6 characters.',
+            'new_password.confirmed' => 'Password confirmation does not match.',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        $teacher = Teacher::where('id', $teacherID)
+            ->where('schoolID', $schoolID)
+            ->first();
+
+        if (! $teacher) {
+            return redirect()->back()->with('error', 'Teacher not found');
+        }
+
+        $user = User::where('name', $teacher->employee_number)->first();
+        if (! $user) {
+            return redirect()->back()->with('error', 'User account not found');
+        }
+
+        if (! Hash::check($request->current_password, $user->password)) {
+            return redirect()->back()->with('error', 'Current password is incorrect.');
+        }
+
+        if (Hash::check($request->new_password, $user->password)) {
+            return redirect()->back()->with('error', 'New password must be different from the current password.');
+        }
+
+        $user->update([
+            'password' => Hash::make($request->new_password),
+        ]);
+
+        return redirect()->back()->with('success', 'Password updated successfully.');
     }
 
     /**

@@ -16,9 +16,12 @@ use App\Models\ExamPaper;
 use App\Models\ExamPaperQuestion;
 use App\Models\ExamPaperQuestionMark;
 use App\Models\ExamPaperOptionalRange;
+use App\Models\Teacher;
+use App\Services\SmsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Validator;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -1263,8 +1266,13 @@ class ResultManagementController extends Controller
         $exams = $examsQuery->orderBy('start_date', 'desc')->get();
 
         $analysisData = [];
+        $selectedExam = null;
         if ($examID) {
-            $classSubjectsQuery = ClassSubject::with(['subject', 'class', 'subclass'])
+            $selectedExam = Examination::where('examID', $examID)
+                ->where('schoolID', $schoolID)
+                ->first();
+
+            $classSubjectsQuery = ClassSubject::with(['subject', 'class', 'subclass', 'teacher'])
                 ->where('status', 'Active');
 
             if ($classID) {
@@ -1316,6 +1324,20 @@ class ResultManagementController extends Controller
                     ];
                 });
 
+                $answeredRows = $resultRows->filter(function ($row) {
+                    return $row['marks'] !== null;
+                });
+                $passCount = $answeredRows->filter(function ($row) {
+                    return $row['marks'] >= 50;
+                })->count();
+                $failCount = $answeredRows->filter(function ($row) {
+                    return $row['marks'] < 50;
+                })->count();
+                $overallRemark = $answeredRows->count() > 0
+                    ? ($passCount >= $failCount ? 'Pass' : 'Fail')
+                    : 'Incomplete';
+                $overallClass = $overallRemark === 'Pass' ? 'success' : ($overallRemark === 'Fail' ? 'danger' : 'secondary');
+
                 $examPaper = ExamPaper::where('examID', $examID)
                     ->where('class_subjectID', $classSubjectID)
                     ->where('status', 'approved')
@@ -1351,19 +1373,26 @@ class ResultManagementController extends Controller
                             ->filter(function ($value) {
                                 return $value !== null;
                             });
-                        $avg = $questionMarks->count() > 0 ? $questionMarks->avg() : 0;
-                        $percent = $question->marks > 0 ? round(($avg / $question->marks) * 100, 1) : 0;
+                        $selectedCount = $questionMarks->count();
+                        $avg = $selectedCount > 0 ? $questionMarks->avg() : null;
+                        $percent = ($selectedCount > 0 && $question->marks > 0)
+                            ? round(($avg / $question->marks) * 100, 1)
+                            : null;
 
                         $questionStats[] = [
                             'question' => $question,
-                            'average' => round($avg, 2),
+                            'average' => $avg !== null ? round($avg, 2) : null,
                             'percent' => $percent,
+                            'selected_count' => $selectedCount,
                         ];
                     }
 
-                    if (!empty($questionStats)) {
-                        $bestQuestion = collect($questionStats)->sortByDesc('percent')->first();
-                        $worstQuestion = collect($questionStats)->sortBy('percent')->first();
+                    $scoredQuestions = collect($questionStats)->filter(function ($stat) {
+                        return $stat['percent'] !== null;
+                    });
+                    if ($scoredQuestions->isNotEmpty()) {
+                        $bestQuestion = $scoredQuestions->sortByDesc('percent')->first();
+                        $worstQuestion = $scoredQuestions->sortBy('percent')->first();
                     }
                 }
 
@@ -1371,6 +1400,7 @@ class ResultManagementController extends Controller
                     'class_subjectID' => $classSubjectID,
                     'subject_name' => $subjectName,
                     'class_display' => $classDisplay,
+                    'teacher' => $classSubject->teacher,
                     'results' => $results,
                     'result_rows' => $resultRows,
                     'questions' => $questions,
@@ -1379,6 +1409,13 @@ class ResultManagementController extends Controller
                     'best_question' => $bestQuestion,
                     'worst_question' => $worstQuestion,
                     'student_question_marks' => $studentQuestionMarks,
+                    'overall_stats' => [
+                        'answered' => $answeredRows->count(),
+                        'pass' => $passCount,
+                        'fail' => $failCount,
+                        'remark' => $overallRemark,
+                        'remark_class' => $overallClass,
+                    ],
                 ];
             }
         }
@@ -1395,6 +1432,7 @@ class ResultManagementController extends Controller
             'year',
             'term',
             'examID',
+            'selectedExam',
             'classID',
             'subclassID',
             'subjectID',
@@ -1437,6 +1475,66 @@ class ResultManagementController extends Controller
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => $e->getMessage()]);
         }
+    }
+
+    public function sendSubjectAnalysisComment(Request $request)
+    {
+        $schoolID = Session::get('schoolID');
+        if (! $schoolID) {
+            return response()->json(['error' => 'Access denied'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'teacherID' => 'required|integer',
+            'message' => 'required|string|max:500',
+            'class_subjectID' => 'required|integer',
+            'examID' => 'nullable|integer',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $teacher = Teacher::where('id', $request->teacherID)
+            ->where('schoolID', $schoolID)
+            ->first();
+
+        if (! $teacher || empty($teacher->phone_number)) {
+            return response()->json(['error' => 'Teacher phone number not available'], 422);
+        }
+
+        $classSubject = ClassSubject::with(['subject', 'class', 'subclass'])
+            ->where('class_subjectID', $request->class_subjectID)
+            ->first();
+
+        if (! $classSubject) {
+            return response()->json(['error' => 'Class subject not found'], 404);
+        }
+
+        $subjectName = $classSubject->subject->subject_name ?? 'Subject';
+        $className = $classSubject->class->class_name ?? '';
+        $subclassName = $classSubject->subclass->subclass_name ?? '';
+        $classDisplay = trim($className.' '.$subclassName);
+
+        $examName = 'Exam';
+        if ($request->examID) {
+            $exam = Examination::where('examID', $request->examID)
+                ->where('schoolID', $schoolID)
+                ->first();
+            if ($exam) {
+                $examName = $exam->exam_name;
+            }
+        }
+
+        $smsMessage = "Subject analysis comment: {$subjectName} ({$classDisplay}) - {$examName}. {$request->message}";
+        try {
+            $smsService = new SmsService();
+            $smsService->sendSms($teacher->phone_number, $smsMessage);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to send message'], 500);
+        }
+
+        return response()->json(['success' => true]);
     }
 
     /**

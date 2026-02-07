@@ -3497,6 +3497,8 @@ $(document).ready(function() {
         });
     });
 
+    loadExamPaperNotificationCounts();
+
     // Reset edit form when modal is closed
     $('#editExamModal').on('hidden.bs.modal', function() {
         resetEditFormState();
@@ -3967,6 +3969,7 @@ window.updateResultsStatus = function(examID, permission, status, statusName, st
             <div class="modal-header bg-primary-custom text-white">
                 <h4 class="modal-title" id="viewExamPapersModalLabel">
                     <i class="bi bi-file-earmark-text"></i> Exam Papers
+                    <span class="badge badge-light ml-2 d-none" id="examPaperModalCount"></span>
                 </h4>
                 <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" style="font-size: 1.5rem;">
                     <span aria-hidden="true">&times;</span>
@@ -4138,8 +4141,11 @@ window.viewExamPapers = function(examID, examName) {
                 return;
             }
 
-            $('#viewExamPapersModalLabel').html('<i class="bi bi-file-earmark-text"></i> Exam Papers - ' + examName);
+            $('#viewExamPapersModalLabel').html('<i class="bi bi-file-earmark-text"></i> Exam Papers - ' + examName + ' <span class="badge badge-light ml-2 d-none" id="examPaperModalCount"></span>');
             $('#viewExamPapersModal').modal('show');
+
+            updateExamPaperModalCount();
+    markExamPaperNotificationsReadForExam(examID);
 
             // Reset content
             $('#examPapersContent').html(`
@@ -4164,6 +4170,53 @@ window.viewExamPapers = function(examID, examName) {
         });
     })(typeof jQuery !== 'undefined' ? jQuery : window.$);
 };
+
+function updateExamPaperModalCount() {
+    $.get('{{ route("admin.exam_paper_notifications_count") }}', function(response) {
+        if (!response || response.success !== true) {
+            return;
+        }
+        const count = parseInt(response.count || 0, 10);
+        const $badge = $('#examPaperModalCount');
+        if (count > 0) {
+            $badge.text(count + ' new').removeClass('d-none');
+        } else {
+            $badge.addClass('d-none').text('');
+        }
+    });
+}
+
+function applyExamPaperNotificationCounts(counts) {
+    $('.exam-paper-count').each(function() {
+        const examId = String($(this).data('exam-id'));
+        const count = parseInt(counts[examId] || 0, 10);
+        if (count > 0) {
+            $(this).text(count).removeClass('d-none');
+        } else {
+            $(this).addClass('d-none').text('');
+        }
+    });
+}
+
+function loadExamPaperNotificationCounts() {
+    $.get('{{ route("admin.exam_paper_notifications_by_exam") }}', function(response) {
+        if (!response || response.success !== true) {
+            return;
+        }
+        applyExamPaperNotificationCounts(response.counts || {});
+    });
+}
+
+function markExamPaperNotificationsReadForExam(examID) {
+    $.ajax({
+        url: `/admin/mark-exam-paper-notifications-read/${examID}`,
+        method: 'POST',
+        data: { _token: $('meta[name="csrf-token"]').attr('content') },
+        success: function() {
+            loadExamPaperNotificationCounts();
+        }
+    });
+}
 
 function loadExamPapers(examID, search = '', status = '') {
     $.ajax({
