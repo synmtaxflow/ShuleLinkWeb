@@ -457,17 +457,20 @@ class ManageStudentController extends Controller
         // Get student photo path
         $studentImgPath = null;
         if ($student->photo) {
-            // Check in standard public path
-            $photoPath = public_path('userImages/' . $student->photo);
+            // Check if file exists in the filesystem relative to public_html/public
+            // On cPanel, public_path often points to the repo's public folder, NOT public_html
+            // So we manually check the likely live path first
             
-            // Check in alternative cPanel path if standard path fails
-            if (!file_exists($photoPath)) {
-                 $cpanelPath = base_path('../public_html/userImages/' . $student->photo);
-                 if (file_exists($cpanelPath)) {
-                     $studentImgPath = url('userImages/' . $student->photo);
-                 }
-            } else {
-                 $studentImgPath = asset('userImages/' . $student->photo);
+            $filename = $student->photo;
+            $livePath = base_path('../public_html/userImages/' . $filename);
+            $localPath = public_path('userImages/' . $filename);
+
+            if (file_exists($livePath)) {
+                // If found in public_html/userImages, the URL is just domain.com/userImages/filename
+                $studentImgPath = url('userImages/' . $filename);
+            } elseif (file_exists($localPath)) {
+                // If found in local dev public/userImages
+                $studentImgPath = asset('userImages/' . $filename);
             }
         }
         
