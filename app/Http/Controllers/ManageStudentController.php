@@ -230,9 +230,16 @@ class ManageStudentController extends Controller
             // Handle Image Upload
             $imageName = null;
             if ($request->hasFile('photo')) {
-                $uploadPath = public_path('userImages');
-                if (!file_exists($uploadPath)) {
-                    mkdir($uploadPath, 0755, true);
+                // Determine upload path based on environment
+                if (file_exists(public_path('userImages'))) {
+                     $uploadPath = public_path('userImages');
+                } else {
+                     // Fallback for cPanel if public_path points to incorrect location
+                     $uploadPath = base_path('../public_html/userImages'); 
+                     if (!file_exists($uploadPath)) {
+                        // Create directory if it doesn't exist
+                        mkdir($uploadPath, 0755, true);
+                     }
                 }
 
                 $imageName = time() . '_' . $request->file('photo')->getClientOriginalName();
@@ -450,11 +457,20 @@ class ManageStudentController extends Controller
         // Get student photo path
         $studentImgPath = null;
         if ($student->photo) {
+            // Check in standard public path
             $photoPath = public_path('userImages/' . $student->photo);
-            if (file_exists($photoPath)) {
-                $studentImgPath = asset('userImages/' . $student->photo);
+            
+            // Check in alternative cPanel path if standard path fails
+            if (!file_exists($photoPath)) {
+                 $cpanelPath = base_path('../public_html/userImages/' . $student->photo);
+                 if (file_exists($cpanelPath)) {
+                     $studentImgPath = url('userImages/' . $student->photo);
+                 }
+            } else {
+                 $studentImgPath = asset('userImages/' . $student->photo);
             }
         }
+        
         if (!$studentImgPath) {
             $studentImgPath = $student->gender == 'Female'
                 ? asset('images/female.png')
@@ -569,14 +585,23 @@ class ManageStudentController extends Controller
             // Handle Image Upload
             $imageName = $student->photo; // Keep existing photo
             if ($request->hasFile('photo')) {
-                $uploadPath = public_path('userImages');
-                if (!file_exists($uploadPath)) {
-                    mkdir($uploadPath, 0755, true);
+                // Determine upload path based on environment
+                if (file_exists(public_path('userImages'))) {
+                     $uploadPath = public_path('userImages');
+                } else {
+                     // Fallback for cPanel if public_path points to incorrect location
+                     $uploadPath = base_path('../public_html/userImages'); 
+                     if (!file_exists($uploadPath)) {
+                        // Create directory if it doesn't exist
+                        mkdir($uploadPath, 0755, true);
+                     }
                 }
 
                 // Delete old image if exists
-                if ($student->photo && file_exists($uploadPath . '/' . $student->photo)) {
-                    unlink($uploadPath . '/' . $student->photo);
+                if ($student->photo) {
+                    if (file_exists($uploadPath . '/' . $student->photo)) {
+                        unlink($uploadPath . '/' . $student->photo);
+                    }
                 }
 
                 $imageName = time() . '_' . $request->file('photo')->getClientOriginalName();
