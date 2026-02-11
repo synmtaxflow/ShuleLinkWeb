@@ -26,10 +26,10 @@ class ExpenseController extends Controller
     public function create()
     {
         $schoolID = Session::get('schoolID');
-        $categories = [];
+        $categoryNames = [];
         try {
             if (DB::getSchemaBuilder()->hasTable('expense_categories')) {
-                $categories = DB::table('expense_categories')
+                $categoryNames = DB::table('expense_categories')
                     ->where('schoolID', $schoolID)
                     ->where('status', 'Active')
                     ->orderBy('name')
@@ -40,8 +40,8 @@ class ExpenseController extends Controller
             // ignore and fallback below
         }
         // Fallback ONLY if table exists and has no data
-        if (DB::getSchemaBuilder()->hasTable('expense_categories') && empty($categories)) {
-            $categories = [
+        if (DB::getSchemaBuilder()->hasTable('expense_categories') && empty($categoryNames)) {
+            $categoryNames = [
                 'Academic & Learning Expenses',
                 'Personnel & Staff Costs',
                 'Administration & Office Expenses',
@@ -56,7 +56,22 @@ class ExpenseController extends Controller
                 'Regulatory & Compliance Costs'
             ];
         }
+
         $year = date('Y');
+        $categories = [];
+        foreach ($categoryNames as $name) {
+            $budget = \App\Models\Budget::where('schoolID', $schoolID)
+                ->where('budget_category', $name)
+                ->where('fiscal_year', $year)
+                ->where('status', 'Active')
+                ->first();
+
+            $categories[] = [
+                'name' => $name,
+                'remaining' => $budget ? $budget->remaining_amount : 0
+            ];
+        }
+
         $lastExpense = Expense::latest()->first();
         $sequence = $lastExpense ? ($lastExpense->id + 1) : 1;
         $voucherPreview = "PCV-{$year}-" . str_pad($sequence, 3, '0', STR_PAD_LEFT);

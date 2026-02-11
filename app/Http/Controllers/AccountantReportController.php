@@ -36,6 +36,7 @@ class AccountantReportController extends Controller
     public function getChartData()
     {
         $schoolID = Session::get('schoolID');
+        $currentYear = date('Y');
         
         // Last 6 months trends
         $months = [];
@@ -62,12 +63,60 @@ class AccountantReportController extends Controller
         }
 
         // Category breakdown (Current Year)
-        $categories = Expense::where('schoolID', $schoolID)
+        $categoriesStats = Expense::where('schoolID', $schoolID)
             ->where('status', 'Approved')
-            ->whereYear('date', date('Y'))
+            ->whereYear('date', $currentYear)
             ->select('expense_category', DB::raw('SUM(amount) as total'))
             ->groupBy('expense_category')
             ->get();
+
+        // Budget vs Expenses Comparison
+        $budgets = Budget::where('schoolID', $schoolID)
+            ->where('fiscal_year', $currentYear)
+            ->where('status', 'Active')
+            ->get();
+
+        $budgetComparison = [];
+        $budgetLabels = [];
+        $budgetAllocated = [];
+        $budgetSpent = [];
+        $expenseDetails = [];
+
+        // Get all unique categories from both budgets and actual expenses
+        $allCategories = $budgets->pluck('budget_category')
+            ->merge($categoriesStats->pluck('expense_category'))
+            ->unique()
+            ->values();
+
+        foreach ($allCategories as $category) {
+            $budget = $budgets->where('budget_category', $category)->first();
+            $allocated = $budget ? $budget->allocated_amount : 0;
+            
+            $spent = Expense::where('schoolID', $schoolID)
+                ->where('expense_category', $category)
+                ->where('status', 'Approved')
+                ->whereYear('date', $currentYear)
+                ->sum('amount');
+
+            $details = Expense::where('schoolID', $schoolID)
+                ->where('expense_category', $category)
+                ->where('status', 'Approved')
+                ->whereYear('date', $currentYear)
+                ->select('date', 'description', 'amount', 'voucher_number')
+                ->orderBy('date', 'desc')
+                ->get();
+
+            $budgetLabels[] = $category;
+            $budgetAllocated[] = $allocated;
+            $budgetSpent[] = $spent;
+            
+            $expenseDetails[$category] = [
+                'allocated' => $allocated,
+                'spent' => $spent,
+                'percentage' => $allocated > 0 ? round(($spent / $allocated) * 100, 1) : ($spent > 0 ? 100 : 0),
+                'items' => $details
+            ];
+        }
 
         return response()->json([
             'trends' => [
@@ -76,8 +125,14 @@ class AccountantReportController extends Controller
                 'expenses' => $expenseData
             ],
             'categories' => [
-                'labels' => $categories->pluck('expense_category'),
-                'data' => $categories->pluck('total')
+                'labels' => $categoriesStats->pluck('expense_category'),
+                'data' => $categoriesStats->pluck('total')
+            ],
+            'budget_comparison' => [
+                'labels' => $budgetLabels,
+                'allocated' => $budgetAllocated,
+                'spent' => $budgetSpent,
+                'details' => $expenseDetails
             ]
         ]);
     }

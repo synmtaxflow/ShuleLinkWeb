@@ -1,6 +1,11 @@
 @extends('layouts.vali')
 
 @section('content')
+<style>
+    div, h1, h2, h3, h4, h5, h6, p, a, span, label, input, select, textarea, button, .breadcrumb, .card-header, .card-footer {
+        font-family: 'Century Gothic', sans-serif !important;
+    }
+</style>
 <div class="breadcrumbs">
     <div class="col-sm-4">
         <div class="page-header float-left">
@@ -46,7 +51,7 @@
                         <select name="expense_category" id="expense_category" class="form-control" required>
                             <option value="">Please select</option>
                             @foreach($categories as $category)
-                                <option value="{{ $category }}">{{ $category }}</option>
+                                <option value="{{ $category['name'] }}" data-remaining="{{ $category['remaining'] }}">{{ $category['name'] }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -123,7 +128,38 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const amountInput = document.getElementById('amount');
+        const categorySelect = document.getElementById('expense_category');
+
+        function checkBudget() {
+            const amount = parseFloat(amountInput.value);
+            const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+
+            if (!selectedOption.value || isNaN(amount)) return;
+
+            const remaining = parseFloat(selectedOption.getAttribute('data-remaining'));
+            
+            // Logic: If user enters an amount > remaining budget, show alert.
+            // Note: If remaining is 0, it might trigger every time if budget wasn't set (which is effectively 0).
+            if (!isNaN(remaining) && amount > remaining) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Budget Low!',
+                    text: 'The entered amount (' + amount.toLocaleString() + ') exceeds the remaining budget (' + remaining.toLocaleString() + ') for ' + selectedOption.text + '.',
+                    confirmButtonColor: '#ffc107',
+                    confirmButtonText: 'OK, I Understand'
+                });
+            }
+        }
+
+        // Trigger check when amount changes or category changes
+        amountInput.addEventListener('change', checkBudget);
+        categorySelect.addEventListener('change', checkBudget);
+    });
+
     function toggleAccountOptions() {
         var voucherType = document.querySelector('input[name="voucher_type"]:checked').value;
         var accountSelect = document.getElementById('payment_account');
