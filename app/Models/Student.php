@@ -20,6 +20,8 @@ class Student extends Model
         'subclassID',
         'old_subclassID',
         'parentID',
+        'sponsor_id',
+        'sponsorship_percentage',
         'first_name',
         'middle_name',
         'last_name',
@@ -105,5 +107,10 @@ class Student extends Model
     public function payments()
     {
         return $this->hasMany(Payment::class, 'studentID', 'studentID');
+    }
+
+    public function sponsor()
+    {
+        return $this->belongsTo(Sponsor::class, 'sponsor_id', 'sponsorID');
     }
 }

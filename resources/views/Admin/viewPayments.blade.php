@@ -68,36 +68,27 @@
     }
     #paymentsTable th:nth-child(1),
     #paymentsTable td:nth-child(1) {
-        width: 5%;
+        width: 30%;
     }
     #paymentsTable th:nth-child(2),
     #paymentsTable td:nth-child(2) {
-        width: 6%;
+        width: 15%;
+        text-align: center;
     }
     #paymentsTable th:nth-child(3),
     #paymentsTable td:nth-child(3) {
-        width: 18%;
-        white-space: normal;
+        width: 20%;
+        text-align: right;
     }
     #paymentsTable th:nth-child(4),
     #paymentsTable td:nth-child(4) {
-        width: 10%;
-        text-align: center;
+        width: 20%;
+        text-align: right;
     }
     #paymentsTable th:nth-child(5),
     #paymentsTable td:nth-child(5) {
-        width: 13%;
-        text-align: right;
-    }
-    #paymentsTable th:nth-child(6),
-    #paymentsTable td:nth-child(6) {
-        width: 13%;
-        text-align: right;
-    }
-    #paymentsTable th:nth-child(7),
-    #paymentsTable td:nth-child(7) {
-        width: 13%;
-        text-align: right;
+        width: 15%;
+        text-align: center;
     }
     #paymentsTable th:nth-child(8),
     #paymentsTable td:nth-child(8) {
@@ -119,6 +110,9 @@
         #paymentsTable td {
             padding: 6px 8px;
         }
+    }
+    .border-primary-custom {
+        border: 1px solid #940000 !important;
     }
 </style>
 
@@ -164,10 +158,10 @@
                                 <i class="bi bi-key"></i> Generate Control Numbers
                             </button>
                             <button class="btn btn-light text-primary-custom fw-bold" type="button" id="sendSMSBtn">
-                                <i class="bi bi-send"></i> Send SMS to Parents
+                                <i class="bi bi-send-check"></i> Send Control Numbers
                             </button>
-                            <button class="btn btn-light text-primary-custom fw-bold" type="button" id="exportInvoiceBtn">
-                                <i class="bi bi-file-earmark-pdf"></i> Export PDF Invoice
+                            <button class="btn btn-light text-warning fw-bold" type="button" id="sendDebtRemindersBtn">
+                                <i class="bi bi-bell-fill"></i> Send Debt Reminders
                             </button>
                         </div>
                     </div>
@@ -176,23 +170,23 @@
 
             <!-- Statistics Cards -->
             <div class="row mb-4" id="statisticsCards">
-                <div class="col-md-3">
+                <div class="col-md-2" style="flex: 0 0 20%; max-width: 20%;">
                     <div class="card border-0 shadow-sm">
                         <div class="card-body">
-                            <h6 class="text-muted mb-2">Pending Payments</h6>
+                            <h6 class="text-muted mb-2">Pending</h6>
                             <h3 class="mb-0 text-warning" id="statPendingPayments">0</h3>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2" style="flex: 0 0 20%; max-width: 20%;">
                     <div class="card border-0 shadow-sm">
                         <div class="card-body">
-                            <h6 class="text-muted mb-2">Incomplete Payments</h6>
+                            <h6 class="text-muted mb-2">Incomplete</h6>
                             <h3 class="mb-0 text-info" id="statIncompletePayments">0</h3>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2" style="flex: 0 0 20%; max-width: 20%;">
                     <div class="card border-0 shadow-sm">
                         <div class="card-body">
                             <h6 class="text-muted mb-2">Fully Paid</h6>
@@ -200,11 +194,19 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2" style="flex: 0 0 20%; max-width: 20%;">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <h6 class="text-muted mb-2">Overpaid</h6>
+                            <h3 class="mb-0 text-primary-custom" id="statOverpaidPayments">0</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2" style="flex: 0 0 20%; max-width: 20%;">
                     <div class="card border-0 shadow-sm">
                         <div class="card-body">
                             <h6 class="text-muted mb-2">Total Balance</h6>
-                            <h3 class="mb-0 text-danger" id="statTotalBalance">TZS 0.00</h3>
+                            <h3 class="mb-0 text-danger" id="statTotalBalance">TZS 0</h3>
                         </div>
                     </div>
                 </div>
@@ -294,14 +296,12 @@
                                 <option value="Graduated">Graduated</option>
                             </select>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md-2 d-none">
                             <label class="form-label fw-bold mb-2">
                                 <i class="bi bi-filter"></i> Fee Type
                             </label>
                             <select class="form-select" id="filterFeeType">
-                                <option value="">All Types</option>
-                                <option value="Tuition Fees">School Fee</option>
-                                <option value="Other Fees">Other Contribution</option>
+                                <option value="" selected>All Types</option>
                             </select>
                         </div>
                         <div class="col-md-2">
@@ -315,6 +315,16 @@
                                 <option value="Partial">Partial</option>
                                 <option value="Paid">Paid</option>
                                 <option value="Overpaid">Overpaid</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold mb-2">
+                                <i class="bi bi-shield-check"></i> Sponsorship
+                            </label>
+                            <select class="form-select" id="filterSponsorship">
+                                <option value="">All</option>
+                                <option value="sponsored">Sponsored</option>
+                                <option value="self">Self-paying</option>
                             </select>
                         </div>
                         <div class="col-md-3">
@@ -331,8 +341,8 @@
                                 <button type="button" class="btn btn-outline-secondary flex-fill" id="clearFiltersBtn" title="Clear Filters">
                                     <i class="bi bi-x-circle"></i> Clear
                                 </button>
-                                <button type="button" class="btn btn-primary-custom flex-fill" id="exportFilteredPdfBtn" title="Export Filtered PDF">
-                                    <i class="bi bi-file-earmark-pdf"></i> Export
+                                <button type="button" class="btn btn-primary-custom flex-fill" id="openReportBtn" title="Open Payments Report">
+                                    <i class="bi bi-graph-up"></i> Report
                                 </button>
                             </div>
                         </div>
@@ -352,32 +362,27 @@
                         <table class="table table-hover table-sm mb-0" id="paymentsTable">
                             <thead class="table-light">
                                 <tr>
-                                    <th>#</th>
-                                    <th>Photo</th>
-                                    <th>Student Name</th>
-                                    <th>Academic Year</th>
-                                    <th>Total Fee Required (TZS)</th>
-                                    <th>Paid Amount (TZS)</th>
-                                    <th>Bill Balance (TZS)</th>
-                                    <th>Status</th>
+                                    <th>Student Details</th>
+                                    <th>Payment Type</th>
+                                    <th>Bill Summary (TZS)</th>
+                                    <th>Balance & Status</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tfoot class="table-light">
                                 <tr>
-                                    <th></th>
-                                    <th></th>
-                                    <th><input type="text" class="form-control form-control-sm column-filter" placeholder="Filter Name" data-column="2"></th>
-                                    <th><input type="text" class="form-control form-control-sm column-filter" placeholder="Filter Year" data-column="3"></th>
-                                    <th><input type="text" class="form-control form-control-sm column-filter" placeholder="Filter Required" data-column="4"></th>
-                                    <th><input type="text" class="form-control form-control-sm column-filter" placeholder="Filter Paid" data-column="5"></th>
-                                    <th><input type="text" class="form-control form-control-sm column-filter" placeholder="Filter Balance" data-column="6"></th>
-                                    <th><select class="form-control form-control-sm column-filter" data-column="7">
+                                    <th><input type="text" class="form-control form-control-sm column-filter" placeholder="Filter Student" data-column="0"></th>
+                                    <th><select class="form-control form-control-sm column-filter" data-column="1">
+                                        <option value="">All Types</option>
+                                        <option value="Sponsored">Sponsored</option>
+                                        <option value="Own Payment">Own Payment</option>
+                                    </select></th>
+                                    <th><input type="text" class="form-control form-control-sm column-filter" placeholder="Filter Bill" data-column="2"></th>
+                                    <th><select class="form-control form-control-sm column-filter" data-column="3">
                                         <option value="">All Status</option>
+                                        <option value="Paid">Paid</option>
                                         <option value="Pending">Pending</option>
                                         <option value="Incomplete">Incomplete</option>
-                                        <option value="Paid">Paid</option>
-                                        <option value="Overpaid">Overpaid</option>
                                     </select></th>
                                     <th></th>
                                 </tr>
@@ -407,44 +412,158 @@
             </div>
             <div class="modal-body">
                 <!-- Student Information -->
-                <div class="row mb-4">
-                    <div class="col-md-4 text-center mb-3">
-                        <div class="student-photo-modal-container" style="display: inline-block; position: relative;">
+                <div class="row mb-4 align-items-center">
+                    <div class="col-md-2 text-center">
+                        <div class="student-photo-modal-container">
                             <img id="view_student_photo" src="" alt="Student Photo" 
                                 class="img-thumbnail" 
-                                style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px; display: none;"
+                                style="width: 100px; height: 100px; object-fit: cover; border-radius: 50%; display: none;"
                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                             <div id="view_student_photo_placeholder" 
                                 class="student-photo-placeholder d-none" 
-                                style="width: 120px; height: 120px; border-radius: 8px; display: none; align-items: center; justify-content: center; font-size: 48px; font-weight: bold; color: white; margin: 0 auto;">
+                                style="width: 100px; height: 100px; border-radius: 50%; display: none; align-items: center; justify-content: center; font-size: 36px; font-weight: bold; color: white; margin: 0 auto;">
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-8 mb-3">
-                        <h5 class="text-primary-custom mb-2" id="view_student_name">-</h5>
-                        <p class="mb-1"><strong>Class:</strong> <span id="view_student_class">-</span></p>
+                    <div class="col-md-6">
+                        <h4 class="text-primary-custom mb-1" id="view_student_name">-</h4>
+                        <p class="mb-0 text-muted"> <i class="bi bi-book"></i> <span id="view_student_class">-</span> | <i class="bi bi-person-badge"></i> <span id="view_student_admission">-</span></p>
                     </div>
-                </div>
-
-                <!-- Tuition Fees Details -->
-                <div class="row mb-3" id="tuitionFeesSection" style="display: none;">
-                    <div class="col-12">
-                        <div id="tuitionFeesContent">
-                            <!-- Tuition fees will be dynamically inserted here -->
+                    <div class="col-md-4 text-end">
+                        <div class="p-2 bg-light rounded border">
+                            <small class="text-muted d-block">Control Number</small>
+                            <span class="h5 mb-0 text-primary-custom fw-bold" id="view_control_number">-</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Other Fees Details -->
-                <div class="row mb-3" id="otherFeesSection" style="display: none;">
-                    <div class="col-12">
-                        <div id="otherFeesContent">
-                            <!-- Other fees will be dynamically inserted here -->
+                <!-- Payment Summary Dashboard -->
+                <div class="row mb-4 g-2">
+                    <div class="col">
+                        <div class="card border-0 bg-light h-100">
+                            <div class="card-body p-2 text-center">
+                                <small class="text-muted d-block mb-1" style="font-size: 0.75rem;">Fee Required</small>
+                                <h6 class="mb-0 text-primary-custom fw-bold" id="view_total_fee_required">0.00</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card border-0 bg-light h-100">
+                            <div class="card-body p-2 text-center">
+                                <small class="text-muted d-block mb-1" style="font-size: 0.75rem;">Total Paid</small>
+                                <h6 class="mb-0 text-success fw-bold" id="view_total_paid">0.00</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card border-0 bg-light h-100">
+                            <div class="card-body p-2 text-center">
+                                <small class="text-muted d-block mb-1" style="font-size: 0.75rem;">Bill Balance</small>
+                                <h6 class="mb-0 text-danger fw-bold" id="view_bill_balance">0.00</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card border-0 bg-light h-100">
+                            <div class="card-body p-2 text-center">
+                                <small class="text-muted d-block mb-1" style="font-size: 0.75rem;">Prev. Year Debt</small>
+                                <h6 class="mb-0 text-warning fw-bold" id="view_old_debt">0.00</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card border-0 bg-primary-custom text-white h-100">
+                            <div class="card-body p-2 text-center">
+                                <small class="d-block mb-1" style="font-size: 0.75rem;">Total Outstanding</small>
+                                <h6 class="mb-0 fw-bold" id="view_total_outstanding">0.00</h6>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sponsorship Information (Hidden by default) -->
+                <div id="sponsorInfoSection" class="mb-4" style="display: none;">
+                    <div class="card border-primary-custom shadow-sm bg-light">
+                        <div class="card-header bg-primary-custom text-white py-1 px-3">
+                            <small class="fw-bold"><i class="bi bi-shield-check me-2"></i> Sponsorship Information</small>
+                        </div>
+                        <div class="card-body py-2 px-3">
+                            <div class="row align-items-center">
+                                <div class="col-md-5">
+                                    <h6 class="mb-1 text-primary-custom fw-bold" id="view_sponsor_name">-</h6>
+                                    <div class="small mb-1"><i class="bi bi-person"></i> <span id="view_sponsor_contact_person">-</span></div>
+                                    <div class="small text-muted mb-1"><i class="bi bi-telephone"></i> <span id="view_sponsor_phone">-</span></div>
+                                    <div class="small text-muted"><i class="bi bi-envelope"></i> <span id="view_sponsor_email">-</span></div>
+                                </div>
+                                <div class="col-md-3 text-center border-start border-end">
+                                    <div class="display-6 fw-bold text-primary-custom" id="view_sponsor_percentage">0%</div>
+                                    <small class="text-muted d-block text-uppercase" style="font-size: 0.65rem;">Coverage</small>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <small class="text-muted d-block">Sponsor Component</small>
+                                    <h5 class="mb-0 text-success fw-bold" id="view_sponsor_amount">0.00/=</h5>
+                                    <small class="text-muted" style="font-size: 0.7rem;">(Calculated from total fees)</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Record Payment Button Section -->
+                <div id="modalRecordPaymentContainer" class="mb-4 text-center">
+                    <!-- Button will be dynamically inserted here -->
+                </div>
+
+                <!-- Expandable Detailed Breakdown -->
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-bottom-0 p-0">
+                        <button class="btn btn-link w-100 text-start text-decoration-none p-3 d-flex justify-content-between align-items-center" 
+                                type="button" data-toggle="collapse" data-target="#detailedBreakdownCollapse" aria-expanded="false">
+                            <span class="fw-bold text-dark"><i class="bi bi-list-task me-2"></i> Detailed Fee Breakdown</span>
+                            <i class="bi bi-chevron-down"></i>
+                        </button>
+                    </div>
+                    <div class="collapse" id="detailedBreakdownCollapse">
+                        <div class="card-body pt-0">
+                            <!-- Tuition Fees Details -->
+                            <div id="tuitionFeesSection" style="display: none;">
+                                <div id="tuitionFeesContent" class="mb-4">
+                                    <!-- Tuition fees will be dynamically inserted here -->
+                                </div>
+                            </div>
+
+                            <!-- Other Fees Details -->
+                            <div id="otherFeesSection" style="display: none;">
+                                <div id="otherFeesContent">
+                                    <!-- Other fees will be dynamically inserted here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transaction History -->
+                <div class="card border-0 shadow-sm mt-3">
+                    <div class="card-header bg-white border-bottom-0 p-0">
+                        <button class="btn btn-link w-100 text-start text-decoration-none p-3 d-flex justify-content-between align-items-center" 
+                                type="button" data-toggle="collapse" data-target="#allTransactionsCollapse" aria-expanded="false">
+                            <span class="fw-bold text-dark"><i class="bi bi-clock-history me-2"></i> All Transactions of Control Number</span>
+                            <i class="bi bi-chevron-down"></i>
+                        </button>
+                    </div>
+                    <div class="collapse" id="allTransactionsCollapse">
+                        <div class="card-body pt-0">
+                            <div id="allTransactionsContent">
+                                <!-- Transaction history will be dynamically inserted here -->
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
+                <button type="button" class="btn btn-outline-danger" id="modalExportPdfBtn">
+                    <i class="bi bi-file-earmark-pdf"></i> Export PDF
+                </button>
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">
                     <i class="bi bi-x-circle"></i> Close
                 </button>
@@ -624,37 +743,126 @@
     </div>
 </div>
 
-<!-- DataTables JS -->
-<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap4.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap4.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+<!-- Edit Payment Record Modal -->
+<div class="modal fade" id="editPaymentRecordModal" tabindex="-1" aria-labelledby="editPaymentRecordModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="editPaymentRecordModalLabel">
+                    <i class="bi bi-pencil-square"></i> Edit Payment Record
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="editPaymentRecordForm">
+                @csrf
+                <input type="hidden" name="recordID" id="edit_record_id">
+                <input type="hidden" name="paymentID" id="edit_payment_id">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Amount Paid (TZS) <span class="text-danger">*</span></label>
+                        <input type="number" name="paid_amount" id="edit_paid_amount" class="form-control" step="0.01" min="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Payment Date <span class="text-danger">*</span></label>
+                        <input type="date" name="payment_date" id="edit_payment_date" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Payment Method <span class="text-danger">*</span></label>
+                        <select name="payment_source" id="edit_payment_source" class="form-select" required>
+                            <option value="Cash">Cash</option>
+                            <option value="Bank">Bank</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="edit_reference_number_group" style="display: none;">
+                        <label class="form-label fw-bold">Reference Number <span class="text-danger">*</span></label>
+                        <input type="text" name="reference_number" id="edit_reference_number" class="form-control">
+                    </div>
+                    <div class="mb-3" id="edit_bank_name_group" style="display: none;">
+                        <label class="form-label fw-bold">Bank Name <span class="text-danger">*</span></label>
+                        <input type="text" name="bank_name" id="edit_bank_name" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Notes</label>
+                        <textarea name="notes" id="edit_notes" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">Update Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
-<!-- jsPDF Library for PDF generation -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-<script>
-    // Ensure jsPDF is available globally
-    if (typeof window.jspdf !== 'undefined' && !window.jsPDF) {
-        window.jsPDF = window.jspdf.jsPDF;
-    }
-</script>
-
+<!-- Core dependencies wait and load -->
 <script>
 (function() {
-    function initPaymentsManagement() {
-        if (typeof jQuery === 'undefined') {
-            setTimeout(initPaymentsManagement, 100);
+    var scripts = [
+        'https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js',
+        'https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap4.min.js',
+        'https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js',
+        'https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap4.min.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js',
+        'https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js',
+        'https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js'
+    ];
+
+    function loadScript(url, callback) {
+        var script = document.createElement('script');
+        script.src = url;
+        script.onload = callback;
+        script.onerror = function() {
+            console.error('Failed to load script: ' + url);
+            // Continue with next script even if one fails
+            if (callback) callback();
+        };
+        document.head.appendChild(script);
+    }
+
+    function loadScriptsSequentially(urls, callback) {
+        if (urls.length === 0) {
+            if (callback) callback();
             return;
         }
+        var nextUrl = urls.shift();
+        loadScript(nextUrl, function() {
+            loadScriptsSequentially(urls, callback);
+        });
+    }
+
+    function waitForJQuery(callback) {
+        if (window.jQuery) {
+            callback();
+        } else {
+            setTimeout(function() { waitForJQuery(callback); }, 100);
+        }
+    }
+
+    // Show loading state in table immediately
+    waitForJQuery(function() {
+        var $ = window.jQuery;
+        $('#paymentsTableBody').html('<tr><td colspan="4" class="text-center py-4"><div class="spinner-border text-primary-custom" role="status"></div><p class="mt-2">Initializing assets...</p></td></tr>');
         
-        var $ = jQuery;
-        
+        loadScriptsSequentially(scripts, function() {
+            console.log('All scripts loaded, initializing payments management...');
+            
+            // Ensure jsPDF mapping
+            if (typeof window.jspdf !== 'undefined' && !window.jsPDF) {
+                window.jsPDF = window.jspdf.jsPDF;
+            }
+            
+            initPaymentsApp($);
+        });
+    });
+
+    function initPaymentsApp($) {
         // Function to generate placeholder color
         function getPlaceholderColor(name) {
             if (!name) return '#940000';
@@ -692,24 +900,35 @@
                 });
             }
             
-            // Trigger data reload
             loadPaymentsData();
         });
 
+        // Variable to store the current AJAX request to allow aborting previous ones
+        var currentPaymentsAjax = null;
+
         // Function to load payments data via AJAX
         function loadPaymentsData() {
+            // Abort previous request if it exists
+            if (currentPaymentsAjax) {
+                currentPaymentsAjax.abort();
+            }
+
             var year = $('#filterYear').val();
             var classID = $('#filterClass').val();
             var subclassID = $('#filterSubclass').val();
             var studentStatus = $('#filterStatus').val();
-            var feeType = $('#filterFeeType').val();
             var paymentStatus = $('#filterPaymentStatus').val();
             var searchStudentName = $('#searchStudentName').val();
 
-            // Show loading
-            $('#paymentsTableBody').html('<tr><td colspan="9" class="text-center py-4"><div class="spinner-border text-primary-custom" role="status"></div><p class="mt-2">Loading payments...</p></td></tr>');
+            // Clear previous table instance
+            if ($.fn.DataTable && $.fn.DataTable.isDataTable('#paymentsTable')) {
+                $('#paymentsTable').DataTable().destroy();
+            }
 
-            $.ajax({
+            // Show loading
+            $('#paymentsTableBody').html('<tr><td colspan="5" class="text-center py-4"><div class="spinner-border text-primary-custom" role="status"></div><p class="mt-2">Loading payments...</p></td></tr>');
+
+            currentPaymentsAjax = $.ajax({
                 url: '{{ route("get_payments_ajax") }}',
                 type: 'GET',
                 data: {
@@ -717,9 +936,9 @@
                     class_id: classID,
                     subclass_id: subclassID,
                     student_status: studentStatus,
-                    fee_type: feeType,
                     payment_status: paymentStatus,
-                    search_student_name: searchStudentName
+                    search_student_name: searchStudentName,
+                    sponsorship_filter: $('#filterSponsorship').val()
                 },
                 dataType: 'json',
                 success: function(response) {
@@ -729,10 +948,9 @@
                         if (response.data.length > 0) {
                             response.data.forEach(function(item) {
                                 var student = item.student;
-                                var payments = item.payments || [];
+                                var paymentsData = item.payment || {}; // Renamed to avoid conflict
                                 var totals = item.totals || {};
-                                var index = item.index;
-
+                                
                                 // Generate placeholder
                                 var firstName = student.first_name || '';
                                 var firstLetter = firstName ? firstName.charAt(0).toUpperCase() : 'N';
@@ -742,108 +960,74 @@
                                 // Photo HTML
                                 var photoHtml = '';
                                 if (student.photo) {
-                                    photoHtml = '<div class="photo-container">' +
-                                        '<img src="' + student.photo + '" alt="Student Photo" class="student-photo" ' +
-                                        'data-first-letter="' + firstLetter + '" ' +
-                                        'data-placeholder-color="' + placeholderColor + '" ' +
+                                    photoHtml = '<div class="photo-container me-2">' +
+                                        '<img src="' + student.photo + '" alt="Photo" class="student-photo" ' +
                                         'onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\';">' +
                                         '<div class="student-photo-placeholder d-none" style="background-color: ' + placeholderColor + ';">' + firstLetter + '</div>' +
                                         '</div>';
                                 } else {
-                                    photoHtml = '<div class="photo-container">' +
+                                    photoHtml = '<div class="photo-container me-2">' +
                                         '<div class="student-photo-placeholder" style="background-color: ' + placeholderColor + ';">' + firstLetter + '</div>' +
                                         '</div>';
                                 }
 
                                 var studentFullName = (student.first_name || '') + ' ' + (student.middle_name || '') + ' ' + (student.last_name || '');
-                                var parentName = (student.parent && student.parent.first_name) ? 
-                                    student.parent.first_name + ' ' + (student.parent.last_name || '') : 'N/A';
-                                var parentPhone = (student.parent && student.parent.phone) ? student.parent.phone : 'N/A';
-                                // Format class name: Main Class + Subclass (e.g., "FORM ONE A")
                                 var studentClass = 'N/A';
                                 if (student.subclass) {
                                     var mainClass = student.subclass.class_name || '';
                                     var subclass = student.subclass.subclass_name || '';
-                                    if (mainClass && subclass) {
-                                        studentClass = mainClass + ' ' + subclass;
-                                    } else if (subclass) {
-                                        studentClass = subclass;
-                                    } else if (mainClass) {
-                                        studentClass = mainClass;
-                                    }
+                                    studentClass = (mainClass && subclass) ? mainClass + ' ' + subclass : (subclass || mainClass || 'N/A');
                                 }
 
-                                // Total Fee Required
-                                var totalFeeRequiredHtml = '<div style="font-size: 0.9rem;">';
-                                if (totals.total_required > 0) {
-                                    totalFeeRequiredHtml += '<strong class="text-primary-custom">' + 
-                                        parseFloat(totals.total_required || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</strong>';
+                                // Column 1: Student Details
+                                var col1 = '<div class="d-flex align-items-center">' +
+                                    photoHtml +
+                                    '<div>' +
+                                    '<div class="fw-bold text-dark">' + studentFullName.trim() + '</div>' +
+                                    '<div class="small text-muted">' + (student.admission_number || 'No Adm') + ' | ' + studentClass + '</div>' +
+                                    '<div class="small badge bg-light text-dark border">' + (item.academic_year || '') + '</div>' +
+                                    '</div>' +
+                                    '</div>';
+
+                                // Column 2: Payment Type
+                                var colType = '';
+                                if (student.sponsor) {
+                                    colType = '<div class="text-center"><span class="badge bg-primary-custom text-white mb-1" style="font-size: 0.7rem; padding: 4px 8px; display: inline-block; width: 100px;">' +
+                                        '<i class="bi bi-shield-check me-1"></i>Sponsored' +
+                                        '</span><br><small class="text-muted">' + student.sponsor.percentage + '% Cover</small> <br> <small class="text-muted" style="font-size: 0.65rem;">' + student.sponsor.sponsor_name + '</small></div>';
                                 } else {
-                                    totalFeeRequiredHtml += '<span class="text-muted">0/=</span>';
+                                    colType = '<div class="text-center"><span class="badge bg-secondary text-white" style="font-size: 0.7rem; padding: 4px 8px; display: inline-block; width: 100px;">' +
+                                        '<i class="bi bi-person me-1"></i>Own Payment' +
+                                        '</span></div>';
                                 }
-                                totalFeeRequiredHtml += '</div>';
 
-                                // Paid Amount
-                                var paidAmountHtml = '<div style="font-size: 0.9rem;">';
-                                if (totals.total_paid > 0) {
-                                    paidAmountHtml += '<strong class="text-success">' + 
-                                        parseFloat(totals.total_paid || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</strong>';
-                                } else {
-                                    paidAmountHtml += '<span class="text-muted">0/=</span>';
-                                }
-                                paidAmountHtml += '</div>';
+                                // Column 3: Bill Summary
+                                var col2 = '<div class="bill-container">' +
+                                    '<div class="bill-item text-muted small">Required: <span class="fw-bold text-dark">' + parseFloat(totals.total_required || 0).toLocaleString() + '</span></div>' +
+                                    '<div class="bill-item text-muted small">Paid: <span class="fw-bold text-success">' + parseFloat(totals.total_paid || 0).toLocaleString() + '</span></div>' +
+                                    '</div>';
 
-                                // Bill Balance
-                                var billBalanceHtml = '<div style="font-size: 0.9rem;">';
-                                    if (totals.total_balance > 0) {
-                                    billBalanceHtml += '<strong class="text-danger">' + 
-                                        parseFloat(totals.total_balance || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</strong>';
-                                } else {
-                                    billBalanceHtml += '<span class="text-success">0/=</span>';
-                                }
-                                billBalanceHtml += '</div>';
-
-                                // Status badge
+                                // Column 4: Balance & Status
                                 var overallStatus = totals.overall_status || 'Pending';
-                                var statusBadge = '';
-                                if (overallStatus === 'Pending') {
-                                    statusBadge = '<span class="badge bg-warning">Pending</span>';
-                                } else if (overallStatus === 'Incomplete Payment' || overallStatus === 'Partial') {
-                                    statusBadge = '<span class="badge bg-info">Incomplete</span>';
-                                } else if (overallStatus === 'Paid') {
-                                    statusBadge = '<span class="badge bg-success">Paid</span>';
-                                } else {
-                                    statusBadge = '<span class="badge bg-secondary">Overpaid</span>';
+                                var statusClass = 'bg-secondary';
+                                if (overallStatus === 'Paid') statusClass = 'bg-success';
+                                else if (overallStatus === 'Overpaid') statusClass = 'bg-info';
+                                else if (overallStatus.includes('Incomplete') || overallStatus === 'Partial') statusClass = 'bg-warning text-dark';
+                                
+                                var col3 = '<div class="text-end">' +
+                                    '<div class="fw-bold text-danger mb-1">' + parseFloat(totals.total_balance || 0).toLocaleString() + '/=</div>' +
+                                    '<span class="badge ' + statusClass + ' mb-1">' + overallStatus + '</span>';
+                                
+                                // Can Start Icon
+                                if (totals.can_start_school) {
+                                    col3 += ' <i class="bi bi-check-circle-fill text-success" title="Can Start School"></i>';
                                 }
+                                col3 += '</div>';
 
-                                // Store payments data as JSON for modal
-                                var paymentsJson = JSON.stringify(payments);
-                                console.log('Payments JSON for student:', student.studentID, paymentsJson);
-                                console.log('Payments array for student:', student.studentID, payments);
-
-                                // Check if student is graduated
-                                var isGraduated = item.is_graduated || false;
-                                var graduatedBadge = isGraduated ? '<span class="badge bg-secondary ms-1">Graduated</span>' : '';
-                                var graduatedDebts = item.graduated_debts || {school_fee_balance: 0, other_contribution_balance: 0};
-                                var debtNote = '';
-                                if (isGraduated && (graduatedDebts.school_fee_balance > 0 || graduatedDebts.other_contribution_balance > 0)) {
-                                    var totalDebt = (graduatedDebts.school_fee_balance || 0) + (graduatedDebts.other_contribution_balance || 0);
-                                    debtNote = '<br><small class="text-danger"><i class="bi bi-exclamation-triangle"></i> Outstanding debt from past years: ' + 
-                                        parseFloat(totalDebt).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + ' TZS</small>';
-                                }
-
-                                html += '<tr' + (isGraduated ? ' style="background-color: #f8f9fa;"' : '') + '>' +
-                                    '<td>' + index + '</td>' +
-                                    '<td>' + photoHtml + '</td>' +
-                                    '<td><strong>' + studentFullName.trim() + '</strong>' + graduatedBadge + debtNote + '<br><small class="text-muted">' + (student.admission_number || 'N/A') + '</small></td>' +
-                                    '<td class="text-center"><span class="badge bg-info">' + (item.academic_year || new Date().getFullYear()) + '</span></td>' +
-                                    '<td class="text-end">' + totalFeeRequiredHtml + '</td>' +
-                                    '<td class="text-end">' + paidAmountHtml + '</td>' +
-                                    '<td class="text-end">' + billBalanceHtml + '</td>' +
-                                    '<td>' + statusBadge + '</td>' +
-                                    '<td>' +
-                                    '<div class="btn-group btn-group-sm" role="group">' +
-                                    '<button class="btn btn-outline-primary btn-sm view-more-btn" ' +
+                                // Column 5: Actions
+                                var paymentsJson = JSON.stringify(paymentsData).replace(/'/g, "&#39;");
+                                var sponsorJson = student.sponsor ? JSON.stringify(student.sponsor).replace(/'/g, "&#39;") : '';
+                                var col4 = '<button class="btn btn-primary-custom btn-sm view-more-btn" ' +
                                     'data-student-id="' + student.studentID + '" ' +
                                     'data-student-name="' + studentFullName.trim() + '" ' +
                                     'data-student-admission="' + (student.admission_number || 'N/A') + '" ' +
@@ -851,17 +1035,24 @@
                                     'data-student-photo="' + (student.photo || '') + '" ' +
                                     'data-student-first-letter="' + firstLetter + '" ' +
                                     'data-student-placeholder-color="' + placeholderColor + '" ' +
-                                    'data-parent-name="' + parentName + '" ' +
-                                    'data-parent-phone="' + parentPhone + '" ' +
+                                    'data-student-sponsor=\'' + sponsorJson + '\' ' +
                                     'data-is-closed-year="' + (isClosedYear ? 'true' : 'false') + '" ' +
-                                    'data-payments=\'' + paymentsJson.replace(/'/g, "&#39;") + '\' ' +
+                                    'data-payment=\'' + paymentsJson + '\' ' +
                                     'data-totals=\'' + JSON.stringify(totals).replace(/'/g, "&#39;") + '\' ' +
-                                    'title="View More Details"><i class="bi bi-eye"></i></button>' +
-                                    '</div></td></tr>';
+                                    'title="View More Details"><i class="bi bi-eye"></i> Details</button>';
+
+                                html += '<tr>' +
+                                    '<td>' + col1 + '</td>' +
+                                    '<td>' + colType + '</td>' +
+                                    '<td class="text-end">' + col2 + '</td>' +
+                                    '<td class="text-end">' + col3 + '</td>' +
+                                    '<td class="text-center">' + col4 + '</td>' +
+                                    '</tr>';
                             });
                         } else {
-                            html = '<tr><td colspan="9" class="text-center py-4 text-muted"><i class="bi bi-inbox" style="font-size: 2rem;"></i><p class="mt-2">No payments found</p></td></tr>';
+                            html = '<tr><td colspan="5" class="text-center py-4 text-muted"><p class="mt-2">No payments found</p></td></tr>';
                         }
+                        
                         $('#paymentsTableBody').html(html);
                         
                         // Update statistics
@@ -870,6 +1061,7 @@
                             $('#statPendingPayments').text(stats.pending_payments || 0);
                             $('#statIncompletePayments').text(stats.incomplete_payments || 0);
                             $('#statPaidPayments').text(stats.paid_payments || 0);
+                            $('#statOverpaidPayments').text(stats.overpaid_payments || 0);
                             $('#statTotalBalance').text('TZS ' + parseFloat(stats.total_balance || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}));
                             $('#statTotalRequired').text('TZS ' + parseFloat(stats.total_required || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}));
                             $('#statTotalPaid').text('TZS ' + parseFloat(stats.total_paid || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}));
@@ -887,85 +1079,52 @@
                             }
                         }
                         
-                        // Reinitialize DataTable with enhanced filtering
-                        if ($.fn.DataTable.isDataTable('#paymentsTable')) {
-                            $('#paymentsTable').DataTable().destroy();
-                        }
-                        
-                        // Wait a bit for DOM to be ready
-                        setTimeout(function() {
-                            // Initialize DataTable with column filters
+                        // Initialize DataTable
+                        if ($.fn.DataTable) {
+                            // Check again if it's already a DataTable (in case another request finished just before this)
+                            if ($.fn.DataTable.isDataTable('#paymentsTable')) {
+                                $('#paymentsTable').DataTable().destroy();
+                            }
+                            
                             var table = $('#paymentsTable').DataTable({
+                                destroy: true, // Allow re-initialization by destroying previous instance
                                 dom: 'Bfrtip',
                                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],
-                                pageLength: 5,
+                                pageLength: 10,
                                 lengthMenu: [[5, 10, 25, 50, 100, -1], [5, 10, 25, 50, 100, "All"]],
                                 order: [[0, 'asc']],
+                                responsive: true,
                                 scrollX: true,
                                 autoWidth: false,
-                                fixedColumns: false,
-                                responsive: true,
-                                paging: true,
-                                pagingType: 'full_numbers',
-                                processing: true,
                                 columnDefs: [
-                                    { width: "5%", targets: 0, orderable: true, searchable: false },
-                                    { width: "6%", targets: 1, orderable: false, searchable: false },
-                                    { width: "18%", targets: 2, orderable: true, searchable: true },
-                                    { width: "10%", targets: 3, orderable: true, searchable: true },
-                                    { width: "13%", targets: 4, orderable: true, searchable: true },
-                                    { width: "13%", targets: 5, orderable: true, searchable: true },
-                                    { width: "13%", targets: 6, orderable: true, searchable: true },
-                                    { width: "10%", targets: 7, orderable: true, searchable: true },
-                                    { width: "10%", targets: 8, orderable: false, searchable: false }
-                                ],
-                                language: {
-                                    search: "Search All:",
-                                    lengthMenu: "Show _MENU_ entries",
-                                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                                    infoEmpty: "No entries to show",
-                                    infoFiltered: "(filtered from _MAX_ total entries)",
-                                    zeroRecords: "No matching records found",
-                                    processing: "Processing..."
-                                },
-                                drawCallback: function() {
-                                    // Re-attach column filter handlers after each draw
-                                    $('.column-filter').off('keyup change').on('keyup change', function() {
-                                        var columnIndex = $(this).data('column');
-                                        var value = $(this).val();
-                                        table.column(columnIndex).search(value).draw();
-                                    });
-                                }
+                                    { width: "30%", targets: 0 },
+                                    { width: "15%", targets: 1 },
+                                    { width: "20%", targets: 2 },
+                                    { width: "20%", targets: 3 },
+                                    { width: "15%", targets: 4, orderable: false }
+                                ]
                             });
-                            
-                            // Add column filter functionality (minimum 5 columns)
-                            $('.column-filter').on('keyup change', function() {
+
+                            // Column filters
+                            $('.column-filter').off('keyup change').on('keyup change', function() {
                                 var columnIndex = $(this).data('column');
-                                var value = $(this).val();
-                                
-                                // Apply filter to the column
-                                table.column(columnIndex).search(value).draw();
+                                table.column(columnIndex).search($(this).val()).draw();
                             });
-                            
-                            // Clear all column filters
-                            $('#clearFiltersBtn').off('click').on('click', function() {
-                                $('.column-filter').val('').trigger('change');
-                                table.search('').columns().search('').draw();
-                            });
-                        }, 100);
+                        }
                     } else {
-                        $('#paymentsTableBody').html('<tr><td colspan="9" class="text-center py-4 text-danger">Error loading payments</td></tr>');
+                        $('#paymentsTableBody').html('<tr><td colspan="5" class="text-center py-4 text-muted"><p class="mt-2">No payments found</p></td></tr>');
                     }
                 },
-                error: function(xhr) {
+                error: function(xhr, status, error) {
+                    if (status === 'abort') return; // Ignore aborted requests
                     console.error('Error loading payments:', xhr);
-                    $('#paymentsTableBody').html('<tr><td colspan="9" class="text-center py-4 text-danger">Error loading payments. Please try again.</td></tr>');
+                    $('#paymentsTableBody').html('<tr><td colspan="5" class="text-center py-4 text-danger">Error loading payments. Please try again.</td></tr>');
                 }
             });
         }
 
         // Real-time filtering
-        $('#filterYear, #filterClass, #filterSubclass, #filterStatus, #filterFeeType, #filterPaymentStatus').on('change', function() {
+        $('#filterYear, #filterClass, #filterSubclass, #filterStatus, #filterPaymentStatus, #filterSponsorship').on('change', function() {
             loadPaymentsData();
         });
 
@@ -981,192 +1140,117 @@
 
         // Clear all filters
         $('#clearFiltersBtn').on('click', function() {
-            $('#filterYear').val('{{ isset($defaultYear) ? $defaultYear : date("Y") }}');
+            $('#filterYear').val('{{ $currentYear }}');
             $('#filterClass').val('');
             $('#filterSubclass').html('<option value="">All Subclasses</option>');
             $('#filterStatus').val('');
-            $('#filterFeeType').val('');
             $('#filterPaymentStatus').val('');
+            $('#filterSponsorship').val('');
             $('#searchStudentName').val('');
             loadPaymentsData();
         });
         
         // Export filtered PDF
-        $('#exportFilteredPdfBtn').on('click', function() {
-            // Get current filter values
+        $('#openReportBtn').on('click', function() {
             var year = $('#filterYear').val();
             var classID = $('#filterClass').val();
             var subclassID = $('#filterSubclass').val();
             var studentStatus = $('#filterStatus').val();
-            var feeType = $('#filterFeeType').val();
             var paymentStatus = $('#filterPaymentStatus').val();
             var searchStudentName = $('#searchStudentName').val();
-            
-            // Build filter description
-            var filterDesc = [];
-            if (classID) {
-                var className = $('#filterClass option:selected').text();
-                filterDesc.push('Class: ' + className);
-            }
-            if (subclassID) {
-                var subclassName = $('#filterSubclass option:selected').text();
-                filterDesc.push('Subclass: ' + subclassName);
-            }
-            if (studentStatus) {
-                filterDesc.push('Status: ' + studentStatus);
-            }
-            if (feeType) {
-                filterDesc.push('Fee Type: ' + feeType);
-            }
-            if (paymentStatus) {
-                filterDesc.push('Payment Status: ' + paymentStatus);
-            }
-            if (searchStudentName) {
-                filterDesc.push('Student Name: ' + searchStudentName);
-            }
-            
-            Swal.fire({
-                title: 'Export Filtered Payments?',
-                html: 'Export PDF for all filtered students?<br><small>' + (filterDesc.length > 0 ? filterDesc.join(', ') : 'All students') + '</small>',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#940000',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, Export',
-                cancelButtonText: 'Cancel'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Trigger export - this will be handled by generating PDF for all filtered students
-                    // For now, show message that this feature will export all filtered students
-                    Swal.fire({
-                        title: 'Exporting...',
-                        text: 'Preparing PDF for filtered students...',
-                        allowOutsideClick: false,
-                        didOpen: () => {
-                            Swal.showLoading();
-                        }
-                    });
-                    
-                    // Export filtered PDF via AJAX
-                    $.ajax({
-                        url: '{{ route("export_filtered_payments_pdf") }}',
-                        type: 'POST',
-                        data: {
-                            _token: '{{ csrf_token() }}',
-                            year: year,
-                            class_id: classID,
-                            subclass_id: subclassID,
-                            student_status: studentStatus,
-                            fee_type: feeType,
-                            payment_status: paymentStatus,
-                            search_student_name: searchStudentName
-                        },
-                        xhrFields: {
-                            responseType: 'blob'
-                        },
-                        success: function(blob) {
-                            Swal.close();
-                            // Create download link
-                            var url = window.URL.createObjectURL(blob);
-                            var a = document.createElement('a');
-                            a.href = url;
-                            var filename = 'Filtered_Payments_' + new Date().getTime() + '.pdf';
-                            a.download = filename;
-                            document.body.appendChild(a);
-                            a.click();
-                            window.URL.revokeObjectURL(url);
-                            document.body.removeChild(a);
-                            
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Export Successful!',
-                                text: 'PDF exported successfully',
-                                confirmButtonColor: '#940000'
-                            });
-                        },
-                        error: function(xhr) {
-                            Swal.close();
-                            var errorMessage = 'Failed to export PDF';
-                            if (xhr.responseJSON && xhr.responseJSON.message) {
-                                errorMessage = xhr.responseJSON.message;
-                            }
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Export Failed',
-                                text: errorMessage,
-                                confirmButtonColor: '#940000'
-                            });
-                        }
-                    });
-                }
-            });
+            var sponsorshipFilter = $('#filterSponsorship').val();
+
+            var params = new URLSearchParams();
+            if (year) params.append('year', year);
+            if (classID) params.append('class_id', classID);
+            if (subclassID) params.append('subclass_id', subclassID);
+            if (studentStatus) params.append('student_status', studentStatus);
+            if (paymentStatus) params.append('payment_status', paymentStatus);
+            if (searchStudentName) params.append('search_student_name', searchStudentName);
+            if (sponsorshipFilter) params.append('sponsorship_filter', sponsorshipFilter);
+
+            var reportUrl = '{{ url('payments/report') }}';
+            var finalUrl = reportUrl + (params.toString() ? ('?' + params.toString()) : '');
+            window.location.href = finalUrl;
         });
 
         // Load initial data
         loadPaymentsData();
-        
-        // Initialize DataTable on page load if table exists
-        $(document).ready(function() {
-            // Wait for table to be populated
-            setTimeout(function() {
-                if ($('#paymentsTable tbody tr').length > 0) {
-                    // Check if DataTable is already initialized
-                    if (!$.fn.DataTable.isDataTable('#paymentsTable')) {
-                        // Initialize DataTable
-                        var table = $('#paymentsTable').DataTable({
-                            dom: 'Bfrtip',
-                            buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],
-                            pageLength: 5,
-                            lengthMenu: [[5, 10, 25, 50, 100, -1], [5, 10, 25, 50, 100, "All"]],
-                            order: [[0, 'asc']],
-                            scrollX: true,
-                            autoWidth: false,
-                            fixedColumns: false,
-                            responsive: true,
-                            paging: true,
-                            pagingType: 'full_numbers',
-                            processing: true,
-                            columnDefs: [
-                                { width: "5%", targets: 0, orderable: true, searchable: false },
-                                { width: "6%", targets: 1, orderable: false, searchable: false },
-                                { width: "18%", targets: 2, orderable: true, searchable: true },
-                                { width: "10%", targets: 3, orderable: true, searchable: true },
-                                { width: "13%", targets: 4, orderable: true, searchable: true },
-                                { width: "13%", targets: 5, orderable: true, searchable: true },
-                                { width: "13%", targets: 6, orderable: true, searchable: true },
-                                { width: "10%", targets: 7, orderable: true, searchable: true },
-                                { width: "10%", targets: 8, orderable: false, searchable: false }
-                            ],
-                            language: {
-                                search: "Search All:",
-                                lengthMenu: "Show _MENU_ entries",
-                                info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                                infoEmpty: "No entries to show",
-                                infoFiltered: "(filtered from _MAX_ total entries)",
-                                zeroRecords: "No matching records found",
-                                processing: "Processing..."
-                            },
-                            drawCallback: function() {
-                                // Re-attach column filter handlers after each draw
-                                $('.column-filter').off('keyup change').on('keyup change', function() {
-                                    var columnIndex = $(this).data('column');
-                                    var value = $(this).val();
-                                    table.column(columnIndex).search(value).draw();
-                                });
-                            }
-                        });
-                        
-                        // Add column filter functionality
-                        $('.column-filter').on('keyup change', function() {
-                            var columnIndex = $(this).data('column');
-                            var value = $(this).val();
-                            table.column(columnIndex).search(value).draw();
-                        });
+
+        // Enhance Send SMS to include recipient/target status/sponsorship
+        $('#sendSMSBtn').off('click').on('click', function(e) {
+            e.preventDefault();
+            const html = `
+                <div class="text-start">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold"><i class="bi bi-person-lines-fill"></i> Recipient</label>
+                        <select id="smsRecipient" class="form-select">
+                            <option value="auto" selected>Auto (Sponsor if sponsored else Parent)</option>
+                            <option value="parent">Parent only</option>
+                            <option value="sponsor">Sponsor only</option>
+                            <option value="both">Both (Parent + Sponsor)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold"><i class="bi bi-funnel"></i> Target Payment Status</label>
+                        <select id="smsTargetStatus" class="form-select">
+                            <option value="">All new (default)</option>
+                            <option value="no_payment">Haven't paid at all</option>
+                            <option value="incomplete">Incomplete</option>
+                            <option value="pending">Pending</option>
+                            <option value="overpaid">Overpaid</option>
+                            <option value="paid">Fullpaid</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold"><i class="bi bi-shield-check"></i> Sponsorship</label>
+                        <select id="smsSponsorshipFilter" class="form-select">
+                            <option value="">All</option>
+                            <option value="sponsored">Sponsored</option>
+                            <option value="self">Self-paying</option>
+                        </select>
+                        <small class="text-muted">Optional: tumia kuchagua wanafunzi wenye sponsor au wanaolipa wenyewe.</small>
+                    </div>
+                </div>`;
+
+            Swal.fire({
+                title: 'Send Control Numbers',
+                html: html,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#940000',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Send SMS',
+                cancelButtonText: 'Cancel',
+                didOpen: () => {
+                    const current = $('#filterSponsorship').val();
+                    if (current !== undefined) {
+                        $('#smsSponsorshipFilter').val(current);
                     }
                 }
-            }, 500);
+            }).then(function(result) {
+                if (!result.isConfirmed) return;
+                $.ajax({
+                    url: '{{ route("send_control_numbers_sms") }}',
+                    method: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        year: $('#filterYear').val(),
+                        recipient: $('#smsRecipient').val(),
+                        target_payment_status: $('#smsTargetStatus').val(),
+                        sponsorship_filter: $('#smsSponsorshipFilter').val()
+                    },
+                    success: function(response) {
+                        Swal.fire('Success', (response && response.message) ? response.message : 'SMS sent!', 'success');
+                    },
+                    error: function(xhr) {
+                        var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to send SMS';
+                        Swal.fire('Error', msg, 'error');
+                    }
+                });
+            });
         });
-
+        
         // Function to generate PDF Invoice using jsPDF
         function generatePaymentInvoicePDF(data) {
             // Check if jsPDF is available
@@ -1293,8 +1377,8 @@
                         
                         // Payment Summary Section
                     if (data.payments && data.payments.length > 0) {
-                        var tuitionPayments = data.payments.filter(function(p) { return p.fee_type === 'Tuition Fees'; });
-                            var otherPayments = data.payments.filter(function(p) { return p.fee_type === 'Other Fees'; });
+                        var tuitionPayments = data.payments.filter(function(p) { return p.is_required; });
+                            var otherPayments = data.payments.filter(function(p) { return !p.is_required; });
                             
                             // Calculate totals from payments array - always calculate to ensure accuracy (including debt)
                             var tuitionBaseRequired = tuitionPayments.reduce(function(sum, p) { 
@@ -1391,9 +1475,18 @@
                             if (data.otherDebt !== undefined && data.otherDebt !== null) {
                                 otherDebt = parseFloat(data.otherDebt);
                             }
-                            if (data.otherRequired !== undefined && data.otherRequired !== null && parseFloat(data.otherRequired) > 0) {
-                                otherRequired = parseFloat(data.otherRequired);
-                            }
+                             if (data.otherRequired !== undefined && data.otherRequired !== null && parseFloat(data.otherRequired) > 0) {
+                                 otherRequired = parseFloat(data.otherRequired);
+                             }
+                             
+                             // Add Control Number at the top of the invoice
+                             if (data.payments && data.payments.length > 0) {
+                                 doc.setFontSize(10);
+                                 doc.setFont('helvetica', 'bold');
+                                 doc.setTextColor(0, 0, 0);
+                                 var controlNo = data.controlNumber || (data.payments[0] && data.payments[0].control_number) || 'N/A';
+                                 doc.text('Control Number: ' + controlNo, pageWidth - margin, yPos + 10, { align: 'right' });
+                             }
                             
                             // Recalculate balances (using total_required which includes debt)
                             tuitionBalance = tuitionRequired - tuitionPaid;
@@ -1529,8 +1622,8 @@
                                     console.log('Tuition Payment - baseAmount:', baseAmount, 'debt:', debt, 'totalRequired:', totalRequired, 'amountPaid:', amountPaid, 'balance:', balance);
                                     
                                     tuitionTableData.push([
-                                        payment.control_number || 'N/A',
-                                        baseAmount.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
+                                        p.fee_name || 'Mandatory Fee',
+                                        totalRequired.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
                                         debt.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
                                         totalRequired.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
                                         amountPaid.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
@@ -1546,7 +1639,7 @@
                     yPos += 7;
                     
                                 doc.autoTable({
-                                    head: [['Control Number', 'Required Amount (TZS)', 'Debt (TZS)', 'Total Required (TZS)', 'Paid Amount (TZS)', 'Bill Balance (TZS)']],
+                                    head: [['Fee Name', 'Required Amount (TZS)', 'Debt (TZS)', 'Total Required (TZS)', 'Paid Amount (TZS)', 'Bill Balance (TZS)']],
                                     body: tuitionTableData,
                                     startY: yPos,
                                     tableWidth: tableWidth,
@@ -1620,8 +1713,8 @@
                                     console.log('Other Payment - baseAmount:', baseAmount, 'debt:', debt, 'totalRequired:', totalRequired, 'amountPaid:', amountPaid, 'balance:', balance);
                                     
                                     otherTableData.push([
-                                        payment.control_number || 'N/A',
-                                        baseAmount.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
+                                        p.fee_name || 'Contribution',
+                                        totalRequired.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
                                         debt.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
                                         totalRequired.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
                                         amountPaid.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
@@ -1637,7 +1730,7 @@
                                 yPos += 7;
                                 
                                 doc.autoTable({
-                                    head: [['Control Number', 'Required Amount (TZS)', 'Debt (TZS)', 'Total Required (TZS)', 'Paid Amount (TZS)', 'Bill Balance (TZS)']],
+                                    head: [['Fee Name', 'Required Amount (TZS)', 'Debt (TZS)', 'Total Required (TZS)', 'Paid Amount (TZS)', 'Bill Balance (TZS)']],
                                     body: otherTableData,
                                     startY: yPos,
                                     tableWidth: tableWidth,
@@ -1669,6 +1762,46 @@
                                 });
                                 
                                 yPos = doc.lastAutoTable.finalY + 10;
+                        }
+
+                        // NEW: Transaction History Table
+                        if (data.paymentRecords && data.paymentRecords.length > 0) {
+                            var historyTableData = [];
+                            data.paymentRecords.sort((a, b) => new Date(b.payment_date) - new Date(a.payment_date)).forEach(function(record) {
+                                historyTableData.push([
+                                    record.payment_date || 'N/A',
+                                    parseFloat(record.paid_amount || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=',
+                                    record.payment_source || 'N/A',
+                                    record.reference_number || '-',
+                                    record.is_verified ? 'Verified' : 'Unverified'
+                                ]);
+                            });
+
+                            doc.setTextColor(148, 0, 0);
+                            doc.setFontSize(12);
+                            doc.setFont('helvetica', 'bold');
+                            doc.text('Transaction History', pageWidth / 2, yPos, { align: 'center' });
+                            yPos += 7;
+
+                            doc.autoTable({
+                                head: [['Date', 'Amount (TZS)', 'Method', 'Reference', 'Status']],
+                                body: historyTableData,
+                                startY: yPos,
+                                tableWidth: tableWidth,
+                                styles: { fontSize: 8, cellPadding: 2, lineColor: [0, 0, 0], lineWidth: 0.1 },
+                                headStyles: { fillColor: [148, 0, 0], textColor: 255, fontStyle: 'bold', halign: 'center' },
+                                columnStyles: {
+                                    0: { halign: 'center' },
+                                    1: { halign: 'right' },
+                                    2: { halign: 'center' },
+                                    3: { halign: 'center' },
+                                    4: { halign: 'center' }
+                                },
+                                margin: { left: margin, right: margin },
+                                theme: 'grid'
+                            });
+
+                            yPos = doc.lastAutoTable.finalY + 10;
                         }
                     }
                     
@@ -2010,6 +2143,9 @@
                     $.ajax({
                         url: '{{ route("generate_control_numbers") }}',
                         method: 'POST',
+                        data: {
+                            year: $('#filterYear').val()
+                        },
                         dataType: 'json',
                         success: function(response) {
                             if (response.success) {
@@ -2065,6 +2201,9 @@
                     $.ajax({
                         url: '/send_control_numbers_sms',
                         method: 'POST',
+                        data: {
+                            year: $('#filterYear').val()
+                        },
                         dataType: 'json',
                         success: function(response) {
                             if (response.success) {
@@ -2164,16 +2303,17 @@
             // Student Information
             $('#view_student_name').text(btn.data('student-name') || '-');
             $('#view_student_class').text(btn.data('student-class') || '-');
+            $('#view_student_admission').text(btn.data('student-admission') || '-');
             
             // Get payments and totals data
-            let payments = [];
+            let payment = {};
             let totals = {};
             try {
-                const paymentsData = btn.data('payments');
+                const paymentData = btn.data('payment');
                 const totalsData = btn.data('totals');
                 
-                if (paymentsData) {
-                    payments = typeof paymentsData === 'string' ? JSON.parse(paymentsData) : paymentsData;
+                if (paymentData) {
+                    payment = typeof paymentData === 'string' ? JSON.parse(paymentData) : paymentData;
                 }
                 if (totalsData) {
                     totals = typeof totalsData === 'string' ? JSON.parse(totalsData) : totalsData;
@@ -2182,233 +2322,166 @@
                 console.error('Error parsing payments data:', e);
             }
             
-            // Calculate totals for summary
-            const tuitionPayments = payments.filter(p => p.fee_type === 'Tuition Fees');
-            const otherFeePayments = payments.filter(p => p.fee_type === 'Other Fees');
+            // Extract fee payments from the unified payment record
+            const feePayments = payment.fee_payments || [];
+            const tuitionPayments = feePayments.filter(fp => fp.is_required);
+            const otherFeePayments = feePayments.filter(fp => !fp.is_required);
             
-            // Use total_required (base + debt) instead of amount_required (base only)
-            const totalRequired = (tuitionPayments.reduce((sum, p) => sum + parseFloat(p.total_required || p.amount_required || 0), 0) + 
-                                  otherFeePayments.reduce((sum, p) => sum + parseFloat(p.total_required || p.amount_required || 0), 0));
-            const totalPaid = (tuitionPayments.reduce((sum, p) => sum + parseFloat(p.amount_paid || 0), 0) + 
-                              otherFeePayments.reduce((sum, p) => sum + parseFloat(p.amount_paid || 0), 0));
-            const totalBalance = (tuitionPayments.reduce((sum, p) => sum + parseFloat(p.balance || 0), 0) + 
-                                 otherFeePayments.reduce((sum, p) => sum + parseFloat(p.balance || 0), 0));
-            
-            // Determine overall status
-            let overallStatus = 'Pending';
-            if (totalBalance <= 0 && totalPaid > 0) {
-                overallStatus = totalPaid > totalRequired ? 'Overpaid' : 'Paid';
-            } else if (totalPaid > 0 && totalBalance > 0) {
-                overallStatus = 'Incomplete Payment';
-            } else if (totalPaid > 0 && totalPaid < totalRequired) {
-                overallStatus = 'Partial';
-            }
-            
-            // Build Summary Table - Simple totals only
-            let summaryHtml = '';
-            if (payments.length > 0) {
-                summaryHtml += '<div class="table-responsive mb-4">';
-                summaryHtml += '<table class="table table-bordered">';
-                summaryHtml += '<thead style="background-color: #940000; color: white;">';
-                summaryHtml += '<tr>';
-                summaryHtml += '<th class="text-end">Required Amount (TZS)</th>';
-                summaryHtml += '<th class="text-end">Paid Amount (TZS)</th>';
-                summaryHtml += '<th class="text-end">Bill Balance (TZS)</th>';
-                summaryHtml += '<th class="text-center">Status</th>';
-                summaryHtml += '</tr>';
-                summaryHtml += '</thead>';
-                summaryHtml += '<tbody>';
-                summaryHtml += '<tr>';
-                summaryHtml += '<td class="text-end"><strong>' + parseFloat(totalRequired).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</strong></td>';
-                summaryHtml += '<td class="text-end text-success"><strong>' + parseFloat(totalPaid).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</strong></td>';
-                summaryHtml += '<td class="text-end text-danger"><strong>' + parseFloat(totalBalance).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</strong></td>';
-                summaryHtml += '<td class="text-center">';
-                let statusBadge = '';
-                if (overallStatus === 'Paid') {
-                    statusBadge = '<span class="badge bg-success">Paid</span>';
-                } else if (overallStatus === 'Overpaid') {
-                    statusBadge = '<span class="badge bg-info">Overpaid</span>';
-                } else if (overallStatus === 'Incomplete Payment' || overallStatus === 'Partial') {
-                    statusBadge = '<span class="badge bg-warning">' + overallStatus + '</span>';
-                } else {
-                    statusBadge = '<span class="badge bg-secondary">Pending</span>';
+            // Debt handling
+            const oldDebt = parseFloat(payment.debt || 0);
+            const totalPaid = parseFloat(payment.amount_paid || 0);
+            const totalRequired = parseFloat(payment.amount_required || 0);
+            const totalOutstanding = parseFloat(payment.balance || 0);
+            const currentBillBalance = Math.max(0, totalOutstanding - oldDebt);
+
+            // Populate Summary Dashboard
+            $('#view_control_number').text(payment.control_number || 'N/A');
+            $('#view_total_paid').text(totalPaid.toLocaleString() + '/=');
+            $('#view_bill_balance').text(currentBillBalance.toLocaleString() + '/=');
+            $('#view_total_fee_required').text(totalRequired.toLocaleString() + '/=');
+            $('#view_old_debt').text(oldDebt.toLocaleString() + '/=');
+            $('#view_total_outstanding').text(totalOutstanding.toLocaleString() + '/=');
+
+            // Sponsorship Info
+            const sponsorData = btn.data('student-sponsor');
+            const sponsorInfoSection = $('#sponsorInfoSection');
+            if (sponsorData) {
+                let sponsor = typeof sponsorData === 'string' ? JSON.parse(sponsorData) : sponsorData;
+                $('#view_sponsor_name').text(sponsor.sponsor_name || '-');
+                $('#view_sponsor_contact_person').text(sponsor.contact_person || 'N/A');
+                $('#view_sponsor_phone').text(sponsor.phone || '-');
+                $('#view_sponsor_email').text(sponsor.email || 'N/A');
+                $('#view_sponsor_percentage').text((sponsor.percentage || 0) + '%');
+                
+                // Use pre-calculated values from totals if available
+                const sponsorAmount = totals.sponsor_amount || 0;
+                $('#view_sponsor_amount').text(sponsorAmount.toLocaleString() + '/=');
+                
+                // Optionally show original total if needed
+                if (totals.original_total) {
+                     $('#view_total_fee_required').html('<span class="text-muted small me-1" style="text-decoration: line-through;">' + totals.original_total.toLocaleString() + '</span> ' + totalRequired.toLocaleString() + '/=');
                 }
-                summaryHtml += statusBadge;
-                summaryHtml += '</td>';
-                summaryHtml += '</tr>';
-                summaryHtml += '</tbody>';
-                summaryHtml += '</table>';
-                summaryHtml += '</div>';
+                
+                sponsorInfoSection.show();
+            } else {
+                sponsorInfoSection.hide();
+                // Reset Total Fee Required display if previously modified
+                $('#view_total_fee_required').text(totalRequired.toLocaleString() + '/=');
             }
             
-            // Build Tuition Fees section - Simple table
+            // Build Record Payment button for the whole control number
+            let recordPaymentHtml = '';
+            if (!isClosedYear) {
+                recordPaymentHtml += '<div class="btn-group">';
+                recordPaymentHtml += '<button class="btn btn-success record-payment-btn" ' +
+                    'data-payment-id="' + payment.paymentID + '" ' +
+                    'data-control-number="' + (payment.control_number || '') + '" ' +
+                    'data-amount-required="' + (payment.amount_required || 0) + '" ' +
+                    'data-amount-paid="' + (payment.amount_paid || 0) + '" ' +
+                    'data-balance="' + (payment.balance || 0) + '" ' +
+                    'data-fee-type="Unified Payment" ' +
+                    'title="Record Payment">' +
+                    '<i class="bi bi-cash-coin me-2"></i> Record New Payment' +
+                    '</button>';
+                
+                // Add Send SMS button to modal
+                recordPaymentHtml += '<button class="btn btn-outline-primary resend-control-sms-btn" ' +
+                    'data-payment-id="' + payment.paymentID + '" ' +
+                    'title="Send Control Number SMS">' +
+                    '<i class="bi bi-send me-1"></i> Send SMS' +
+                    '</button>';
+                recordPaymentHtml += '</div>';
+            }
+            $('#modalRecordPaymentContainer').html(recordPaymentHtml);
+            
+            // Build Tuition Fees section
             let tuitionHtml = '';
-            if (tuitionPayments.length > 0) {
-                        tuitionHtml += '<div class="table-responsive">';
-                tuitionHtml += '<table class="table table-bordered table-hover" style="margin-bottom: 20px;">';
-                tuitionHtml += '<caption style="caption-side: top; font-size: 1.2rem; font-weight: bold; color: #940000; padding: 12px 0; text-align: center; margin-bottom: 10px;">';
-                tuitionHtml += '<i class="bi bi-book"></i> School Fee';
-                tuitionHtml += '</caption>';
-                tuitionHtml += '<thead style="background-color: #940000; color: white;">';
+            if (tuitionPayments.length > 0 || oldDebt > 0) {
+                tuitionHtml += '<div class="table-responsive">';
+                tuitionHtml += '<table class="table table-sm table-bordered table-hover">';
+                tuitionHtml += '<thead class="bg-light">';
                 tuitionHtml += '<tr>';
-                tuitionHtml += '<th>Control Number</th>';
-                tuitionHtml += '<th class="text-end">Required Amount (TZS)</th>';
-                tuitionHtml += '<th class="text-end">Debt (TZS)</th>';
-                tuitionHtml += '<th class="text-end">Total Required (TZS)</th>';
-                tuitionHtml += '<th class="text-end">Paid Amount (TZS)</th>';
-                tuitionHtml += '<th class="text-end">Bill Balance (TZS)</th>';
+                tuitionHtml += '<th>Fee Name</th>';
+                tuitionHtml += '<th class="text-end">Required (TZS)</th>';
+                tuitionHtml += '<th class="text-end">Paid (TZS)</th>';
+                tuitionHtml += '<th class="text-end">Balance (TZS)</th>';
                 tuitionHtml += '<th class="text-center">Actions</th>';
                 tuitionHtml += '</tr>';
                 tuitionHtml += '</thead>';
-                        tuitionHtml += '<tbody>';
-                        
-                tuitionPayments.forEach(function(payment) {
-                            var debt = parseFloat(payment.debt || 0);
-                            var baseAmount = parseFloat(payment.amount_required || 0);
-                            var totalRequired = parseFloat(payment.total_required || payment.amount_required || 0);
-                            
-                            tuitionHtml += '<tr>';
-                    tuitionHtml += '<td><span class="control-number">' + (payment.control_number || 'N/A') + '</span></td>';
-                    tuitionHtml += '<td class="text-end">' + baseAmount.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</td>';
-                    tuitionHtml += '<td class="text-end text-warning">' + debt.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</td>';
-                    tuitionHtml += '<td class="text-end"><strong>' + totalRequired.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</strong></td>';
-                    tuitionHtml += '<td class="text-end text-success">' + parseFloat(payment.amount_paid || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</td>';
-                    tuitionHtml += '<td class="text-end text-danger">' + parseFloat(payment.balance || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</td>';
+                tuitionHtml += '<tbody>';
+                
+                // Add Previous Year Debt if applicable
+                if (oldDebt > 0) {
+                    tuitionHtml += '<tr class="table-warning">';
+                    tuitionHtml += '<td><strong>Previous Year Debt</strong></td>';
+                    tuitionHtml += '<td class="text-end">' + oldDebt.toLocaleString() + '/=</td>';
+                    tuitionHtml += '<td class="text-end">0.00/=</td>';
+                    tuitionHtml += '<td class="text-end"><strong>' + oldDebt.toLocaleString() + '/=</strong></td>';
+                    tuitionHtml += '<td class="text-center">-</td>';
+                    tuitionHtml += '</tr>';
+                }
+
+                tuitionPayments.forEach(function(fp) {
+                    tuitionHtml += '<tr>';
+                    tuitionHtml += '<td>' + fp.fee_name + '</td>';
+                    tuitionHtml += '<td class="text-end">' + parseFloat(fp.fee_total_amount || 0).toLocaleString() + '/=</td>';
+                    tuitionHtml += '<td class="text-end text-success">' + parseFloat(fp.amount_paid || 0).toLocaleString() + '/=</td>';
+                    tuitionHtml += '<td class="text-end text-danger">' + parseFloat(fp.balance || 0).toLocaleString() + '/=</td>';
                     tuitionHtml += '<td class="text-center">';
-                    tuitionHtml += '<div class="btn-group btn-group-sm" role="group">';
-                    if (isClosedYear) {
-                        tuitionHtml += '<button class="btn btn-sm btn-secondary" disabled title="Cannot record payment for closed academic year">';
-                        tuitionHtml += '<i class="bi bi-lock"></i>';
-                        tuitionHtml += '</button>';
-                    } else {
-                        tuitionHtml += '<button class="btn btn-sm btn-success record-payment-btn" ';
-                        tuitionHtml += 'data-payment-id="' + payment.paymentID + '" ';
-                        tuitionHtml += 'data-control-number="' + (payment.control_number || '') + '" ';
-                        tuitionHtml += 'data-amount-required="' + (payment.amount_required || 0) + '" ';
-                        tuitionHtml += 'data-amount-paid="' + (payment.amount_paid || 0) + '" ';
-                        tuitionHtml += 'data-balance="' + (payment.balance || 0) + '" ';
-                        tuitionHtml += 'data-fee-type="Tuition Fees" ';
-                        tuitionHtml += 'title="Record Payment">';
-                        tuitionHtml += '<i class="bi bi-cash-coin"></i>';
-                        tuitionHtml += '</button>';
-                    }
-                    tuitionHtml += '<button class="btn btn-sm btn-info view-payment-records-btn" ';
+                    tuitionHtml += '<button class="btn btn-sm btn-outline-info view-payment-records-btn" ';
                     tuitionHtml += 'data-payment-id="' + payment.paymentID + '" ';
                     tuitionHtml += 'data-control-number="' + (payment.control_number || '') + '" ';
-                    tuitionHtml += 'data-fee-type="Tuition Fees" ';
-                    tuitionHtml += 'title="View Payment Records">';
-                    tuitionHtml += '<i class="bi bi-eye"></i>';
-                    tuitionHtml += '</button>';
-                    tuitionHtml += '<button class="btn btn-sm btn-warning send-control-number-btn" ';
-                    tuitionHtml += 'data-payment-id="' + payment.paymentID + '" ';
-                    tuitionHtml += 'data-control-number="' + (payment.control_number || '') + '" ';
-                    tuitionHtml += 'data-fee-type="Tuition Fees" ';
-                    tuitionHtml += 'title="Send Control Number to Parent">';
-                    tuitionHtml += '<i class="bi bi-send"></i>';
-                    tuitionHtml += '</button>';
-                    tuitionHtml += '</div>';
+                    tuitionHtml += 'data-fee-name="' + fp.fee_name + '" ';
+                    tuitionHtml += 'title="View History"><i class="bi bi-clock-history"></i></button>';
                     tuitionHtml += '</td>';
-                            tuitionHtml += '</tr>';
-                        });
-                        
-                        tuitionHtml += '</tbody>';
+                    tuitionHtml += '</tr>';
+                });
+                
+                tuitionHtml += '</tbody>';
                 tuitionHtml += '</table>';
-                        tuitionHtml += '</div>';
-                    
+                tuitionHtml += '</div>';
+                
                 $('#tuitionFeesContent').html(tuitionHtml);
                 $('#tuitionFeesSection').show();
             } else {
                 $('#tuitionFeesSection').hide();
             }
             
-            // Display Summary Table
-            // Remove any existing summary table first
-            $('.payment-summary-table').remove();
-            if (summaryHtml) {
-                // Insert summary before tuition fees section
-                if ($('#tuitionFeesSection').is(':visible')) {
-                    $('#tuitionFeesSection').before('<div class="payment-summary-table">' + summaryHtml + '</div>');
-                } else if ($('#otherFeesSection').is(':visible')) {
-                    $('#otherFeesSection').before('<div class="payment-summary-table">' + summaryHtml + '</div>');
-                } else {
-                    // If no sections visible, add after student info
-                    $('#viewMoreModal .modal-body .row:first').after('<div class="payment-summary-table">' + summaryHtml + '</div>');
-                }
-            }
-            
-            // Build Other Fees section - Simple table
+            // Build Other Fees section
             let otherFeesHtml = '';
             if (otherFeePayments.length > 0) {
-                        otherFeesHtml += '<div class="table-responsive">';
-                otherFeesHtml += '<table class="table table-bordered table-hover" style="margin-bottom: 20px;">';
-                otherFeesHtml += '<caption style="caption-side: top; font-size: 1.2rem; font-weight: bold; color: #940000; padding: 12px 0; text-align: center; margin-bottom: 10px;">';
-                otherFeesHtml += '<i class="bi bi-list-check"></i> Other Contribution';
-                otherFeesHtml += '</caption>';
-                otherFeesHtml += '<thead style="background-color: #940000; color: white;">';
+                otherFeesHtml += '<div class="table-responsive">';
+                otherFeesHtml += '<table class="table table-sm table-bordered table-hover">';
+                otherFeesHtml += '<thead class="bg-light">';
                 otherFeesHtml += '<tr>';
-                otherFeesHtml += '<th>Control Number</th>';
-                otherFeesHtml += '<th class="text-end">Required Amount (TZS)</th>';
-                otherFeesHtml += '<th class="text-end">Debt (TZS)</th>';
-                otherFeesHtml += '<th class="text-end">Total Required (TZS)</th>';
-                otherFeesHtml += '<th class="text-end">Paid Amount (TZS)</th>';
-                otherFeesHtml += '<th class="text-end">Bill Balance (TZS)</th>';
+                otherFeesHtml += '<th>Fee Name</th>';
+                otherFeesHtml += '<th class="text-end">Required (TZS)</th>';
+                otherFeesHtml += '<th class="text-end">Paid (TZS)</th>';
+                otherFeesHtml += '<th class="text-end">Balance (TZS)</th>';
                 otherFeesHtml += '<th class="text-center">Actions</th>';
                 otherFeesHtml += '</tr>';
                 otherFeesHtml += '</thead>';
-                        otherFeesHtml += '<tbody>';
-                        
-                otherFeePayments.forEach(function(payment) {
-                            var debt = parseFloat(payment.debt || 0);
-                            var baseAmount = parseFloat(payment.amount_required || 0);
-                            var totalRequired = parseFloat(payment.total_required || payment.amount_required || 0);
-                            
-                            otherFeesHtml += '<tr>';
-                    otherFeesHtml += '<td><span class="control-number">' + (payment.control_number || 'N/A') + '</span></td>';
-                    otherFeesHtml += '<td class="text-end">' + baseAmount.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</td>';
-                    otherFeesHtml += '<td class="text-end text-warning">' + debt.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</td>';
-                    otherFeesHtml += '<td class="text-end"><strong>' + totalRequired.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</strong></td>';
-                    otherFeesHtml += '<td class="text-end text-success">' + parseFloat(payment.amount_paid || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</td>';
-                    otherFeesHtml += '<td class="text-end text-danger">' + parseFloat(payment.balance || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</td>';
+                otherFeesHtml += '<tbody>';
+                
+                otherFeePayments.forEach(function(fp) {
+                    otherFeesHtml += '<tr>';
+                    otherFeesHtml += '<td>' + fp.fee_name + '</td>';
+                    otherFeesHtml += '<td class="text-end">' + parseFloat(fp.fee_total_amount || 0).toLocaleString() + '/=</td>';
+                    otherFeesHtml += '<td class="text-end text-success">' + parseFloat(fp.amount_paid || 0).toLocaleString() + '/=</td>';
+                    otherFeesHtml += '<td class="text-end text-danger">' + parseFloat(fp.balance || 0).toLocaleString() + '/=</td>';
                     otherFeesHtml += '<td class="text-center">';
-                    otherFeesHtml += '<div class="btn-group btn-group-sm" role="group">';
-                    if (isClosedYear) {
-                        otherFeesHtml += '<button class="btn btn-sm btn-secondary" disabled title="Cannot record payment for closed academic year">';
-                        otherFeesHtml += '<i class="bi bi-lock"></i>';
-                        otherFeesHtml += '</button>';
-                    } else {
-                        otherFeesHtml += '<button class="btn btn-sm btn-success record-payment-btn" ';
-                        otherFeesHtml += 'data-payment-id="' + payment.paymentID + '" ';
-                        otherFeesHtml += 'data-control-number="' + (payment.control_number || '') + '" ';
-                        otherFeesHtml += 'data-amount-required="' + (payment.amount_required || 0) + '" ';
-                        otherFeesHtml += 'data-amount-paid="' + (payment.amount_paid || 0) + '" ';
-                        otherFeesHtml += 'data-balance="' + (payment.balance || 0) + '" ';
-                        otherFeesHtml += 'data-fee-type="Other Fees" ';
-                        otherFeesHtml += 'title="Record Payment">';
-                        otherFeesHtml += '<i class="bi bi-cash-coin"></i>';
-                        otherFeesHtml += '</button>';
-                    }
-                    otherFeesHtml += '<button class="btn btn-sm btn-info view-payment-records-btn" ';
+                    otherFeesHtml += '<button class="btn btn-sm btn-outline-info view-payment-records-btn" ';
                     otherFeesHtml += 'data-payment-id="' + payment.paymentID + '" ';
                     otherFeesHtml += 'data-control-number="' + (payment.control_number || '') + '" ';
-                    otherFeesHtml += 'data-fee-type="Other Fees" ';
-                    otherFeesHtml += 'title="View Payment Records">';
-                    otherFeesHtml += '<i class="bi bi-eye"></i>';
-                    otherFeesHtml += '</button>';
-                    otherFeesHtml += '<button class="btn btn-sm btn-warning send-control-number-btn" ';
-                    otherFeesHtml += 'data-payment-id="' + payment.paymentID + '" ';
-                    otherFeesHtml += 'data-control-number="' + (payment.control_number || '') + '" ';
-                    otherFeesHtml += 'data-fee-type="Other Fees" ';
-                    otherFeesHtml += 'title="Send Control Number to Parent">';
-                    otherFeesHtml += '<i class="bi bi-send"></i>';
-                    otherFeesHtml += '</button>';
-                    otherFeesHtml += '</div>';
+                    otherFeesHtml += 'data-fee-name="' + fp.fee_name + '" ';
+                    otherFeesHtml += 'title="View History"><i class="bi bi-clock-history"></i></button>';
                     otherFeesHtml += '</td>';
-                            otherFeesHtml += '</tr>';
-                        });
-                        
-                        otherFeesHtml += '</tbody>';
+                    otherFeesHtml += '</tr>';
+                });
+                
+                otherFeesHtml += '</tbody>';
                 otherFeesHtml += '</table>';
-                        otherFeesHtml += '</div>';
+                otherFeesHtml += '</div>';
                     
                 $('#otherFeesContent').html(otherFeesHtml);
                 $('#otherFeesSection').show();
@@ -2416,7 +2489,158 @@
                 $('#otherFeesSection').hide();
             }
             
+            // Build All Transactions section
+            let transactionsHtml = '';
+            const paymentRecords = payment.payment_records || [];
+            
+            // Update collapse button text with control number
+            const controlNo = payment.control_number || 'N/A';
+            $('#allTransactionsCollapse').parent().find('button span').html('<i class="bi bi-clock-history me-2"></i> All Transactions of Control Number: <span class="text-primary-custom">' + controlNo + '</span>');
+
+            if (paymentRecords.length > 0) {
+                transactionsHtml += '<div class="table-responsive">';
+                transactionsHtml += '<table class="table table-sm table-bordered table-hover">';
+                transactionsHtml += '<thead class="bg-light">';
+                transactionsHtml += '<tr>';
+                transactionsHtml += '<th>Date</th>';
+                transactionsHtml += '<th class="text-end">Amount (TZS)</th>';
+                transactionsHtml += '<th>Method</th>';
+                transactionsHtml += '<th>Reference</th>';
+                transactionsHtml += '<th class="text-center">Status</th>';
+                transactionsHtml += '<th class="text-center">Actions</th>';
+                transactionsHtml += '</tr>';
+                transactionsHtml += '</thead>';
+                transactionsHtml += '<tbody>';
+                
+                paymentRecords.sort((a, b) => new Date(b.payment_date) - new Date(a.payment_date)).forEach(function(record) {
+                    const isVerified = record.is_verified || false;
+                    
+                    // Format Date
+                    let displayDate = 'N/A';
+                    if (record.payment_date) {
+                        const pDate = new Date(record.payment_date);
+                        displayDate = pDate.toLocaleString('en-GB', { 
+                            day: '2-digit', 
+                            month: 'short', 
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                    }
+
+                    transactionsHtml += '<tr>';
+                    transactionsHtml += '<td>' + displayDate + '</td>';
+                    transactionsHtml += '<td class="text-end fw-bold text-success">' + parseFloat(record.paid_amount || 0).toLocaleString() + '/=</td>';
+                    transactionsHtml += '<td><span class="badge ' + (record.payment_source === 'Bank' ? 'bg-primary' : 'bg-success') + '">' + (record.payment_source || 'N/A') + '</span></td>';
+                    transactionsHtml += '<td>' + (record.reference_number || 'N/A') + '</td>';
+                    transactionsHtml += '<td class="text-center">';
+                    if (isVerified) {
+                        transactionsHtml += '<span class="badge bg-success" title="Verified"><i class="bi bi-patch-check-fill"></i></span>';
+                    } else {
+                        transactionsHtml += '<span class="badge bg-secondary" title="Unverified"><i class="bi bi-patch-exclamation"></i></span>';
+                    }
+                    transactionsHtml += '</td>';
+                    transactionsHtml += '<td class="text-center">';
+                    transactionsHtml += '<div class="btn-group btn-group-sm">';
+                    
+                    if (!isClosedYear) {
+                        // Verify/Unverify Toggle
+                        if (isVerified) {
+                            transactionsHtml += '<button class="btn btn-outline-secondary unverify-payment-record-btn" ';
+                            transactionsHtml += 'data-record-id="' + record.recordID + '" ';
+                            transactionsHtml += 'data-payment-id="' + payment.paymentID + '" ';
+                            transactionsHtml += 'title="Unverify"><i class="bi bi-patch-minus"></i></button>';
+                        } else {
+                            transactionsHtml += '<button class="btn btn-outline-success verify-payment-record-btn" ';
+                            transactionsHtml += 'data-record-id="' + record.recordID + '" ';
+                            transactionsHtml += 'data-payment-id="' + payment.paymentID + '" ';
+                            transactionsHtml += 'title="Verify"><i class="bi bi-patch-check"></i></button>';
+                        }
+
+                        // Edit button
+                        transactionsHtml += '<button class="btn btn-outline-warning edit-payment-record-btn" ';
+                        transactionsHtml += 'data-record-id="' + record.recordID + '" ';
+                        transactionsHtml += 'data-payment-id="' + payment.paymentID + '" ';
+                        transactionsHtml += 'data-paid-amount="' + record.paid_amount + '" ';
+                        transactionsHtml += 'data-payment-date="' + (record.payment_date || '') + '" ';
+                        transactionsHtml += 'data-payment-source="' + (record.payment_source || '') + '" ';
+                        transactionsHtml += 'data-reference-number="' + (record.reference_number || '') + '" ';
+                        transactionsHtml += 'data-bank-name="' + (record.bank_name || '') + '" ';
+                        transactionsHtml += 'data-notes="' + (record.notes || '') + '" ';
+                        transactionsHtml += 'title="Edit"><i class="bi bi-pencil"></i></button>';
+                        
+                        // Delete button
+                        transactionsHtml += '<button class="btn btn-outline-danger delete-payment-record-btn" ';
+                        transactionsHtml += 'data-record-id="' + record.recordID + '" ';
+                        transactionsHtml += 'data-payment-id="' + payment.paymentID + '" ';
+                        transactionsHtml += 'data-paid-amount="' + record.paid_amount + '" ';
+                        transactionsHtml += 'title="Delete"><i class="bi bi-trash"></i></button>';
+                    } else {
+                        transactionsHtml += '-';
+                    }
+                    
+                    transactionsHtml += '</div>';
+                    transactionsHtml += '</td>';
+                    transactionsHtml += '</tr>';
+                });
+                
+                transactionsHtml += '</tbody>';
+                transactionsHtml += '</table>';
+                transactionsHtml += '</div>';
+            } else {
+                transactionsHtml = '<div class="text-center py-3 text-muted">No transactions found for this control number.</div>';
+            }
+            $('#allTransactionsContent').html(transactionsHtml);
+            
             $('#viewMoreModal').modal('show');
+        });
+
+        // Modal Export PDF Click Handler
+        $(document).on('click', '#modalExportPdfBtn', function() {
+            const btn = $('#viewMoreModal').data('view-more-btn');
+            if (!btn) return;
+
+            const studentName = btn.data('student-name');
+            const studentAdmission = btn.data('student-admission');
+            const studentClass = btn.data('student-class');
+            const studentPhoto = btn.data('student-photo');
+            
+            let payment = {};
+            try {
+                const paymentData = btn.data('payment');
+                payment = typeof paymentData === 'string' ? JSON.parse(paymentData) : paymentData;
+            } catch(e) {
+                console.error('Error parsing payment data for PDF:', e);
+            }
+
+            // Prepare data for PDF generation
+            const pdfData = {
+                schoolName: '{{ $school->school_name ?? "School Name" }}',
+                schoolLogo: '{{ $school->logo ? asset("storage/" . $school->logo) : "" }}',
+                studentName: studentName,
+                studentAdmission: studentAdmission,
+                studentClass: studentClass,
+                studentPhoto: studentPhoto,
+                controlNumber: payment.control_number || 'N/A',
+                totalRequired: payment.amount_required || 0,
+                totalPaid: payment.amount_paid || 0,
+                totalBalance: payment.balance || 0,
+                tuitionPaid: payment.amount_paid || 0,
+                otherPaid: 0,
+                payments: payment.fee_payments || [],
+                paymentRecords: payment.payment_records || []
+            };
+
+            Swal.fire({
+                title: 'Generating PDF...',
+                html: 'Please wait while we prepare your invoice',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            generatePaymentInvoicePDF(pdfData);
         });
 
         // Record Payment Button Click Handler
@@ -2589,6 +2813,7 @@
                             html += '<th>Paid Amount (TZS)</th>';
                             html += '<th>Payment Method</th>';
                             html += '<th>Reference Number</th>';
+                            html += '<th>Status</th>';
                             html += '<th>Notes</th>';
                             html += '<th class="text-center">Actions</th>';
                             html += '</tr>';
@@ -2604,28 +2829,56 @@
                                 html += '<td class="text-end text-success fw-bold">' + parseFloat(record.paid_amount || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '/=</td>';
                                 html += '<td><span class="badge ' + (record.payment_source === 'Bank' ? 'bg-primary' : 'bg-success') + '">' + (record.payment_source || 'N/A') + '</span></td>';
                                 html += '<td>' + (record.reference_number || 'N/A') + '</td>';
+                                html += '<td class="text-center">';
+                                if (record.is_verified) {
+                                    html += '<span class="badge bg-success" title="Verified"><i class="bi bi-patch-check-fill"></i> Verified</span>';
+                                } else {
+                                    html += '<span class="badge bg-secondary" title="Pending Verification"><i class="bi bi-patch-exclamation"></i> Unverified</span>';
+                                }
+                                html += '</td>';
                                 html += '<td>' + (record.notes || '-') + '</td>';
                                 html += '<td class="text-center">';
                                 html += '<div class="btn-group btn-group-sm" role="group">';
-                                html += '<button class="btn btn-sm btn-warning edit-payment-record-btn" ';
-                                html += 'data-record-id="' + record.recordID + '" ';
-                                html += 'data-payment-id="' + paymentID + '" ';
-                                html += 'data-paid-amount="' + record.paid_amount + '" ';
-                                html += 'data-payment-date="' + (record.payment_date || '') + '" ';
-                                html += 'data-payment-source="' + (record.payment_source || '') + '" ';
-                                html += 'data-reference-number="' + (record.reference_number || '') + '" ';
-                                html += 'data-bank-name="' + (record.bank_name || '') + '" ';
-                                html += 'data-notes="' + (record.notes || '') + '" ';
-                                html += 'title="Edit Payment Record">';
-                                html += '<i class="bi bi-pencil"></i>';
-                                html += '</button>';
-                                html += '<button class="btn btn-sm btn-danger delete-payment-record-btn" ';
-                                html += 'data-record-id="' + record.recordID + '" ';
-                                html += 'data-payment-id="' + paymentID + '" ';
-                                html += 'data-paid-amount="' + record.paid_amount + '" ';
-                                html += 'title="Delete Payment Record">';
-                                html += '<i class="bi bi-trash"></i>';
-                                html += '</button>';
+                                
+                                if (!record.is_verified) {
+                                    html += '<button class="btn btn-sm btn-success verify-payment-record-btn" ';
+                                    html += 'data-record-id="' + record.recordID + '" ';
+                                    html += 'data-payment-id="' + paymentID + '" ';
+                                    html += 'title="Verify Payment">';
+                                    html += '<i class="bi bi-shield-check"></i>';
+                                    html += '</button>';
+                                    
+                                    html += '<button class="btn btn-sm btn-warning edit-payment-record-btn" ';
+                                    html += 'data-record-id="' + record.recordID + '" ';
+                                    html += 'data-payment-id="' + paymentID + '" ';
+                                    html += 'data-paid-amount="' + record.paid_amount + '" ';
+                                    html += 'data-payment-date="' + (record.payment_date || '') + '" ';
+                                    html += 'data-payment-source="' + (record.payment_source || '') + '" ';
+                                    html += 'data-reference-number="' + (record.reference_number || '') + '" ';
+                                    html += 'data-bank-name="' + (record.bank_name || '') + '" ';
+                                    html += 'data-notes="' + (record.notes || '') + '" ';
+                                    html += 'title="Edit Payment Record">';
+                                    html += '<i class="bi bi-pencil"></i>';
+                                    html += '</button>';
+                                    
+                                    html += '<button class="btn btn-sm btn-danger delete-payment-record-btn" ';
+                                    html += 'data-record-id="' + record.recordID + '" ';
+                                    html += 'data-payment-id="' + paymentID + '" ';
+                                    html += 'data-paid-amount="' + record.paid_amount + '" ';
+                                    html += 'title="Delete Payment Record">';
+                                    html += '<i class="bi bi-trash"></i>';
+                                    html += '</button>';
+                                } else {
+                                    html += '<button class="btn btn-sm btn-info unverify-payment-record-btn" ';
+                                    html += 'data-record-id="' + record.recordID + '" ';
+                                    html += 'data-payment-id="' + paymentID + '" ';
+                                    html += 'title="Cancel Verification">';
+                                    html += '<i class="bi bi-shield-x"></i>';
+                                    html += '</button>';
+                                    
+                                    html += '<span class="btn btn-sm btn-light disabled" title="Verified records cannot be edited"><i class="bi bi-lock-fill"></i></span>';
+                                }
+                                
                                 html += '</div>';
                                 html += '</td>';
                                 html += '</tr>';
@@ -2661,6 +2914,94 @@
                 }
             });
         });
+
+            // Verify Payment Record
+            $(document).on('click', '.verify-payment-record-btn', function() {
+                const recordID = $(this).data('record-id');
+                const paymentID = $(this).data('payment-id');
+                
+                if (confirm('Je, unathibitisha kupokea malipo haya?')) {
+                    const btn = $(this);
+                    btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+                    
+                    $.ajax({
+                        url: '/verify_payment',
+                        method: 'POST',
+                        data: {
+                            _token: '{{ csrf_token() }}',
+                            recordID: recordID
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                showNotification(response.message, 'success');
+                                // Refresh payment records list
+                                $('.view-payment-records-btn[data-payment-id="' + paymentID + '"]').trigger('click');
+                                // Refresh main table
+                                loadPaymentsData();
+                            } else {
+                                toastr.error(response.message || 'Kosa limetokea');
+                                btn.prop('disabled', false).html('<i class="bi bi-shield-check"></i>');
+                            }
+                        },
+                        error: function() {
+                            toastr.error('Kosa la mawasiliano');
+                            btn.prop('disabled', false).html('<i class="bi bi-shield-check"></i>');
+                        }
+                    });
+                }
+            });
+            
+            // Unverify Payment Record
+            $(document).on('click', '.unverify-payment-record-btn', function() {
+                const recordID = $(this).data('record-id');
+                const paymentID = $(this).data('payment-id');
+                
+                if (confirm('Je, una uhakika wa kufuta uthibitisho huu?')) {
+                    const btn = $(this);
+                    btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+                    
+                    $.ajax({
+                        url: '/unverify_payment',
+                        method: 'POST',
+                        data: {
+                            _token: '{{ csrf_token() }}',
+                            recordID: recordID
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                // Refresh payment records list
+                                $('.view-payment-records-btn[data-payment-id="' + paymentID + '"]').trigger('click');
+                                // Refresh main table
+                                loadPaymentsData();
+                            } else {
+                                toastr.error(response.message || 'Kosa limetokea');
+                                btn.prop('disabled', false).html('<i class="bi bi-shield-x"></i>');
+                            }
+                        },
+                        error: function() {
+                            toastr.error('Kosa la mawasiliano');
+                            btn.prop('disabled', false).html('<i class="bi bi-shield-x"></i>');
+                        }
+                    });
+                }
+            });
+            
+            // Handle verification UI (ensure toastr is available for these calls)
+            function showNotification(message, type) {
+                if (typeof toastr !== 'undefined') {
+                    toastr[type](message);
+                } else if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: type === 'success' ? 'success' : 'error',
+                        title: type === 'success' ? 'Success' : 'Error',
+                        text: message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    alert(message);
+                }
+            }
 
         // Edit Payment Record Button Click Handler
         $(document).on('click', '.edit-payment-record-btn', function(e) {
@@ -3034,22 +3375,100 @@
                 }
             });
         });
-    }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(initPaymentsManagement, 200);
+        // Send Debt Reminders
+        $('#sendDebtRemindersBtn').on('click', function(e) {
+            e.preventDefault();
+            
+            Swal.fire({
+                title: 'Send Debt Reminders?',
+                text: 'Hii itatuma SMS za kumbusho la deni kwa wazazi wote ambao wana bakaa (balance) ya malipo. SMS itajumuisha kiasi wanachodaiwa na Control Number yao.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ffc107',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Ndiyo, Tuma Kumbusho',
+                cancelButtonText: 'Ghairi'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const btn = $(this);
+                    const originalHtml = btn.html();
+                    btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Sending...');
+                    
+                    $.ajax({
+                        url: '{{ route("send_debt_reminders_sms") }}',
+                        method: 'POST',
+                        data: {
+                            year: $('#filterYear').val(),
+                            _token: '{{ csrf_token() }}'
+                        },
+                        dataType: 'json',
+                        success: function(response) {
+                            Swal.fire({
+                                icon: response.success ? 'success' : 'error',
+                                title: response.success ? 'Success!' : 'Error!',
+                                text: response.message,
+                                confirmButtonColor: '#940000'
+                            });
+                        },
+                        error: function(xhr) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error!',
+                                text: 'Imeshindwa kutuma SMS za kumbusho.',
+                                confirmButtonColor: '#940000'
+                            });
+                        },
+                        complete: function() {
+                            btn.prop('disabled', false).html(originalHtml);
+                        }
+                    });
+                }
+            });
         });
-    } else {
-        setTimeout(initPaymentsManagement, 200);
+
+        // Resend Individual Control SMS from Modal
+        $(document).on('click', '.resend-control-sms-btn', function() {
+            const btn = $(this);
+            const paymentID = btn.data('payment-id');
+            const originalHtml = btn.html();
+
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Sending...');
+
+            $.ajax({
+                url: '/resend_control_number/' + paymentID,
+                method: 'POST',
+                data: { _token: '{{ csrf_token() }}' },
+                success: function(response) {
+                    Swal.fire({
+                        icon: response.success ? 'success' : 'error',
+                        title: response.success ? 'Sent!' : 'Failed!',
+                        text: response.message,
+                        confirmButtonColor: '#940000'
+                    });
+                },
+                error: function() {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: 'Failed to send SMS.',
+                        confirmButtonColor: '#940000'
+                    });
+                },
+                complete: function() {
+                    btn.prop('disabled', false).html(originalHtml);
+                }
+            });
+        });
+
+
+
+        // Load initial data on startup
+        console.log('Starting Payments Management App...');
+        loadPaymentsData();
     }
     
-    // Initialize on page load
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initPaymentsManagement);
-    } else {
-        initPaymentsManagement();
-    }
+    // App is started via waitForJQuery at the top
 })();
 </script>
 

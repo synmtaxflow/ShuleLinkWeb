@@ -92,6 +92,24 @@
                                 <input type="file" class="form-control" name="student_photo" accept="image/*">
                                 <small class="text-muted">Max 2MB (JPEG, PNG)</small>
                             </div>
+                            
+                            <!-- Sponsorship Information -->
+                            <div class="col-12 mt-3">
+                                <hr class="my-2">
+                                <h6 class="fw-bold mb-3 mt-2" style="color: #940000;">
+                                    <i class="bi bi-handshake"></i> Sponsorship Payment
+                                </h6>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Payment Type</label>
+                                <select class="form-select" id="reg_payment_type" name="payment_type">
+                                    <option value="own">Own Payment</option>
+                                    <option value="sponsor">Sponsor Payment</option>
+                                </select>
+                            </div>
+                            <!-- Hidden inputs for sponsorship details collected via popup -->
+                            <input type="hidden" id="reg_sponsor_id" name="sponsor_id">
+                            <input type="hidden" id="reg_sponsorship_percentage" name="sponsorship_percentage">
                         </div>
                     </div>
 
@@ -210,7 +228,7 @@
                                     <textarea class="form-control" name="chronic_illness_details" rows="2" placeholder="Describe the chronic illness"></textarea>
                                 </div>
                             </div>
-                            <div class="col-12">
+                            <div class="col-md-12">
                                 <label class="form-label fw-bold">Immunization Details</label>
                                 <textarea class="form-control" name="immunization_details" rows="2" placeholder="e.g., Fully vaccinated, pending, allergies to vaccines"></textarea>
                             </div>
@@ -333,6 +351,27 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Sponsorship Review -->
+                            <div class="mb-3 p-3 border rounded" style="background-color: #f8f9fa;">
+                                <h6 class="fw-bold mb-2" style="color: #940000;">
+                                    <i class="bi bi-handshake"></i> Sponsorship Information
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <p class="mb-1"><strong>Payment Type:</strong> <span id="reviewPaymentType">-</span></p>
+                                    </div>
+                                    <div class="col-md-3 review-sponsor-only" style="display: none;">
+                                        <p class="mb-1"><strong>Sponsor:</strong> <span id="reviewSponsorName">-</span></p>
+                                    </div>
+                                    <div class="col-md-3 review-sponsor-only" style="display: none;">
+                                        <p class="mb-1"><strong>Sponsor ID:</strong> <span id="reviewSponsorId">-</span></p>
+                                    </div>
+                                    <div class="col-md-3 review-sponsor-only" style="display: none;">
+                                        <p class="mb-1"><strong>Percentage:</strong> <span id="reviewSponsorshipPercentage">-</span>%</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Declaration Section -->
@@ -420,6 +459,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentStep = 1;
     const totalSteps = 5;
     let selectedParentId = null;
+    let sponsorsList = []; // Global list of sponsors
     let schoolNumber = '{{ session("schoolID") ?? "SCH" }}';
     let registrationNumber = '{{ optional(\App\Models\School::find(session("schoolID")))->registration_number ?? session("schoolID") ?? "REG" }}';
 
@@ -430,6 +470,49 @@ document.addEventListener('DOMContentLoaded', function() {
         4: document.getElementById('step4'),
         5: document.getElementById('step5')
     };
+
+    // Reset modal when it's shown
+    const registrationModal = document.getElementById('registrationModal');
+    if (registrationModal) {
+        // Handle both Bootstrap and manual show
+        const resetModal = function() {
+            console.log('Modal shown, resetting to Step 1');
+            const subclassID = document.getElementById('selectedSubclassID').value;
+            const subclassName = document.getElementById('selectedSubclassName').textContent;
+            
+            currentStep = 1;
+            showStep(1);
+            document.getElementById('registrationForm').reset();
+            
+            // Restore subclass info
+            document.getElementById('selectedSubclassID').value = subclassID;
+            document.getElementById('selectedSubclassName').textContent = subclassName;
+
+            // Regenerate admission number since reset() cleared it
+            if (typeof generateAdmissionNumber === 'function') {
+                generateAdmissionNumber();
+            }
+
+            // Clear any error highlights
+            document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            document.querySelectorAll('.text-danger[class*="error-"]').forEach(el => el.classList.add('d-none'));
+        };
+
+        registrationModal.addEventListener('show.bs.modal', resetModal);
+        
+        // Also watch for manual show via display:block
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.attributeName === 'style') {
+                    const display = registrationModal.style.display;
+                    if (display === 'block') {
+                        resetModal();
+                    }
+                }
+            });
+        });
+        observer.observe(registrationModal, { attributes: true });
+    }
 
     // Function to populate review section with all entered data
     function populateReviewSection() {
@@ -573,6 +656,24 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('reviewEmergencyName').textContent = data.emergency_contact_name || 'N/A';
         document.getElementById('reviewEmergencyRelationship').textContent = data.emergency_contact_relationship || 'N/A';
         document.getElementById('reviewEmergencyPhone').textContent = data.emergency_contact_phone || 'N/A';
+        
+        // Sponsorship Information
+        const paymentType = data.payment_type || 'own';
+        document.getElementById('reviewPaymentType').textContent = paymentType === 'sponsor' ? 'Sponsor Payment' : 'Own Payment';
+        
+        const sponsorOnlyFields = document.querySelectorAll('.review-sponsor-only');
+        if (paymentType === 'sponsor') {
+            sponsorOnlyFields.forEach(el => el.style.display = 'block');
+            
+            // Get sponsor name from sponsorsList
+            const sponsorId = data.sponsor_id;
+            const sponsor = sponsorsList.find(s => s.sponsorID.toString() === sponsorId?.toString());
+            document.getElementById('reviewSponsorName').textContent = sponsor ? sponsor.sponsor_name : (sponsorId || 'N/A');
+            document.getElementById('reviewSponsorId').textContent = sponsorId || 'N/A';
+            document.getElementById('reviewSponsorshipPercentage').textContent = data.sponsorship_percentage || '0';
+        } else {
+            sponsorOnlyFields.forEach(el => el.style.display = 'none');
+        }
     }
 
     const showStep = (step) => {
@@ -858,7 +959,12 @@ document.addEventListener('DOMContentLoaded', function() {
         phone = phone.replace(/[^0-9]/g, '');
         
         if (!phone || !/^[0-9]{9}$/.test(phone)) {
-            alert('Please enter a valid phone number (9 digits after 255)');
+            Swal.fire({
+                title: 'Invalid Phone Number',
+                text: 'Please enter a valid phone number (9 digits after 255)',
+                icon: 'warning',
+                confirmButtonColor: '#940000'
+            });
             return;
         }
         const fullPhone = '255' + phone;
@@ -1113,11 +1219,102 @@ document.addEventListener('DOMContentLoaded', function() {
             return false; // Block navigation completely
         }
         
+        // INTERCEPT: If in Step 1 and Sponsor Payment is selected, show popup
+        const paymentTypeSelect = document.getElementById('reg_payment_type');
+        const paymentType = paymentTypeSelect ? paymentTypeSelect.value : 'own';
+        
+        console.log('Intercept Debug:', { currentStep, paymentType });
+        
+        if (currentStep === 1 && paymentType === 'sponsor') {
+            console.log('Triggering Sponsorship Popup...');
+            showSponsorshipPopup();
+            return;
+        }
+        
             console.log('Validation passed, moving to step:', currentStep + 1);
         if (currentStep < totalSteps) {
             showStep(currentStep + 1);
         }
     });
+
+    // Function to show sponsorship popup
+    function showSponsorshipPopup() {
+        if (sponsorsList.length === 0) {
+            Swal.fire({
+                title: 'No Sponsors Found',
+                text: 'Please register sponsors in the Manage Sponsors section first.',
+                icon: 'warning',
+                confirmButtonColor: '#940000'
+            });
+            return;
+        }
+
+        let sponsorOptions = '<option value="">Choose a sponsor...</option>';
+        sponsorsList.forEach(sponsor => {
+            sponsorOptions += `<option value="${sponsor.sponsorID}">${sponsor.sponsor_name}${sponsor.contact_person ? ' (' + sponsor.contact_person + ')' : ''}</option>`;
+        });
+
+        // Get existing values if any
+        const currentSponsorId = document.getElementById('reg_sponsor_id').value;
+        const currentPercentage = document.getElementById('reg_sponsorship_percentage').value;
+
+        Swal.fire({
+            title: '<h5 class="fw-bold"><i class="bi bi-handshake"></i> Sponsorship Details</h5>',
+            html: `
+                <div class="text-start">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Select Sponsor <span class="text-danger">*</span></label>
+                        <select id="swal_sponsor_id" class="form-select">
+                            ${sponsorOptions}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Sponsorship Percentage (%) <span class="text-danger">*</span></label>
+                        <input type="number" id="swal_percentage" class="form-control" min="0" max="100" step="any" onfocus="this.select()" value="${parseFloat(currentPercentage) || '100.00'}">
+                        <small class="text-muted">How much of the fees will this sponsor cover?</small>
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Continue to Step 2',
+            cancelButtonText: 'Back',
+            confirmButtonColor: '#940000',
+            didOpen: () => {
+                // Focus the percentage input for easier typing
+                const percInput = document.getElementById('swal_percentage');
+                if (percInput) {
+                    setTimeout(() => percInput.focus(), 100);
+                }
+
+                // Pre-select current sponsor if exists
+                if (currentSponsorId) {
+                    document.getElementById('swal_sponsor_id').value = currentSponsorId;
+                }
+            },
+            preConfirm: () => {
+                const sponsorId = document.getElementById('swal_sponsor_id').value;
+                const percentage = document.getElementById('swal_percentage').value;
+                if (!sponsorId) {
+                    Swal.showValidationMessage('Please select a sponsor');
+                    return false;
+                }
+                if (!percentage || percentage < 0 || percentage > 100) {
+                    Swal.showValidationMessage('Please enter a valid percentage (0-100)');
+                    return false;
+                }
+                return { sponsorId, percentage };
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Save values to hidden inputs
+                document.getElementById('reg_sponsor_id').value = result.value.sponsorId;
+                document.getElementById('reg_sponsorship_percentage').value = result.value.percentage;
+                
+                // Move to next step
+                showStep(2);
+            }
+        });
+    }
 
     document.getElementById('submitBtn').addEventListener('click', (e) => {
         e.preventDefault();
@@ -1139,6 +1336,11 @@ document.addEventListener('DOMContentLoaded', function() {
         let isValid = true;
         let failedFields = [];
         let errorMessages = [];
+
+        // Special rule: Step 3 (Health Information) is optional
+        if (currentStep === 3) {
+            return true;
+        }
 
         // Special validation for Step 1 - check if subclassID is selected
         if (currentStep === 1) {
@@ -1479,6 +1681,18 @@ document.addEventListener('DOMContentLoaded', function() {
         summary += '<p><strong>Relationship:</strong> ' + (data.emergency_contact_relationship || 'N/A') + '</p>';
         summary += '<p><strong>Phone:</strong> ' + (data.emergency_contact_phone || 'N/A') + '</p>';
         
+        summary += '<hr style="margin: 15px 0;">';
+        summary += '<h6 style="color: #212529; margin-bottom: 15px;"><i class="bi bi-handshake"></i> Sponsorship Information</h6>';
+        const paymentType = data.payment_type || 'own';
+        summary += '<p><strong>Payment Type:</strong> ' + (paymentType === 'sponsor' ? 'Sponsor Payment' : 'Own Payment') + '</p>';
+        if (paymentType === 'sponsor') {
+            const sponsorId = data.sponsor_id;
+            const sponsor = sponsorsList.find(s => s.sponsorID.toString() === sponsorId?.toString());
+            summary += '<p><strong>Sponsor:</strong> ' + (sponsor ? sponsor.sponsor_name : (sponsorId || 'N/A')) + '</p>';
+            summary += '<p><strong>Sponsor ID:</strong> ' + (sponsorId || 'N/A') + '</p>';
+            summary += '<p><strong>Percentage:</strong> ' + (data.sponsorship_percentage || '0') + '%</p>';
+        }
+
         summary += '<hr style="margin: 15px 0;">';
         summary += '<h6 style="color: #212529; margin-bottom: 15px;"><i class="bi bi-file-check"></i> Declaration</h6>';
         // Check for parent declaration checkbox
@@ -1838,6 +2052,33 @@ document.addEventListener('DOMContentLoaded', function() {
         const regBackdrop = document.getElementById('regBackdrop');
         if (regBackdrop) regBackdrop.remove();
     };
+
+    // =====================
+    // SPONSORSHIP HANDLING
+    // =====================
+    
+    // Function to load sponsors from server
+    function loadSponsors() {
+        fetch('{{ route("get_sponsors") }}', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.sponsors) {
+                sponsorsList = data.sponsors;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading sponsors:', error);
+        });
+    }
+    
+    // Load sponsors on init
+    loadSponsors();
 
     // Initialize - show step 1
     showStep(1);

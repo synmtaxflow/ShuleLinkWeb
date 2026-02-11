@@ -156,6 +156,8 @@ class ManageStudentController extends Controller
 
     public function save_student(Request $request)
     {
+        Log::info('DEBUG: save_student hit', $request->all());
+        
         // Check create permission - New format: student_create
         if (!$this->hasPermission('student_create')) {
             return response()->json([
@@ -186,7 +188,9 @@ class ManageStudentController extends Controller
             'parentID' => 'nullable|exists:parents,parentID',
             'address' => 'nullable|string|max:255',
             'status' => 'nullable|in:Active,Transferred,Graduated,Inactive',
-            'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048'
+            'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'sponsor_id' => 'nullable|exists:sponsors,sponsorID',
+            'sponsorship_percentage' => 'nullable|numeric|min:0|max:100'
         ], [
             'admission_number.unique' => 'Admission number already exists. Please use a different admission number.',
             'photo.image' => 'Photo must be an image file.',
@@ -230,16 +234,20 @@ class ManageStudentController extends Controller
             // Handle Image Upload
             $imageName = null;
             if ($request->hasFile('photo')) {
-                // Determine upload path based on environment
-                if (file_exists(public_path('userImages'))) {
-                     $uploadPath = public_path('userImages');
-                } else {
-                     // Fallback for cPanel if public_path points to incorrect location
-                     $uploadPath = base_path('../public_html/userImages'); 
-                     if (!file_exists($uploadPath)) {
-                        // Create directory if it doesn't exist
-                        mkdir($uploadPath, 0755, true);
+                // Determine upload path using server document root for reliability on cPanel
+                $docRoot = $_SERVER['DOCUMENT_ROOT'];
+                $uploadPath = $docRoot . '/userImages'; // Default to public_html/userImages
+                
+                // Fallback: if userImages doesn't exist in doc root/public_html, try local public path
+                if (!file_exists($uploadPath) && !is_writable($docRoot)) {
+                     if (file_exists(public_path('userImages'))) {
+                         $uploadPath = public_path('userImages');
                      }
+                }
+                
+                // Create directory if it doesn't exist
+                if (!file_exists($uploadPath)) {
+                    @mkdir($uploadPath, 0755, true);
                 }
 
                 $imageName = time() . '_' . $request->file('photo')->getClientOriginalName();
@@ -281,10 +289,26 @@ class ManageStudentController extends Controller
                 'address' => $request->address ?: null,
                 'photo' => $imageName,
                 'status' => $request->status ?: 'Active',
+                'sponsor_id' => $request->sponsor_id ?: null,
+                'sponsorship_percentage' => $request->sponsorship_percentage ?: 0,
                 'is_disabled' => $request->has('is_disabled') && $request->is_disabled == '1' ? true : false,
                 'has_epilepsy' => $request->has('has_epilepsy') && $request->has_epilepsy == '1' ? true : false,
                 'has_allergies' => $request->has('has_allergies') && $request->has_allergies == '1' ? true : false,
                 'allergies_details' => $request->has_allergies == '1' ? ($request->allergies_details ?: null) : null
+            ]);
+
+            Log::info('Student Created Object:', [
+                'studentID' => $student->studentID,
+                'sponsor_id' => $student->sponsor_id,
+                'sponsorship_percentage' => $student->sponsorship_percentage
+            ]);
+
+            // Re-fetch from DB to be 100% sure
+            $savedStudent = Student::find($student->studentID);
+            Log::info('Student Saved in DB:', [
+                'studentID' => $savedStudent ? $savedStudent->studentID : 'NOT FOUND',
+                'sponsor_id' => $savedStudent ? $savedStudent->sponsor_id : 'n/a',
+                'sponsorship_percentage' => $savedStudent ? $savedStudent->sponsorship_percentage : 'n/a'
             ]);
 
             // Send student to biometric device directly (not via API)
@@ -411,7 +435,7 @@ class ManageStudentController extends Controller
 
         $schoolID = Session::get('schoolID');
 
-        $student = Student::with(['parent', 'subclass.class'])
+        $student = Student::with(['parent', 'subclass.class', 'sponsor'])
             ->where('studentID', $studentID)
             ->where('schoolID', $schoolID)
             ->first();
@@ -457,16 +481,13 @@ class ManageStudentController extends Controller
         // Get student photo path
         $studentImgPath = null;
         if ($student->photo) {
-            // Check if file exists in the filesystem relative to public_html/public
-            // On cPanel, public_path often points to the repo's public folder, NOT public_html
-            // So we manually check the likely live path first
-            
             $filename = $student->photo;
-            $livePath = base_path('../public_html/userImages/' . $filename);
+            $docRoot = $_SERVER['DOCUMENT_ROOT'];
+            $livePath = $docRoot . '/userImages/' . $filename;
             $localPath = public_path('userImages/' . $filename);
 
             if (file_exists($livePath)) {
-                // If found in public_html/userImages, the URL is just domain.com/userImages/filename
+                // If found in public_html/userImages (via document root)
                 $studentImgPath = url('userImages/' . $filename);
             } elseif (file_exists($localPath)) {
                 // If found in local dev public/userImages
@@ -517,6 +538,9 @@ class ManageStudentController extends Controller
                 'has_epilepsy' => $student->has_epilepsy ?? false,
                 'has_allergies' => $student->has_allergies ?? false,
                 'allergies_details' => $student->allergies_details,
+                'sponsor_id' => $student->sponsor_id,
+                'sponsor_name' => $student->sponsor ? $student->sponsor->sponsor_name : null,
+                'sponsorship_percentage' => $student->sponsorship_percentage,
             ]
         ]);
     }
@@ -551,7 +575,9 @@ class ManageStudentController extends Controller
             'parentID' => 'nullable|exists:parents,parentID',
             'address' => 'nullable|string|max:255',
             'status' => 'nullable|in:Active,Transferred,Graduated,Inactive',
-            'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048'
+            'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'sponsor_id' => 'nullable|exists:sponsors,sponsorID',
+            'sponsorship_percentage' => 'nullable|numeric|min:0|max:100'
         ], [
             'admission_number.unique' => 'Admission number already exists. Please use a different admission number.',
             'photo.image' => 'Photo must be an image file.',
@@ -588,16 +614,19 @@ class ManageStudentController extends Controller
             // Handle Image Upload
             $imageName = $student->photo; // Keep existing photo
             if ($request->hasFile('photo')) {
-                // Determine upload path based on environment
-                if (file_exists(public_path('userImages'))) {
-                     $uploadPath = public_path('userImages');
-                } else {
-                     // Fallback for cPanel if public_path points to incorrect location
-                     $uploadPath = base_path('../public_html/userImages'); 
-                     if (!file_exists($uploadPath)) {
-                        // Create directory if it doesn't exist
-                        mkdir($uploadPath, 0755, true);
+                // Determine upload path using server document root
+                $docRoot = $_SERVER['DOCUMENT_ROOT'];
+                $uploadPath = $docRoot . '/userImages'; // Default to public_html/userImages
+                
+                // Fallback: if permissions fail or logic is different
+                if (!file_exists($uploadPath) && !is_writable($docRoot)) {
+                     if (file_exists(public_path('userImages'))) {
+                         $uploadPath = public_path('userImages');
                      }
+                }
+                
+                if (!file_exists($uploadPath)) {
+                    @mkdir($uploadPath, 0755, true);
                 }
 
                 // Delete old image if exists
@@ -624,6 +653,8 @@ class ManageStudentController extends Controller
                 'subclassID' => $request->subclassID ?: null,
                 'photo' => $imageName,
                 'status' => $request->status ?: 'Active',
+                'sponsor_id' => $request->sponsor_id ?: null,
+                'sponsorship_percentage' => $request->sponsorship_percentage ?: 0,
                 // Additional particulars
                 'birth_certificate_number' => $request->birth_certificate_number ?: null,
                 'religion' => $request->religion ?: null,

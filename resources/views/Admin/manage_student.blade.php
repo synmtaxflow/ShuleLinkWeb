@@ -873,6 +873,31 @@
                         <small class="text-muted">Max size: 2MB (jpg, jpeg, png)</small>
                     </div>
 
+                    <!-- Sponsorship Information Section -->
+                    <hr class="my-4">
+                    <h6 class="mb-3 text-primary-custom"><i class="bi bi-handshake-fill"></i> Sponsorship Information</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="payment_type" class="form-label">Payment Type</label>
+                            <select class="form-select" id="payment_type" name="payment_type">
+                                <option value="own">Own Payment</option>
+                                <option value="sponsor">Sponsor Payment</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3" id="sponsorSelectContainer" style="display: none;">
+                            <label for="sponsor_id" class="form-label">Select Sponsor</label>
+                            <select class="form-select" id="sponsor_id" name="sponsor_id">
+                                <option value="">Choose a sponsor...</option>
+                                <!-- Will be loaded via AJAX -->
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="sponsorshipPercentageContainer" style="display: none;">
+                        <label for="sponsorship_percentage" class="form-label">Sponsorship Percentage (%)</label>
+                        <input type="number" class="form-control" id="sponsorship_percentage" name="sponsorship_percentage" min="0" max="100" step="any" onfocus="this.select()" placeholder="e.g., 50.00">
+                        <small class="text-muted">Enter the percentage of fees covered by the sponsor (0-100)</small>
+                    </div>
+
                     <!-- Health Information Section -->
                     <hr class="my-4">
                     <h6 class="mb-3 text-primary-custom"><i class="bi bi-heart-pulse"></i> Health Information</h6>
@@ -908,7 +933,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" onclick="document.getElementById('registrationModal').style.display = 'none'  ;" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary-custom">
                         <i class="bi bi-check-circle"></i> Register Student
                     </button>
@@ -1045,10 +1070,32 @@
                         </div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label for="edit_photo" class="form-label">Photo</label>
-                        <input type="file" class="form-control" id="edit_photo" name="photo" accept="image/*">
                         <small class="text-muted">Max size: 2MB (jpg, jpeg, png). Leave empty to keep current photo.</small>
+                    </div>
+                    
+                    <!-- Sponsorship Information Section -->
+                    <hr class="my-4">
+                    <h6 class="mb-3 text-primary-custom"><i class="bi bi-handshake-fill"></i> Sponsorship Information</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_payment_type" class="form-label">Payment Type</label>
+                            <select class="form-select" id="edit_payment_type" name="payment_type">
+                                <option value="own">Own Payment</option>
+                                <option value="sponsor">Sponsor Payment</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3" id="editSponsorSelectContainer" style="display: none;">
+                            <label for="edit_sponsor_id" class="form-label">Select Sponsor</label>
+                            <select class="form-select" id="edit_sponsor_id" name="sponsor_id">
+                                <option value="">Choose a sponsor...</option>
+                                <!-- Will be loaded via AJAX -->
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="editSponsorshipPercentageContainer" style="display: none;">
+                        <label for="edit_sponsorship_percentage" class="form-label">Sponsorship Percentage (%)</label>
+                        <input type="number" class="form-control" id="edit_sponsorship_percentage" name="sponsorship_percentage" min="0" max="100" step="any" onfocus="this.select()" placeholder="e.g., 50.00">
+                        <small class="text-muted">Enter the percentage of fees covered by the sponsor (0-100)</small>
                     </div>
 
                     <!-- Health Information Section -->
@@ -1379,7 +1426,48 @@
                     }
                 }
             });
+
+            // Load sponsors
+            $.ajax({
+                url: '{{ route("get_sponsors") }}',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        let sponsorSelect = $('#sponsor_id');
+                        sponsorSelect.html('<option value="">Choose a sponsor...</option>');
+                        response.sponsors.forEach(function(sponsor) {
+                            sponsorSelect.append('<option value="' + sponsor.sponsorID + '">' + sponsor.sponsor_name + '</option>');
+                        });
+                    }
+                }
+            });
         }
+
+        // Handle payment type change
+        $('#payment_type').on('change', function() {
+            if ($(this).val() === 'sponsor') {
+                $('#sponsorSelectContainer').slideDown();
+                $('#sponsorshipPercentageContainer').slideDown();
+            } else {
+                $('#sponsorSelectContainer').slideUp();
+                $('#sponsorshipPercentageContainer').slideUp();
+                $('#sponsor_id').val('');
+                $('#sponsorship_percentage').val('');
+            }
+        });
+
+        $('#edit_payment_type').on('change', function() {
+            if ($(this).val() === 'sponsor') {
+                $('#editSponsorSelectContainer').slideDown();
+                $('#editSponsorshipPercentageContainer').slideDown();
+            } else {
+                $('#editSponsorSelectContainer').slideUp();
+                $('#editSponsorshipPercentageContainer').slideUp();
+                $('#edit_sponsor_id').val('');
+                $('#edit_sponsorship_percentage').val('');
+            }
+        });
 
         // Load students with filters
         function loadStudents() {
@@ -1869,6 +1957,21 @@
                             html += '</div>';
                         }
                         
+                        // Sponsorship Information
+                        if (student.sponsor_id) {
+                            html += '<div class="info-item" style="grid-column: 1 / -1; background-color: #fff9e6; padding: 15px; border: 1px solid #ffd633;">';
+                            html += '<i class="bi bi-handshake-fill text-warning" style="font-size: 1.5rem;"></i>';
+                            html += '<div class="info-item-content">';
+                            html += '<div class="info-item-label" style="font-weight: 700; font-size: 0.9rem; color: #856404;">SPONSORSHIP INFORMATION</div>';
+                            html += '<div class="row mt-2">';
+                            html += '<div class="col-md-4"><div class="info-item-label">Sponsor</div><div class="info-item-value">' + (student.sponsor_name || 'Assigned') + '</div></div>';
+                            html += '<div class="col-md-4"><div class="info-item-label">Sponsor ID</div><div class="info-item-value">' + student.sponsor_id + '</div></div>';
+                            html += '<div class="col-md-4"><div class="info-item-label">Percentage Cover</div><div class="info-item-value">' + (student.sponsorship_percentage || 0) + '%</div></div>';
+                            html += '</div>';
+                            html += '</div>';
+                            html += '</div>';
+                        }
+                        
                         // Emergency Contact (Next of Kin)
                         if (student.emergency_contact_name && student.emergency_contact_name !== 'N/A') {
                             html += '<div class="info-item" style="grid-column: 1 / -1; background-color: #f8f9fa; padding: 15px; border: 1px solid #dee2e6;">';
@@ -2076,10 +2179,24 @@
                         $('#edit_has_allergies').prop('checked', student.has_allergies == 1 || student.has_allergies === true);
                         $('#edit_allergies_details').val(student.allergies_details || '');
                         
-                        // Set emergency contact fields
-                        $('#edit_emergency_contact_name').val(student.emergency_contact_name || '');
-                        $('#edit_emergency_contact_relationship').val(student.emergency_contact_relationship || '');
                         $('#edit_emergency_contact_phone').val(student.emergency_contact_phone || '');
+                        
+                        // Set sponsorship fields
+                        if (student.sponsor_id) {
+                            $('#edit_payment_type').val('sponsor').trigger('change');
+                            window.pendingEditSponsorID = student.sponsor_id; // Store for after sponsors load
+                            $('#edit_sponsor_id').val(student.sponsor_id);
+                            $('#edit_sponsorship_percentage').val(student.sponsorship_percentage);
+                            $('#editSponsorSelectContainer').show();
+                            $('#editSponsorshipPercentageContainer').show();
+                        } else {
+                            $('#edit_payment_type').val('own').trigger('change');
+                            window.pendingEditSponsorID = null;
+                            $('#edit_sponsor_id').val('');
+                            $('#edit_sponsorship_percentage').val('');
+                            $('#editSponsorSelectContainer').hide();
+                            $('#editSponsorshipPercentageContainer').hide();
+                        }
 
                         // Show/hide details containers based on checkboxes
                         if (student.has_disability == 1 || student.has_disability === true) {
@@ -2209,6 +2326,28 @@
                         // Set the selected value after initialization
                         if (currentParentID) {
                             parentSelect.val(currentParentID).trigger('change');
+                        }
+                    }
+                }
+            });
+
+            // Load sponsors for edit modal
+            $.ajax({
+                url: '{{ route("get_sponsors") }}',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        let sponsorSelect = $('#edit_sponsor_id');
+                        sponsorSelect.html('<option value="">Choose a sponsor...</option>');
+                        response.sponsors.forEach(function(sponsor) {
+                            sponsorSelect.append('<option value="' + sponsor.sponsorID + '">' + sponsor.sponsor_name + '</option>');
+                        });
+                        
+                        // If we have a pending sponsor ID, set it now
+                        if (window.pendingEditSponsorID) {
+                            sponsorSelect.val(window.pendingEditSponsorID);
+                            window.pendingEditSponsorID = null;
                         }
                     }
                 }
@@ -2740,6 +2879,13 @@ Would you like to try direct registration anyway, or use the manual method?`;
 
             let formData = new FormData(this);
             formData.set('admission_number', admission_number);
+
+            // Debug: Log form data to console for review
+            console.log('--- Registering Student - Reviewing Form Data ---');
+            for (var pair of formData.entries()) {
+                console.log(pair[0] + ': ' + pair[1]);
+            }
+            console.log('------------------------------------------------');
             let submitBtn = $(this).find('button[type="submit"]');
             let originalBtnText = submitBtn.html();
 
@@ -3366,15 +3512,15 @@ Would you like to try direct registration anyway, or use the manual method?`;
                 }
 
                 tableData.forEach(function(row, index) {
-                    // Row is an array of HTML strings
-                    let rowHtml = Array.isArray(row) ? row : [];
+                    // Row is an array of data from currentStudentsData
+                    let rowData = Array.isArray(row) ? row : [];
 
-                    let admissionNumber = extractText(rowHtml[1] || '');
-                    let fullName = extractText(rowHtml[2] || '');
-                    let className = extractText(rowHtml[3] || '');
-                    let genderVal = extractText(rowHtml[4] || '');
-                    let parentName = extractText(rowHtml[5] || '');
-                    let fingerprintId = extractText(rowHtml[6] || '');
+                    let admissionNumber = extractText(rowData[0] || '');
+                    let fullName = extractText(rowData[1] || '');
+                    let className = extractText(rowData[2] || '');
+                    let genderVal = extractText(rowData[3] || '');
+                    let parentName = extractText(rowData[4] || '');
+                    let fingerprintId = extractText(rowData[5] || '');
 
                     tableRows.push([
                         index + 1,

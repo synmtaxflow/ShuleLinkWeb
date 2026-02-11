@@ -17,6 +17,7 @@ use App\Models\OtherFeeDetail;
 use App\Models\Payment;
 use App\Models\PaymentRecord;
 use App\Models\ParentModel;
+use App\Models\StudentFeePayment;
 use App\Services\SmsService;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Validator;
@@ -39,33 +40,57 @@ class FeesController extends Controller
      * Get current academic year ID for a school
      * Returns the active academic year ID, or the current year's academic year ID if found
      */
-    private function getCurrentAcademicYearID($schoolID)
+    private function getCurrentAcademicYearID($schoolID, $requestedYear = null)
     {
-        // First, try to get active academic year (prioritize active year)
-        $activeAcademicYear = DB::table('academic_years')
+        $yearToUse = $requestedYear ?: date('Y');
+
+        // 1. Try to get the specific year record
+        $academicYear = DB::table('academic_years')
+            ->where('schoolID', $schoolID)
+            ->where('year', $yearToUse)
+            ->first();
+
+        if ($academicYear) {
+            return $academicYear->academic_yearID;
+        }
+
+        // 2. If not found, try to get ANY active year
+        $activeYear = DB::table('academic_years')
             ->where('schoolID', $schoolID)
             ->where('status', 'Active')
             ->orderBy('year', 'desc')
             ->first();
-        
-        if ($activeAcademicYear) {
-            return $activeAcademicYear->academic_yearID;
+
+        if ($activeYear) {
+            return $activeYear->academic_yearID;
         }
-        
-        // If no active year, try to get academic year for current calendar year
-        $currentYear = date('Y');
-        $academicYear = DB::table('academic_years')
+
+        // 3. Fallback: Get most recent year regardless of status
+        $mostRecent = DB::table('academic_years')
             ->where('schoolID', $schoolID)
-            ->where('year', $currentYear)
+            ->orderBy('year', 'desc')
             ->first();
-        
-        // If found, return its ID
-        if ($academicYear) {
-            return $academicYear->academic_yearID;
+
+        if ($mostRecent) {
+            return $mostRecent->academic_yearID;
         }
-        
-        // If not found, return null
-        return null;
+
+        // 4. Final resort: Create the year record automatically so the user is never blocked
+        try {
+            return DB::table('academic_years')->insertGetId([
+                'schoolID' => $schoolID,
+                'year' => $yearToUse,
+                'year_name' => (string)$yearToUse,
+                'start_date' => $yearToUse . '-01-01',
+                'end_date' => $yearToUse . '-12-31',
+                'status' => 'Active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to auto-create academic year: ' . $e->getMessage());
+            return null;
+        }
     }
 
     /**
@@ -80,36 +105,33 @@ class FeesController extends Controller
             ->where('status', 'Closed')
             ->orderBy('year', 'desc')
             ->first();
-        
+
         if (!$closedAcademicYear) {
             // No closed academic year found, return zero balance
             return ['school_fee_balance' => 0, 'other_contribution_balance' => 0];
         }
-        
+
         // Get payments from history for closed academic year
         $previousYearPayments = DB::table('payments_history')
             ->where('studentID', $studentID)
             ->where('academic_yearID', $closedAcademicYear->academic_yearID)
             ->get();
-        
+
         // Calculate outstanding balances (only positive balances are debts)
         $schoolFeeBalance = 0;
         $otherContributionBalance = 0;
-        
+
         foreach ($previousYearPayments as $payment) {
             $balance = (float) $payment->balance;
-            
+
             // Only count positive balances as debt
             if ($balance > 0) {
-                // Map fee types: 'Tuition Fees' -> 'School Fee', 'Other Fees' -> 'Other Contribution'
-                if ($payment->fee_type === 'Tuition Fees') {
-                    $schoolFeeBalance += $balance;
-                } elseif ($payment->fee_type === 'Other Fees') {
-                    $otherContributionBalance += $balance;
-                }
+                // In unified system, we aggregate all balance into schoolFeeBalance
+                // unless we have a specific way to differentiate historical other fees
+                $schoolFeeBalance += $balance;
             }
         }
-        
+
         return [
             'school_fee_balance' => max(0, $schoolFeeBalance), // Ensure non-negative
             'other_contribution_balance' => max(0, $otherContributionBalance) // Ensure non-negative
@@ -135,7 +157,8 @@ class FeesController extends Controller
         $fees = Fee::where('schoolID', $schoolID)
             ->with(['class', 'otherFeeDetails'])
             ->orderBy('classID')
-            ->orderBy('fee_type')
+            ->orderBy('display_order')
+            ->orderBy('fee_name')
             ->get();
 
         // Group fees by class for widgets
@@ -149,38 +172,20 @@ class FeesController extends Controller
         $userType = Session::get('user_type');
         $schoolID = Session::get('schoolID');
 
-        if (!$userType || !$schoolID)
-        {
+        if (!$userType || !$schoolID) {
             return response()->json(['success' => false, 'message' => 'Access denied'], 403);
-        }
-
-        // Check if fee type already exists for this class
-        $existingFee = Fee::where('schoolID', $schoolID)
-            ->where('classID', $request->classID)
-            ->where('fee_type', $request->fee_type)
-            ->where('status', 'Active')
-            ->first();
-
-        if ($existingFee) {
-            return response()->json([
-                'success' => false,
-                'message' => ucfirst(strtolower($request->fee_type)) . ' already exists for this class. Each class can only have one Tuition Fee and one Other Fee.',
-            ], 422);
-        }
-
-        // Auto-generate fee_name based on fee_type if not provided
-        $feeName = $request->fee_name;
-        if (empty($feeName)) {
-            $feeName = $request->fee_type === 'Tuition Fees' ? 'School Fee' : 'Other Contribution';
         }
 
         $validator = Validator::make($request->all(), [
             'classID' => 'required|exists:classes,classID',
-            'fee_type' => 'required|in:Tuition Fees,Other Fees',
-            'fee_name' => 'nullable|string|max:200',
-            'amount' => 'required|numeric|min:0',
             'duration' => 'required|in:Year,Month,Term,Semester,One-time',
-            'description' => 'nullable|string',
+            'fees' => 'required|array|min:1',
+            'fees.*.name' => 'required|string|max:200',
+            'fees.*.amount' => 'required|numeric|min:0',
+            'fees.*.description' => 'nullable|string',
+            'fees.*.must_start_pay' => 'nullable|boolean',
+            'fees.*.deadline_amount' => 'nullable|numeric|min:0',
+            'fees.*.deadline_date' => 'nullable|date',
             'allow_installments' => 'nullable|boolean',
             'default_installment_type' => 'nullable|in:Semester,Month,Two Months,Term,Quarter,One-time',
             'number_of_installments' => 'nullable|integer|min:1|max:12',
@@ -198,164 +203,179 @@ class FeesController extends Controller
         try {
             DB::beginTransaction();
 
-            $fee = Fee::create([
-                'schoolID' => $schoolID,
-                'classID' => $request->classID,
-                'fee_type' => $request->fee_type,
-                'fee_name' => $feeName,
-                'amount' => $request->amount,
-                'duration' => $request->duration,
-                'description' => $request->description,
-                'status' => 'Active',
-                'allow_installments' => $request->input('allow_installments', false),
-                'default_installment_type' => $request->input('default_installment_type'),
-                'number_of_installments' => $request->input('number_of_installments'),
-                'allow_partial_payment' => $request->input('allow_partial_payment', true),
-            ]);
-
-            // Create installments if allow_installments is true
-            if ($request->input('allow_installments') && $request->input('number_of_installments') && $request->input('default_installment_type')) {
-                $installmentType = $request->input('default_installment_type');
-                $numberOfInstallments = $request->input('number_of_installments');
-                $amountPerInstallment = $request->amount / $numberOfInstallments;
-
-                $installmentNames = [
-                    'Semester' => 'Semester',
-                    'Month' => 'Month',
-                    'Two Months' => 'Two Months',
-                    'Term' => 'Term',
-                    'Quarter' => 'Quarter',
-                    'One-time' => 'One-time',
-                ];
-
-                $baseName = $installmentNames[$installmentType] ?? 'Installment';
-
-                for ($i = 1; $i <= $numberOfInstallments; $i++) {
-                    FeeInstallment::create([
-                        'feeID' => $fee->feeID,
-                        'installment_name' => $baseName . ' ' . $i,
-                        'installment_type' => $installmentType,
-                        'installment_number' => $i,
-                        'amount' => $amountPerInstallment,
-                        'status' => 'Active',
-                    ]);
-                }
-            }
-
-            // Create other fees details if fee type is Other Fees
-            if ($request->fee_type === 'Other Fees') {
-                // Check if other_fees_details is provided as JSON string or array
-                $otherFeesDetails = null;
-                
-                // Try multiple ways to get the data
-                if ($request->has('other_fees_details')) {
-                    $otherFeesDetailsInput = $request->input('other_fees_details');
-                    
-                    // Try to decode if it's a JSON string
-                    if (is_string($otherFeesDetailsInput)) {
-                        // First try direct decode
-                        $decoded = json_decode($otherFeesDetailsInput, true);
-                        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                            $otherFeesDetails = $decoded;
-                        } else {
-                            // Try URL decode first
-                            $urlDecoded = urldecode($otherFeesDetailsInput);
-                            $decoded = json_decode($urlDecoded, true);
-                            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                                $otherFeesDetails = $decoded;
-                            }
-                        }
-                    } elseif (is_array($otherFeesDetailsInput)) {
-                        $otherFeesDetails = $otherFeesDetailsInput;
-                    }
-                }
-                
-                // Also check raw input from request
-                if (empty($otherFeesDetails)) {
-                    $rawInput = $request->get('other_fees_details');
-                    if (is_string($rawInput)) {
-                        $decoded = json_decode(urldecode($rawInput), true);
-                        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                            $otherFeesDetails = $decoded;
-                        }
-                    }
-                }
-                
-                // Log for debugging
-                \Log::info('Other Fees Details - Fee ID: ' . $fee->feeID, [
-                    'fee_type' => $request->fee_type,
-                    'has_input' => $request->has('other_fees_details'),
-                    'input_raw' => $request->input('other_fees_details'),
-                    'input_type' => gettype($request->input('other_fees_details')),
-                    'decoded' => $otherFeesDetails,
-                    'decoded_type' => gettype($otherFeesDetails),
-                    'decoded_count' => is_array($otherFeesDetails) ? count($otherFeesDetails) : 0
+            $createdFees = [];
+            foreach ($request->fees as $index => $feeData) {
+                $fee = Fee::create([
+                    'schoolID' => $schoolID,
+                    'classID' => $request->classID,
+                    'fee_name' => $feeData['name'] ?? 'Fee',
+                    'amount' => $feeData['amount'] ?? 0,
+                    'must_start_pay' => isset($feeData['must_start_pay']) && $feeData['must_start_pay'] == 1,
+                    'payment_deadline_amount' => $feeData['deadline_amount'] ?? null,
+                    'payment_deadline_date' => $feeData['deadline_date'] ?? null,
+                    'display_order' => $index,
+                    'duration' => $request->duration,
+                    'description' => $feeData['description'] ?? null,
+                    'status' => 'Active',
+                    'allow_installments' => $request->has('allow_installments'),
+                    'default_installment_type' => $request->input('default_installment_type'),
+                    'number_of_installments' => $request->input('number_of_installments'),
+                    'allow_partial_payment' => $request->has('allow_partial_payment'),
                 ]);
-                
-                if (is_array($otherFeesDetails) && count($otherFeesDetails) > 0) {
-                    $createdCount = 0;
-                    foreach ($otherFeesDetails as $index => $detail) {
-                        // Validate detail
-                        if (!empty($detail['name']) && isset($detail['amount']) && is_numeric($detail['amount']) && $detail['amount'] > 0) {
-                            try {
-                                OtherFeeDetail::create([
-                                    'feeID' => $fee->feeID,
-                                    'fee_detail_name' => trim($detail['name']),
-                                    'amount' => (float) $detail['amount'],
-                                    'description' => !empty($detail['description']) ? trim($detail['description']) : null,
-                                    'status' => 'Active',
-                                ]);
-                                $createdCount++;
-                                \Log::info("Other Fee Detail #{$index} Created:", [
-                                    'feeID' => $fee->feeID,
-                                    'name' => $detail['name'],
-                                    'amount' => $detail['amount']
-                                ]);
-                            } catch (\Exception $e) {
-                                \Log::error('Error creating other fee detail: ' . $e->getMessage(), [
-                                    'detail' => $detail,
-                                    'index' => $index,
-                                    'trace' => $e->getTraceAsString()
-                                ]);
-                                DB::rollBack();
-                                throw $e;
-                            }
-                        } else {
-                            \Log::warning("Skipping invalid other fee detail #{$index}:", [
-                                'detail' => $detail,
-                                'name_empty' => empty($detail['name']),
-                                'amount_set' => isset($detail['amount']),
-                                'amount_numeric' => isset($detail['amount']) ? is_numeric($detail['amount']) : false,
-                                'amount_positive' => isset($detail['amount']) && is_numeric($detail['amount']) ? $detail['amount'] > 0 : false
-                            ]);
-                        }
+
+                // Create installments if allowed
+                if ($request->has('allow_installments') && $request->input('number_of_installments')) {
+                    $numInstallments = $request->input('number_of_installments');
+                    $installmentType = $request->input('default_installment_type', 'Installment');
+                    $amountPerInstallment = $fee->amount / $numInstallments;
+
+                    for ($i = 1; $i <= $numInstallments; $i++) {
+                        FeeInstallment::create([
+                            'feeID' => $fee->feeID,
+                            'installment_name' => $installmentType . ' ' . $i,
+                            'installment_type' => $installmentType,
+                            'installment_number' => $i,
+                            'amount' => $amountPerInstallment,
+                            'status' => 'Active',
+                        ]);
                     }
-                    \Log::info("Created {$createdCount} other fee details for fee ID: {$fee->feeID}");
-                } else {
-                    \Log::warning('No other fees details to create', [
-                        'otherFeesDetails' => $otherFeesDetails,
-                        'is_array' => is_array($otherFeesDetails),
-                        'count' => is_array($otherFeesDetails) ? count($otherFeesDetails) : 0,
-                        'fee_type' => $request->fee_type
-                    ]);
                 }
+                $createdFees[] = $fee;
             }
+
+            // Trigger Billing for all students in this class
+            $this->generateBillsForClass($request->classID, $schoolID);
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Fee assigned successfully',
-                'fee' => $fee->load(['class', 'installments', 'otherFeeDetails'])
+                'message' => count($createdFees) . ' Fees saved and assigned to students successfully.',
+                'fees' => $createdFees
             ], 201);
+
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Fee Assignment Error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to assign fee: ' . $e->getMessage()
+                'message' => 'Failed to save fees: ' . $e->getMessage()
             ], 500);
         }
     }
+
+    /**
+     * Helper to generate/update billing for all students in a class
+     */
+    private function generateBillsForClass($classID, $schoolID)
+    {
+        $academicYearID = $this->getCurrentAcademicYearID($schoolID);
+        if (!$academicYearID) return;
+
+        $students = Student::where('schoolID', $schoolID)
+            ->whereHas('subclass', function($q) use ($classID) {
+                $q->where('classID', $classID);
+            })
+            ->where('status', 'Active')
+            ->get();
+
+        foreach ($students as $student) {
+            $this->generateStudentBill($student, $academicYearID, $schoolID);
+        }
+    }
+
+    /**
+     * Helper to generate/update a specific student's bill (Single Control Number)
+     */
+    private function generateStudentBill($student, $academicYearID, $schoolID)
+    {
+        // 1. Get all active fees for student's class
+        $fees = Fee::where('schoolID', $schoolID)
+            ->where('classID', $student->subclass->classID)
+            ->where('status', 'Active')
+            ->orderBy('display_order')
+            ->get();
+
+        // 2. Calculate totals
+        $totalAmount = $fees->sum('amount');
+        $mustPayAmount = $fees->where('must_start_pay', true)->sum('amount');
+
+        $previousYearBalance = $this->getPreviousYearBalance($student->studentID, $schoolID);
+        $debt = $previousYearBalance['school_fee_balance'] + $previousYearBalance['other_contribution_balance'];
+
+        $totalRequiredAmount = $totalAmount + $debt;
+
+        // Apply sponsorship discount if applicable
+        if ($student->sponsor_id && $student->sponsorship_percentage > 0) {
+            $sponsorshipDiscount = ($totalRequiredAmount * $student->sponsorship_percentage) / 100;
+            $totalRequiredAmount = $totalRequiredAmount - $sponsorshipDiscount;
+        }
+
+        // 3. Get existing control number or generate new one
+        $payment = Payment::where('studentID', $student->studentID)
+            ->where('academic_yearID', $academicYearID)
+            ->first();
+
+        if (!$payment) {
+            // New Control Number Logic (Strictly numeric, starts with 3345)
+            $controlNumber = $this->generateControlNumber($schoolID, $student->studentID);
+
+            $payment = Payment::create([
+                'schoolID' => $schoolID,
+                'academic_yearID' => $academicYearID,
+                'studentID' => $student->studentID,
+                'control_number' => $controlNumber,
+                'amount_required' => $totalRequiredAmount,
+                'amount_paid' => 0,
+                'balance' => $totalRequiredAmount,
+                'debt' => $debt,
+                'required_fees_amount' => $mustPayAmount,
+                'required_fees_paid' => 0,
+                'can_start_school' => $mustPayAmount <= 0,
+                'payment_status' => 'Pending'
+            ]);
+        } else {
+            // Update existing bill if fees changed
+            $payment->update([
+                'amount_required' => $totalRequiredAmount,
+                'balance' => $totalRequiredAmount - $payment->amount_paid,
+                'debt' => $debt,
+                'required_fees_amount' => $mustPayAmount,
+            ]);
+        }
+
+        // 4. Update individual fee payment tracking entries
+        foreach ($fees as $fee) {
+            $sfp = StudentFeePayment::where('studentID', $student->studentID)
+                ->where('feeID', $fee->feeID)
+                ->where('paymentID', $payment->paymentID)
+                ->first();
+
+            if (!$sfp) {
+                StudentFeePayment::create([
+                    'schoolID' => $schoolID,
+                    'studentID' => $student->studentID,
+                    'paymentID' => $payment->paymentID,
+                    'feeID' => $fee->feeID,
+                    'fee_name' => $fee->fee_name,
+                    'fee_total_amount' => $fee->amount,
+                    'amount_paid' => 0,
+                    'balance' => $fee->amount,
+                    'is_required' => $fee->must_start_pay,
+                    'display_order' => $fee->display_order,
+                ]);
+            } else {
+                $sfp->update([
+                    'paymentID' => $payment->paymentID,
+                    'fee_total_amount' => $fee->amount,
+                    'balance' => $fee->amount - $sfp->amount_paid,
+                    'is_required' => $fee->must_start_pay,
+                    'display_order' => $fee->display_order,
+                ]);
+            }
+        }
+    }
+
 
     public function update_fee(Request $request, $feeID)
     {
@@ -378,96 +398,77 @@ class FeesController extends Controller
             ], 404);
         }
 
-        // Check if fee type already exists for this class (excluding current fee)
-        $existingFee = Fee::where('schoolID', $schoolID)
-            ->where('classID', $request->classID)
-            ->where('fee_type', $request->fee_type)
-            ->where('feeID', '!=', $feeID)
-            ->where('status', 'Active')
-            ->first();
+    $validator = Validator::make($request->all(), [
+        'classID' => 'required|exists:classes,classID',
+        'fee_name' => 'required|string|max:200',
+        'amount' => 'required|numeric|min:0',
+        'must_start_pay' => 'nullable|boolean',
+        'payment_deadline_amount' => 'nullable|numeric|min:0',
+        'payment_deadline_date' => 'nullable|date',
+        'duration' => 'required|in:Year,Month,Term,Semester,One-time',
+        'description' => 'nullable|string',
+        'allow_installments' => 'nullable|boolean',
+        'default_installment_type' => 'nullable|in:Semester,Month,Two Months,Term,Quarter,One-time',
+        'number_of_installments' => 'nullable|integer|min:1|max:12',
+        'allow_partial_payment' => 'nullable|boolean',
+    ]);
 
-        if ($existingFee) {
-            return response()->json([
-                'success' => false,
-                'message' => ucfirst(strtolower($request->fee_type)) . ' already exists for this class. Each class can only have one Tuition Fee and one Other Fee.',
-            ], 422);
-        }
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed',
+            'errors' => $validator->errors()
+        ], 422);
+    }
 
-        $validator = Validator::make($request->all(), [
-            'classID' => 'required|exists:classes,classID',
-            'fee_type' => 'required|in:Tuition Fees,Other Fees',
-            'fee_name' => 'required|string|max:200',
-            'amount' => 'required|numeric|min:0',
-            'duration' => 'required|in:Year,Month,Term,Semester,One-time',
-            'description' => 'nullable|string',
-            'allow_installments' => 'nullable|boolean',
-            'default_installment_type' => 'nullable|in:Semester,Month,Two Months,Term,Quarter,One-time',
-            'number_of_installments' => 'nullable|integer|min:1|max:12',
-            'allow_partial_payment' => 'nullable|boolean',
+    try {
+        DB::beginTransaction();
+
+        $fee->update([
+            'classID' => $request->classID,
+            'fee_name' => $request->fee_name,
+            'amount' => $request->amount,
+            'must_start_pay' => $request->has('must_start_pay'),
+            'payment_deadline_amount' => $request->payment_deadline_amount,
+            'payment_deadline_date' => $request->payment_deadline_date,
+            'duration' => $request->duration,
+            'description' => $request->description,
+            'allow_installments' => $request->has('allow_installments'),
+            'default_installment_type' => $request->input('default_installment_type'),
+            'number_of_installments' => $request->input('number_of_installments'),
+            'allow_partial_payment' => $request->has('allow_partial_payment'),
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
+        // Delete existing installments and create new ones if allowed
+        FeeInstallment::where('feeID', $fee->feeID)->delete();
+
+        if ($request->has('allow_installments') && $request->input('number_of_installments') && $request->input('default_installment_type')) {
+            $installmentType = $request->input('default_installment_type');
+            $numberOfInstallments = $request->input('number_of_installments');
+            $amountPerInstallment = $request->amount / $numberOfInstallments;
+
+            for ($i = 1; $i <= $numberOfInstallments; $i++) {
+                FeeInstallment::create([
+                    'feeID' => $fee->feeID,
+                    'installment_name' => $installmentType . ' ' . $i,
+                    'installment_type' => $installmentType,
+                    'installment_number' => $i,
+                    'amount' => $amountPerInstallment,
+                    'status' => 'Active',
+                ]);
+            }
         }
 
-        try {
-            DB::beginTransaction();
+        // Update bills for this class
+        $this->generateBillsForClass($request->classID, $schoolID);
 
-            $fee->update([
-                'classID' => $request->classID,
-                'fee_type' => $request->fee_type,
-                'fee_name' => $feeName,
-                'amount' => $request->amount,
-                'duration' => $request->duration,
-                'description' => $request->description,
-                'allow_installments' => $request->input('allow_installments', false),
-                'default_installment_type' => $request->input('default_installment_type'),
-                'number_of_installments' => $request->input('number_of_installments'),
-                'allow_partial_payment' => $request->input('allow_partial_payment', true),
-            ]);
+        DB::commit();
 
-            // Delete existing installments and create new ones if allow_installments is true
-            FeeInstallment::where('feeID', $fee->feeID)->delete();
-
-            if ($request->input('allow_installments') && $request->input('number_of_installments') && $request->input('default_installment_type')) {
-                $installmentType = $request->input('default_installment_type');
-                $numberOfInstallments = $request->input('number_of_installments');
-                $amountPerInstallment = $request->amount / $numberOfInstallments;
-
-                $installmentNames = [
-                    'Semester' => 'Semester',
-                    'Month' => 'Month',
-                    'Two Months' => 'Two Months',
-                    'Term' => 'Term',
-                    'Quarter' => 'Quarter',
-                    'One-time' => 'One-time',
-                ];
-
-                $baseName = $installmentNames[$installmentType] ?? 'Installment';
-
-                for ($i = 1; $i <= $numberOfInstallments; $i++) {
-                    FeeInstallment::create([
-                        'feeID' => $fee->feeID,
-                        'installment_name' => $baseName . ' ' . $i,
-                        'installment_type' => $installmentType,
-                        'installment_number' => $i,
-                        'amount' => $amountPerInstallment,
-                        'status' => 'Active',
-                    ]);
-                }
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Fee updated successfully',
-                'fee' => $fee->load(['class', 'installments'])
-            ], 200);
+        return response()->json([
+            'success' => true,
+            'message' => 'Fee updated successfully',
+            'fee' => $fee->load(['class', 'installments'])
+        ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -625,32 +626,16 @@ class FeesController extends Controller
         // Get current year and next year
         $currentYear = date('Y');
         $nextYear = $currentYear + 1;
-        
-        // Default year: prioritize next year if it exists and is Active
+
+        // Default year: current calendar year
         $defaultYear = $currentYear;
-        $nextYearExists = false;
-        foreach ($academicYears as $academicYear) {
-            if ($academicYear->year == $nextYear && $academicYear->status == 'Active') {
-                $defaultYear = $nextYear;
-                $nextYearExists = true;
-                break;
-            }
-        }
-        
-        // If next year doesn't exist, use the most recent Active year (first in the list since it's ordered desc)
-        if (!$nextYearExists) {
-            $activeYears = $academicYears->where('status', 'Active');
-            if ($activeYears->count() > 0) {
-                $defaultYear = $activeYears->first()->year;
-            }
-        }
 
         // Get all classes and subclasses for filters
         $classes = ClassModel::where('schoolID', $schoolID)
             ->where('status', 'Active')
             ->orderBy('class_name')
             ->get();
-        
+
         $subclasses = Subclass::whereIn('classID', $classes->pluck('classID'))
             ->where('status', 'Active')
             ->orderBy('subclass_name')
@@ -677,20 +662,20 @@ class FeesController extends Controller
             $classID = $request->input('class_id', '');
             $subclassID = $request->input('subclass_id', '');
             $studentStatus = $request->input('student_status', ''); // Active or Graduated
-            $feeType = $request->input('fee_type', '');
             $paymentStatus = $request->input('payment_status', '');
             $year = $request->input('year', date('Y')); // This is the year value from dropdown
             $searchStudentName = $request->input('search_student_name', '');
+            $sponsorshipFilter = $request->input('sponsorship_filter', ''); // 'sponsored' or 'self'
 
             // Get academic_yearID for the selected year
             $academicYear = DB::table('academic_years')
                 ->where('schoolID', $schoolID)
                 ->where('year', $year)
                 ->first();
-            
+
             $academicYearID = $academicYear ? $academicYear->academic_yearID : null;
             $isClosedYear = $academicYear && $academicYear->status === 'Closed';
-            
+
             // If no academic year found for selected year, try to get active academic year
             if (!$academicYearID) {
                 $activeAcademicYear = DB::table('academic_years')
@@ -705,15 +690,17 @@ class FeesController extends Controller
                 }
             }
 
-            // Build query - filter by student status
-            $statusFilter = ['Active', 'Graduated'];
+            // Build query - default to Active students only to match school expectations
+            $statusFilter = ['Active'];
             if (!empty($studentStatus)) {
                 $statusFilter = [$studentStatus];
+            } else if ($studentStatus === 'All') {
+                $statusFilter = ['Active', 'Graduated'];
             }
-            
+
             $query = Student::where('schoolID', $schoolID)
                 ->whereIn('status', $statusFilter)
-                ->with(['parent', 'subclass.class', 'payments' => function($q) use ($academicYearID, $year) {
+                ->with(['parent', 'sponsor', 'subclass.class', 'payments' => function($q) use ($academicYearID, $year) {
                     if ($academicYearID) {
                         // Filter by academic_yearID if academic year exists
                         $q->where('academic_yearID', $academicYearID);
@@ -721,7 +708,7 @@ class FeesController extends Controller
                         // Fallback to year filter if academic year doesn't exist
                         $q->whereYear('created_at', $year);
                     }
-                }, 'payments.fee.installments', 'payments.fee.otherFeeDetails', 'payments.academicYear']);
+                }, 'payments.fee_payments', 'payments.academicYear', 'payments.paymentRecords']);
 
             // Filter by class (main class)
             if (!empty($classID)) {
@@ -733,6 +720,17 @@ class FeesController extends Controller
             // Filter by subclass
             if (!empty($subclassID)) {
                 $query->where('subclassID', $subclassID);
+            }
+
+            // Filter by sponsorship
+            if ($sponsorshipFilter === 'sponsored') {
+                $query->whereNotNull('sponsor_id')
+                      ->where('sponsorship_percentage', '>', 0);
+            } elseif ($sponsorshipFilter === 'self') {
+                $query->where(function($q) {
+                    $q->whereNull('sponsor_id')
+                      ->orWhere('sponsorship_percentage', '<=', 0);
+                });
             }
 
             // Filter by student name search
@@ -750,423 +748,111 @@ class FeesController extends Controller
 
             // Group payments by student and aggregate totals
             $filteredData = [];
-            $index = 1;
-
+            $index = 1; // Initialize index
             foreach ($students as $student) {
-                // Ensure fee relationships are loaded for all payments
-                $student->load(['payments.fee.installments', 'payments.fee.otherFeeDetails']);
-                
-                // Filter payments based on criteria
-                $filteredPayments = $student->payments->filter(function($payment) use ($academicYearID, $year, $feeType, $paymentStatus) {
-                    // Filter by academic year ID if available, otherwise by created_at year
-                    if ($academicYearID) {
-                        if ($payment->academic_yearID != $academicYearID) {
-                            return false;
-                        }
+                // Get the unified payment record for this student and year
+                $payment = $student->payments->first(); // Should be only one due to generateStudentBill logic
+
+                if (!$payment && !empty($paymentStatus)) {
+                    if ($paymentStatus !== "Pending") continue;
+                }
+
+                if ($payment && !empty($paymentStatus)) {
+                    $status = $payment->payment_status;
+                    if ($paymentStatus === 'Incomplete' || $paymentStatus === 'Partial' || $paymentStatus === 'Incomplete Payment') {
+                        if ($status !== 'Incomplete Payment' && $status !== 'Partial') continue;
+                    } elseif ($status !== $paymentStatus) {
+                        continue;
+                    }
+                }
+
+                // Calculate verification status
+                $hasUnverified = $payment ? $payment->paymentRecords()->where('is_verified', false)->exists() : false;
+                $hasVerified = $payment ? $payment->paymentRecords()->where('is_verified', true)->exists() : false;
+
+                $verificationStatus = 'Unverified';
+                if ($payment) {
+                    if ($payment->amount_paid == 0) {
+                        $verificationStatus = 'No Payment';
+                    } elseif (!$hasUnverified && $hasVerified) {
+                        $verificationStatus = 'Verified';
+                    } elseif ($hasUnverified && $hasVerified) {
+                        $verificationStatus = 'Partially Verified';
                     } else {
-                        // Fallback to created_at year if no academic_yearID
-                        if ($year && date('Y', strtotime($payment->created_at)) != $year) {
-                            return false;
-                        }
-                    }
-
-                    // Filter by fee type
-                    if (!empty($feeType) && $payment->fee_type !== $feeType) {
-                        return false;
-                    }
-
-                    // Filter by payment status
-                    if (!empty($paymentStatus)) {
-                        $statusMap = ['Incomplete' => 'Incomplete Payment'];
-                        $actualStatus = $statusMap[$paymentStatus] ?? $paymentStatus;
-                        if ($payment->payment_status !== $actualStatus) {
-                            return false;
-                        }
-                    }
-
-                    return true;
-                });
-
-                // Skip if no payments match filters (unless no filters applied)
-                if ($filteredPayments->isEmpty() && (!empty($feeType) || !empty($paymentStatus))) {
-                    continue;
-                }
-
-                // Get academic year from payments (get first payment's academic year, or use selected year)
-                $academicYearDisplay = $year; // Default to selected year
-                if (!$filteredPayments->isEmpty()) {
-                    $firstPayment = $filteredPayments->first();
-                    if ($firstPayment->academic_yearID) {
-                        $academicYear = DB::table('academic_years')
-                            ->where('academic_yearID', $firstPayment->academic_yearID)
-                            ->first();
-                        if ($academicYear) {
-                            $academicYearDisplay = $academicYear->year;
-                        }
-                    } else {
-                        // Fallback to created_at year if academicYear relationship is null
-                        $academicYearDisplay = date('Y', strtotime($firstPayment->created_at));
+                        $verificationStatus = 'Pending Verification';
                     }
                 }
 
-                // For graduated students, get debts from past academic years (payments_history)
-                $graduatedDebts = ['school_fee_balance' => 0, 'other_contribution_balance' => 0];
-                if ($student->status === 'Graduated') {
-                    // Get all closed academic years for this school
-                    $closedAcademicYears = DB::table('academic_years')
-                        ->where('schoolID', $schoolID)
-                        ->where('status', 'Closed')
-                        ->orderBy('year', 'desc')
-                        ->get();
-
-                    foreach ($closedAcademicYears as $closedYear) {
-                        // Get payments from history for this graduated student
-                        $historyPayments = DB::table('payments_history')
-                            ->where('studentID', $student->studentID)
-                            ->where('academic_yearID', $closedYear->academic_yearID)
-                            ->get();
-
-                        foreach ($historyPayments as $historyPayment) {
-                            $balance = (float) $historyPayment->balance;
-                            if ($historyPayment->fee_type === 'Tuition Fees') {
-                                $graduatedDebts['school_fee_balance'] += $balance;
-                            } elseif ($historyPayment->fee_type === 'Other Fees') {
-                                $graduatedDebts['other_contribution_balance'] += $balance;
-                            }
-                        }
-                    }
-
-                    // Ensure non-negative
-                    $graduatedDebts['school_fee_balance'] = max(0, $graduatedDebts['school_fee_balance']);
-                    $graduatedDebts['other_contribution_balance'] = max(0, $graduatedDebts['other_contribution_balance']);
-                }
-
-                // Format student data for JSON
-                $studentImgPath = $student->photo
-                    ? asset('userImages/' . $student->photo)
-                    : ($student->gender == 'Female'
-                        ? asset('images/female.png')
-                        : asset('images/male.png'));
-                
-                // Get student class information - use historical data for closed years
-                $subclassName = null;
-                $className = null;
-                
-                if ($isClosedYear && $academicYearID) {
-                    // For closed years, get class from student_class_history
-                    $studentClassHistory = DB::table('student_class_history')
-                        ->where('studentID', $student->studentID)
-                        ->where('academic_yearID', $academicYearID)
-                        ->first();
-                    
-                    if ($studentClassHistory) {
-                        // Get subclass name from history using original_subclassID
-                        $subclassHistory = DB::table('subclasses_history')
-                            ->where('academic_yearID', $academicYearID)
-                            ->where('original_subclassID', $studentClassHistory->subclassID)
-                            ->first();
-                        
-                        // Get class name from history using original_classID
-                        $classHistory = DB::table('classes_history')
-                            ->where('academic_yearID', $academicYearID)
-                            ->where('original_classID', $studentClassHistory->classID)
-                            ->first();
-                        
-                        if ($subclassHistory) {
-                            $subclassName = $subclassHistory->subclass_name;
-                        }
-                        if ($classHistory) {
-                            $className = $classHistory->class_name;
-                        }
-                    }
-                } else {
-                    // For active years, use current class
-                    if ($student->subclass) {
-                        $subclassName = $student->subclass->subclass_name;
-                        $className = $student->subclass->class ? $student->subclass->class->class_name : null;
-                    }
-                }
-                
                 $studentData = [
                     'studentID' => $student->studentID,
                     'first_name' => $student->first_name,
                     'middle_name' => $student->middle_name,
                     'last_name' => $student->last_name,
                     'admission_number' => $student->admission_number,
-                    'status' => $student->status, // Active or Graduated
-                    'photo' => $studentImgPath,
+                    'status' => $student->status,
+                    'photo' => $student->photo ? asset('userImages/' . $student->photo) : null,
                     'parent' => $student->parent ? [
                         'first_name' => $student->parent->first_name,
                         'last_name' => $student->parent->last_name,
                         'phone' => $student->parent->phone,
                     ] : null,
                     'subclass' => [
-                        'subclass_name' => $subclassName,
-                        'class_name' => $className,
+                        'subclass_name' => $student->subclass->subclass_name ?? 'N/A',
+                        'class_name' => $student->subclass->class->class_name ?? 'N/A',
                     ],
+                    'sponsor' => $student->sponsor ? [
+                        'sponsor_name' => $student->sponsor->sponsor_name,
+                        'contact_person' => $student->sponsor->contact_person,
+                        'phone' => $student->sponsor->phone,
+                        'email' => $student->sponsor->email,
+                        'percentage' => $student->sponsorship_percentage,
+                    ] : null,
                 ];
 
-                // Get previous year debt for this student (only for active students, not graduated)
-                $previousYearDebt = ['school_fee_balance' => 0, 'other_contribution_balance' => 0];
-                if ($student->status === 'Active') {
-                    $previousYearDebt = $this->getPreviousYearBalance($student->studentID, $schoolID);
-                }
-                
-                // Get current fees for student's class to calculate base amounts
-                $classID = $student->subclass->classID ?? null;
-                $currentTuitionFees = 0;
-                $currentOtherFees = 0;
-                if ($classID) {
-                    $tuitionFees = Fee::where('schoolID', $schoolID)
-                        ->where('classID', $classID)
-                        ->where('fee_type', 'Tuition Fees')
-                        ->where('status', 'Active')
-                        ->get();
-                    $currentTuitionFees = $tuitionFees->sum('amount');
-                    
-                    $otherFees = Fee::where('schoolID', $schoolID)
-                        ->where('classID', $classID)
-                        ->where('fee_type', 'Other Fees')
-                        ->where('status', 'Active')
-                        ->get();
-                    $currentOtherFees = $otherFees->sum('amount');
-                }
-                
-                // Aggregate payments by fee type
-                $tuitionPayments = $filteredPayments->where('fee_type', 'Tuition Fees');
-                $otherFeePayments = $filteredPayments->where('fee_type', 'Other Fees');
+                $totalRequired = $payment ? $payment->amount_required : 0;
+                $totalPaid = $payment ? $payment->amount_paid : 0;
+                $totalBalance = $payment ? $payment->balance : 0;
+                $requiredPaid = $payment ? $payment->required_fees_paid : 0;
+                $requiredAmount = $payment ? $payment->required_fees_amount : 0;
+                $canStartSchool = $payment ? $payment->can_start_school : false;
 
-                // Calculate totals for Tuition Fees
-                // Use total_required from payment data (base + debt) if available, otherwise use amount_required
-                $tuitionRequired = 0;
-                foreach ($tuitionPayments as $payment) {
-                    // amount_required already includes debt from generate_control_numbers
-                    $tuitionRequired += $payment->amount_required;
-                }
-                
-                // For active students in active years, add debt if not already included in amount_required
-                // (This handles cases where payment was created before debt was added)
-                // For closed years, don't add debts - data stays as it was originally
-                if ($student->status === 'Active' && !$isClosedYear && $previousYearDebt['school_fee_balance'] > 0) {
-                    // Check if debt is already included by checking if amount_required > currentTuitionFees
-                    $totalFromPayments = $tuitionPayments->sum('amount_required');
-                    if ($totalFromPayments <= $currentTuitionFees) {
-                        // Debt not included, add it
-                        $tuitionRequired += $previousYearDebt['school_fee_balance'];
-                    }
-                }
-                
-                // Calculate paid amount from payment_records
-                $tuitionPaid = 0;
-                foreach ($tuitionPayments as $payment) {
-                    $paid = PaymentRecord::where('paymentID', $payment->paymentID)->sum('paid_amount');
-                    $tuitionPaid += $paid ?: 0;
-                }
-                $tuitionBalance = $tuitionRequired - $tuitionPaid;
-
-                // Calculate totals for Other Fees
-                $otherRequired = 0;
-                foreach ($otherFeePayments as $payment) {
-                    // amount_required already includes debt from generate_control_numbers
-                    $otherRequired += $payment->amount_required;
-                }
-                
-                // For active students in active years, add debt if not already included
-                // For closed years, don't add debts - data stays as it was originally
-                if ($student->status === 'Active' && !$isClosedYear && $previousYearDebt['other_contribution_balance'] > 0) {
-                    $totalFromPayments = $otherFeePayments->sum('amount_required');
-                    if ($totalFromPayments <= $currentOtherFees) {
-                        // Debt not included, add it
-                        $otherRequired += $previousYearDebt['other_contribution_balance'];
-                    }
-                }
-                
-                // Calculate paid amount from payment_records
-                $otherPaid = 0;
-                foreach ($otherFeePayments as $payment) {
-                    $paid = PaymentRecord::where('paymentID', $payment->paymentID)->sum('paid_amount');
-                    $otherPaid += $paid ?: 0;
-                }
-                $otherBalance = $otherRequired - $otherPaid;
-
-                // For graduated students, add debts from past academic years
-                if ($student->status === 'Graduated') {
-                    $tuitionRequired += $graduatedDebts['school_fee_balance'];
-                    $tuitionBalance += $graduatedDebts['school_fee_balance'];
-                    $otherRequired += $graduatedDebts['other_contribution_balance'];
-                    $otherBalance += $graduatedDebts['other_contribution_balance'];
+                // Calculate sponsorship amounts if applicable
+                $originalTotal = $totalRequired;
+                $sponsorAmount = 0;
+                if ($payment && $student->sponsor_id && $student->sponsorship_percentage > 0) {
+                    // Original total is the sum of fee amounts + debt
+                    $baseFeesSum = $payment->fee_payments ? $payment->fee_payments->sum('fee_total_amount') : 0;
+                    $originalTotal = $baseFeesSum + ($payment->debt ?? 0);
+                    $sponsorAmount = $originalTotal - $totalRequired;
                 }
 
-                // Total amounts
-                $totalRequired = $tuitionRequired + $otherRequired;
-                $totalPaid = $tuitionPaid + $otherPaid;
-                $totalBalance = $tuitionBalance + $otherBalance;
-
-                // Determine overall payment status
-                $overallStatus = 'Pending';
-                if ($totalBalance <= 0 && $totalPaid > 0) {
-                    $overallStatus = $totalPaid > $totalRequired ? 'Overpaid' : 'Paid';
-                } elseif ($totalPaid > 0 && $totalBalance > 0) {
-                    $overallStatus = 'Incomplete Payment';
-                } elseif ($totalPaid > 0 && $totalPaid < $totalRequired) {
-                    $overallStatus = 'Partial';
-                }
-
-                // Format all payments with installments and other fee details
-                $allPayments = [];
-                foreach ($filteredPayments as $payment) {
-                    // Calculate actual paid amount from payment_records
-                    // For closed years, show all payment records (historical data)
-                    // For active years, only show payment records for this year's control numbers
-                    $actualPaid = PaymentRecord::where('paymentID', $payment->paymentID)->sum('paid_amount');
-                    $actualPaid = $actualPaid ?: 0;
-                    
-                    // Calculate debt for this payment type
-                    // For closed years, don't show debts - data stays as it was originally
-                    $debt = 0;
-                    $baseAmountRequired = 0;
-                    
-                    if (!$isClosedYear) {
-                        // Only calculate debts for active years
-                        if ($payment->fee_type === 'Tuition Fees') {
-                            $debt = $previousYearDebt['school_fee_balance'];
-                            $baseAmountRequired = $currentTuitionFees; // Base fee for current year
-                        } elseif ($payment->fee_type === 'Other Fees') {
-                            $debt = $previousYearDebt['other_contribution_balance'];
-                            $baseAmountRequired = $currentOtherFees; // Base fee for current year
-                        }
-                    } else {
-                        // For closed years, use original amount_required as base (no debt calculation)
-                        // Extract base amount from amount_required (which may have included debt when created)
-                        // But for closed years, we show it as it was originally
-                        $baseAmountRequired = $payment->amount_required;
-                        $debt = 0; // No debt shown for closed years
-                    }
-                    
-                    // Total required = base amount + debt (for active years)
-                    // For closed years, total = base amount only (no debt)
-                    $totalAmountRequired = $isClosedYear ? $baseAmountRequired : ($baseAmountRequired + $debt);
-                    $actualBalance = $totalAmountRequired - $actualPaid;
-                    
-                    $paymentData = [
-                        'paymentID' => $payment->paymentID,
-                        'feeID' => $payment->feeID,
-                        'fee_type' => $payment->fee_type,
-                        'control_number' => $payment->control_number,
-                        'amount_required' => (float) $baseAmountRequired, // Base amount without debt
-                        'debt' => (float) $debt, // Debt from previous year
-                        'total_required' => (float) $totalAmountRequired, // Total = base + debt
-                        'amount_paid' => (float) $actualPaid,
-                        'balance' => (float) $actualBalance,
-                        'payment_status' => $payment->payment_status,
-                        'sms_sent' => $payment->sms_sent,
-                        'sms_sent_at' => $payment->sms_sent_at ? $payment->sms_sent_at->toDateTimeString() : null,
-                        'payment_date' => $payment->payment_date ? $payment->payment_date->toDateTimeString() : null,
-                        'payment_reference' => $payment->payment_reference,
-                        'notes' => $payment->notes,
-                    ];
-
-                    // Add installments for Tuition Fees
-                    if ($payment->fee && $payment->fee_type === 'Tuition Fees') {
-                        // Load installments if not already loaded
-                        if (!$payment->fee->relationLoaded('installments')) {
-                            $payment->fee->load('installments');
-                        }
-                        
-                        if ($payment->fee->installments && $payment->fee->installments->count() > 0) {
-                            // Get all installments (both Active and Inactive for display)
-                            $paymentData['installments'] = $payment->fee->installments->map(function($installment) {
-                                return [
-                                    'installmentID' => $installment->installmentID,
-                                    'installment_name' => $installment->installment_name,
-                                    'installment_type' => $installment->installment_type,
-                                    'installment_number' => $installment->installment_number,
-                                    'amount' => (float) $installment->amount,
-                                    'due_date' => $installment->due_date ? $installment->due_date->format('Y-m-d') : null,
-                                    'description' => $installment->description,
-                                    'status' => $installment->status,
-                                ];
-                            })->toArray();
-                        } else {
-                            $paymentData['installments'] = [];
-                        }
-                    } else {
-                        $paymentData['installments'] = [];
-                    }
-                    
-                    // Debug: Log if fee is missing
-                    if (!$payment->fee) {
-                        \Log::warning('Payment ' . $payment->paymentID . ' has no fee relationship');
-                    } elseif ($payment->fee_type === 'Tuition Fees' && (!$payment->fee->installments || $payment->fee->installments->count() === 0)) {
-                        \Log::info('Payment ' . $payment->paymentID . ' (Tuition Fees) has no installments. Fee ID: ' . $payment->fee->feeID);
-                    }
-
-                    // Add other fee details for Other Fees
-                    if ($payment->fee && $payment->fee_type === 'Other Fees') {
-                        // Load otherFeeDetails if not already loaded
-                        if (!$payment->fee->relationLoaded('otherFeeDetails')) {
-                            $payment->fee->load('otherFeeDetails');
-                        }
-                        
-                        if ($payment->fee->otherFeeDetails && $payment->fee->otherFeeDetails->count() > 0) {
-                            // Get all other fee details (both Active and Inactive for display)
-                            $paymentData['other_fee_details'] = $payment->fee->otherFeeDetails->map(function($detail) {
-                                return [
-                                    'detailID' => $detail->detailID,
-                                    'fee_detail_name' => $detail->fee_detail_name,
-                                    'amount' => (float) $detail->amount,
-                                    'description' => $detail->description,
-                                    'status' => $detail->status,
-                                ];
-                            })->toArray();
-                        } else {
-                            $paymentData['other_fee_details'] = [];
-                        }
-                    } else {
-                        $paymentData['other_fee_details'] = [];
-                    }
-                    
-                    // Debug: Log if fee is missing or has no details
-                    if (!$payment->fee) {
-                        \Log::warning('Payment ' . $payment->paymentID . ' has no fee relationship');
-                    } elseif ($payment->fee_type === 'Other Fees' && (!$payment->fee->otherFeeDetails || $payment->fee->otherFeeDetails->count() === 0)) {
-                        \Log::info('Payment ' . $payment->paymentID . ' (Other Fees) has no other fee details. Fee ID: ' . $payment->fee->feeID);
-                    }
-
-                    $allPayments[] = $paymentData;
-                }
-
-                // Add to filtered data (one row per student)
                 $filteredData[] = [
                     'index' => $index++,
                     'student' => $studentData,
-                    'academic_year' => $academicYearDisplay,
-                    'is_graduated' => $student->status === 'Graduated',
-                    'graduated_debts' => $graduatedDebts,
-                    'payments' => $allPayments,
+                    'payment' => $payment,
                     'totals' => [
-                        'tuition_required' => $tuitionRequired,
-                        'tuition_paid' => $tuitionPaid,
-                        'tuition_balance' => $tuitionBalance,
-                        'other_required' => $otherRequired,
-                        'other_paid' => $otherPaid,
-                        'other_balance' => $otherBalance,
                         'total_required' => $totalRequired,
                         'total_paid' => $totalPaid,
                         'total_balance' => $totalBalance,
-                        'overall_status' => $overallStatus,
-                    ]
+                        'required_paid' => $requiredPaid,
+                        'required_amount' => $requiredAmount,
+                        'can_start_school' => $canStartSchool,
+                        'original_total' => $originalTotal,
+                        'sponsor_amount' => $sponsorAmount,
+                        'overall_status' => $payment ? $payment->payment_status : 'Pending',
+                    ],
+                    'payment_status' => $payment ? $payment->payment_status : 'Pending',
+                    'verification_status' => $verificationStatus,
+                    'academic_year' => $year,
                 ];
             }
-
-            // Calculate statistics
-            $totalPayments = count($filteredData);
-            $pendingPayments = 0;
-            $incompletePayments = 0;
-            $paidPayments = 0;
             $totalRequired = 0;
             $totalPaid = 0;
             $totalBalance = 0;
+            $pendingPayments = 0;
+            $incompletePayments = 0;
+            $paidPayments = 0;
+            $overpaidPayments = 0;
 
             foreach ($filteredData as $item) {
                 if (isset($item['totals'])) {
@@ -1175,56 +861,30 @@ class FeesController extends Controller
                     $totalPaid += $totals['total_paid'] ?? 0;
                     $totalBalance += $totals['total_balance'] ?? 0;
 
-                    $overallStatus = $totals['overall_status'] ?? 'Pending';
-                    if ($overallStatus === 'Pending') {
+                    $status = $item['payment_status'] ?? 'Pending';
+                    if ($status === 'Pending' || $status === 'No Billing') {
                         $pendingPayments++;
-                    } elseif ($overallStatus === 'Incomplete Payment' || $overallStatus === 'Partial') {
+                    } elseif ($status === 'Incomplete Payment' || $status === 'Partial') {
                         $incompletePayments++;
-                    } elseif ($overallStatus === 'Paid') {
+                    } elseif ($status === 'Paid') {
                         $paidPayments++;
+                    } elseif ($status === 'Overpaid') {
+                        $overpaidPayments++;
                     }
-                }
-            }
-
-            // Calculate additional statistics
-            $totalStudents = count($filteredData);
-            $activeStudents = 0;
-            $graduatedStudents = 0;
-            $studentsWithDebt = 0;
-            $studentsPaid = 0;
-            
-            foreach ($filteredData as $item) {
-                $student = $item['student'];
-                if ($student['status'] === 'Active') {
-                    $activeStudents++;
-                } elseif ($student['status'] === 'Graduated') {
-                    $graduatedStudents++;
-                }
-                
-                $totals = $item['totals'] ?? [];
-                if (($totals['total_balance'] ?? 0) > 0) {
-                    $studentsWithDebt++;
-                }
-                if (($totals['total_paid'] ?? 0) > 0) {
-                    $studentsPaid++;
                 }
             }
 
             return response()->json([
                 'success' => true,
                 'data' => $filteredData,
-                'is_closed_year' => $isClosedYear,
-                'academic_year' => $academicYearDisplay,
+                'academic_year' => $year,
                 'statistics' => [
-                    'total_students' => $totalStudents,
-                    'active_students' => $activeStudents,
-                    'graduated_students' => $graduatedStudents,
-                    'students_with_debt' => $studentsWithDebt,
-                    'students_paid' => $studentsPaid,
-                    'total_payments' => $totalPayments,
+                    'total_students' => count($filteredData),
+                    'total_payments' => count($filteredData),
                     'pending_payments' => $pendingPayments,
                     'incomplete_payments' => $incompletePayments,
                     'paid_payments' => $paidPayments,
+                    'overpaid_payments' => $overpaidPayments,
                     'total_required' => $totalRequired,
                     'total_paid' => $totalPaid,
                     'total_balance' => $totalBalance
@@ -1248,155 +908,62 @@ class FeesController extends Controller
         $userType = Session::get('user_type');
         $schoolID = Session::get('schoolID');
 
-        if (!$userType || !$schoolID)
-        {
+        if (!$userType || !$schoolID) {
             return response()->json(['success' => false, 'message' => 'Access denied'], 403);
         }
 
         try {
             DB::beginTransaction();
 
-            // Get all active students only (exclude graduated students)
+            $requestedYear = $request->input('year');
+            $academicYearID = $this->getCurrentAcademicYearID($schoolID, $requestedYear);
+
+            if (!$academicYearID) {
+                return response()->json(['success' => false, 'message' => 'No academic year found. Please set an academic year first.'], 404);
+            }
+
+            // Get the year value for logging
+            $academicYear = DB::table('academic_years')->where('academic_yearID', $academicYearID)->first();
+            $yearValue = $academicYear ? $academicYear->year : 'N/A';
+
+            // Get all active students
             $students = Student::where('schoolID', $schoolID)
-                ->where('status', 'Active') // Only active students, excludes 'Graduated' status
-                ->with(['subclass.class', 'parent'])
+                ->where('status', 'Active')
                 ->get();
 
             if ($students->isEmpty()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No active students found to generate control numbers'
-                ], 404);
+                return response()->json(['success' => false, 'message' => 'No active students found.'], 404);
             }
 
             $generated = 0;
             $skipped = 0;
-
             foreach ($students as $student) {
-                $classID = $student->subclass->classID ?? null;
-                
-                if (!$classID) {
-                    $skipped++;
-                    continue;
-                }
+                // Check if student already has a control number for this academic year
+                $existingPayment = Payment::where('studentID', $student->studentID)
+                    ->where('academic_yearID', $academicYearID)
+                    ->whereNotNull('control_number')
+                    ->where('control_number', '!=', '')
+                    ->first();
 
-                // Get fees by type for student's class
-                $tuitionFees = Fee::where('schoolID', $schoolID)
-                    ->where('classID', $classID)
-                    ->where('fee_type', 'Tuition Fees')
-                    ->where('status', 'Active')
-                    ->get();
-
-                $otherFees = Fee::where('schoolID', $schoolID)
-                    ->where('classID', $classID)
-                    ->where('fee_type', 'Other Fees')
-                    ->where('status', 'Active')
-                    ->get();
-
-                // Generate control number for Tuition Fees if exists
-                if ($tuitionFees->count() > 0) {
-                    $tuitionAmount = $tuitionFees->sum('amount');
-                    
-                    // Get previous year balance (debt) for School Fee
-                    $previousYearBalance = $this->getPreviousYearBalance($student->studentID, $schoolID);
-                    $schoolFeeDebt = $previousYearBalance['school_fee_balance'];
-                    
-                    // Add previous year debt to current year amount
-                    $totalTuitionAmount = $tuitionAmount + $schoolFeeDebt;
-                    
-                    // Check if student already has tuition payment for current academic year
-                    $currentAcademicYearID = $this->getCurrentAcademicYearID($schoolID);
-                    $existingTuitionPayment = Payment::where('studentID', $student->studentID)
-                        ->where('fee_type', 'Tuition Fees')
-                        ->where(function($query) use ($currentAcademicYearID) {
-                            if ($currentAcademicYearID) {
-                                $query->where('academic_yearID', $currentAcademicYearID);
-                            } else {
-                                // If no academic year, check by current year
-                                $query->whereYear('created_at', date('Y'));
-                            }
-                        })
-                        ->where('payment_status', '!=', 'Paid')
-                        ->first();
-
-                    if (!$existingTuitionPayment) {
-                        $controlNumber = $this->generateControlNumber($schoolID, $student->studentID, 'TUITION');
-                        
-                        Payment::create([
-                            'schoolID' => $schoolID,
-                            'academic_yearID' => $this->getCurrentAcademicYearID($schoolID),
-                            'studentID' => $student->studentID,
-                            'feeID' => null, // Aggregate for all tuition fees
-                            'fee_type' => 'Tuition Fees',
-                            'control_number' => $controlNumber,
-                            'amount_required' => $totalTuitionAmount,
-                            'amount_paid' => 0,
-                            'balance' => $totalTuitionAmount,
-                            'payment_status' => 'Pending',
-                            'sms_sent' => 'No',
-                            'notes' => $schoolFeeDebt > 0 ? "Imeongezewa na deni la mwaka uliopita: " . number_format($schoolFeeDebt, 0) . " TZS" : null,
-                        ]);
-                        $generated++;
-                    }
-                }
-
-                // Generate control number for Other Fees if exists
-                if ($otherFees->count() > 0) {
-                    $otherAmount = $otherFees->sum('amount');
-                    
-                    // Get previous year balance (debt) for Other Contribution
-                    $previousYearBalance = $this->getPreviousYearBalance($student->studentID, $schoolID);
-                    $otherContributionDebt = $previousYearBalance['other_contribution_balance'];
-                    
-                    // Add previous year debt to current year amount
-                    $totalOtherAmount = $otherAmount + $otherContributionDebt;
-                    
-                    // Check if student already has other fees payment for current academic year
-                    $currentAcademicYearID = $this->getCurrentAcademicYearID($schoolID);
-                    $existingOtherPayment = Payment::where('studentID', $student->studentID)
-                        ->where('fee_type', 'Other Fees')
-                        ->where(function($query) use ($currentAcademicYearID) {
-                            if ($currentAcademicYearID) {
-                                $query->where('academic_yearID', $currentAcademicYearID);
-                            } else {
-                                // If no academic year, check by current year
-                                $query->whereYear('created_at', date('Y'));
-                            }
-                        })
-                        ->where('payment_status', '!=', 'Paid')
-                        ->first();
-
-                    if (!$existingOtherPayment) {
-                        $controlNumber = $this->generateControlNumber($schoolID, $student->studentID, 'OTHER');
-                        
-                        Payment::create([
-                            'schoolID' => $schoolID,
-                            'academic_yearID' => $this->getCurrentAcademicYearID($schoolID),
-                            'studentID' => $student->studentID,
-                            'feeID' => null, // Aggregate for all other fees
-                            'fee_type' => 'Other Fees',
-                            'control_number' => $controlNumber,
-                            'amount_required' => $totalOtherAmount,
-                            'amount_paid' => 0,
-                            'balance' => $totalOtherAmount,
-                            'payment_status' => 'Pending',
-                            'sms_sent' => 'No',
-                            'notes' => $otherContributionDebt > 0 ? "Imeongezewa na deni la mwaka uliopita: " . number_format($otherContributionDebt, 0) . " TZS" : null,
-                        ]);
-                        $generated++;
-                    }
-                }
-
-                if ($tuitionFees->count() == 0 && $otherFees->count() == 0) {
+                if (!$existingPayment) {
+                    // generateStudentBill updates if exists, creates if not
+                    $this->generateStudentBill($student, $academicYearID, $schoolID);
+                    $generated++;
+                } else {
                     $skipped++;
                 }
             }
 
             DB::commit();
 
+            $msg = "Control numbers generated for {$generated} new students for year {$yearValue}!";
+            if ($skipped > 0) {
+                $msg .= " ({$skipped} students skipped as they already have them)";
+            }
+
             return response()->json([
                 'success' => true,
-                'message' => "Control numbers generated successfully. Generated: {$generated}, Skipped: {$skipped}",
+                'message' => $msg,
                 'generated' => $generated,
                 'skipped' => $skipped
             ], 200);
@@ -1404,11 +971,7 @@ class FeesController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error generating control numbers: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Error generating control numbers: ' . $e->getMessage()
-            ], 500);
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
     }
 
@@ -1416,18 +979,22 @@ class FeesController extends Controller
      * Generate unique control number
      * Format: 3345XXXXX (9 digits total, starts with 3345, only digits)
      */
-    private function generateControlNumber($schoolID, $studentID, $type = 'TUITION')
+    private function generateControlNumber($schoolID, $studentID)
     {
         do {
             // Generate 5 random digits (0-9)
             $randomDigits = str_pad(rand(0, 99999), 5, '0', STR_PAD_LEFT);
-            
+
             // Format: 3345 + 5 random digits = 9 digits total
             $controlNumber = '3345' . $randomDigits;
-            
-            // Check if control number already exists
-            $exists = Payment::where('control_number', $controlNumber)->exists();
-        } while ($exists);
+
+            // Check if control number already exists in active payments
+            $existsActive = DB::table('payments')->where('control_number', $controlNumber)->exists();
+
+            // Check if control number exists in history
+            $existsHistory = DB::table('payments_history')->where('control_number', $controlNumber)->exists();
+
+        } while ($existsActive || $existsHistory);
 
         return $controlNumber;
     }
@@ -1440,206 +1007,244 @@ class FeesController extends Controller
         $userType = Session::get('user_type');
         $schoolID = Session::get('schoolID');
 
-        if (!$userType || !$schoolID)
-        {
+        if (!$userType || !$schoolID) {
             return response()->json(['success' => false, 'message' => 'Access denied'], 403);
         }
 
         try {
-            // Get school info
             $school = School::find($schoolID);
             if (!$school) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Shule haijapatikana'
-                ], 404);
+                return response()->json(['success' => false, 'message' => 'School not found'], 404);
             }
 
-            // Get all payments with pending status and not sent
-            $payments = Payment::where('schoolID', $schoolID)
-                ->where('payment_status', '!=', 'Paid')
-                ->where('sms_sent', 'No')
-                ->with(['student.parent', 'student.subclass.class', 'fee.installments', 'fee.otherFeeDetails'])
-                ->get();
+            // Get parameters
+            $requestedYear = $request->input('year');
+            $recipient = $request->input('recipient', 'parent'); // 'parent' | 'sponsor' | 'both'
+            $targetStatus = $request->input('target_payment_status', ''); // '', 'no_payment', 'incomplete', 'overpaid', 'pending'
+            $sponsorshipFilter = $request->input('sponsorship_filter', ''); // 'sponsored' | 'self' | ''
+
+            // Resolve academic year
+            $academicYearID = $this->getCurrentAcademicYearID($schoolID, $requestedYear);
+
+            // Base query for payments
+            $paymentsQuery = Payment::where('schoolID', $schoolID)
+                ->where('academic_yearID', $academicYearID)
+                ->with(['student.parent', 'student.sponsor', 'fee_payments']);
+
+            // Default previous behavior: only send new and not fully paid, when no explicit target provided
+            if (empty($targetStatus)) {
+                $paymentsQuery->where('sms_sent', 'No')
+                              ->where('payment_status', '!=', 'Paid');
+            }
+
+            // Filter by sponsorship if requested
+            if ($sponsorshipFilter === 'sponsored') {
+                $paymentsQuery->whereHas('student', function($q) {
+                    $q->whereNotNull('sponsor_id')->where('sponsorship_percentage', '>', 0);
+                });
+            } elseif ($sponsorshipFilter === 'self') {
+                $paymentsQuery->whereHas('student', function($q) {
+                    $q->whereNull('sponsor_id')->orWhere('sponsorship_percentage', '<=', 0);
+                });
+            }
+
+            $payments = $paymentsQuery->get();
 
             if ($payments->isEmpty()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Hakuna control numbers za kutuma. Tafadhali generate control numbers kwanza.'
-                ], 404);
+                return response()->json(['success' => false, 'message' => 'No new control numbers to send.'], 404);
             }
 
             $sent = 0;
             $failed = 0;
 
-            // Group payments by student to send one SMS per student with all control numbers
-            $paymentsByStudent = $payments->groupBy('studentID');
+            foreach ($payments as $payment) {
+                $student = $payment->student;
+                if (!$student) { $failed++; continue; }
 
-            foreach ($paymentsByStudent as $studentID => $studentPayments) {
-                $firstPayment = $studentPayments->first();
-                
-                if (!$firstPayment->student || !$firstPayment->student->parent || !$firstPayment->student->parent->phone) {
-                    $failed += $studentPayments->count();
-                    continue;
+                // Apply target payment status filter if provided
+                if (!empty($targetStatus)) {
+                    $statusOk = true;
+                    $amtRequired = (float) ($payment->amount_required ?? 0);
+                    $amtPaid = (float) ($payment->amount_paid ?? 0);
+                    $status = $payment->payment_status ?? 'Pending';
+
+                    switch ($targetStatus) {
+                        case 'no_payment':
+                            $statusOk = ($amtPaid <= 0.0);
+                            break;
+                        case 'incomplete':
+                            $statusOk = ($amtPaid > 0.0 && $amtPaid < $amtRequired) || in_array($status, ['Incomplete Payment', 'Partial']);
+                            break;
+                        case 'overpaid':
+                            $statusOk = ($amtPaid > $amtRequired) || $status === 'Overpaid';
+                            break;
+                        case 'pending':
+                            $statusOk = $status === 'Pending' || $status === 'No Billing';
+                            break;
+                        case 'paid':
+                            $statusOk = $status === 'Paid';
+                            break;
+                        default:
+                            $statusOk = true;
+                    }
+                    if (!$statusOk) { continue; }
                 }
 
-                $parent = $firstPayment->student->parent;
-                $student = $firstPayment->student;
-                $studentName = trim($student->first_name . ' ' . ($student->middle_name ? $student->middle_name . ' ' : '') . $student->last_name);
-                $parentName = trim($parent->first_name . ' ' . ($parent->last_name ?? ''));
+                $parent = $student->parent ?? null;
+                $sponsor = $student->sponsor ?? null;
 
-                // Build SMS message with all control numbers
-                $message = "{$school->school_name}\nMzazi {$parentName}, mwanafunzi {$studentName} ana control numbers zifuatazo:\n\n";
+                $studentName = trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''));
+                $controlNumber = $payment->control_number;
+                $requiredAmount = number_format($payment->required_fees_amount ?? 0, 0);
 
-                // Get Tuition Fees payment
-                $tuitionPayment = $studentPayments->where('fee_type', 'Tuition Fees')->first();
-                if ($tuitionPayment) {
-                    $message .= "ADA ZA MASOMO (TUITION FEES)\n";
-                    $message .= "Control Number: {$tuitionPayment->control_number}\n";
-                    $message .= "Kiasi: TZS " . number_format($tuitionPayment->amount_required, 0) . "/=\n";
-                    
-                    // Get tuition fees for student's class
-                    $tuitionFees = collect();
-                    if ($tuitionPayment->fee) {
-                        $tuitionFees = collect([$tuitionPayment->fee]);
+                // Determine recipients based on requested recipient mode
+                $sendToSponsor = false;
+                $sendToParent = false;
+                if ($recipient === 'auto') {
+                    $sendToSponsor = ($sponsor && !empty($sponsor->phone) && (float)($student->sponsorship_percentage ?? 0) > 0);
+                    $sendToParent = !$sendToSponsor && ($parent && !empty($parent->phone));
+                } elseif ($recipient === 'sponsor') {
+                    $sendToSponsor = true;
+                } elseif ($recipient === 'parent') {
+                    $sendToParent = true;
+                } elseif ($recipient === 'both') {
+                    $sendToSponsor = true;
+                    $sendToParent = true;
+                }
+
+                // Compute original total and sponsorship shares
+                $baseFeesSum = $payment->fee_payments ? $payment->fee_payments->sum('fee_total_amount') : 0;
+                $originalTotal = ($baseFeesSum + ($payment->debt ?? 0)) ?: ($payment->amount_required ?? 0);
+                $p = (float) ($student->sponsorship_percentage ?? 0);
+                $sponsorShareRaw = $p > 0 ? ($originalTotal * $p / 100.0) : 0;
+                $sponsorShare = (int) round($sponsorShareRaw, 0);
+                $parentShare = (int) max(0, round($originalTotal - $sponsorShare, 0));
+
+                $totalAmountForMsg = number_format($originalTotal, 0);
+                $parentShareMsg = number_format($parentShare, 0);
+                $sponsorShareMsg = number_format($sponsorShare, 0);
+
+                $sentAtLeastOne = false;
+
+                // Send to sponsor if requested and available
+                if ($sendToSponsor && $sponsor && $sponsor->phone && $p > 0) {
+                    $messageSponsor = "HABARI! {$school->school_name} inakujulisha kuwa unadhamini mwanafunzi {$studentName}. Control Number: {$controlNumber}. ";
+                    $messageSponsor .= "Unaombwa kulipa TZS {$sponsorShareMsg} (" . (int)$p . "% ya jumla TZS {$totalAmountForMsg}). Lipia kupitia benki au mitandao ya simu.";
+                    $res = $this->smsService->sendSms($sponsor->phone, $messageSponsor);
+                    if ($res['success']) { $sent++; $sentAtLeastOne = true; } else { $failed++; }
+                }
+
+                // Send to parent if requested and available
+                if ($sendToParent && $parent && $parent->phone) {
+                    if ($p > 0) {
+                        $messageParent = "HABARI! {$school->school_name} inakujulisha kuwa mwanafunzi {$studentName} ana Control Number: {$controlNumber}. ";
+                        $messageParent .= "Jumla ya ada/michango ni TZS {$totalAmountForMsg}. Mzazi unatakiwa kulipa TZS {$parentShareMsg}; kiasi kingine TZS {$sponsorShareMsg} kitalipwa na mdhamini. ";
+                        $messageParent .= "Kiasi cha lazima kuanza shule ni TZS {$requiredAmount}.";
                     } else {
-                        $classID = $student->subclass ? $student->subclass->classID : null;
-                        if ($classID) {
-                            $tuitionFees = Fee::where('schoolID', $schoolID)
-                                ->where('classID', $classID)
-                                ->where('fee_type', 'Tuition Fees')
-                                ->where('status', 'Active')
-                                ->with(['installments'])
-                                ->get();
-                        }
+                        $totalAmount = number_format($payment->amount_required ?? 0, 0);
+                        $messageParent = "HABARI! {$school->school_name} inakujulisha kuwa mwanafunzi {$studentName} amepangiwa Control Number: {$controlNumber}. ";
+                        $messageParent .= "Jumla ya ada na michango yote ni TZS {$totalAmount}. Kiasi cha lazima kuanza shule ni TZS {$requiredAmount}. Lipia kupitia benki au mitandao ya simu.";
                     }
-                    
-                    // Add installment information if available
-                    $allInstallments = collect();
-                    $allowPartialPayment = false;
-                    foreach ($tuitionFees as $fee) {
-                        if ($fee->allow_installments && $fee->installments && $fee->installments->count() > 0) {
-                            $allInstallments = $allInstallments->merge($fee->installments->where('status', 'Active'));
-                            if ($fee->allow_partial_payment) {
-                                $allowPartialPayment = true;
-                            }
-                        }
-                    }
-                    
-                    if ($allInstallments->count() > 0) {
-                        $message .= "Awamu:\n";
-                        foreach ($allInstallments as $installment) {
-                            $message .= "- " . $installment->installment_name . " (TZS " . number_format($installment->amount, 0) . "/=)\n";
-                        }
-                        $message = rtrim($message, "\n");
-                        if ($allowPartialPayment) {
-                            $message .= "\nUnaweza kulipa nusu nusu kwa kila awamu.";
-                        } else {
-                            $message .= "\nLazima ulipe kiasi kamili cha kila awamu.";
-                        }
-                    }
-                    $message .= "\n\n";
+                    $res = $this->smsService->sendSms($parent->phone, $messageParent);
+                    if ($res['success']) { $sent++; $sentAtLeastOne = true; } else { $failed++; }
                 }
 
-                // Get Other Fees payment
-                $otherFeePayment = $studentPayments->where('fee_type', 'Other Fees')->first();
-                if ($otherFeePayment) {
-                    $message .= "ADA ZINGINE (OTHER FEES)\n";
-                    $message .= "Control Number: {$otherFeePayment->control_number}\n";
-                    $message .= "Kiasi: TZS " . number_format($otherFeePayment->amount_required, 0) . "/=\n";
-                    
-                    // Get other fees for student's class
-                    $otherFees = collect();
-                    if ($otherFeePayment->fee) {
-                        $otherFees = collect([$otherFeePayment->fee]);
-                    } else {
-                        $classID = $student->subclass ? $student->subclass->classID : null;
-                        if ($classID) {
-                            $otherFees = Fee::where('schoolID', $schoolID)
-                                ->where('classID', $classID)
-                                ->where('fee_type', 'Other Fees')
-                                ->where('status', 'Active')
-                                ->with(['otherFeeDetails', 'installments'])
-                                ->get();
-                        }
-                    }
-                    
-                    // Add other fees details if available
-                    $allOtherFeeDetails = collect();
-                    foreach ($otherFees as $fee) {
-                        if ($fee->otherFeeDetails && $fee->otherFeeDetails->count() > 0) {
-                            $allOtherFeeDetails = $allOtherFeeDetails->merge($fee->otherFeeDetails->where('status', 'Active'));
-                        }
-                    }
-                    
-                    if ($allOtherFeeDetails->count() > 0) {
-                        $message .= "Ada hii inajumuisha:\n";
-                        foreach ($allOtherFeeDetails as $detail) {
-                            $message .= "- " . $detail->fee_detail_name . " (TZS " . number_format($detail->amount, 0) . "/=)\n";
-                        }
-                        $message = rtrim($message, "\n");
-                    }
-                    
-                    // Add installment information if available for Other Fees
-                    $allInstallments = collect();
-                    $allowPartialPayment = false;
-                    foreach ($otherFees as $fee) {
-                        if ($fee->allow_installments && $fee->installments && $fee->installments->count() > 0) {
-                            $allInstallments = $allInstallments->merge($fee->installments->where('status', 'Active'));
-                            if ($fee->allow_partial_payment) {
-                                $allowPartialPayment = true;
-                            }
-                        }
-                    }
-                    
-                    if ($allInstallments->count() > 0) {
-                        $message .= "\nAwamu:\n";
-                        foreach ($allInstallments as $installment) {
-                            $message .= "- " . $installment->installment_name . " (TZS " . number_format($installment->amount, 0) . "/=)\n";
-                        }
-                        $message = rtrim($message, "\n");
-                        if ($allowPartialPayment) {
-                            $message .= "\nUnaweza kulipa nusu nusu kwa kila awamu.";
-                        } else {
-                            $message .= "\nLazima ulipe kiasi kamili cha kila awamu.";
-                        }
-                    }
-                    $message .= "\n\n";
-                }
-
-                $message .= "Tafadhali lipa kwa kutumia control numbers hizi kwenye benki yoyote.";
-
-                // Send SMS
-                $smsResult = $this->smsService->sendSms($parent->phone, $message);
-
-                if ($smsResult['success']) {
-                    // Update SMS sent status for all payments of this student
-                    foreach ($studentPayments as $payment) {
-                        $payment->sms_sent = 'Yes';
-                        $payment->sms_sent_at = now();
-                        $payment->save();
-                    }
-                    $sent++;
+                if ($sentAtLeastOne) {
+                    $payment->update(['sms_sent' => 'Yes', 'sms_sent_at' => now()]);
                 } else {
-                    $failed++;
-                    Log::error("Failed to send SMS to parent {$parent->parentID}: " . $smsResult['message']);
+                    // If neither parent nor sponsor had a phone, count as failed once
+                    if (!(($parent && $parent->phone) || ($sponsor && $sponsor->phone))) {
+                        $failed++;
+                    }
                 }
             }
 
             return response()->json([
                 'success' => true,
-                'message' => "SMS zimetumwa kwa mafanikio. Zimetumwa: {$sent}, Zimeshindwa: {$failed}",
+                'message' => "SMS zimetumwa! Imefanikiwa: {$sent}, Imefeli: {$failed}",
                 'sent' => $sent,
                 'failed' => $failed
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Error sending control numbers SMS: ' . $e->getMessage());
-            
+            Log::error('Error sending SMS: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Send debt reminders to all parents with outstanding balances
+     */
+    public function send_debt_reminders_sms(Request $request)
+    {
+        $userType = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$userType || !$schoolID) {
+            return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+        }
+
+        try {
+            $school = DB::table('schools')->where('schoolID', $schoolID)->first();
+            if (!$school) {
+                return response()->json(['success' => false, 'message' => 'School not found'], 404);
+            }
+
+            // Get requested year or active year
+            $requestedYear = $request->input('year');
+            $academicYearID = $this->getCurrentAcademicYearID($schoolID, $requestedYear);
+
+            // Get all payments with balance > 0
+            $payments = \App\Models\Payment::where('schoolID', $schoolID)
+                ->where('academic_yearID', $academicYearID)
+                ->where('balance', '>', 0)
+                ->with(['student.parent'])
+                ->get();
+
+            if ($payments->isEmpty()) {
+                return response()->json(['success' => false, 'message' => 'Hakuna mwanafunzi mwenye deni la kutumiwa ujumbe.'], 404);
+            }
+
+            $sent = 0;
+            $failed = 0;
+
+            foreach ($payments as $payment) {
+                $student = $payment->student;
+                $parent = $student ? $student->parent : null;
+
+                if (!$parent || !$parent->phone) {
+                    $failed++;
+                    continue;
+                }
+
+                $studentName = $student->first_name . ' ' . $student->last_name;
+                $controlNumber = $payment->control_number;
+                $balance = number_format($payment->balance, 0);
+
+                // Kiswahili Message for Debt Reminder
+                $message = "HABARI! {$school->school_name} inakujulisha kuwa mwanafunzi {$studentName} ana deni la ada/michango TZS {$balance}. ";
+                $message .= "Tafadhali kamilisha malipo kupitia Control Number: {$controlNumber}. Asante.";
+
+                // Send SMS using the service
+                $smsResult = $this->smsService->sendSms($parent->phone, $message);
+
+                if ($smsResult['success']) {
+                    $sent++;
+                } else {
+                    $failed++;
+                }
+            }
+
             return response()->json([
-                'success' => false,
-                'message' => 'Kosa la kutuma SMS: ' . $e->getMessage()
-            ], 500);
+                'success' => true,
+                'message' => "SMS za kukumbusha deni zimetumwa! Imefanikiwa: {$sent}, Imefeli: {$failed}",
+                'sent' => $sent,
+                'failed' => $failed
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Error sending debt reminders: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
     }
 
@@ -1651,181 +1256,50 @@ class FeesController extends Controller
         $userType = Session::get('user_type');
         $schoolID = Session::get('schoolID');
 
-        if (!$userType || !$schoolID)
-        {
+        if (!$userType || !$schoolID) {
             return response()->json(['success' => false, 'message' => 'Access denied'], 403);
         }
 
         try {
             $payment = Payment::where('paymentID', $paymentID)
                 ->where('schoolID', $schoolID)
-                ->with(['student.parent', 'student.subclass.class', 'school', 'fee.installments', 'fee.otherFeeDetails'])
+                ->with(['student.parent', 'school'])
                 ->first();
 
             if (!$payment) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Payment haijapatikana'
-                ], 404);
+                return response()->json(['success' => false, 'message' => 'Payment not found'], 404);
             }
 
-            if (!$payment->student || !$payment->student->parent || !$payment->student->parent->phone) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Mwanafunzi au mzazi hajapatikana au hakuna namba ya simu'
-                ], 404);
-            }
-
-            $parent = $payment->student->parent;
             $student = $payment->student;
+            $parent = $student ? $student->parent : null;
             $school = $payment->school;
-            $studentName = trim($student->first_name . ' ' . ($student->middle_name ? $student->middle_name . ' ' : '') . $student->last_name);
-            $parentName = trim($parent->first_name . ' ' . ($parent->last_name ?? ''));
 
-            // Build SMS message based on fee type
-            $message = "{$school->school_name}. Mzazi {$parentName}, mwanafunzi {$studentName} ana control number: {$payment->control_number} kwa ajili ya malipo ya ";
-            
-            if ($payment->fee_type == 'Tuition Fees') {
-                // Tuition Fees message with installments
-                $message .= "ada za masomo (Tuition Fees). Kiasi kinachohitajika: TZS " . number_format($payment->amount_required, 2);
-                
-                // Get tuition fees for student's class if payment has no specific fee
-                $tuitionFees = collect();
-                if ($payment->fee) {
-                    $tuitionFees = collect([$payment->fee]);
-                } else {
-                    // Get all tuition fees for student's class
-                    $classID = $student->subclass ? $student->subclass->classID : null;
-                    if ($classID) {
-                        $tuitionFees = Fee::where('schoolID', $schoolID)
-                            ->where('classID', $classID)
-                            ->where('fee_type', 'Tuition Fees')
-                            ->where('status', 'Active')
-                            ->with(['installments'])
-                            ->get();
-                    }
-                }
-                
-                // Add installment information if available
-                $allInstallments = collect();
-                $allowPartialPayment = false;
-                foreach ($tuitionFees as $fee) {
-                    if ($fee->allow_installments && $fee->installments && $fee->installments->count() > 0) {
-                        $allInstallments = $allInstallments->merge($fee->installments->where('status', 'Active'));
-                        if ($fee->allow_partial_payment) {
-                            $allowPartialPayment = true;
-                        }
-                    }
-                }
-                
-                if ($allInstallments->count() > 0) {
-                    $message .= "\nAda hii inaweza kulipwa kwa awamu " . $allInstallments->count() . ":\n";
-                    foreach ($allInstallments as $installment) {
-                        $message .= "- " . $installment->installment_name . " (TZS " . number_format($installment->amount, 0) . "/=)\n";
-                    }
-                    // Remove last newline
-                    $message = rtrim($message, "\n");
-                    
-                    if ($allowPartialPayment) {
-                        $message .= "\nUnaweza kulipa nusu nusu kwa kila awamu.";
-                    } else {
-                        $message .= "\nLazima ulipe kiasi kamili cha kila awamu.";
-                    }
-                }
-            } else {
-                // Other Fees message with details
-                $message .= "ada zingine (Other Fees).\nKiasi kinachohitajika: TZS " . number_format($payment->amount_required, 0) . "/=";
-                
-                // Get other fees for student's class if payment has no specific fee
-                $otherFees = collect();
-                if ($payment->fee) {
-                    $otherFees = collect([$payment->fee]);
-                } else {
-                    // Get all other fees for student's class
-                    $classID = $student->subclass ? $student->subclass->classID : null;
-                    if ($classID) {
-                        $otherFees = Fee::where('schoolID', $schoolID)
-                            ->where('classID', $classID)
-                            ->where('fee_type', 'Other Fees')
-                            ->where('status', 'Active')
-                            ->with(['otherFeeDetails', 'installments'])
-                            ->get();
-                    }
-                }
-                
-                // Add other fees details if available
-                $allOtherFeeDetails = collect();
-                foreach ($otherFees as $fee) {
-                    if ($fee->otherFeeDetails && $fee->otherFeeDetails->count() > 0) {
-                        $allOtherFeeDetails = $allOtherFeeDetails->merge($fee->otherFeeDetails->where('status', 'Active'));
-                    }
-                }
-                
-                if ($allOtherFeeDetails->count() > 0) {
-                    $message .= ". Ada hii inajumuisha:\n";
-                    foreach ($allOtherFeeDetails as $detail) {
-                        $message .= "- " . $detail->fee_detail_name . " (TZS " . number_format($detail->amount, 0) . "/=)\n";
-                    }
-                    // Remove last newline
-                    $message = rtrim($message, "\n");
-                }
-                
-                // Add installment information if available for Other Fees
-                $allInstallments = collect();
-                $allowPartialPayment = false;
-                foreach ($otherFees as $fee) {
-                    if ($fee->allow_installments && $fee->installments && $fee->installments->count() > 0) {
-                        $allInstallments = $allInstallments->merge($fee->installments->where('status', 'Active'));
-                        if ($fee->allow_partial_payment) {
-                            $allowPartialPayment = true;
-                        }
-                    }
-                }
-                
-                if ($allInstallments->count() > 0) {
-                    $message .= "\nAda hii inaweza kulipwa kwa awamu " . $allInstallments->count() . ":\n";
-                    foreach ($allInstallments as $installment) {
-                        $message .= "- " . $installment->installment_name . " (TZS " . number_format($installment->amount, 0) . "/=)\n";
-                    }
-                    // Remove last newline
-                    $message = rtrim($message, "\n");
-                    
-                    if ($allowPartialPayment) {
-                        $message .= "\nUnaweza kulipa nusu nusu kwa kila awamu.";
-                    } else {
-                        $message .= "\nLazima ulipe kiasi kamili cha kila awamu.";
-                    }
-                }
+            if (!$student || !$student->parent || !$student->parent->phone) {
+                return response()->json(['success' => false, 'message' => 'Parent or phone number not found'], 404);
             }
-            
-            $message .= "\n\nTafadhali lipa kwa kutumia control number hii kwenye benki yoyote.";
 
-            // Send SMS
+            $studentName = $student->first_name . ' ' . $student->last_name;
+            $controlNumber = $payment->control_number;
+            $totalAmount = number_format($payment->amount_required, 0);
+            $requiredAmount = number_format($payment->required_fees_amount, 0);
+
+            // Kiswahili Template for Fee Assigned
+            $message = "HABARI! Shule ya {$school->school_name} inakujulisha kuwa mwanafunzi {$studentName} amepangiwa Control Number: {$controlNumber}. \n";
+            $message .= "Kiasi cha lazima kuanza shule ni TZS {$requiredAmount}. Jumla ya ada na michango yote ni TZS {$totalAmount}.\n";
+            $message .= "Lipia kupitia benki (CRDB/NMB) au mitandao ya simu kwa kutumia Control Number hiyo. Asante.";
+
             $smsResult = $this->smsService->sendSms($parent->phone, $message);
 
             if ($smsResult['success']) {
-                $payment->sms_sent = 'Yes';
-                $payment->sms_sent_at = now();
-                $payment->save();
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Control number imetumwa tena kwa mafanikio'
-                ], 200);
+                $payment->update(['sms_sent' => 'Yes', 'sms_sent_at' => now()]);
+                return response()->json(['success' => true, 'message' => 'Control Number resent successfully.'], 200);
             } else {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Kushindwa kutuma SMS: ' . $smsResult['message']
-                ], 500);
+                return response()->json(['success' => false, 'message' => 'Failed to send SMS: ' . $smsResult['message']], 500);
             }
 
         } catch (\Exception $e) {
             Log::error('Error resending control number: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Kosa la kutuma SMS: ' . $e->getMessage()
-            ], 500);
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
     }
 
@@ -1837,8 +1311,7 @@ class FeesController extends Controller
         $userType = Session::get('user_type');
         $schoolID = Session::get('schoolID');
 
-        if (!$userType || !$schoolID)
-        {
+        if (!$userType || !$schoolID) {
             return response()->json(['success' => false, 'message' => 'Access denied'], 403);
         }
 
@@ -1857,52 +1330,43 @@ class FeesController extends Controller
         }
 
         try {
+            DB::beginTransaction();
+
             $payment = Payment::where('paymentID', $paymentID)
                 ->where('schoolID', $schoolID)
                 ->first();
 
             if (!$payment) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Payment haijapatikana'
-                ], 404);
+                return response()->json(['success' => false, 'message' => 'Payment not found'], 404);
             }
 
-            $amountPaid = $request->amount_paid;
-            $totalAmountPaid = $payment->amount_paid + $amountPaid;
-            $newBalance = $payment->amount_required - $totalAmountPaid;
-            
-            // Update payment
-            $payment->amount_paid = $totalAmountPaid;
-            $payment->balance = $newBalance;
-            $payment->payment_reference = $request->payment_reference ?? $payment->payment_reference;
-            $payment->notes = $request->notes ?? $payment->notes;
-            $payment->payment_date = now();
+            // Create a payment record
+            $paymentRecord = PaymentRecord::create([
+                'paymentID' => $payment->paymentID,
+                'paid_amount' => $request->amount_paid,
+                'payment_date' => now(),
+                'payment_source' => 'Bank/System',
+                'reference_number' => $request->payment_reference,
+                'notes' => $request->notes,
+                'is_verified' => true,
+                'verified_at' => now(),
+            ]);
 
-            // Update status
-            if ($newBalance <= 0) {
-                $payment->payment_status = $newBalance < 0 ? 'Overpaid' : 'Paid';
-            } else if ($totalAmountPaid > 0 && $totalAmountPaid < $payment->amount_required) {
-                $payment->payment_status = 'Incomplete Payment';
-            } else {
-                $payment->payment_status = 'Pending';
-            }
+            // Allocate payment across fees
+            $this->allocatePayment($payment);
 
-            $payment->save();
+            DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Payment status imesasishwa kwa mafanikio',
-                'payment' => $payment->load(['student', 'fee'])
+                'message' => 'Payment received and allocated successfully.',
+                'payment' => $payment->fresh(['student'])
             ], 200);
 
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::error('Error updating payment status: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Kosa la kusasisha payment: ' . $e->getMessage()
-            ], 500);
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
     }
 
@@ -1941,10 +1405,10 @@ class FeesController extends Controller
                 ->where('status', 'Active')
                 ->orderBy('year', 'desc')
                 ->first();
-            
+
             $currentYear = $activeAcademicYear ? $activeAcademicYear->year : date('Y');
             $academicYearID = $activeAcademicYear ? $activeAcademicYear->academic_yearID : null;
-            
+
             // Get payments for active academic year - filter out empty/null payments
             $payments = $student->payments()
                 ->where(function($query) use ($academicYearID, $currentYear) {
@@ -1966,72 +1430,15 @@ class FeesController extends Controller
             }
 
             // Calculate totals
-            $tuitionPayments = $payments->where('fee_type', 'Tuition Fees');
-            $otherFeePayments = $payments->where('fee_type', 'Other Fees');
+            $payment = $payments->first(); // Get the first (unified) payment record
+            $totalRequired = $payment ? $payment->amount_required : 0;
+            $totalPaid = $payment ? $payment->amount_paid : 0;
+            $totalBalance = $payment ? $payment->balance : 0;
+            $requiredPaid = $payment ? $payment->required_fees_paid : 0;
+            $requiredAmount = $payment ? $payment->required_fees_amount : 0;
 
-            // Get debt amounts
-            $tuitionDebt = $previousYearDebt['school_fee_balance'];
-            $otherDebt = $previousYearDebt['other_contribution_balance'];
-            
-            // Calculate base amounts from fees table (not from payment amount_required which may include debt)
-            // Get student's class
-            $classID = $student->subclass->classID ?? null;
-            $tuitionBaseRequired = 0;
-            $otherBaseRequired = 0;
-            
-            if ($classID) {
-                // Get current fees for student's class
-                $tuitionFees = Fee::where('schoolID', $schoolID)
-                    ->where('classID', $classID)
-                    ->where('fee_type', 'Tuition Fees')
-                    ->where('status', 'Active')
-                    ->get();
-                $tuitionBaseRequired = $tuitionFees->sum('amount');
-                
-                $otherFees = Fee::where('schoolID', $schoolID)
-                    ->where('classID', $classID)
-                    ->where('fee_type', 'Other Fees')
-                    ->where('status', 'Active')
-                    ->get();
-                $otherBaseRequired = $otherFees->sum('amount');
-            }
-            
-            // If no fees found, fallback to payment amount_required (but subtract debt if it was included)
-            if ($tuitionBaseRequired == 0 && $tuitionPayments->count() > 0) {
-                $paymentAmountRequired = $tuitionPayments->sum('amount_required');
-                // If payment amount_required is greater than debt, assume debt was included
-                if ($paymentAmountRequired > $tuitionDebt) {
-                    $tuitionBaseRequired = $paymentAmountRequired - $tuitionDebt;
-                } else {
-                    $tuitionBaseRequired = $paymentAmountRequired;
-                }
-            }
-            
-            if ($otherBaseRequired == 0 && $otherFeePayments->count() > 0) {
-                $paymentAmountRequired = $otherFeePayments->sum('amount_required');
-                // If payment amount_required is greater than debt, assume debt was included
-                if ($paymentAmountRequired > $otherDebt) {
-                    $otherBaseRequired = $paymentAmountRequired - $otherDebt;
-                } else {
-                    $otherBaseRequired = $paymentAmountRequired;
-                }
-            }
-            
-            // Calculate total required (base + debt)
-            $tuitionRequired = $tuitionBaseRequired + $tuitionDebt;
-            $otherRequired = $otherBaseRequired + $otherDebt;
-            
-            // Get paid amounts
-            $tuitionPaid = $tuitionPayments->sum('amount_paid');
-            $otherPaid = $otherFeePayments->sum('amount_paid');
-            
-            // Calculate balances
-            $tuitionBalance = $tuitionRequired - $tuitionPaid;
-            $otherBalance = $otherRequired - $otherPaid;
-
-            $totalRequired = $tuitionRequired + $otherRequired;
-            $totalPaid = $tuitionPaid + $otherPaid;
-            $totalBalance = $tuitionBalance + $otherBalance;
+            // Get fee breakdown
+            $feeBreakdown = $payment ? $payment->fee_payments()->orderBy('display_order')->get() : collect();
 
             // School logo path
             $schoolLogo = $school->school_logo ? public_path($school->school_logo) : null;
@@ -2040,22 +1447,14 @@ class FeesController extends Controller
             $data = [
                 'student' => $student,
                 'school' => $school,
-                'payments' => $payments,
-                'tuitionPayments' => $tuitionPayments,
-                'otherFeePayments' => $otherFeePayments,
-                'tuitionBaseRequired' => $tuitionBaseRequired,
-                'tuitionDebt' => $tuitionDebt,
-                'tuitionRequired' => $tuitionRequired,
-                'tuitionPaid' => $tuitionPaid,
-                'tuitionBalance' => $tuitionBalance,
-                'otherBaseRequired' => $otherBaseRequired,
-                'otherDebt' => $otherDebt,
-                'otherRequired' => $otherRequired,
-                'otherPaid' => $otherPaid,
-                'otherBalance' => $otherBalance,
+                'payment' => $payment,
+                'feeBreakdown' => $feeBreakdown,
                 'totalRequired' => $totalRequired,
                 'totalPaid' => $totalPaid,
                 'totalBalance' => $totalBalance,
+                'requiredAmount' => $requiredAmount,
+                'requiredPaid' => $requiredPaid,
+                'previousYearDebt' => $previousYearDebt,
                 'schoolLogo' => $schoolLogo,
                 'year' => $currentYear,
             ];
@@ -2065,22 +1464,22 @@ class FeesController extends Controller
                 // Method 1: Try using the facade
                 $pdf = PDF::loadView('Admin.pdf.payment_invoice', $data);
                 $pdf->setPaper('A4', 'portrait');
-                
+
                 $filename = 'Payment_Invoice_' . str_replace(' ', '_', $student->admission_number) . '_' . $currentYear . '.pdf';
-                
+
                 return $pdf->download($filename);
             } catch (\Exception $facadeError) {
                 // Method 2: Fallback to direct Dompdf class
                 try {
                     $dompdf = new \Dompdf\Dompdf();
                     $html = view('Admin.pdf.payment_invoice', $data)->render();
-                    
+
                     $dompdf->loadHtml($html);
                     $dompdf->setPaper('A4', 'portrait');
                     $dompdf->render();
-                    
+
                     $filename = 'Payment_Invoice_' . str_replace(' ', '_', $student->admission_number) . '_' . $currentYear . '.pdf';
-                    
+
                     return response()->streamDownload(function() use ($dompdf) {
                         echo $dompdf->output();
                     }, $filename, [
@@ -2110,7 +1509,6 @@ class FeesController extends Controller
         }
 
         try {
-            // Build validation rules based on payment source
             $rules = [
                 'paymentID' => 'required|exists:payments,paymentID',
                 'paid_amount' => 'required|numeric|min:0.01',
@@ -2118,118 +1516,128 @@ class FeesController extends Controller
                 'payment_source' => 'required|in:Cash,Bank',
                 'notes' => 'nullable|string',
             ];
-            
-            // Reference number required only for Bank payments
+
             if ($request->payment_source === 'Bank') {
-                $rules['reference_number'] = 'required|string|unique:payment_records,reference_number';
+                $rules['reference_number'] = 'required|string';
                 $rules['bank_name'] = 'required|string|max:200';
-            } else {
-                $rules['reference_number'] = 'nullable|string|unique:payment_records,reference_number';
-                $rules['bank_name'] = 'nullable|string|max:200';
             }
-            
+
             $validator = Validator::make($request->all(), $rules);
 
             if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $validator->errors()
-                ], 422);
+                return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $validator->errors()], 422);
             }
 
-            // Get payment
             $payment = Payment::where('schoolID', $schoolID)
                 ->where('paymentID', $request->paymentID)
                 ->first();
 
             if (!$payment) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Payment record not found.'
-                ], 404);
-            }
-
-            // Check if payment belongs to a closed academic year
-            if ($payment->academic_yearID) {
-                $academicYear = DB::table('academic_years')
-                    ->where('academic_yearID', $payment->academic_yearID)
-                    ->first();
-                
-                if ($academicYear && $academicYear->status === 'Closed') {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Cannot record payment for a closed academic year. Please record payments only for the active academic year.'
-                    ], 403);
-                }
+                return response()->json(['success' => false, 'message' => 'Payment record not found.'], 404);
             }
 
             DB::beginTransaction();
 
-            // Create payment record
-            $paymentRecordData = [
+            $paymentRecord = PaymentRecord::create([
                 'paymentID' => $payment->paymentID,
                 'paid_amount' => $request->paid_amount,
                 'payment_date' => $request->payment_date,
                 'payment_source' => $request->payment_source,
+                'reference_number' => $request->reference_number,
+                'bank_name' => $request->bank_name,
                 'notes' => $request->notes,
-            ];
-            
-            // Add reference number if provided
-            if ($request->filled('reference_number')) {
-                $paymentRecordData['reference_number'] = $request->reference_number;
-            }
-            
-            // Add bank name if provided
-            if ($request->filled('bank_name')) {
-                $paymentRecordData['bank_name'] = $request->bank_name;
-            }
-            
-            $paymentRecord = PaymentRecord::create($paymentRecordData);
-
-            // Update payment totals from payment_records
-            $totalPaid = PaymentRecord::where('paymentID', $payment->paymentID)
-                ->sum('paid_amount');
-
-            $balance = $payment->amount_required - $totalPaid;
-
-            // Update payment status
-            $paymentStatus = 'Pending';
-            if ($balance <= 0) {
-                $paymentStatus = $totalPaid > $payment->amount_required ? 'Overpaid' : 'Paid';
-            } elseif ($totalPaid > 0) {
-                $paymentStatus = 'Incomplete Payment';
-            }
-
-            $payment->update([
-                'amount_paid' => $totalPaid,
-                'balance' => $balance,
-                'payment_status' => $paymentStatus,
-                'payment_date' => $request->payment_date,
             ]);
+
+            // Allocate payment across fees
+            $this->allocatePayment($payment);
 
             DB::commit();
 
+            // --- SYNC TO INCOME TABLE ---
+            // Only sync if payment is verified (for now, assume all are verified on record)
+            // Avoid duplicate: Only add for this payment record (not for all history)
+            try {
+                $student = $payment->student;
+                $payerName = $student ? ($student->first_name . ' ' . $student->last_name) : 'Student';
+                \App\Models\Income::create([
+                    'schoolID' => $payment->schoolID,
+                    'receipt_number' => 'AUTO-FEE-' . $payment->paymentID . '-' . now()->format('YmdHis'),
+                    'date' => $request->payment_date,
+                    'income_category' => 'Tuition & Fees',
+                    'description' => 'Student fee payment (auto-sync)',
+                    'amount' => $request->paid_amount,
+                    'payment_method' => $request->payment_source,
+                    'payer_name' => $payerName,
+                    'entered_by' => auth()->id() ?? 1,
+                ]);
+            } catch (\Exception $ex) {
+                \Log::error('Failed to sync payment to Income: ' . $ex->getMessage());
+            }
+
             return response()->json([
                 'success' => true,
-                'message' => 'Payment recorded successfully',
+                'message' => 'Payment recorded and allocated.',
                 'payment_record' => $paymentRecord
             ]);
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $e->errors()
-            ], 422);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Error recording payment: ' . $e->getMessage()
-            ], 500);
+            Log::error('Error recording payment: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Allocate all paid amounts for a payment across student fees based on priority.
+     */
+    private function allocatePayment($payment)
+    {
+        $totalPaid = PaymentRecord::where('paymentID', $payment->paymentID)
+            ->where('is_verified', true)
+            ->sum('paid_amount') ?? 0;
+        $remainingToAllocate = $totalPaid;
+
+        // Get all student fee payments, ordered by priority (must_start_pay) and display_order
+        $fee_payments = StudentFeePayment::where('paymentID', $payment->paymentID)
+            ->join('fees', 'student_fee_payments.feeID', '=', 'fees.feeID')
+            ->select('student_fee_payments.*', 'fees.must_start_pay', 'fees.display_order')
+            ->orderBy('fees.must_start_pay', 'desc')
+            ->orderBy('fees.display_order', 'asc')
+            ->get();
+
+        foreach ($fee_payments as $feePayment) {
+            $amountToAllocate = min($remainingToAllocate, $feePayment->fee_total_amount);
+            $feePayment->update([
+                'amount_paid' => $amountToAllocate,
+                'balance' => $feePayment->fee_total_amount - $amountToAllocate
+            ]);
+            $remainingToAllocate -= $amountToAllocate;
+        }
+
+        // Update overall payment record totals
+        $requiredPaid = StudentFeePayment::where('paymentID', $payment->paymentID)
+            ->join('fees', 'student_fee_payments.feeID', '=', 'fees.feeID')
+            ->where('fees.must_start_pay', 1)
+            ->sum('student_fee_payments.amount_paid') ?? 0;
+
+        $balance = $payment->amount_required - $totalPaid;
+        $paymentStatus = 'Pending';
+        if ($balance <= 0) {
+            $paymentStatus = $totalPaid > $payment->amount_required ? 'Overpaid' : 'Paid';
+        } elseif ($totalPaid > 0) {
+            $paymentStatus = 'Incomplete Payment';
+        }
+
+        $canStartSchool = ($requiredPaid >= $payment->required_fees_amount);
+
+        $payment->update([
+            'amount_paid' => $totalPaid,
+            'balance' => $balance,
+            'required_fees_paid' => $requiredPaid,
+            'can_start_school' => $canStartSchool,
+            'payment_status' => $paymentStatus,
+            'payment_date' => now(),
+        ]);
     }
 
     /**
@@ -2275,6 +1683,7 @@ class FeesController extends Controller
                     'payment_source' => $record->payment_source,
                     'bank_name' => $record->bank_name,
                     'notes' => $record->notes,
+                    'is_verified' => $record->is_verified,
                 ];
             });
 
@@ -2304,7 +1713,6 @@ class FeesController extends Controller
         }
 
         try {
-            // Build validation rules based on payment source
             $rules = [
                 'recordID' => 'required|exists:payment_records,recordID',
                 'paymentID' => 'required|exists:payments,paymentID',
@@ -2313,118 +1721,46 @@ class FeesController extends Controller
                 'payment_source' => 'required|in:Cash,Bank',
                 'notes' => 'nullable|string',
             ];
-            
-            // Reference number required only for Bank payments
+
             if ($request->payment_source === 'Bank') {
-                $rules['reference_number'] = 'required|string|unique:payment_records,reference_number,' . $request->recordID . ',recordID';
+                $rules['reference_number'] = 'required|string';
                 $rules['bank_name'] = 'required|string|max:200';
-            } else {
-                $rules['reference_number'] = 'nullable|string|unique:payment_records,reference_number,' . $request->recordID . ',recordID';
-                $rules['bank_name'] = 'nullable|string|max:200';
             }
-            
+
             $validator = Validator::make($request->all(), $rules);
 
             if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $validator->errors()
-                ], 422);
+                return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $validator->errors()], 422);
             }
 
-            // Verify payment belongs to this school
-            $payment = Payment::where('schoolID', $schoolID)
-                ->where('paymentID', $request->paymentID)
-                ->first();
+            $payment = Payment::where('schoolID', $schoolID)->where('paymentID', $request->paymentID)->first();
+            $paymentRecord = PaymentRecord::where('recordID', $request->recordID)->where('paymentID', $request->paymentID)->first();
 
-            if (!$payment) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Payment record not found.'
-                ], 404);
-            }
-
-            // Check if payment record belongs to this payment
-            $paymentRecord = PaymentRecord::where('recordID', $request->recordID)
-                ->where('paymentID', $request->paymentID)
-                ->first();
-
-            if (!$paymentRecord) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Payment record not found.'
-                ], 404);
+            if (!$payment || !$paymentRecord) {
+                return response()->json(['success' => false, 'message' => 'Record not found.'], 404);
             }
 
             DB::beginTransaction();
 
-            // Update payment record
-            $paymentRecordData = [
+            $paymentRecord->update([
                 'paid_amount' => $request->paid_amount,
                 'payment_date' => $request->payment_date,
                 'payment_source' => $request->payment_source,
+                'reference_number' => $request->reference_number,
+                'bank_name' => $request->bank_name,
                 'notes' => $request->notes,
-            ];
-            
-            // Add reference number if provided
-            if ($request->filled('reference_number')) {
-                $paymentRecordData['reference_number'] = $request->reference_number;
-            } else {
-                $paymentRecordData['reference_number'] = null;
-            }
-            
-            // Add bank name if provided
-            if ($request->filled('bank_name')) {
-                $paymentRecordData['bank_name'] = $request->bank_name;
-            } else {
-                $paymentRecordData['bank_name'] = null;
-            }
-            
-            $paymentRecord->update($paymentRecordData);
-
-            // Update payment totals from payment_records
-            $totalPaid = PaymentRecord::where('paymentID', $payment->paymentID)
-                ->sum('paid_amount');
-
-            $balance = $payment->amount_required - $totalPaid;
-
-            // Update payment status
-            $paymentStatus = 'Pending';
-            if ($balance <= 0) {
-                $paymentStatus = $totalPaid > $payment->amount_required ? 'Overpaid' : 'Paid';
-            } elseif ($totalPaid > 0) {
-                $paymentStatus = 'Incomplete Payment';
-            }
-
-            $payment->update([
-                'amount_paid' => $totalPaid,
-                'balance' => $balance,
-                'payment_status' => $paymentStatus,
-                'payment_date' => $request->payment_date,
             ]);
+
+            $this->allocatePayment($payment);
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Payment record updated successfully',
-                'payment_record' => $paymentRecord
-            ]);
+            return response()->json(['success' => true, 'message' => 'Record updated.', 'payment_record' => $paymentRecord]);
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $e->errors()
-            ], 422);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Error updating payment record: ' . $e->getMessage()
-            ], 500);
+            Log::error('Error updating record: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
     }
 
@@ -2477,28 +1813,9 @@ class FeesController extends Controller
 
             DB::beginTransaction();
 
-            // Delete payment record
             $paymentRecord->delete();
 
-            // Update payment totals from payment_records
-            $totalPaid = PaymentRecord::where('paymentID', $payment->paymentID)
-                ->sum('paid_amount');
-
-            $balance = $payment->amount_required - $totalPaid;
-
-            // Update payment status
-            $paymentStatus = 'Pending';
-            if ($balance <= 0) {
-                $paymentStatus = $totalPaid > $payment->amount_required ? 'Overpaid' : 'Paid';
-            } elseif ($totalPaid > 0) {
-                $paymentStatus = 'Incomplete Payment';
-            }
-
-            $payment->update([
-                'amount_paid' => $totalPaid,
-                'balance' => $balance,
-                'payment_status' => $paymentStatus,
-            ]);
+            $this->allocatePayment($payment);
 
             DB::commit();
 
@@ -2536,7 +1853,6 @@ class FeesController extends Controller
             $classID = $request->input('class_id', '');
             $subclassID = $request->input('subclass_id', '');
             $studentStatus = $request->input('student_status', '');
-            $feeType = $request->input('fee_type', '');
             $paymentStatus = $request->input('payment_status', '');
             $year = $request->input('year', date('Y'));
             $searchStudentName = $request->input('search_student_name', '');
@@ -2546,10 +1862,10 @@ class FeesController extends Controller
                 ->where('schoolID', $schoolID)
                 ->where('year', $year)
                 ->first();
-            
+
             $academicYearID = $academicYear ? $academicYear->academic_yearID : null;
             $isClosedYear = $academicYear && $academicYear->status === 'Closed';
-            
+
             if (!$academicYearID) {
                 $activeAcademicYear = DB::table('academic_years')
                     ->where('schoolID', $schoolID)
@@ -2568,7 +1884,7 @@ class FeesController extends Controller
             if (!empty($studentStatus)) {
                 $statusFilter = [$studentStatus];
             }
-            
+
             $query = Student::where('schoolID', $schoolID)
                 ->whereIn('status', $statusFilter)
                 ->with(['parent', 'subclass.class', 'payments' => function($q) use ($academicYearID, $year) {
@@ -2577,7 +1893,7 @@ class FeesController extends Controller
                     } else {
                         $q->whereYear('created_at', $year);
                     }
-                }, 'payments.fee.installments', 'payments.fee.otherFeeDetails', 'payments.academicYear']);
+                }, 'payments.fee_payments', 'payments.academicYear']);
 
             if (!empty($classID)) {
                 $query->whereHas('subclass', function($q) use ($classID) {
@@ -2620,82 +1936,32 @@ class FeesController extends Controller
 
             // Generate PDF for all filtered students
             $pdfData = [];
-            
-            foreach ($students as $student) {
-                // Get payments for this student
-                $payments = $student->payments()
-                    ->where(function($q) use ($academicYearID, $year) {
-                        if ($academicYearID) {
-                            $q->where('academic_yearID', $academicYearID);
-                        } else {
-                            $q->whereYear('created_at', $year);
-                        }
-                    })
-                    ->with(['fee.installments', 'fee.otherFeeDetails'])
-                    ->get()
-                    ->filter(function($payment) use ($feeType, $paymentStatus) {
-                        if (!empty($feeType) && $payment->fee_type !== $feeType) {
-                            return false;
-                        }
-                        if (!empty($paymentStatus)) {
-                            $statusMap = ['Incomplete' => 'Incomplete Payment'];
-                            $actualStatus = $statusMap[$paymentStatus] ?? $paymentStatus;
-                            if ($payment->payment_status !== $actualStatus) {
-                                return false;
-                            }
-                        }
-                        return true;
-                    });
 
-                if ($payments->isEmpty() && (!empty($feeType) || !empty($paymentStatus))) {
-                    continue;
+            foreach ($students as $student) {
+                $payment = $student->payments->first(); // Unified payment
+
+                if (!$payment && !empty($paymentStatus)) {
+                    if ($paymentStatus !== 'Pending') continue;
+                }
+                if ($payment && !empty($paymentStatus)) {
+                    $status = $payment->payment_status;
+                    if ($paymentStatus === 'Incomplete' || $paymentStatus === 'Partial' || $paymentStatus === 'Incomplete Payment') {
+                        if ($status !== 'Incomplete Payment' && $status !== 'Partial') continue;
+                    } elseif ($status !== $paymentStatus) {
+                        continue;
+                    }
                 }
 
                 // Calculate totals
-                $tuitionPayments = $payments->where('fee_type', 'Tuition Fees');
-                $otherFeePayments = $payments->where('fee_type', 'Other Fees');
+                $totalRequired = $payment ? $payment->amount_required : 0;
+                $totalPaid = $payment ? $payment->amount_paid : 0;
+                $totalBalance = $payment ? $payment->balance : 0;
+                $requiredPaid = $payment ? $payment->required_fees_paid : 0;
+                $requiredAmount = $payment ? $payment->required_fees_amount : 0;
+                $canStartSchool = $payment ? $payment->can_start_school : false;
 
-                $classID = $student->subclass->classID ?? null;
-                $tuitionBaseRequired = 0;
-                $otherBaseRequired = 0;
-                
-                if ($classID) {
-                    $tuitionFees = Fee::where('schoolID', $schoolID)
-                        ->where('classID', $classID)
-                        ->where('fee_type', 'Tuition Fees')
-                        ->where('status', 'Active')
-                        ->get();
-                    $tuitionBaseRequired = $tuitionFees->sum('amount');
-                    
-                    $otherFees = Fee::where('schoolID', $schoolID)
-                        ->where('classID', $classID)
-                        ->where('fee_type', 'Other Fees')
-                        ->where('status', 'Active')
-                        ->get();
-                    $otherBaseRequired = $otherFees->sum('amount');
-                }
-
-                $tuitionDebt = 0;
-                $otherDebt = 0;
-                
-                if (!$isClosedYear && $student->status === 'Active') {
-                    $previousYearDebt = $this->getPreviousYearBalance($student->studentID, $schoolID);
-                    $tuitionDebt = $previousYearDebt['school_fee_balance'];
-                    $otherDebt = $previousYearDebt['other_contribution_balance'];
-                }
-
-                $tuitionRequired = $tuitionBaseRequired + $tuitionDebt;
-                $otherRequired = $otherBaseRequired + $otherDebt;
-                
-                $tuitionPaid = $tuitionPayments->sum('amount_paid');
-                $otherPaid = $otherFeePayments->sum('amount_paid');
-                
-                $tuitionBalance = $tuitionRequired - $tuitionPaid;
-                $otherBalance = $otherRequired - $otherPaid;
-
-                $totalRequired = $tuitionRequired + $otherRequired;
-                $totalPaid = $tuitionPaid + $otherPaid;
-                $totalBalance = $tuitionBalance + $otherBalance;
+                // Get fee breakdown
+                $feeBreakdown = $payment ? $payment->fee_payments()->orderBy('display_order')->get() : collect();
 
                 // Format student class
                 $studentClass = 'N/A';
@@ -2710,7 +1976,6 @@ class FeesController extends Controller
                         $studentClass = $mainClass;
                     }
                 }
-
                 $pdfData[] = [
                     'student' => [
                         'studentID' => $student->studentID,
@@ -2722,21 +1987,14 @@ class FeesController extends Controller
                         'status' => $student->status,
                         'photo' => $student->photo ? asset('userImages/' . $student->photo) : null,
                     ],
-                    'tuitionPayments' => $tuitionPayments,
-                    'otherFeePayments' => $otherFeePayments,
-                    'tuitionBaseRequired' => $tuitionBaseRequired,
-                    'tuitionDebt' => $tuitionDebt,
-                    'tuitionRequired' => $tuitionRequired,
-                    'tuitionPaid' => $tuitionPaid,
-                    'tuitionBalance' => $tuitionBalance,
-                    'otherBaseRequired' => $otherBaseRequired,
-                    'otherDebt' => $otherDebt,
-                    'otherRequired' => $otherRequired,
-                    'otherPaid' => $otherPaid,
-                    'otherBalance' => $otherBalance,
+                    'payment' => $payment,
+                    'feeBreakdown' => $feeBreakdown,
                     'totalRequired' => $totalRequired,
                     'totalPaid' => $totalPaid,
                     'totalBalance' => $totalBalance,
+                    'requiredAmount' => $requiredAmount,
+                    'requiredPaid' => $requiredPaid,
+                    'canStartSchool' => $canStartSchool,
                 ];
             }
 
@@ -2763,7 +2021,6 @@ class FeesController extends Controller
                     'class' => $classID ? (ClassModel::find($classID)->class_name ?? '') : '',
                     'subclass' => $subclassID ? (Subclass::find($subclassID)->subclass_name ?? '') : '',
                     'status' => $studentStatus,
-                    'fee_type' => $feeType,
                     'payment_status' => $paymentStatus,
                 ]
             ];
@@ -2773,20 +2030,20 @@ class FeesController extends Controller
                 // Use a simple view for filtered payments list
                 $pdf = PDF::loadView('Admin.pdf.filtered_payments_list', $data);
                 $pdf->setPaper('A4', 'portrait');
-                
+
                 $filename = 'Filtered_Payments_' . $year . '_' . date('YmdHis') . '.pdf';
-                
+
                 return $pdf->download($filename);
             } catch (\Exception $e) {
                 // Fallback: generate individual PDFs
                 Log::error('Error generating filtered payments PDF: ' . $e->getMessage());
-                
+
                 // For now, return first student's PDF as fallback
                 if (!empty($pdfData)) {
                     $firstStudent = $pdfData[0];
                     return $this->exportPaymentInvoicePDF($firstStudent['student']['studentID']);
                 }
-                
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Error generating PDF: ' . $e->getMessage()
@@ -2799,6 +2056,81 @@ class FeesController extends Controller
                 'success' => false,
                 'message' => 'Error exporting PDF: ' . $e->getMessage()
             ], 500);
+        }
+    }
+    /**
+     * Verify a payment record
+     */
+    public function verify_payment(Request $request)
+    {
+        $userType = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$userType || !$schoolID) {
+            return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+        }
+
+        try {
+            $recordID = $request->input('recordID');
+            $record = PaymentRecord::whereHas('payment', function($q) use ($schoolID) {
+                $q->where('schoolID', $schoolID);
+            })->where('recordID', $recordID)->first();
+
+            if (!$record) {
+                return response()->json(['success' => false, 'message' => 'Record not found'], 404);
+            }
+
+            $record->update([
+                'is_verified' => true,
+                'verified_by' => Session::get('userID'),
+                'verified_at' => now(),
+            ]);
+
+            // Recalculate payment totals after verification
+            $this->allocatePayment($record->payment);
+
+            return response()->json(['success' => true, 'message' => 'Payment verified!']);
+
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Unverify a payment record
+     */
+    public function unverify_payment(Request $request)
+    {
+        $userType = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if (!$userType || !$schoolID) {
+            return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+        }
+
+        try {
+            $recordID = $request->input('recordID');
+            $record = PaymentRecord::whereHas('payment', function($q) use ($schoolID) {
+                $q->where('schoolID', $schoolID);
+            })->where('recordID', $recordID)->first();
+
+            if (!$record) {
+                return response()->json(['success' => false, 'message' => 'Record not found'], 404);
+            }
+
+            $record->update([
+                'is_verified' => false,
+                'verified_by' => null,
+                'verified_at' => null,
+            ]);
+
+            // Recalculate payment totals after unverification
+            $this->allocatePayment($record->payment);
+
+            return response()->json(['success' => true, 'message' => 'Payment verification deleted!']);
+
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
     }
 }

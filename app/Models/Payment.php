@@ -17,11 +17,15 @@ class Payment extends Model
         'academic_yearID',
         'studentID',
         'feeID',
-        'fee_type',
+        // 'fee_type', // REMOVED
         'control_number',
         'amount_required',
         'amount_paid',
         'balance',
+        'debt', // NEW
+        'required_fees_amount', // NEW
+        'required_fees_paid', // NEW
+        'can_start_school', // NEW
         'payment_status',
         'sms_sent',
         'sms_sent_at',
@@ -34,6 +38,10 @@ class Payment extends Model
         'amount_required' => 'decimal:2',
         'amount_paid' => 'decimal:2',
         'balance' => 'decimal:2',
+        'debt' => 'decimal:2',
+        'required_fees_amount' => 'decimal:2',
+        'required_fees_paid' => 'decimal:2',
+        'can_start_school' => 'boolean',
         'sms_sent_at' => 'datetime',
         'payment_date' => 'datetime',
     ];
@@ -62,5 +70,10 @@ class Payment extends Model
     public function academicYear()
     {
         return $this->belongsTo(AcademicYear::class, 'academic_yearID', 'academic_yearID');
+    }
+
+    public function fee_payments()
+    {
+        return $this->hasMany(StudentFeePayment::class, 'paymentID', 'paymentID');
     }
 }

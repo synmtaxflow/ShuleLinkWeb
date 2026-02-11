@@ -408,6 +408,7 @@
                                 <li><a href="{{ route('manageTeachers') }}" class="nav-link"><i class="fa fa-users"></i> Teachers And Staff</a></li>
                                 <li><a href="{{ route('manage_watchman') }}" class="nav-link"><i class="fa fa-shield"></i> Watchman</a></li>
                                 <li><a href="{{ route('manage_student') }}" class="nav-link"><i class="fa fa-user"></i> Students</a></li>
+                                <li><a href="{{ route('manage_sponsors') }}" class="nav-link"><i class="fa fa-handshake-o"></i> Sponsors</a></li>
                                 <li><a href="{{ route('admin.school_visitors') }}" class="nav-link"><i class="fa fa-id-badge"></i> School Visitors</a></li>
                             </ul>
                         </li>
@@ -552,14 +553,27 @@
                             </ul>
                         </li>
 
+                        <!-- Accountant Module -->
+                        <li class="dropdown-nav-item">
+                            <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#accountantModule" aria-expanded="false">
+                                <i class="fa fa-calculator"></i> Accountant Module <i class="fa fa-chevron-down float-right"></i>
+                            </a>
+                            <ul id="accountantModule" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
+                                <li><a href="{{ route('accountant.expenses.index') }}" class="nav-link"><i class="fa fa-money"></i> School Expenses</a></li>
+                                <li><a href="{{ route('accountant.income.index') }}" class="nav-link"><i class="fa fa-usd"></i> School Income</a></li>
+                                <li><a href="{{ route('accountant.budget.index') }}" class="nav-link"><i class="fa fa-pie-chart"></i> School Budget</a></li>
+                                <li><a href="{{ route('accountant.reports.index') }}" class="nav-link"><i class="fa fa-line-chart"></i> Financial Reports</a></li>
+                            </ul>
+                        </li>
+
                         <!-- Revenue and Expenses -->
                         <li class="dropdown-nav-item">
                             <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#revenueExpenses" aria-expanded="false">
-                                <i class="fa fa-money"></i> Revenue and Expenses <i class="fa fa-chevron-down float-right"></i>
+                                <!-- <i class="fa fa-money"></i> Revenue and Expenses <i class="fa fa-chevron-down float-right"></i> -->
                             </a>
                             <ul id="revenueExpenses" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
-                                <li><a href="{{ route('manage_revenue') }}" class="nav-link"><i class="fa fa-arrow-up"></i> Manage Revenue</a></li>
-                                <li><a href="{{ route('manage_expenses') }}" class="nav-link"><i class="fa fa-arrow-down"></i> Manage Expenses</a></li>
+                                {{-- <li><a href="{{ route('manage_revenue') }}" class="nav-link"><i class="fa fa-arrow-up"></i> Manage Revenue</a></li>
+                                <li><a href="{{ route('manage_expenses') }}" class="nav-link"><i class="fa fa-arrow-down"></i> Manage Expenses</a></li> --}}
                             </ul>
                         </li>
 

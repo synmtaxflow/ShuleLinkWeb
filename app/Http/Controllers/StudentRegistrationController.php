@@ -474,6 +474,10 @@ class StudentRegistrationController extends Controller
                 'has_chronic_illness' => 'nullable',
                 'chronic_illness_details' => 'nullable|string',
                 'immunization_details' => 'nullable|string',
+                // Sponsorship
+                'payment_type' => 'nullable|in:own,sponsor',
+                'sponsor_id' => 'nullable|exists:sponsors,sponsorID',
+                'sponsorship_percentage' => 'nullable|numeric|min:0|max:100',
                 // Step 4
                 'emergency_contact_name' => 'required|string|max:100',
                 'emergency_contact_relationship' => 'required|string|max:100',
@@ -672,7 +676,10 @@ class StudentRegistrationController extends Controller
                 'declaration_date' => $request->declaration_date,
                 'registering_officer_name' => $request->registering_officer_name,
                 'registering_officer_title' => $request->registering_officer_title,
-                'registration_status' => 'Completed'
+                'registration_status' => 'Completed',
+                // Sponsorship fields
+                'sponsor_id' => ($request->payment_type === 'sponsor' && $request->sponsor_id) ? $request->sponsor_id : null,
+                'sponsorship_percentage' => ($request->payment_type === 'sponsor' && $request->sponsorship_percentage) ? $request->sponsorship_percentage : 0,
             ]);
 
             // Create user account for the student

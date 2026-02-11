@@ -20,11 +20,16 @@ class PaymentRecord extends Model
         'payment_source',
         'bank_name',
         'notes',
+        'is_verified',
+        'verified_by',
+        'verified_at',
     ];
 
     protected $casts = [
         'paid_amount' => 'decimal:2',
         'payment_date' => 'date',
+        'is_verified' => 'boolean',
+        'verified_at' => 'datetime',
     ];
 
     // Relationships

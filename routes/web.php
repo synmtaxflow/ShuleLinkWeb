@@ -31,6 +31,12 @@ use App\Http\Controllers\OnlineApplicationController;
 use App\Http\Controllers\StudentRegistrationController;
 use App\Http\Controllers\WatchmanController;
 use App\Http\Controllers\StaffController;
+use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\IncomeController;
+use App\Http\Controllers\BudgetController;
+use App\Http\Controllers\AccountantReportController;
+use App\Http\Controllers\ExpenseCategoryController;
+use App\Http\Controllers\SponsorController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 
@@ -46,6 +52,13 @@ Route::get('online-application', [OnlineApplicationController::class, 'index'])-
 Route::get('online-application/school/{schoolID}', [OnlineApplicationController::class, 'getSchoolDetails'])->name('online_application.school_details');
 Route::get('online-application/apply', [OnlineApplicationController::class, 'showApplicationForm'])->name('online_application.apply');
 Route::post('online-application/apply', [OnlineApplicationController::class, 'storeApplication'])->name('online_application.store');
+
+// Sponsor Management Routes
+Route::get('manage_sponsors', [SponsorController::class, 'index'])->name('manage_sponsors');
+Route::post('sponsors/store', [SponsorController::class, 'store'])->name('sponsors.store');
+Route::post('sponsors/update/{id}', [SponsorController::class, 'update'])->name('sponsors.update');
+Route::post('sponsors/delete/{id}', [SponsorController::class, 'destroy'])->name('sponsors.delete');
+Route::get('get_sponsors', [SponsorController::class, 'getSponsors'])->name('get_sponsors');
 
 // school management route
 Route::get('school', [SchoolController::class, 'school'])->name('school');
@@ -247,6 +260,14 @@ Route::get('staff/incidents', [StaffController::class, 'incidents'])->name('staf
 Route::post('staff/feedback', [StaffController::class, 'storeStaffFeedback'])->name('staff.feedback.store');
 Route::get('staff/permissions', [StaffController::class, 'permissions'])->name('staff.permissions');
 Route::post('staff/permissions', [StaffController::class, 'storeStaffPermission'])->name('staff.permissions.store');
+Route::prefix('accountant')->name('accountant.')->group(function () {
+    Route::get('expenses', [ExpenseController::class, 'index'])->name('expenses.index');
+    Route::get('expenses/create', [ExpenseController::class, 'create'])->name('expenses.create');
+    Route::post('expenses', [ExpenseController::class, 'store'])->name('expenses.store');
+    
+    Route::get('income', [IncomeController::class, 'index'])->name('income.index');
+    Route::get('budget', [BudgetController::class, 'index'])->name('budget.index');
+});
 Route::get('staff/leave', [StaffController::class, 'leave'])->name('staff.leave');
 Route::get('staff/payroll', [StaffController::class, 'payroll'])->name('staff.payroll');
 Route::get('staff/profile', [StaffController::class, 'profile'])->name('staff.profile');
@@ -365,6 +386,48 @@ Route::get('debug/ping', function () {
 
 // Staff Permissions/Duties Routes
 Route::post('save_staff_permissions', [ManageOtherStaffController::class, 'save_staff_permissions'])->name('save_staff_permissions');
+
+// Accountant Module Routes
+Route::prefix('accountant')->name('accountant.')->group(function () {
+    Route::get('expenses', [ExpenseController::class, 'index'])->name('expenses.index');
+    Route::get('expenses/create', [ExpenseController::class, 'create'])->name('expenses.create');
+    Route::post('expenses', [ExpenseController::class, 'store'])->name('expenses.store');
+
+    // Expense Categories Management
+    Route::get('expense-categories', [ExpenseCategoryController::class, 'index'])->name('expense_categories.index');
+    Route::post('expense-categories', [ExpenseCategoryController::class, 'store'])->name('expense_categories.store');
+    Route::post('expense-categories/{id}', [ExpenseCategoryController::class, 'update'])->name('expense_categories.update');
+    Route::delete('expense-categories/{id}', [ExpenseCategoryController::class, 'destroy'])->name('expense_categories.destroy');
+
+    Route::get('expenses/{id}', [ExpenseController::class, 'show'])->name('expenses.show');
+    Route::get('expenses/{id}/edit', [ExpenseController::class, 'edit'])->name('expenses.edit');
+    Route::put('expenses/{id}', [ExpenseController::class, 'update'])->name('expenses.update');
+    Route::delete('expenses/{id}', [ExpenseController::class, 'destroy'])->name('expenses.destroy');
+    Route::post('expenses/{id}/approve', [ExpenseController::class, 'approve'])->name('expenses.approve');
+    Route::post('expenses/{id}/reject', [ExpenseController::class, 'reject'])->name('expenses.reject');
+    
+    Route::get('income', [IncomeController::class, 'index'])->name('income.index');
+    Route::get('income/create', [IncomeController::class, 'create'])->name('income.create');
+    Route::post('income', [IncomeController::class, 'store'])->name('income.store');
+    Route::get('income/{id}', [IncomeController::class, 'show'])->name('income.show');
+    Route::get('income/{id}/edit', [IncomeController::class, 'edit'])->name('income.edit');
+    Route::put('income/{id}', [IncomeController::class, 'update'])->name('income.update');
+    Route::delete('income/{id}', [IncomeController::class, 'destroy'])->name('income.destroy');
+    
+    Route::get('budget', [BudgetController::class, 'index'])->name('budget.index');
+    Route::get('budget/create', [BudgetController::class, 'create'])->name('budget.create');
+    Route::post('budget', [BudgetController::class, 'store'])->name('budget.store');
+    Route::get('budget/{id}', [BudgetController::class, 'show'])->name('budget.show');
+    Route::get('budget/{id}/edit', [BudgetController::class, 'edit'])->name('budget.edit');
+    Route::put('budget/{id}', [BudgetController::class, 'update'])->name('budget.update');
+    Route::delete('budget/{id}', [BudgetController::class, 'destroy'])->name('budget.destroy');
+
+    // Reports
+    Route::get('reports', [AccountantReportController::class, 'index'])->name('reports.index');
+    Route::get('reports/chart-data', [AccountantReportController::class, 'getChartData'])->name('reports.chart_data');
+    Route::get('reports/export/expenses', [AccountantReportController::class, 'exportExpenses'])->name('reports.export_expenses');
+    Route::get('reports/export/income', [AccountantReportController::class, 'exportIncome'])->name('reports.export_income');
+});
 
 // Revenue and Expenses Routes
 Route::get('manage_revenue', [AdminController::class, 'manageRevenue'])->name('manage_revenue');
@@ -600,10 +663,25 @@ Route::post('resend_control_number/{paymentID}', [FeesController::class, 'resend
 Route::post('update_payment_status/{paymentID}', [FeesController::class, 'update_payment_status'])->name('update_payment_status');
 Route::get('export_payment_invoice_pdf/{studentID}', [FeesController::class, 'exportPaymentInvoicePDF'])->name('export_payment_invoice_pdf');
 Route::post('export_filtered_payments_pdf', [FeesController::class, 'exportFilteredPaymentsPDF'])->name('export_filtered_payments_pdf');
+
+// Payments Report routes (UI-only; data aggregated client-side from get_payments_ajax)
+Route::get('payments/report', function () {
+    return view('Admin.payments_report');
+})->name('payments.report');
 Route::post('record_payment', [FeesController::class, 'record_payment'])->name('record_payment');
 Route::get('get_payment_records', [FeesController::class, 'get_payment_records'])->name('get_payment_records');
 Route::post('update_payment_record', [FeesController::class, 'update_payment_record'])->name('update_payment_record');
 Route::post('delete_payment_record', [FeesController::class, 'delete_payment_record'])->name('delete_payment_record');
+Route::post('verify_payment', [FeesController::class, 'verify_payment'])->name('verify_payment');
+Route::post('unverify_payment', [FeesController::class, 'unverify_payment'])->name('unverify_payment');
+Route::post('send_debt_reminders_sms', [FeesController::class, 'send_debt_reminders_sms'])->name('send_debt_reminders_sms');
+
+// Sponsor Management Routes
+Route::get('manage_sponsors', [SponsorController::class, 'index'])->name('manage_sponsors');
+Route::post('sponsors/store', [SponsorController::class, 'store'])->name('sponsors.store');
+Route::post('sponsors/update/{id}', [SponsorController::class, 'update'])->name('sponsors.update');
+Route::post('sponsors/delete/{id}', [SponsorController::class, 'destroy'])->name('sponsors.destroy');
+Route::get('get_sponsors', [SponsorController::class, 'getSponsors'])->name('get_sponsors');
 
 //sms notification
 // SMS Notification Routes

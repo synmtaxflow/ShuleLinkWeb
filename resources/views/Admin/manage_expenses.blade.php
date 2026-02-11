@@ -16,7 +16,7 @@
     .card, .alert, .btn, div, .form-control, .form-select {
         border-radius: 0 !important;
     }
-    
+
     .bg-primary-custom {
         background-color: #940000 !important;
     }
@@ -208,7 +208,12 @@
                     </div>
 
                     <div id="section-record-expenses" class="expenses-section d-none">
-                        <div class="section-title">Record Expenses</div>
+                        <div class="section-title d-flex justify-content-between align-items-center">
+                            <span>Record Expenses</span>
+                            <a href="{{ route('accountant.expense_categories.index') }}" class="btn btn-sm btn-outline-primary" style="margin-left:10px;">
+                                <i class="fa fa-plus"></i> Add Expense Categories
+                            </a>
+                        </div>
                         @if(!$budget)
                             <div class="alert alert-warning">
                                 Please create a budget for this year before recording expenses.

@@ -15,9 +15,13 @@ class Fee extends Model
     protected $fillable = [
         'schoolID',
         'classID',
-        'fee_type',
+        // 'fee_type', // REMOVED - no longer using Tuition/Other separation
         'fee_name',
         'amount',
+        'must_start_pay', // NEW - priority payment flag
+        'payment_deadline_amount', // NEW - amount required by deadline
+        'payment_deadline_date', // NEW - deadline date
+        'display_order', // NEW - for sorting priority
         'duration',
         'description',
         'status',
@@ -29,6 +33,10 @@ class Fee extends Model
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'must_start_pay' => 'boolean',
+        'payment_deadline_amount' => 'decimal:2',
+        'payment_deadline_date' => 'date',
+        'display_order' => 'integer',
         'allow_installments' => 'boolean',
         'allow_partial_payment' => 'boolean',
         'number_of_installments' => 'integer',
