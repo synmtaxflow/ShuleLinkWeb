@@ -25,17 +25,32 @@ class IncomeController extends Controller
 
     public function create()
     {
-        $categories = [
-            'Tuition & Fees',
-            'Boarding & Accommodation',
-            'Co-Curricular & Extracurricular',
-            'Fundraising & Donations',
-            'Rentals & Leasing',
-            'Sales & Services',
-            'Investment & Interest Income',
-            'Grants & Government Support',
-            'Other Miscellaneous Income'
-        ];
+        $schoolID = Session::get('schoolID');
+        $categories = \App\Models\IncomeCategory::where('schoolID', $schoolID)
+            ->where('status', 'Active')
+            ->orderBy('name')
+            ->pluck('name');
+
+        // Always include 'School Fees' as it's a core system category
+        if (!$categories->contains('School Fees')) {
+            $categories->prepend('School Fees');
+        }
+
+        if ($categories->count() <= 1 && $categories->first() === 'School Fees') { 
+             // If only School Fees is present (meaning no DB categories), add other defaults
+            $defaults = [
+                'Tuition & Fees',
+                'Boarding & Accommodation',
+                'Co-Curricular & Extracurricular',
+                'Fundraising & Donations',
+                'Rentals & Leasing',
+                'Sales & Services',
+                'Investment & Interest Income',
+                'Grants & Government Support',
+                'Other Miscellaneous Income'
+            ];
+            $categories = $categories->merge($defaults)->unique();
+        }
         
         $year = date('Y');
         $lastIncome = Income::latest()->first();
@@ -88,19 +103,34 @@ class IncomeController extends Controller
 
     public function edit($id)
     {
+        $schoolID = Session::get('schoolID');
         $income = Income::findOrFail($id);
         
-        $categories = [
-            'Tuition & Fees',
-            'Boarding & Accommodation',
-            'Co-Curricular & Extracurricular',
-            'Fundraising & Donations',
-            'Rentals & Leasing',
-            'Sales & Services',
-            'Investment & Interest Income',
-            'Grants & Government Support',
-            'Other Miscellaneous Income'
-        ];
+        $categories = \App\Models\IncomeCategory::where('schoolID', $schoolID)
+            ->where('status', 'Active')
+            ->orderBy('name')
+            ->pluck('name');
+
+        // Always include 'School Fees' as it's a core system category
+        if (!$categories->contains('School Fees')) {
+            $categories->prepend('School Fees');
+        }
+
+        if ($categories->count() <= 1 && $categories->first() === 'School Fees') {
+             // If only School Fees is present (meaning no DB categories), add other defaults
+            $defaults = [
+                'Tuition & Fees',
+                'Boarding & Accommodation',
+                'Co-Curricular & Extracurricular',
+                'Fundraising & Donations',
+                'Rentals & Leasing',
+                'Sales & Services',
+                'Investment & Interest Income',
+                'Grants & Government Support',
+                'Other Miscellaneous Income'
+            ];
+            $categories = $categories->merge($defaults)->unique();
+        }
 
         return view('accountant.income.edit', compact('income', 'categories'));
     }

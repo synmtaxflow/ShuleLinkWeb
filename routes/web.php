@@ -36,6 +36,7 @@ use App\Http\Controllers\IncomeController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\AccountantReportController;
 use App\Http\Controllers\ExpenseCategoryController;
+use App\Http\Controllers\IncomeCategoryController;
 use App\Http\Controllers\SponsorController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
@@ -406,6 +407,12 @@ Route::prefix('accountant')->name('accountant.')->group(function () {
     Route::post('expenses/{id}/approve', [ExpenseController::class, 'approve'])->name('expenses.approve');
     Route::post('expenses/{id}/reject', [ExpenseController::class, 'reject'])->name('expenses.reject');
     
+    // Income Categories Management
+    Route::get('income-categories', [IncomeCategoryController::class, 'index'])->name('income_categories.index');
+    Route::post('income-categories', [IncomeCategoryController::class, 'store'])->name('income_categories.store');
+    Route::post('income-categories/{id}', [IncomeCategoryController::class, 'update'])->name('income_categories.update');
+    Route::delete('income-categories/{id}', [IncomeCategoryController::class, 'destroy'])->name('income_categories.destroy');
+
     Route::get('income', [IncomeController::class, 'index'])->name('income.index');
     Route::get('income/create', [IncomeController::class, 'create'])->name('income.create');
     Route::post('income', [IncomeController::class, 'store'])->name('income.store');

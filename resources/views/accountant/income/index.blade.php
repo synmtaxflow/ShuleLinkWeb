@@ -79,9 +79,14 @@
                 <div class="card">
                     <div class="card-header">
                         <strong class="card-title">Income Records</strong>
-                        <a href="{{ route('accountant.income.create') }}" class="btn btn-primary btn-sm float-right">
-                            <i class="fa fa-plus"></i> Record New Income
-                        </a>
+                        <div class="row float-right">
+                            <a href="{{ route('accountant.income_categories.index') }}" class="btn btn-secondary btn-sm mr-2">
+                                <i class="fa fa-list"></i> Manage Categories
+                            </a>
+                            <a href="{{ route('accountant.income.create') }}" class="btn btn-primary btn-sm">
+                                <i class="fa fa-plus"></i> Record New Income
+                            </a>
+                        </div>
                     </div>
                     <div class="card-body">
                         <table id="bootstrap-data-table" class="table table-striped table-bordered">
