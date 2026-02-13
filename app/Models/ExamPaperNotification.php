@@ -24,4 +24,9 @@ class ExamPaperNotification extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+    public function examPaper()
+    {
+        return $this->belongsTo(ExamPaper::class, 'exam_paperID', 'exam_paperID');
+    }
 }

@@ -53,6 +53,22 @@
 <!-- SweetAlert2 JavaScript -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+<!-- Core Scripts -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- DataTables CSS and JS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap4.min.css">
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap4.min.js"></script>
+
+<!-- jsPDF Library for PDF generation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js"></script>
+
+<!-- SheetJS for Excel export -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
 <div class="container-fluid mt-4">
     <div class="row">
         <div class="col-12">
@@ -235,6 +251,21 @@
                                     @foreach($availableExams as $exam)
                                         <option value="{{ $exam->examID }}" {{ ($filters['examID'] ?? '') == $exam->examID ? 'selected' : '' }}>
                                             {{ $exam->exam_name }} ({{ $exam->start_date ?? 'N/A' }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <!-- Week Filter (only show when available) -->
+                            <div class="col-md-3 mb-3" id="weekFilterContainer" style="display: {{ (isset($availableWeeks) && count($availableWeeks) > 0) ? 'block' : 'none' }};">
+                                <label for="week" class="form-label">
+                                    <i class="bi bi-calendar-event"></i> Select Week
+                                </label>
+                                <select class="form-control" id="week" name="week">
+                                    <option value="all" {{ ($filters['week'] ?? 'all') == 'all' ? 'selected' : '' }}>All Weeks</option>
+                                    @foreach($availableWeeks as $weekData)
+                                        <option value="{{ $weekData['week'] }}" {{ ($filters['week'] ?? '') == $weekData['week'] ? 'selected' : '' }}>
+                                            {{ $weekData['display'] }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -563,20 +594,48 @@
                                 @endphp
                                 
                                 <!-- Title -->
-                                <h4 class="mb-4 text-center">
+                                <h4 class="mb-2 text-center">
                                     <i class="bi bi-trophy"></i> 
                                     <strong>
+                                        @php
+                                            $weekLabel = '';
+                                            if (isset($filters['week']) && $filters['week'] !== 'all' && isset($availableWeeks)) {
+                                                foreach ($availableWeeks as $wk) {
+                                                    if ($wk['week'] == $filters['week']) {
+                                                        // Simplify label for title: remove CURRENT/OLD prefx
+                                                        $weekLabel = str_replace(['CURRENT: ', 'OLD: '], '', $wk['display']);
+                                                        break;
+                                                    }
+                                                }
+                                                if (empty($weekLabel)) $weekLabel = $filters['week'];
+                                            }
+                                        @endphp
+                                        
                                         @if($allClassesSelected)
                                             ALL CLASSES STUDENT RESULT IN {{ strtoupper($selectedExam->exam_name) }}
+                                            @if(!empty($weekLabel)) - {{ strtoupper($weekLabel) }} @endif
                                         @elseif($subclassSelectedForTitle && $selectedSubclassForTitle)
                                             {{ strtoupper($subclassDisplayName) }} STUDENT RESULT IN {{ strtoupper($selectedExam->exam_name) }}
+                                            @if(!empty($weekLabel)) - {{ strtoupper($weekLabel) }} @endif
                                         @elseif($selectedClass)
                                             {{ strtoupper($selectedClass->class_name) }} STUDENT RESULT IN {{ strtoupper($selectedExam->exam_name) }}
-                    @else
+                                            @if(!empty($weekLabel)) - {{ strtoupper($weekLabel) }} @endif
+                                        @else
                                             STUDENT RESULT IN {{ strtoupper($selectedExam->exam_name) }}
+                                            @if(!empty($weekLabel)) - {{ strtoupper($weekLabel) }} @endif
                                         @endif
                                     </strong>
                                 </h4>
+
+                                <!-- Exam Status Message -->
+                                @if(isset($examStatusMessage))
+                                    <div class="text-center mb-4">
+                                        <span class="badge {{ (str_contains(strtolower($examStatusMessage), 'ongoing') || str_contains(strtolower($examStatusMessage), 'continuous')) ? 'badge-info' : 'badge-success' }} p-2">
+                                            <i class="bi {{ (str_contains(strtolower($examStatusMessage), 'ongoing') || str_contains(strtolower($examStatusMessage), 'continuous')) ? 'bi-info-circle' : 'bi-check-circle' }}"></i>
+                                            {{ $examStatusMessage }}
+                                        </span>
+                                    </div>
+                                @endif
 
                                 @php
                                     // Re-check conditions (variables from previous PHP block)
@@ -878,29 +937,33 @@
                                             $subjectName = $subject['subject_name'] ?? 'N/A';
                                             $subjectGrade = $subject['grade'] ?? null;
                                             
-                                            if ($subjectGrade) {
-                                                // Initialize subject if not exists
-                                                if (!isset($subjectStats[$subjectName])) {
-                                                    $subjectStats[$subjectName] = [];
-                                                    foreach (['A', 'B', 'C', 'D', 'E', 'F'] as $grade) {
-                                                        $subjectStats[$subjectName][$grade] = [
-                                                            'male' => 0,
-                                                            'female' => 0,
-                                                            'total' => 0
-                                                        ];
-                                                    }
-                                                }
-                                                
-                                                // Count by gender
-                                                if ($gender === 'Male') {
-                                                    $subjectStats[$subjectName][$subjectGrade]['male']++;
-                                                } elseif ($gender === 'Female') {
-                                                    $subjectStats[$subjectName][$subjectGrade]['female']++;
-                                                }
-                                                
-                                                // Update total
-                                                $subjectStats[$subjectName][$subjectGrade]['total']++;
+                                            // Determine grade category
+                                            $category = 'Incomplete';
+                                            if ($subjectGrade && in_array($subjectGrade, ['A', 'B', 'C', 'D', 'E', 'F'])) {
+                                                $category = $subjectGrade;
                                             }
+                                            
+                                            // Initialize subject if not exists
+                                            if (!isset($subjectStats[$subjectName])) {
+                                                $subjectStats[$subjectName] = [];
+                                                foreach (['A', 'B', 'C', 'D', 'E', 'F', 'Incomplete'] as $grade) {
+                                                    $subjectStats[$subjectName][$grade] = [
+                                                        'male' => 0,
+                                                        'female' => 0,
+                                                        'total' => 0
+                                                    ];
+                                                }
+                                            }
+                                            
+                                            // Count by gender
+                                            if ($gender === 'Male') {
+                                                $subjectStats[$subjectName][$category]['male']++;
+                                            } elseif ($gender === 'Female') {
+                                                $subjectStats[$subjectName][$category]['female']++;
+                                            }
+                                            
+                                            // Update total
+                                            $subjectStats[$subjectName][$category]['total']++;
                                         }
                                     }
                                     
@@ -1037,8 +1100,8 @@
                                         'femaleCount' => $femaleCount,
                                         'averageMarks' => number_format($classAverage, 1),
                                         'averageGrade' => $classAverageGrade,
-                                        'maleAverage' => number_format($maleAverage, 1),
-                                        'femaleAverage' => number_format($femaleAverage, 1),
+                                        'maleAverage' => is_numeric($maleAverage) ? number_format($maleAverage, 1) : '0.0',
+                                        'femaleAverage' => is_numeric($femaleAverage) ? number_format($femaleAverage, 1) : '0.0',
                                         'gradeStats' => $gradeStats,
                                         'divisionStats' => $divisionStats,
                                         'maleDivisionStats' => $maleDivisionStats,
@@ -1058,9 +1121,24 @@
                                             ];
                                         }, $top5Students),
                                         'allStudents' => array_map(function($s) {
+                                            $st = $s['student'];
+                                            $pPhone = '';
+                                            if (!empty($st->parent) && !empty($st->parent->phone)) {
+                                                $pPhone = $st->parent->phone;
+                                            } elseif (!empty($st->emergency_contact_phone)) {
+                                                $pPhone = $st->emergency_contact_phone;
+                                            }
+                                            
+                                            // Final sanitization
+                                            $pPhone = trim((string)$pPhone);
+                                            if (in_array(strtolower($pPhone), ['null', 'undefined', 'n/a', ''])) $pPhone = '';
+
                                             return [
-                                                'studentID' => $s['student']->studentID,
-                                                'studentName' => ($s['student']->first_name ?? '') . ' ' . ($s['student']->middle_name ?? '') . ' ' . ($s['student']->last_name ?? ''),
+                                                'studentID' => $st->studentID,
+                                                'firstName' => trim(($st->first_name ?? '') . ' ' . ($st->middle_name ?? '')),
+                                                'lastName' => $st->last_name ?? '',
+                                                'studentName' => ($st->first_name ?? '') . ' ' . ($st->middle_name ?? '') . ' ' . ($st->last_name ?? ''),
+                                                'parentPhone' => (string)$pPhone,
                                                 'className' => $s['class_name'] ?? 'N/A',
                                                 'totalMarks' => $s['total_marks'] ?? 0,
                                                 'grade' => $s['grade'] ?? null,
@@ -1074,12 +1152,14 @@
                                                 }, $s['result']['subjects']) : [],
                                                 'position' => $s['position'] ?? null
                                             ];
-                                        }, $examStudents)
+                                        }, $examStudents),
+                                        'schoolName' => $school->school_name ?? Session::get('school_name', 'ShuleLink')
                                     ];
                                 @endphp
                                 
                                 <script>
                                     window.detailedViewData = @json($detailedViewData);
+                                    console.log('Detailed View Data Loaded:', window.detailedViewData);
                                 </script>
 
                                 @if($totalStudents > 0)
@@ -1123,8 +1203,13 @@
                                                     <div class="col-md-3 mb-3">
                                                         <div class="card bg-light">
                                                             <div class="card-body text-center">
-                                                                <h3 class="text-primary-custom mb-0">{{ number_format(array_sum(array_column($examStudents, 'total_marks')) / $totalStudents, 1) }}</h3>
-                                                                <small class="text-muted">Average Marks</small>
+                                                                @if(isset($filters['week']) && $filters['week'] !== 'all')
+                                                                     <h3 class="text-primary-custom mb-0">{{ isset($subjectStats) ? count($subjectStats) : 0 }}</h3>
+                                                                     <small class="text-muted">Total Subject Taken in this Week</small>
+                                                                @else
+                                                                    <h3 class="text-primary-custom mb-0">{{ (isset($totalStudents) && $totalStudents > 0) ? number_format(array_sum(array_column($examStudents, 'total_marks')) / $totalStudents, 1) : '0.0' }}</h3>
+                                                                    <small class="text-muted">Average Marks</small>
+                                                                @endif
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1143,9 +1228,9 @@
                                                             <div class="card-body text-center">
                                                                 <h3 class="text-primary-custom mb-0">
                                                                     @if($genderFilter === 'Male')
-                                                                        {{ number_format($maleAverage, 1) }}
+                                                                        {{ is_numeric($maleAverage) ? number_format($maleAverage, 1) : '0.0' }}
                                                                     @else
-                                                                        {{ number_format($femaleAverage, 1) }}
+                                                                        {{ is_numeric($femaleAverage) ? number_format($femaleAverage, 1) : '0.0' }}
                                                                     @endif
                                                                 </h3>
                                                                 <small class="text-muted">{{ $genderFilter }} Average Marks</small>
@@ -1155,7 +1240,7 @@
                                                     <div class="col-md-4 mb-3">
                                                         <div class="card bg-light">
                                                             <div class="card-body text-center">
-                                                                <h3 class="text-primary-custom mb-0">{{ number_format(array_sum(array_column($examStudents, 'total_marks')) / $totalStudents, 1) }}</h3>
+                                                                <h3 class="text-primary-custom mb-0">{{ (isset($totalStudents) && $totalStudents > 0) ? number_format(array_sum(array_column($examStudents, 'total_marks')) / $totalStudents, 1) : '0.0' }}</h3>
                                                                 <small class="text-muted">Average Marks</small>
                                                             </div>
                                                         </div>
@@ -1188,6 +1273,7 @@
                                                     </div>
                                                 </div>
                                             @else
+                                                @if(!(isset($filters['week']) && $filters['week'] !== 'all'))
                                                 <!-- Division Statistics for Secondary -->
                                                 <div class="mt-3">
                                                     <h6 class="mb-2"><i class="bi bi-trophy"></i> Division Distribution</h6>
@@ -1224,6 +1310,7 @@
                                                         @endforeach
                                                     </div>
                                                 </div>
+                                                @endif
                                             @endif
                                             
                                             <!-- Male/Female per Division/Grade -->
@@ -1276,6 +1363,7 @@
                                                     </div>
                                                 </div>
                                             @else
+                                                @if(!(isset($filters['week']) && $filters['week'] !== 'all'))
                                                 <div class="mt-4">
                                                     <h6 class="mb-3"><i class="bi bi-gender-ambiguous"></i> 
                                                         Male/Female per Division
@@ -1335,38 +1423,42 @@
                                                         </table>
                                                     </div>
                                                 </div>
+                                                @endif
                                             @endif
                                             
                                             <!-- Class Overview Statistics -->
-                                            <div class="mt-4">
-                                                <h6 class="mb-3"><i class="bi bi-clipboard-data"></i> Class Overview</h6>
-                                                <div class="row">
-                                                    <div class="col-md-6 mb-3">
-                                                        <div class="card bg-light">
-                                                            <div class="card-body">
-                                                                <h6 class="text-primary-custom mb-3">Performance Summary</h6>
-                                                                <p><strong>Class Average:</strong> <span class="badge badge-info">{{ $classAverageGrade }}</span> ({{ number_format($classAverage, 1) }} marks)</p>
-                                                                @if(!$genderFilter)
-                                                                    <p><strong>Male Average:</strong> <span class="badge badge-primary">{{ number_format($maleAverage, 1) }} marks</span></p>
-                                                                    <p><strong>Female Average:</strong> <span class="badge badge-pink">{{ number_format($femaleAverage, 1) }} marks</span></p>
-                                                                @else
-                                                                    <p><strong>{{ $genderFilter }} Average:</strong> <span class="badge badge-primary">{{ number_format($genderFilter === 'Male' ? $maleAverage : $femaleAverage, 1) }} marks</span></p>
-                                                                @endif
-                                                                <p><strong>Pass Rate:</strong> <span class="badge badge-success">{{ number_format($passRate, 1) }}%</span></p>
-                                                                <p><strong>Fail Rate:</strong> <span class="badge badge-danger">{{ number_format($failRate, 1) }}%</span></p>
-                                                                <p><strong>Performance Remark:</strong> <span class="badge badge-info">{{ $performanceRemark }}</span></p>
+                                                @if(!(isset($filters['week']) && $filters['week'] !== 'all'))
+                                                <div class="mt-4">
+                                                    <h6 class="mb-3"><i class="bi bi-clipboard-data"></i> Class Overview</h6>
+                                                    <div class="row">
+                                                        <div class="col-md-6 mb-3">
+                                                            <div class="card bg-light">
+                                                                <div class="card-body">
+                                                                    <h6 class="text-primary-custom mb-3">Performance Summary</h6>
+                                                                    <p><strong>Class Average:</strong> <span class="badge badge-info">{{ $classAverageGrade }}</span> ({{ is_numeric($classAverage) ? number_format($classAverage, 1) : '0.0' }} marks)</p>
+                                                                    @if(!$genderFilter)
+                                                                        <p><strong>Male Average:</strong> <span class="badge badge-primary">{{ is_numeric($maleAverage) ? number_format($maleAverage, 1) : '0.0' }} marks</span></p>
+                                                                        <p><strong>Female Average:</strong> <span class="badge badge-pink">{{ is_numeric($femaleAverage) ? number_format($femaleAverage, 1) : '0.0' }} marks</span></p>
+                                                                    @else
+                                                                        <p><strong>{{ $genderFilter }} Average:</strong> <span class="badge badge-primary">{{ number_format($genderFilter === 'Male' ? $maleAverage : $femaleAverage, 1) }} marks</span></p>
+                                                                    @endif
+                                                                    <p><strong>Pass Rate:</strong> <span class="badge badge-success">{{ is_numeric($passRate) ? number_format($passRate, 1) : '0.0' }}%</span></p>
+                                                                    <p><strong>Fail Rate:</strong> <span class="badge badge-danger">{{ is_numeric($failRate) ? number_format($failRate, 1) : '0.0' }}%</span></p>
+                                                                    <p><strong>Performance Remark:</strong> <span class="badge badge-info">{{ $performanceRemark }}</span></p>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                    <div class="col-md-6 mb-3">
-                                                        <div class="card bg-light">
-                                                            <div class="card-body">
-                                                                <h6 class="text-primary-custom mb-3">Performance Comment</h6>
-                                                                <p class="text-muted">{{ $performanceComment }}</p>
+                                                        <div class="col-md-6 mb-3">
+                                                            <div class="card bg-light">
+                                                                <div class="card-body">
+                                                                    <h6 class="text-primary-custom mb-3">Performance Comment</h6>
+                                                                    <p class="text-muted">{{ $performanceComment }}</p>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
+                                                @endif
                                                 
                                                 @if($schoolType === 'Primary')
                                                     <div class="mt-3">
@@ -1414,13 +1506,14 @@
                                                                     <th>D</th>
                                                                     <th>E</th>
                                                                     <th>F</th>
+                                                                    <th>Incomplete</th>
                                                                 </tr>
                                                             </thead>
                                                             <tbody>
                                                                 @foreach($subjectStats as $subjectName => $grades)
                                                                     <tr>
                                                                         <td><strong>{{ $subjectName }}</strong></td>
-                                                                        @foreach(['A', 'B', 'C', 'D', 'E', 'F'] as $grade)
+                                                                        @foreach(['A', 'B', 'C', 'D', 'E', 'F', 'Incomplete'] as $grade)
                                                                             @php
                                                                                 $maleCount = $grades[$grade]['male'] ?? 0;
                                                                                 $femaleCount = $grades[$grade]['female'] ?? 0;
@@ -1451,6 +1544,252 @@
                                         </div>
                                     </div>
 
+                                    @if($selectedExam->exam_name === 'Weekly Test' && isset($filters['week']) && $filters['week'] !== 'all')
+                                        @php
+                                            $uniqueSubjects = [];
+                                            foreach ($examStudents as $student) {
+                                                if (isset($student['result']['subjects'])) {
+                                                    foreach ($student['result']['subjects'] as $sub) {
+                                                        $uniqueSubjects[$sub['subject_name']] = $sub['subject_name'];
+                                                    }
+                                                }
+                                            }
+                                            sort($uniqueSubjects);
+                                            
+                                            // Get Week Label
+                                            $currentWeekLabel = '';
+                                            if (isset($availableWeeks)) {
+                                                foreach ($availableWeeks as $wk) {
+                                                    if ($wk['week'] == $filters['week']) {
+                                                        $currentWeekLabel = $wk['display'];
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                            if (empty($currentWeekLabel)) $currentWeekLabel = $filters['week'];
+                                        @endphp
+                                         <div class="card mb-4 border-0 shadow-sm bg-success text-white">
+                                             <div class="card-body d-flex justify-content-between align-items-center p-3">
+                                                 <div>
+                                                     <h5 class="mb-0"><i class="bi bi-megaphone"></i> Send All Results for {{ $currentWeekLabel }}</h5>
+                                                     <small>Allows you to send a single SMS to parents with all subject results combined.</small>
+                                                 </div>
+                                                 <button type="button" class="btn btn-light btn-send-all-sms" 
+                                                     data-week="{{ $filters['week'] }}"
+                                                     data-exam-id="{{ $filters['examID'] or '' }}">
+                                                     <i class="bi bi-chat-left-dots-fill text-success"></i> Send All Results (SMS)
+                                                 </button>
+                                             </div>
+                                         </div>
+
+                                        @foreach($uniqueSubjects as $subjectIndex => $subjectName)
+                                            <div class="card mb-3 border-0 shadow-sm">
+                                                <div class="card-header bg-white d-flex justify-content-between align-items-center" style="cursor: pointer; border: 2px solid #940000; border-radius: 10px;" data-toggle="collapse" data-target="#collapseSubject{{ $subjectIndex }}" aria-expanded="false" aria-controls="collapseSubject{{ $subjectIndex }}">
+                                                    <h5 class="mb-0 text-dark" style="font-weight: 600; color: #940000 !important;">{{ $subjectName }} Results - {{ $currentWeekLabel }}</h5>
+                                                    <i class="bi bi-chevron-down" style="color: #940000;"></i>
+                                                </div>
+                                                <div class="collapse" id="collapseSubject{{ $subjectIndex }}">
+                                                    <div class="card-body">
+                                                        {{-- Subject Logic --}}
+                                                        @php
+                                                            $subjectStudents = [];
+                                                            foreach($examStudents as $std) {
+                                                                foreach($std['result']['subjects'] as $sub) {
+                                                                    if ($sub['subject_name'] === $subjectName) {
+                                                                        $stdCopy = $std; 
+                                                                        $stdCopy['subject_mark'] = $sub['marks'] ?? 'Incomplete';
+                                                                        $stdCopy['subject_grade'] = $sub['grade'] ?? '-';
+                                                                        $stdCopy['subject_details'] = $sub;
+                                                                        $subjectStudents[] = $stdCopy;
+                                                                        break;
+                                                                    }
+                                                                }
+                                                            }
+                                                            usort($subjectStudents, function($a, $b) {
+                                                                $markA = is_numeric($a['subject_mark']) ? $a['subject_mark'] : -1;
+                                                                $markB = is_numeric($b['subject_mark']) ? $b['subject_mark'] : -1;
+                                                                return $markB <=> $markA;
+                                                            });
+                                                            $top5Subject = array_slice($subjectStudents, 0, 5);
+                                                        @endphp
+                                                        
+                                                        {{-- Top 5 for Subject --}}
+                                                        <h6 class="mb-3 text-success"><i class="bi bi-star-fill"></i> Top 5 in {{ $subjectName }}</h6>
+                                                        <div class="table-responsive mb-4">
+                                                            <table class="table table-sm table-bordered">
+                                                                <thead class="bg-light">
+                                                                    <tr>
+                                                                        <th>Pos</th>
+                                                                        <th>Student Name</th>
+                                                                        <th>Marks</th>
+                                                                        <th>Grade</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    @foreach($top5Subject as $index => $topStd)
+                                                                        <tr>
+                                                                            <td>{{ $index + 1 }}</td>
+                                                                            <td>
+                                                                                {{ $topStd['student']->first_name }} 
+                                                                                {{ $topStd['student']->last_name }}
+                                                                            </td>
+                                                                            <td>{{ $topStd['subject_mark'] }}</td>
+                                                                            <td>{{ $topStd['subject_grade'] }}</td>
+                                                                        </tr>
+                                                                    @endforeach
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+
+                                                        {{-- All Students for Subject --}}
+                                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                                            <h6 class="mb-0 text-primary-custom"><i class="bi bi-list-ul"></i> All Students in {{ $subjectName }}</h6>
+                                                            @if(isset($availableWeeks) && !empty($availableWeeks))
+                                                                <div class="d-flex" style="gap: 5px;">
+                                                                    <button type="button" class="btn btn-sm btn-outline-danger btn-export-subject-pdf" 
+                                                                        data-subject="{{ $subjectName }}" 
+                                                                        data-subject-index="{{ $subjectIndex }}"
+                                                                        data-week="{{ $filters['week'] }}"
+                                                                        data-week-label="{{ $currentWeekLabel }}"
+                                                                        data-year="{{ $filters['year'] }}">
+                                                                        <i class="bi bi-file-pdf"></i> PDF
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-sm btn-outline-success btn-export-subject-excel" 
+                                                                        data-subject="{{ $subjectName }}" 
+                                                                        data-subject-index="{{ $subjectIndex }}"
+                                                                        data-week="{{ $filters['week'] }}"
+                                                                        data-week-label="{{ $currentWeekLabel }}"
+                                                                        data-year="{{ $filters['year'] }}">
+                                                                        <i class="bi bi-file-excel"></i> Excel
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-sm btn-success btn-send-sms" 
+                                                                        data-subject="{{ $subjectName }}" 
+                                                                        data-subject-index="{{ $subjectIndex }}"
+                                                                        data-week="{{ $filters['week'] }}"
+                                                                        data-exam-id="{{ $filters['examID'] or '' }}">
+                                                                        <i class="bi bi-chat-left-dots"></i> Send SMS
+                                                                    </button>
+                                                                </div>
+                                                            @endif
+                                                        </div>
+                                                        <div class="table-responsive">
+                                                            <table class="table table-bordered table-striped table-hover weekly-results-table" id="weeklyTable{{ $subjectIndex }}">
+                                                                <thead class="bg-light">
+                                                                    <tr>
+                                                                        <th>Pos</th>
+                                                                        <th>First Name</th>
+                                                                        <th>Last Name</th>
+                                                                        <th>Class</th>
+                                                                        <th>Marks</th>
+                                                                        <th>Grade</th>
+                                                                        <th>Action</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    @foreach($subjectStudents as $index => $subStd)
+                                                                        @php
+                                                                            $pPhone = !empty($subStd['student']->parent->phone) ? $subStd['student']->parent->phone : null;
+                                                                            if (!$pPhone || $pPhone === 'null' || $pPhone === 'undefined') {
+                                                                                $pPhone = !empty($subStd['student']->emergency_contact_phone) ? $subStd['student']->emergency_contact_phone : '';
+                                                                            }
+                                                                            $firstName = trim(($subStd['student']->first_name ?? '') . ' ' . ($subStd['student']->middle_name ?? ''));
+                                                                            $lastName = $subStd['student']->last_name ?? '';
+                                                                        @endphp
+                                                                        <tr data-student-id="{{ $subStd['student']->studentID }}" 
+                                                                            data-first-name="{{ $firstName }}"
+                                                                            data-last-name="{{ $lastName }}"
+                                                                            data-parent-phone="{{ $pPhone }}"
+                                                                            data-marks="{{ $subStd['subject_mark'] }}"
+                                                                            data-grade="{{ $subStd['subject_grade'] }}">
+                                                                            <td>{{ $index + 1 }}</td>
+                                                                            <td>{{ $firstName }}</td>
+                                                                            <td>{{ $lastName }}</td>
+                                                                            <td>{{ $subStd['class_name'] ?? '' }}</td>
+                                                                            <td>{{ $subStd['subject_mark'] }}</td>
+                                                                            <td>{{ $subStd['subject_grade'] }}</td>
+                                                                            <td>
+                                                                                 <button class="btn btn-sm btn-info text-white toggle-details" type="button">
+                                                                                    <i class="bi bi-eye"></i> View More
+                                                                                 </button>
+                                                                                 {{-- Hidden content for DataTables child row --}}
+                                                                                 <div class="details-content d-none">
+                                                                                    <div class="p-3 bg-light">
+                                                                                        <div class="card card-body shadow-sm">
+                                                                                            <h6 class="text-primary-custom"><strong><i class="bi bi-info-circle"></i> Question Breakdown - {{ $subStd['student']->first_name }} {{ $subStd['student']->last_name }}</strong></h6>
+                                                                                            <hr class="my-2">
+                                                                                            @if(isset($subStd['subject_details']['question_marks']) && count($subStd['subject_details']['question_marks']) > 0)
+                                                                                                <ul class="list-group list-group-flush">
+                                                                                                    @foreach($subStd['subject_details']['question_marks'] as $qMark)
+                                                                                                        <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                                                                                                            <span><strong>Q{{ $qMark->question }}:</strong> <small class="text-muted ml-1">{{ Str::limit($qMark->question_description, 30) }}</small></span>
+                                                                                                            @if($qMark->marks === 'Incomplete')
+                                                                                                                <span class="badge badge-warning rounded-pill px-3">Incomplete / {{ $qMark->max_marks }}</span>
+                                                                                                            @else
+                                                                                                                <span class="badge bg-primary text-white rounded-pill px-3">{{ $qMark->marks }} / {{ $qMark->max_marks }}</span>
+                                                                                                            @endif
+                                                                                                        </li>
+                                                                                                    @endforeach
+                                                                                                </ul>
+                                                                                            @else
+                                                                                                <div class="text-center py-3">
+                                                                                                    <i class="bi bi-clipboard-x text-muted display-4"></i>
+                                                                                                    <p class="text-muted mt-2">No detailed question marks available.</p>
+                                                                                                </div>
+                                                                                            @endif
+                                                                                        </div>
+                                                                                    </div>
+                                                                                 </div>
+                                                                            </td>
+                                                                        </tr>
+                                                                    @endforeach
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+
+                                        {{-- Initialize DataTables for Weekly Results --}}
+                                        <script>
+                                            $(document).ready(function() {
+                                                $('.weekly-results-table').each(function() {
+                                                    // Check if already initialized
+                                                    if ($.fn.DataTable.isDataTable(this)) {
+                                                        $(this).DataTable().destroy();
+                                                    }
+                                                    
+                                                    var table = $(this).DataTable({
+                                                        "pageLength": 5,
+                                                        "lengthMenu": [[5, 10, 25, 50, -1], [5, 10, 25, 50, "All"]],
+                                                        "ordering": true,
+                                                        "searching": true,
+                                                        "responsive": true,
+                                                        "language": {
+                                                            "emptyTable": "No data available in table"
+                                                        }
+                                                    });
+
+                                                    // Handle details expansion
+                                                    $(this).on('click', '.toggle-details', function() {
+                                                        var tr = $(this).closest('tr');
+                                                        var row = table.row(tr);
+                                                        var detailsHtml = tr.find('.details-content').html();
+
+                                                        if (row.child.isShown()) {
+                                                            row.child.hide();
+                                                            tr.removeClass('shown');
+                                                            $(this).html('<i class="bi bi-eye"></i> View More');
+                                                        } else {
+                                                            row.child(detailsHtml).show();
+                                                            tr.addClass('shown');
+                                                            $(this).html('<i class="bi bi-eye-slash"></i> Hide');
+                                                        }
+                                                    });
+                                                });
+                                            });
+                                        </script>
+                                    @else
                                     <!-- Top 5 Students -->
                                     <div class="card mb-4 border-0 shadow-sm">
                                         <div class="card-header bg-success text-white">
@@ -1544,6 +1883,7 @@
                                             </div>
                                         </div>
                                     </div>
+                                    @endif
                                 @else
                                     <div class="alert alert-info text-center">
                                         <i class="bi bi-info-circle"></i> No results found for the selected exam and class.
@@ -2371,7 +2711,7 @@
                                                                 <td>{{ $examResult['exam']->exam_name ?? 'N/A' }}</td>
                                                                 <td>{{ $examResult['exam']->start_date ?? 'N/A' }}</td>
                                                                 @if($schoolType === 'Primary')
-                                                                    <td><strong>{{ number_format($examResult['total_marks'], 0) }}</strong></td>
+                                                                    <td><strong>{{ is_numeric($examResult['total_marks']) ? number_format($examResult['total_marks'], 0) : $examResult['total_marks'] }}</strong></td>
                                                                     <td>
                                                                         <span class="badge badge-info">{{ $examResult['grade'] ?? 'N/A' }}</span>
                                                                     </td>
@@ -2402,7 +2742,7 @@
                                                                                     @foreach($examResult['subjects'] as $subject)
                                                                                         <tr>
                                                                                             <td>{{ $subject['subject_name'] }}</td>
-                                                                                            <td>{{ $subject['marks'] !== null ? number_format($subject['marks'], 0) : 'N/A' }}</td>
+                                                                                            <td>{{ is_numeric($subject['marks']) ? number_format($subject['marks'], 0) : $subject['marks'] }}</td>
                                                                                             <td>{{ $subject['grade'] ?? 'N/A' }}</td>
                                                                                         </tr>
                                                                                     @endforeach
@@ -2466,20 +2806,7 @@
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- DataTables CSS and JS -->
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap4.min.css">
-<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap4.min.js"></script>
-
-<!-- jsPDF Library for PDF generation -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js"></script>
-
-<!-- SheetJS for Excel export -->
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <script>
 $(document).ready(function() {
@@ -3204,7 +3531,8 @@ $(document).ready(function() {
             subclass: $('#subclass').val(),
             examID: $('#examID').val() || '',
             grade: $('#grade').val() || '',
-            gender: $('#gender').val() || ''
+            gender: $('#gender').val() || '',
+            week: $('#week').val() || 'all'
         };
 
         let description = '';
@@ -3288,6 +3616,10 @@ $(document).ready(function() {
             description += ' (' + filters.gender + ')';
         }
 
+        if (filters.week && filters.week !== 'all') {
+            description += ' (' + filters.week + ')';
+        }
+
         if (description) {
             $('#filteringText').text(description);
             $('#filteringDescription').show();
@@ -3337,7 +3669,7 @@ $(document).ready(function() {
     });
 
     // Update filtering description on filter change
-    $('#term, #year, #type, #status, #class, #subclass, #examID, #grade, #gender').on('change', function() {
+    $('#term, #year, #type, #status, #class, #subclass, #examID, #grade, #gender, #week').on('change', function() {
         updateFilteringDescription();
         
         // Auto-filter when term or year changes (if type is exam) to reload exams
@@ -3411,7 +3743,8 @@ $(document).ready(function() {
                 subclassID: $('#lockedSubclassID').val(), // Also send subclassID parameter
                 examID: $('#examID').val() || '',
                 grade: $('#grade').val() || '',
-                gender: $('#gender').val() || ''
+                gender: $('#gender').val() || '',
+                week: $('#week').val() || 'all'
             };
         @elseif(isset($isCoordinatorResultsView) && $isCoordinatorResultsView)
             // Coordinator view: main class is locked, subclass can be selected
@@ -3426,7 +3759,8 @@ $(document).ready(function() {
                 subclass: $('#subclass').val() || '', // Coordinator can select subclass
                 examID: $('#examID').val() || '',
                 grade: $('#grade').val() || '',
-                gender: $('#gender').val() || ''
+                gender: $('#gender').val() || '',
+                week: $('#week').val() || 'all'
             };
         @else
             const formData = {
@@ -3438,7 +3772,8 @@ $(document).ready(function() {
                 subclass: $('#subclass').val(),
                 examID: $('#examID').val() || '',
                 grade: $('#grade').val() || '',
-                gender: $('#gender').val() || ''
+                gender: $('#gender').val() || '',
+                week: $('#week').val() || 'all'
             };
         @endif
 
@@ -3556,6 +3891,20 @@ $(document).ready(function() {
                     if (currentExamID) {
                         $('#examID').val(currentExamID);
                     }
+                }
+
+                // Update week filter dropdown if needed
+                const $newWeekSelect = $response.find('#week');
+                const $newWeekContainer = $response.find('#weekFilterContainer');
+                if ($newWeekSelect.length > 0) {
+                    const currentWeek = $('#week').val();
+                    $('#week').html($newWeekSelect.html());
+                    if (currentWeek) {
+                        $('#week').val(currentWeek);
+                    }
+                }
+                if ($newWeekContainer.length > 0) {
+                    $('#weekFilterContainer').attr('style', $newWeekContainer.attr('style'));
                 }
 
                 // Update subclasses dropdown if needed
@@ -5348,8 +5697,12 @@ $(document).ready(function() {
             if (studentData.subjects && studentData.subjects.length > 0) {
                 const subjectData = [];
                 studentData.subjects.forEach(function(subject) {
-                    const marks = subject.marks !== null && subject.marks !== '' ? 
-                        parseFloat(subject.marks).toFixed(0) : 'N/A';
+                    let marks = 'N/A';
+                    if (subject.marks === 'incomplete') {
+                        marks = 'incomplete';
+                    } else if (subject.marks !== null && subject.marks !== '') {
+                        marks = parseFloat(subject.marks).toFixed(0);
+                    }
                     subjectData.push([
                         subject.subject_name || 'N/A',
                         marks,
@@ -5455,8 +5808,12 @@ $(document).ready(function() {
         
         if (studentData.subjects && studentData.subjects.length > 0) {
             studentData.subjects.forEach(function(subject) {
-                const marks = subject.marks !== null && subject.marks !== '' ? 
-                    parseFloat(subject.marks).toFixed(0) : 'N/A';
+                let marks = 'N/A';
+                if (subject.marks === 'incomplete') {
+                    marks = 'incomplete';
+                } else if (subject.marks !== null && subject.marks !== '') {
+                    marks = parseFloat(subject.marks).toFixed(0);
+                }
                 data.push([
                     subject.subject_name || 'N/A',
                     marks,
@@ -5619,7 +5976,12 @@ $(document).ready(function() {
                         });
                         
                         if (examResult && examResult.marks !== null && examResult.marks !== '') {
-                            const marks = parseFloat(examResult.marks).toFixed(0);
+                            let marks = 'N/A';
+                            if (examResult.marks === 'incomplete') {
+                                marks = 'incomplete';
+                            } else {
+                                marks = parseFloat(examResult.marks).toFixed(0);
+                            }
                             const grade = examResult.grade || 'N/A';
                             row.push(marks + '-' + grade);
                         } else {
@@ -5766,7 +6128,12 @@ $(document).ready(function() {
                     });
                     
                     if (examResult && examResult.marks !== null && examResult.marks !== '') {
-                        const marks = parseFloat(examResult.marks).toFixed(0);
+                        let marks = 'N/A';
+                        if (examResult.marks === 'incomplete') {
+                            marks = 'incomplete';
+                        } else {
+                            marks = parseFloat(examResult.marks).toFixed(0);
+                        }
                         const grade = examResult.grade || 'N/A';
                         row.push(marks + '-' + grade);
                     } else {
@@ -6464,5 +6831,394 @@ $(document).ready(function() {
     });
 });
 </script>
+<!-- SMS Progress Modal -->
+<div class="modal fade" id="smsProgressModal" tabindex="-1" role="dialog" aria-labelledby="smsProgressModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary-custom text-white">
+                <h5 class="modal-title" id="smsProgressModalLabel"><i class="bi bi-send-check"></i> Send Weekly Test Results (SMS)</h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info border-0 shadow-sm mb-4">
+                    <i class="bi bi-info-circle-fill"></i> Send <strong id="modalSubjectName"></strong> results for <strong id="modalWeekLabel"></strong> to parents.
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" class="custom-control-input" id="selectAllParents">
+                        <label class="custom-control-label font-weight-bold" for="selectAllParents">Select All</label>
+                    </div>
+                    <span class="badge badge-success" id="selectedCount" style="font-size: 1rem;">Receivers: 0</span>
+                </div>
 
+                <div class="table-responsive" style="max-height: 400px;">
+                    <table class="table table-sm table-hover" id="parentSmsTable">
+                        <thead class="bg-light sticky-top">
+                            <tr>
+                                <th style="width: 40px;"></th>
+                                <th>Parent Of</th>
+                                <th>Phone Number</th>
+                                <th class="text-center" style="width: 120px;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="parentSmsList">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
 
+                <div id="smsProgressArea" class="progress-container mt-4 d-none">
+                    <hr>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="font-weight-bold text-primary-custom">Sending Progress</span>
+                        <span id="smsProgressText" class="small">0 / 0</span>
+                    </div>
+                    <div class="progress" style="height: 25px; border-radius: 12px; border: 1px solid #ddd;">
+                        <div id="smsProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                    </div>
+                    <div id="smsDeliverySummary" class="text-center small mt-2"></div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" id="btnCancelSms">Cancel</button>
+                <button type="button" class="btn btn-primary-custom" id="startSendingSms">
+                    <i class="bi bi-send"></i> Start Sending SMS
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    let currentSmsData = [];
+    let isSendingSms = false;
+    let stopSmsRequest = false;
+    const schoolName = window.detailedViewData ? (window.detailedViewData.schoolName || 'Academic Results') : 'Academic Results';
+
+    // Open Modal
+    $(document).on('click', '.btn-send-sms', function() {
+        const subject = $(this).data('subject');
+        const subjectIndex = $(this).data('subject-index');
+        const week = $(this).data('week');
+        const examID = $(this).data('exam-id');
+        const tableId = '#weeklyTable' + subjectIndex;
+        
+        $('#modalSubjectName').text(subject);
+        $('#modalWeekLabel').text($('#collapseSubject' + subjectIndex + ' .card-header h5').text().split('-').pop().trim() || week);
+        
+        // Populate List
+        const list = $('#parentSmsList');
+        list.empty();
+        
+        // Use DataTables if available to get only visible/filtered rows, or just iterate the table
+        const table = $(tableId).DataTable();
+        table.rows().every(function() {
+            const node = $(this.node());
+            const studentId = node.data('student-id');
+            let phone = node.data('parent-phone');
+            const marks = node.data('marks');
+            const grade = node.data('grade');
+            const firstName = node.data('first-name');
+            const lastName = node.data('last-name');
+            const studentName = firstName + ' ' + lastName;
+            
+            // Clean up phone string aggressively
+            phone = String(phone || '').trim();
+            if (!phone || ['null', 'undefined', 'N/A'].includes(phone.toLowerCase())) phone = '';
+            
+            if (studentId) {
+                const disabledAttr = phone ? '' : 'disabled';
+                const statusHtml = phone 
+                    ? '<span class="status-marker text-muted small">Pending</span>' 
+                    : '<span class="text-danger small">No Phone</span>';
+                
+                list.append(`
+                    <tr data-student-id="${studentId}" data-phone="${phone}" data-subject="${subject}" data-marks="${marks}" data-grade="${grade}" data-week="${week}" data-exam-id="${examID}">
+                        <td>
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input parent-checkbox" id="check_${studentId}_${subject.replace(/\s+/g, '_')}" ${disabledAttr}>
+                                <label class="custom-control-label" for="check_${studentId}_${subject.replace(/\s+/g, '_')}">&nbsp;</label>
+                            </div>
+                        </td>
+                        <td>Parent of ${studentName}</td>
+                        <td>${phone || '<span class="text-danger small">No Phone</span>'}</td>
+                        <td class="text-center status-col">${statusHtml}</td>
+                    </tr>
+                `);
+            }
+        });
+        
+        $('#selectAllParents').prop('checked', false); // Explicitly uncheck
+        updateSelectedCount();
+        $('#smsProgressArea').addClass('d-none');
+        $('#smsProgressBar').css('width', '0%').text('0%').removeClass('bg-info').addClass('bg-success');
+        $('#startSendingSms').prop('disabled', true).html('<i class="bi bi-send"></i> Start Sending SMS');
+        $('#smsProgressModal').modal('show');
+    });
+    
+    // Open Modal for All Subjects (Consolidated)
+    $(document).on('click', '.btn-send-all-sms', function() {
+        const week = $(this).data('week');
+        const examID = $(this).data('exam-id');
+        const students = window.detailedViewData.allStudents || [];
+        
+        $('#modalSubjectName').text('All Subjects');
+        $('#modalWeekLabel').text(week);
+        
+        // Populate List
+        const list = $('#parentSmsList');
+        list.empty();
+        
+        students.forEach(student => {
+            const studentId = student.studentID;
+            const studentName = student.studentName;
+            let phone = student.parentPhone;
+            
+            // Clean up phone string aggressively
+            phone = String(phone || '').trim();
+            if (!phone || ['null', 'undefined', 'n/a'].includes(phone.toLowerCase())) phone = '';
+            
+            if (studentId) {
+                const disabledAttr = phone ? '' : 'disabled="disabled"';
+                const statusHtml = phone 
+                    ? '<span class="status-marker text-muted small">Pending</span>' 
+                    : '<span class="text-danger small">No Phone</span>';
+                
+                list.append(`
+                    <tr data-student-id="${studentId}" data-phone="${phone}" data-subject="" data-marks="" data-grade="" data-week="${week}" data-exam-id="${examID}">
+                        <td class="text-center">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input parent-checkbox" id="check_all_${studentId}" ${disabledAttr}>
+                                <label class="custom-control-label" for="check_all_${studentId}">&nbsp;&nbsp;&nbsp;</label>
+                            </div>
+                        </td>
+                        <td>Parent of ${studentName}</td>
+                        <td>${phone || '<span class="text-danger small">No Phone</span>'}</td>
+                        <td class="text-center status-col">${statusHtml}</td>
+                    </tr>
+                `);
+            }
+        });
+        
+        $('#selectAllParents').prop('checked', false);
+        updateSelectedCount();
+        $('#smsProgressArea').addClass('d-none');
+        $('#smsProgressBar').css('width', '0%').text('0%').removeClass('bg-info').addClass('bg-success');
+        $('#startSendingSms').prop('disabled', true).html('<i class="bi bi-send"></i> Start Sending SMS');
+        $('#smsProgressModal').modal('show');
+    });
+
+    // Select All Toggle
+    $('#selectAllParents').on('change', function() {
+        $('.parent-checkbox:not(:disabled)').prop('checked', $(this).is(':checked'));
+        updateSelectedCount();
+    });
+
+    $(document).on('change', '.parent-checkbox', function() {
+        updateSelectedCount();
+    });
+
+    function updateSelectedCount() {
+        const count = $('.parent-checkbox:checked').length;
+        $('#selectedCount').text('Receivers: ' + count);
+        $('#startSendingSms').prop('disabled', count === 0);
+    }
+
+    // Start Sending
+    $('#startSendingSms').on('click', async function() {
+        const selectedRows = $('.parent-checkbox:checked').closest('tr');
+        if (selectedRows.length === 0) return;
+        
+        const confirmed = await Swal.fire({
+            title: 'Send SMS?',
+            text: `You are about to send results SMS to ${selectedRows.length} parents.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#940000',
+            confirmButtonText: 'Yes, Send Now'
+        });
+        
+        if (!confirmed.isConfirmed) return;
+
+        isSendingSms = true;
+        stopSmsRequest = false;
+        $('#startSendingSms').prop('disabled', true).html('<i class="spinner-border spinner-border-sm"></i> Sending...');
+        $('#btnCancelSms').prop('disabled', true);
+        $('.parent-checkbox, #selectAllParents').prop('disabled', true);
+        $('#smsProgressArea').removeClass('d-none');
+        
+        const total = selectedRows.length;
+        let delivered = 0;
+        let failed = 0;
+        
+        $('#smsProgressText').text(`0 / ${total}`);
+        $('#smsDeliverySummary').empty();
+
+        for (let i = 0; i < total; i++) {
+            if (stopSmsRequest) break;
+            
+            const row = $(selectedRows[i]);
+            const statusCol = row.find('.status-col');
+            statusCol.html('<div class="spinner-border spinner-border-sm text-primary" role="status"></div>');
+            
+            const data = {
+                studentID: row.data('student-id'),
+                subject: row.data('subject'),
+                marks: row.data('marks'),
+                grade: row.data('grade'),
+                week: row.data('week'),
+                examID: row.data('exam-id'),
+                _token: $('meta[name="csrf-token"]').attr('content')
+            };
+
+            try {
+                const response = await $.ajax({
+                    url: '{{ route("admin.send_result_sms") }}',
+                    type: 'POST',
+                    data: data
+                });
+
+                if (response.success) {
+                    statusCol.html('<i class="bi bi-check-circle-fill text-success"></i>');
+                    delivered++;
+                } else {
+                    statusCol.html('<i class="bi bi-exclamation-circle-fill text-danger" title="'+(response.error || 'Failed')+'"></i>');
+                    failed++;
+                }
+            } catch (err) {
+                statusCol.html('<i class="bi bi-exclamation-circle-fill text-danger" title="Network Error"></i>');
+                failed++;
+            }
+
+            // Update Progress
+            const currentCount = delivered + failed;
+            const percent = Math.round((currentCount / total) * 100);
+            $('#smsProgressBar').css('width', percent + '%').text(percent + '%');
+            $('#smsProgressText').text(`${currentCount} / ${total}`);
+            $('#smsDeliverySummary').html(`<span class="text-success">${delivered} Delivered</span> | <span class="text-danger">${failed} Failed</span>`);
+        }
+
+        isSendingSms = false;
+        $('#startSendingSms').html('<i class="bi bi-check-all"></i> Completed').prop('disabled', true);
+        $('#btnCancelSms').prop('disabled', false).text('Close');
+        
+        Swal.fire({
+            title: 'Batch Completed',
+            text: `SMS sending finished. Delivered: ${delivered}, Failed: ${failed}`,
+            icon: delivered > 0 ? 'success' : 'info'
+        });
+    });
+
+    // Export Subject to PDF
+    $(document).on('click', '.btn-export-subject-pdf', function() {
+        const subject = $(this).data('subject');
+        const subjectIndex = $(this).data('subject-index');
+        const weekLabel = $(this).data('week-label');
+        const year = $(this).data('year');
+        const tableId = '#weeklyTable' + subjectIndex;
+        
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Add Header
+        doc.setFontSize(18);
+        doc.setTextColor(148, 0, 0); // #940000
+        doc.text(schoolName, 105, 15, { align: 'center' });
+        
+        doc.setFontSize(14);
+        doc.setTextColor(50, 50, 50);
+        doc.text('Subject Achievement Report', 105, 22, { align: 'center' });
+        
+        doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
+        doc.text(`Subject: ${subject}`, 14, 30);
+        doc.text(`Period: ${weekLabel} - ${year}`, 14, 36);
+        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 42);
+        
+        // Target table
+        const table = $(tableId).DataTable();
+        const data = [];
+        const headers = ['Pos', 'First Name', 'Last Name', 'Class', 'Marks', 'Grade'];
+        
+        table.rows().every(function() {
+            const row = $(this.node());
+            const cells = row.find('td');
+            data.push([
+                cells.eq(0).text().trim(),
+                cells.eq(1).text().trim(),
+                cells.eq(2).text().trim(),
+                cells.eq(3).text().trim(),
+                cells.eq(4).text().trim(),
+                cells.eq(5).text().trim()
+            ]);
+        });
+        
+        doc.autoTable({
+            startY: 48,
+            head: [headers],
+            body: data,
+            theme: 'grid',
+            headStyles: { 
+                fillColor: [148, 0, 0],
+                lineWidth: 0.5,
+                lineColor: [0, 0, 0]
+            },
+            styles: {
+                lineWidth: 0.5,
+                lineColor: [0, 0, 0],
+                textColor: [0, 0, 0]
+            }
+        });
+        
+        doc.save(`${subject}_Results_${weekLabel.replace(/[^a-z0-9]/gi, '_')}.pdf`);
+    });
+
+    // Export Subject to Excel
+    $(document).on('click', '.btn-export-subject-excel', function() {
+        const subject = $(this).data('subject');
+        const subjectIndex = $(this).data('subject-index');
+        const weekLabel = $(this).data('week-label');
+        const year = $(this).data('year');
+        const tableId = '#weeklyTable' + subjectIndex;
+        
+        const table = $(tableId).DataTable();
+        const data = [];
+        
+        // Headers with metadata
+        data.push([schoolName]);
+        data.push([`Subject Results: ${subject}`]);
+        data.push([`Period: ${weekLabel} - ${year}`]);
+        data.push([]); // Empty row
+        data.push(['Pos', 'First Name', 'Last Name', 'Class', 'Marks', 'Grade']);
+        
+        table.rows().every(function() {
+            const row = $(this.node());
+            const cells = row.find('td');
+            data.push([
+                cells.eq(0).text().trim(),
+                cells.eq(1).text().trim(),
+                cells.eq(2).text().trim(),
+                cells.eq(3).text().trim(),
+                cells.eq(4).text().trim(),
+                cells.eq(5).text().trim()
+            ]);
+        });
+        
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        XLSX.utils.book_append_sheet(wb, ws, "Results");
+        XLSX.writeFile(wb, `${subject}_Results_${weekLabel.replace(/[^a-z0-9]/gi, '_')}.xlsx`);
+    });
+
+    // Handle Modal Close during sending
+    $('#smsProgressModal').on('hidden.bs.modal', function () {
+        if (isSendingSms) {
+            stopSmsRequest = true;
+        }
+    });
+});
+</script>

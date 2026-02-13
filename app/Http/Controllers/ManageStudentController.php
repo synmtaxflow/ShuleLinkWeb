@@ -190,7 +190,17 @@ class ManageStudentController extends Controller
             'status' => 'nullable|in:Active,Transferred,Graduated,Inactive',
             'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
             'sponsor_id' => 'nullable|exists:sponsors,sponsorID',
-            'sponsorship_percentage' => 'nullable|numeric|min:0|max:100'
+            'sponsorship_percentage' => 'nullable|numeric|min:0|max:100',
+            // Additional fields
+            'birth_certificate_number' => 'nullable|string|max:100',
+            'religion' => 'nullable|string|max:100',
+            'nationality' => 'nullable|string|max:100',
+            'emergency_contact_name' => 'nullable|string|max:255',
+            'emergency_contact_relationship' => 'nullable|string|max:100',
+            'emergency_contact_phone' => 'nullable|string|max:20',
+            'declaration_date' => 'nullable|date',
+            'registering_officer_name' => 'nullable|string|max:255',
+            'registering_officer_title' => 'nullable|string|max:100'
         ], [
             'admission_number.unique' => 'Admission number already exists. Please use a different admission number.',
             'photo.image' => 'Photo must be an image file.',
@@ -291,10 +301,29 @@ class ManageStudentController extends Controller
                 'status' => $request->status ?: 'Active',
                 'sponsor_id' => $request->sponsor_id ?: null,
                 'sponsorship_percentage' => $request->sponsorship_percentage ?: 0,
+                // Additional particulars
+                'birth_certificate_number' => $request->birth_certificate_number ?: null,
+                'religion' => $request->religion ?: null,
+                'nationality' => $request->nationality ?: 'Tanzanian',
+                // Health information
+                'general_health_condition' => $request->general_health_condition ?: null,
+                'has_disability' => $request->has('has_disability') && $request->has_disability == '1' ? 1 : 0,
+                'disability_details' => ($request->has('has_disability') && $request->has_disability == '1') ? ($request->disability_details ?: null) : null,
+                'has_chronic_illness' => $request->has('has_chronic_illness') && $request->has_chronic_illness == '1' ? 1 : 0,
+                'chronic_illness_details' => ($request->has('has_chronic_illness') && $request->has_chronic_illness == '1') ? ($request->chronic_illness_details ?: null) : null,
+                'immunization_details' => $request->immunization_details ?: null,
                 'is_disabled' => $request->has('is_disabled') && $request->is_disabled == '1' ? true : false,
                 'has_epilepsy' => $request->has('has_epilepsy') && $request->has_epilepsy == '1' ? true : false,
                 'has_allergies' => $request->has('has_allergies') && $request->has_allergies == '1' ? true : false,
-                'allergies_details' => $request->has_allergies == '1' ? ($request->allergies_details ?: null) : null
+                'allergies_details' => ($request->has('has_allergies') && $request->has_allergies == '1') ? ($request->allergies_details ?: null) : null,
+                // Emergency contact
+                'emergency_contact_name' => $request->emergency_contact_name ?: null,
+                'emergency_contact_relationship' => $request->emergency_contact_relationship ?: null,
+                'emergency_contact_phone' => $request->emergency_contact_phone ?: null,
+                // Official use
+                'declaration_date' => $request->declaration_date ?: null,
+                'registering_officer_name' => $request->registering_officer_name ?: null,
+                'registering_officer_title' => $request->registering_officer_title ?: null,
             ]);
 
             Log::info('Student Created Object:', [
@@ -541,6 +570,9 @@ class ManageStudentController extends Controller
                 'sponsor_id' => $student->sponsor_id,
                 'sponsor_name' => $student->sponsor ? $student->sponsor->sponsor_name : null,
                 'sponsorship_percentage' => $student->sponsorship_percentage,
+                'declaration_date' => $formatDate($student->declaration_date),
+                'registering_officer_name' => $student->registering_officer_name,
+                'registering_officer_title' => $student->registering_officer_title,
             ]
         ]);
     }
@@ -577,7 +609,17 @@ class ManageStudentController extends Controller
             'status' => 'nullable|in:Active,Transferred,Graduated,Inactive',
             'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
             'sponsor_id' => 'nullable|exists:sponsors,sponsorID',
-            'sponsorship_percentage' => 'nullable|numeric|min:0|max:100'
+            'sponsorship_percentage' => 'nullable|numeric|min:0|max:100',
+            // Additional fields
+            'birth_certificate_number' => 'nullable|string|max:100',
+            'religion' => 'nullable|string|max:100',
+            'nationality' => 'nullable|string|max:100',
+            'emergency_contact_name' => 'nullable|string|max:255',
+            'emergency_contact_relationship' => 'nullable|string|max:100',
+            'emergency_contact_phone' => 'nullable|string|max:20',
+            'declaration_date' => 'nullable|date',
+            'registering_officer_name' => 'nullable|string|max:255',
+            'registering_officer_title' => 'nullable|string|max:100'
         ], [
             'admission_number.unique' => 'Admission number already exists. Please use a different admission number.',
             'photo.image' => 'Photo must be an image file.',
@@ -674,6 +716,10 @@ class ManageStudentController extends Controller
                 'emergency_contact_name' => $request->emergency_contact_name ?: null,
                 'emergency_contact_relationship' => $request->emergency_contact_relationship ?: null,
                 'emergency_contact_phone' => $request->emergency_contact_phone ?: null,
+                // Official use
+                'declaration_date' => $request->declaration_date ?: null,
+                'registering_officer_name' => $request->registering_officer_name ?: null,
+                'registering_officer_title' => $request->registering_officer_title ?: null,
             ]);
 
             // Update user account if admission number changed
@@ -3975,5 +4021,53 @@ class ManageStudentController extends Controller
             'success' => true,
             'fees' => $feesData
         ]);
+    }
+
+    /**
+     * Show Student Identity Cards
+     */
+    public function studentIdCards(Request $request, $classID = null)
+    {
+        $schoolID = Session::get('schoolID');
+        if (!$schoolID) return redirect()->route('login');
+
+        // Fetch all main classes for navigation/selection
+        $classes = ClassModel::where('schoolID', $schoolID)
+            ->where('status', 'Active')
+            ->orderBy('class_name', 'asc')
+            ->get();
+        
+        $selectedClassID = $classID ?? $request->input('classID');
+        $selectedSubclassID = $request->input('subclassID');
+        
+        $students = collect();
+        $subclasses = collect();
+
+        if ($selectedClassID) {
+            // Get subclasses for filtering
+            $subclasses = Subclass::where('classID', $selectedClassID)
+                ->where('status', 'Active')
+                ->get();
+            
+            $query = Student::where('schoolID', $schoolID)
+                ->where('status', 'Active')
+                ->whereHas('subclass', function($q) use ($selectedClassID) {
+                    $q->where('classID', $selectedClassID);
+                });
+                
+            if ($selectedSubclassID) {
+                $query->where('subclassID', $selectedSubclassID);
+            }
+            
+            $students = $query->with(['subclass.class', 'parent', 'school'])->get();
+        }
+
+        return view('Admin.student_identity_card', compact(
+            'students', 
+            'classes', 
+            'subclasses', 
+            'selectedClassID', 
+            'selectedSubclassID'
+        ));
     }
 }

@@ -148,8 +148,8 @@
                                     </span>
                                 </div>
                                 <div class="text-muted mt-1 text-md-right">
-                                    Pass: {{ $overall['pass'] ?? 0 }} |
-                                    Fail: {{ $overall['fail'] ?? 0 }} |
+                                    Pass: {{ $overall['pass'] ?? 0 }} ({{ $overall['pass_rate'] ?? 0 }}%) |
+                                    Fail: {{ $overall['fail'] ?? 0 }} ({{ $overall['fail_rate'] ?? 0 }}%) |
                                     Answered: {{ $overall['answered'] ?? 0 }}
                                 </div>
                             </div>

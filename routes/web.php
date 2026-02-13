@@ -95,6 +95,7 @@ Route::get('task-management', [AdminController::class, 'taskManagement'])->name(
 Route::get('admin/get-teacher-tasks', [AdminController::class, 'getTeacherTasks'])->name('admin.get_teacher_tasks');
 Route::post('approve-task/{taskID}', [AdminController::class, 'approveTask'])->name('approve_task');
 Route::post('reject-task/{taskID}', [AdminController::class, 'rejectTask'])->name('reject_task');
+Route::get('admin/student-id-cards/{classID?}', [ManageStudentController::class, 'studentIdCards'])->name('admin.student_id_cards');
 
 // Parents Routes
 Route::get('parentDashboard', [ParentsContoller::class, 'parentDashboard'])->name('parentDashboard');
@@ -536,6 +537,8 @@ Route::post('unshift_students/{examID}', [ManageExaminationController::class, 'u
 Route::post('update_exam_attendance/{examID}', [ManageExaminationController::class, 'updateExamAttendance'])->name('update_exam_attendance');
 Route::get('get_class_student_counts/{classID}', [ManageExaminationController::class, 'getClassStudentCounts'])->name('get_class_student_counts');
 Route::get('my_supervise_exams', [ManageExaminationController::class, 'getMySuperviseExams'])->name('my_supervise_exams');
+Route::get('supervise_exam/view_students', [ManageExaminationController::class, 'viewHallStudentsPage'])->name('supervise_exam.view_students');
+Route::get('supervise_exam/take_attendance', [ManageExaminationController::class, 'takeAttendancePage'])->name('supervise_exam.take_attendance');
 Route::get('hall_students/{examHallID}', [ManageExaminationController::class, 'getHallStudents'])->name('get_hall_students');
 Route::get('admin/get-exam-halls/{examID}', [ManageExaminationController::class, 'getExamHalls'])->name('admin.get_exam_halls');
 Route::post('hall_attendance/{examHallID}', [ManageExaminationController::class, 'updateHallAttendance'])->name('update_hall_attendance');
@@ -546,6 +549,7 @@ Route::get('manageResults', [ResultManagementController::class, 'index'])->name(
 Route::get('admin/subject-analysis', [ResultManagementController::class, 'subjectAnalysis'])->name('admin.subject_analysis');
 Route::get('admin/get-class-subjects', [ResultManagementController::class, 'getClassSubjectsForAnalysis'])->name('admin.get_class_subjects_for_analysis');
 Route::post('admin/send-subject-analysis-comment', [ResultManagementController::class, 'sendSubjectAnalysisComment'])->name('admin.send_subject_analysis_comment');
+Route::post('admin/send-result-sms', [ResultManagementController::class, 'sendResultSms'])->name('admin.send_result_sms');
 
 // Exam Papers Routes
 Route::post('store_exam_paper', [ManageExaminationController::class, 'storeExamPaper'])->name('store_exam_paper');
@@ -565,6 +569,9 @@ Route::delete('delete_exam_paper/{examPaperID}', [ManageExaminationController::c
 Route::get('supervise_exams', [ManageExaminationController::class, 'supervise_exams'])->name('supervise_exams');
 Route::get('admin/printing-unit', [ManageExaminationController::class, 'printingUnit'])->name('admin.printing_unit');
 Route::get('admin/printing-unit/filter', [ManageExaminationController::class, 'filterPrintingUnit'])->name('admin.printing_unit.filter');
+Route::get('get_test_by_type_year', [ManageExaminationController::class, 'getTestByTypeYear'])->name('get_test_by_type_year');
+Route::get('get_available_periods', [ManageExaminationController::class, 'getAvailablePeriods'])->name('get_available_periods');
+Route::get('get_scheduled_subjects', [ManageExaminationController::class, 'getScheduledSubjects'])->name('get_scheduled_subjects');
 // Attendance Routes
 Route::post('save_attendance', [ManageClassessController::class, 'saveAttendance'])->name('save_attendance');
 Route::get('get_attendance', [ManageClassessController::class, 'getAttendance'])->name('get_attendance');
@@ -607,6 +614,11 @@ Route::post('admin/save-class-session-timetables', [TimeTableController::class, 
 Route::post('admin/delete-class-session-timetable', [TimeTableController::class, 'deleteClassSessionTimetable'])->name('delete_class_session_timetable');
 Route::post('admin/shuffle-session-timetable', [TimeTableController::class, 'shuffleSessionTimetable'])->name('shuffle_session_timetable');
 Route::post('admin/swap-session-timetable', [TimeTableController::class, 'swapSessionTimetable'])->name('swap_session_timetable');
+
+// New route for fetching subjects for timetable builder (Weekly Tests etc.)
+Route::get('admin/api/get-subjects-for-timetable', [TimeTableController::class, 'getSubjectsForTimetable'])->name('admin.get_subjects_for_timetable');
+Route::get('admin/api/get-test-schedules', [TimeTableController::class, 'getTestSchedules'])->name('admin.get_test_schedules');
+Route::post('admin/api/delete-all-test-schedules', [TimeTableController::class, 'deleteAllTestSchedules'])->name('admin.delete_all_test_schedules');
 
 // Calendar routes
 Route::get('admin/calendar', [CalendarController::class, 'adminCalendar'])->name('admin.calendar');

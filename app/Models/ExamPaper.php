@@ -14,12 +14,16 @@ class ExamPaper extends Model
 
     protected $fillable = [
         'examID',
+        'weekly_test_schedule_id',
         'class_subjectID',
         'teacherID',
         'file_path',
         'question_content',
         'optional_question_total',
         'upload_type',
+        'test_week',
+        'test_week_range',
+        'test_date',
         'status',
         'rejection_reason',
         'approval_comment',
@@ -34,6 +38,11 @@ class ExamPaper extends Model
     public function examination()
     {
         return $this->belongsTo(Examination::class, 'examID', 'examID');
+    }
+
+    public function weeklyTestSchedule()
+    {
+        return $this->belongsTo(WeeklyTestSchedule::class, 'weekly_test_schedule_id');
     }
 
     public function classSubject()

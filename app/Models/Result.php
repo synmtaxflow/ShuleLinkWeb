@@ -21,6 +21,8 @@ class Result extends Model
         'grade',
         'remark',
         'status',
+        'test_week',
+        'test_date',
     ];
 
     protected $casts = [

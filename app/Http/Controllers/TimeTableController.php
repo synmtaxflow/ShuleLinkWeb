@@ -12,6 +12,9 @@ use App\Models\SchoolSubject;
 use App\Models\Teacher;
 use App\Models\ClassModel;
 use App\Models\ExamHall;
+use App\Models\Result;
+use App\Models\ExamPaper;
+use App\Models\WeeklyTestSchedule;
 use App\Models\ExamHallSupervisor;
 use App\Services\SmsService;
 use Illuminate\Http\Request;
@@ -134,9 +137,8 @@ class TimeTableController extends Controller
 
         $schoolID = Session::get('schoolID');
 
-        // Get scheduled examinations
+        // Get all approved examinations for the school
         $examinations = Examination::where('schoolID', $schoolID)
-            ->where('status', 'scheduled')
             ->where('approval_status', 'Approved')
             ->orderBy('year', 'desc')
             ->orderBy('start_date', 'desc')
@@ -173,7 +175,8 @@ class TimeTableController extends Controller
         // Get teacher permissions for the view
         $teacherPermissions = $this->getTeacherPermissions();
 
-        return view('Admin.manage_Timetable', compact('examinations', 'subclasses', 'teachers', 'classes', 'schoolSubjects', 'school', 'teacherPermissions'));
+        $user_type = $user;
+    return view('Admin.manage_Timetable', compact('examinations', 'subclasses', 'teachers', 'classes', 'schoolSubjects', 'school', 'teacherPermissions', 'user_type'));
     }
 
     /**
@@ -296,6 +299,81 @@ class TimeTableController extends Controller
     }
 
     /**
+     * Get subjects for timetable based on scope
+     */
+    public function getSubjectsForTimetable(Request $request)
+    {
+        $scope = $request->input('scope');
+        $scopeId = $request->input('scope_id');
+        $schoolID = Session::get('schoolID');
+
+        if (!$scope) {
+            return response()->json(['error' => 'Scope is required'], 400);
+        }
+
+        $subjects = collect();
+
+        if ($scope === 'school_wide') {
+            $subjects = SchoolSubject::where('schoolID', $schoolID)
+                ->where('status', 'Active')
+                ->orderBy('subject_name')
+                ->get()
+                ->map(function($subject) {
+                    return [
+                        'id' => $subject->subjectID,
+                        'name' => $subject->subject_name,
+                        'code' => $subject->subject_code,
+                        'teacher_id' => null, // No specific teacher for school-wide yet
+                        'teacher_name' => null
+                    ];
+                });
+
+        } elseif ($scope === 'class') {
+            if (!$scopeId) return response()->json(['error' => 'Class ID is required'], 400);
+
+            // Get all subjects assigned to any subclass of this class
+            // We want unique subjects
+            $subjects = ClassSubjectModel::whereHas('subclass', function($q) use ($scopeId) {
+                    $q->where('classID', $scopeId);
+                })
+                ->with(['subject'])
+                ->get()
+                ->unique('subjectID')
+                ->map(function($cs) {
+                    // For class scope, we can't easily pin down a SINGLE teacher if different subclasses have different teachers.
+                    // We will just return the subject info.
+                    return [
+                        'id' => $cs->subjectID,
+                        'name' => $cs->subject->subject_name ?? 'N/A',
+                        'code' => $cs->subject->subject_code ?? '',
+                        'teacher_id' => null, // Ambiguous at class level
+                        'teacher_name' => 'Varies'
+                    ];
+                })
+                ->values(); // Reset keys
+
+        } elseif ($scope === 'subclass') {
+            if (!$scopeId) return response()->json(['error' => 'Subclass ID is required'], 400);
+
+            $subjects = ClassSubjectModel::where('subclassID', $scopeId)
+                ->where('status', 'Active')
+                ->with(['subject', 'teacher'])
+                ->get()
+                ->map(function($cs) {
+                    return [
+                        'id' => $cs->subjectID, // Use subjectID (SchoolSubject ID) for consistency across scopes
+                        'name' => $cs->subject->subject_name ?? 'N/A',
+                        'code' => $cs->subject->subject_code ?? '',
+                        'teacher_id' => $cs->teacherID,
+                        'teacher_name' => $cs->teacher ? ($cs->teacher->first_name . ' ' . $cs->teacher->last_name) : 'Not Assigned'
+                    ];
+                });
+        }
+
+        return response()->json(['success' => true, 'subjects' => $subjects]);
+    }
+
+    /**
      * Store exam timetable
      */
     public function storeExamTimetable(Request $request)
@@ -303,8 +381,13 @@ class TimeTableController extends Controller
         // Check create permission - New format: timetable_create
         if (!$this->hasPermission('timetable_create')) {
             return response()->json([
-                'error' => 'You do not have permission to create timetables. You need timetable_create permission.',
+               'error' => 'You do not have permission to create timetables. You need timetable_create permission.',
             ], 403);
+        }
+
+        // --- NEW LOGIC FOR TEST SCHEDULES ---
+        if ($request->input('exam_category_select') === 'test') {
+            return $this->storeTestSchedule($request);
         }
 
         $timetableType = $request->timetable_type;
@@ -614,6 +697,369 @@ class TimeTableController extends Controller
 
             return response()->json(['success' => true, 'timetables' => $timetables]);
         }
+    }
+
+    /**
+     * Store Weekly/Monthly Test Schedule
+     */
+    private function storeTestSchedule(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'test_type' => 'required|in:weekly,monthly',
+            'test_scope' => 'required|in:school_wide,class,subclass',
+            'schedule' => 'required|array',
+            'test_exam_id' => 'required|exists:examinations,examID', // Added validation
+            'start_date' => 'nullable|date',
+            // Conditional validation for scope_id
+            'test_class_id' => 'required_if:test_scope,class',
+            'test_subclass_id' => 'required_if:test_scope,subclass',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $schoolID = Session::get('schoolID');
+        $testType = $request->test_type;
+        $scope = $request->test_scope;
+        $examID = $request->test_exam_id;
+        $scopeId = null;
+
+        if ($scope === 'class') $scopeId = $request->test_class_id;
+        if ($scope === 'subclass') $scopeId = $request->test_subclass_id;
+
+        try {
+            DB::beginTransaction();
+
+            // Clear existing schedule for this scope to allow full update
+            \App\Models\WeeklyTestSchedule::where('schoolID', $schoolID)
+                ->where('test_type', $testType)
+                ->where('scope', $scope)
+                ->where('scope_id', $scopeId)
+                ->delete();
+
+            $scheduleData = $request->schedule; // Array of Weeks
+            $createdCount = 0;
+
+            foreach ($scheduleData as $weekKey => $weekExams) {
+                // Extract week number from key (e.g. "week_1" -> 1)
+                $weekNum = (int) str_replace('week_', '', $weekKey);
+                if ($weekNum <= 0) $weekNum = 1;
+
+                foreach ($weekExams as $examRow) {
+                    $day = $examRow['day'];
+                    $subjectID = $examRow['subject_id'];
+                    $teacherID = $examRow['teacher_id'] ?? null;
+                    $start = $examRow['start'];
+                    $end = $examRow['end'];
+
+                    if (!$day || !$subjectID || !$start || !$end) continue;
+
+                    $record = new \App\Models\WeeklyTestSchedule();
+                    $record->schoolID = $schoolID;
+                    $record->examID = $examID;
+                    $record->test_type = $testType;
+                    $record->week_number = $weekNum;
+                    $record->day = $day;
+                    $record->scope = $scope;
+                    $record->scope_id = $scopeId;
+                    $record->subjectID = $subjectID;
+                    $record->teacher_id = $teacherID;
+                    $record->start_time = $start;
+                    $record->end_time = $end;
+                    $record->supervisor_ids = isset($examRow['supervisor_ids']) ? json_encode($examRow['supervisor_ids']) : null;
+                    $record->created_by = auth()->id();
+                    $record->save();
+                    
+                    $createdCount++;
+                }
+            }
+
+            // Sync Results - passing optional start_date if provided
+            $startDate = $request->input('start_date');
+            $this->syncTestResults($schoolID, $examID, $testType, $scope, $scopeId, $scheduleData, $startDate);
+            
+            // Sync Exam Paper Slots
+            $this->syncExamPaperSlots($schoolID, $examID, $testType, $scope, $scopeId, $scheduleData, $startDate);
+            
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Test schedule saved successfully. {$createdCount} entries created.",
+                'schedule_count' => $createdCount
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Failed to save test schedule: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Sync Test Schedule Results
+     */
+    private function syncTestResults($schoolID, $examID, $testType, $scope, $scopeId, $scheduleData, $startDate = null)
+    {
+        // 1. Delete Existing Results (Only those without marks) for this Exam
+        // ... (existing delete logic)
+        
+        $query = Result::where('examID', $examID)->whereNull('marks');
+        
+        if ($scope === 'class') {
+           // Filter by studentID IN (select studentID from students JOIN subclasses ... where classID = ?)
+           $query->whereIn('studentID', function($q) use ($scopeId) {
+               $q->select('studentID')
+                 ->from('students')
+                 ->join('subclasses', 'students.subclassID', '=', 'subclasses.subclassID')
+                 ->where('subclasses.classID', $scopeId);
+           });
+        } elseif ($scope === 'subclass') {
+           $query->whereIn('studentID', function($q) use ($scopeId) {
+               $q->select('studentID')->from('students')->where('subclassID', $scopeId);
+           });
+        }
+        // School wide: delete all for examID (that have no marks)
+        
+        $query->delete();
+
+        // 2. Insert New Results
+        $exam = Examination::find($examID);
+        if (!$exam) return;
+        
+        $examStartDate = $startDate ? \Carbon\Carbon::parse($startDate) : \Carbon\Carbon::parse($exam->start_date);
+        
+        // Fetch Students - eager load subclass to get classID
+        $studentsQuery = \App\Models\Student::with('subclass')->where('schoolID', $schoolID)->where('status', 'Active');
+        if ($scope === 'class') {
+            $studentsQuery->whereHas('subclass', function($q) use ($scopeId) {
+                $q->where('classID', $scopeId);
+            });
+        } elseif ($scope === 'subclass') {
+            $studentsQuery->where('subclassID', $scopeId);
+        }
+        $students = $studentsQuery->get();
+        
+        if ($students->isEmpty()) return;
+
+        foreach ($scheduleData as $weekKey => $weekExams) {
+             $weekNum = (int) str_replace('week_', '', $weekKey);
+             if ($weekNum <= 0) $weekNum = 1;
+
+             foreach ($weekExams as $examRow) {
+                 $dayName = $examRow['day']; 
+                 $subjectID = $examRow['subject_id'];
+                 if (!$subjectID) continue;
+
+                 // Calculate Date
+                 // Start of Week 1 + specific Day
+                 $weekStartDate = $examStartDate->copy()->addWeeks($weekNum - 1)->startOfWeek(); 
+                 // Carbon startOfWeek() -> Monday. 
+                 // Map day name to date
+                 try {
+                     $testDate = $weekStartDate->copy()->modify($dayName);
+                     // If test date is before exam start date for week 1, it might be due to day order (e.g. exam starts Wed, but test is Mon).
+                     // However, usually we assume standard weeks. 
+                 } catch (\Exception $e) {
+                     $testDate = $weekStartDate; // Fallback
+                 }
+                 
+                 foreach ($students as $student) {
+                      // Find ClassSubject for this student/subject
+                      $stuClassID = $student->subclass ? $student->subclass->classID : null;
+                      if (!$stuClassID) continue;
+                      $classSubject = \App\Models\ClassSubject::where('classID', $stuClassID)
+                                     ->where('subjectID', $subjectID)
+                                     ->where(function($q) use ($student) {
+                                         $q->where('subclassID', $student->subclassID)
+                                           ->orWhereNull('subclassID');
+                                     })
+                                     ->first();
+                      
+                      if (!$classSubject) continue;
+
+                      // Check existence to avoid dupes (though we deleted unmarked ones, marked ones might exist)
+                      $exists = Result::where('examID', $examID)
+                          ->where('studentID', $student->studentID)
+                          ->where('class_subjectID', $classSubject->class_subjectID)
+                          ->where('test_week', 'Week '.$weekNum)
+                          ->exists();
+
+                      if ($exists) continue;
+
+                      Result::create([
+                          'studentID' => $student->studentID,
+                          'examID' => $examID,
+                          'subclassID' => $student->subclassID, // Use student current subclass
+                          'class_subjectID' => $classSubject->class_subjectID,
+                          'test_week' => 'Week ' . $weekNum,
+                          'test_date' => $testDate->format('Y-m-d'),
+                          'marks' => null,
+                          // 'status' => 'Pending' // if column exists
+                      ]);
+                 }
+             }
+        }
+    }
+
+    /**
+     * Sync Exam Paper Slots
+     */
+    private function syncExamPaperSlots($schoolID, $examID, $testType, $scope, $scopeId, $scheduleData, $startDate = null)
+    {
+        // 1. Delete Existing placeholder slots (those with status='pending') for this Exam and Scope
+        $query = ExamPaper::where('examID', $examID)->where('status', 'pending');
+        
+        // Scope filtering
+        if ($scope === 'class') {
+            $query->whereHas('classSubject', function($q) use ($scopeId) {
+                $q->where('classID', $scopeId);
+            });
+        } elseif ($scope === 'subclass') {
+            $query->whereHas('classSubject', function($q) use ($scopeId) {
+                $q->where('subclassID', $scopeId);
+            });
+        }
+        
+        $query->delete();
+
+        // 2. Insert New Placeholder Slots
+        $exam = Examination::find($examID);
+        if (!$exam) return;
+        
+        $examStartDate = $startDate ? \Carbon\Carbon::parse($startDate) : \Carbon\Carbon::parse($exam->start_date);
+        
+        foreach ($scheduleData as $weekKey => $weekExams) {
+            $weekNum = (int) str_replace('week_', '', $weekKey);
+            if ($weekNum <= 0) $weekNum = 1;
+
+            foreach ($weekExams as $examRow) {
+                $dayName = $examRow['day']; 
+                $subjectID = $examRow['subject_id'];
+                if (!$subjectID) continue;
+
+                // Calculate Date and Range
+                $weekStartDate = $examStartDate->copy()->addWeeks($weekNum - 1)->startOfWeek(); 
+                $weekEndDate = $weekStartDate->copy()->endOfWeek();
+                $weekRange = $weekStartDate->format('d M') . ' - ' . $weekEndDate->format('d M');
+
+                try {
+                    $testDate = $weekStartDate->copy()->modify($dayName);
+                    // If test date < exam start date, logic same as Results sync
+                } catch (\Exception $e) {
+                    $testDate = $weekStartDate;
+                }
+
+                // Find relevant schedule record (for linking)
+                $schedule = WeeklyTestSchedule::where('schoolID', $schoolID)
+                    ->where('examID', $examID)
+                    ->where('test_type', $testType)
+                    ->where('week_number', $weekNum)
+                    ->where('day', $dayName)
+                    ->where('subjectID', $subjectID)
+                    ->where('scope', $scope)
+                    ->where('scope_id', $scopeId)
+                    ->first();
+
+                if (!$schedule) continue;
+
+                // Find ClassSubject(s) affected
+                $csQuery = \App\Models\ClassSubject::where('subjectID', $subjectID)->where('status', 'Active');
+                if ($scope === 'class') {
+                    $csQuery->where('classID', $scopeId);
+                } elseif ($scope === 'subclass') {
+                    $csQuery->where('subclassID', $scopeId);
+                }
+
+                $classSubjects = $csQuery->get();
+
+                foreach ($classSubjects as $cs) {
+                    // Check if already has a real upload (approved or wait_approval)
+                    $exists = ExamPaper::where('examID', $examID)
+                        ->where('class_subjectID', $cs->class_subjectID)
+                        ->where('test_week', 'Week ' . $weekNum)
+                        ->where('status', '!=', 'pending')
+                        ->exists();
+                    
+                    if ($exists) continue;
+
+                    ExamPaper::create([
+                        'examID' => $examID,
+                        'weekly_test_schedule_id' => $schedule->id,
+                        'class_subjectID' => $cs->class_subjectID,
+                        'teacherID' => $cs->teacherID, // Assign to the teacher who teaches this class subject
+                        'test_week' => 'Week ' . $weekNum,
+                        'test_week_range' => $weekRange,
+                        'test_date' => $testDate->format('Y-m-d'),
+                        'upload_type' => 'upload',
+                        'status' => 'pending'
+                    ]);
+                }
+            }
+        }
+    }
+
+    /**
+     * Get Test Schedules
+     */
+    public function getTestSchedules(Request $request)
+    {
+        $testType = $request->input('test_type');
+        $scope = $request->input('scope');
+        $scopeId = $request->input('scope_id');
+        $schoolID = Session::get('schoolID');
+
+        $query = \App\Models\WeeklyTestSchedule::where('schoolID', $schoolID)
+            ->where('test_type', $testType)
+            ->where('scope', $scope)
+            ->with(['subject', 'teacher']);
+
+        if ($scope !== 'school_wide') {
+            $query->where('scope_id', $scopeId);
+        }
+
+        $schedules = $query->orderBy('week_number')
+            ->orderByRaw("FIELD(day, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')")
+            ->orderBy('start_time')
+            ->get();
+
+        // Group by week
+        $grouped = $schedules->groupBy('week_number');
+
+        return response()->json([
+            'success' => true,
+            'schedules' => $grouped
+        ]);
+    }
+
+    /**
+     * Delete all test schedules for a specific scope/type
+     */
+    public function deleteAllTestSchedules(Request $request)
+    {
+        if (!$this->hasPermission('timetable_delete')) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $testType = $request->test_type;
+        $scope = $request->scope;
+        $scopeId = $request->scope_id;
+        $schoolID = Session::get('schoolID');
+
+        $query = \App\Models\WeeklyTestSchedule::where('schoolID', $schoolID)
+            ->where('test_type', $testType)
+            ->where('scope', $scope);
+
+        if ($scope !== 'school_wide') {
+            $query->where('scope_id', $scopeId);
+        }
+
+        $query->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Schedule deleted successfully'
+        ]);
     }
 
     /**

@@ -59,9 +59,25 @@ class SmsService
                 ];
             }
 
+            $responseData = json_decode($response, true);
+            $isSuccess = ($httpCode == 200);
+            $errorMessage = 'SMS sent successfully';
+
+            if ($responseData && isset($responseData['messages'][0]['status'])) {
+                $status = $responseData['messages'][0]['status'];
+                // groupName can be PENDING, ACCEPTED, REJECTED, etc.
+                if (isset($status['groupName']) && $status['groupName'] === 'REJECTED') {
+                    $isSuccess = false;
+                    $errorMessage = $status['description'] ?? 'Message was rejected by the gateway';
+                }
+            } elseif ($httpCode !== 200) {
+                $isSuccess = false;
+                $errorMessage = "Gateway returned HTTP code {$httpCode}";
+            }
+
             return [
-                'success' => true,
-                'message' => 'SMS sent successfully',
+                'success' => $isSuccess,
+                'message' => $errorMessage,
                 'response' => $response,
                 'http_code' => $httpCode
             ];

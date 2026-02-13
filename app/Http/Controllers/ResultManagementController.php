@@ -60,6 +60,7 @@ class ResultManagementController extends Controller
         $classIDParam = $request->get('classID', ''); // From coordinator view
         $isCoordinatorView = $request->get('coordinator') === 'true';
         $examFilter = $request->get('examID', ''); // Specific exam filter
+        $weekFilter = $request->get('week', ''); // Week filter for weekly/monthly tests
 
         // Check if coordinator view is requested
         $isCoordinatorResultsView = false;
@@ -285,66 +286,32 @@ class ResultManagementController extends Controller
                 ], 404);
             }
 
-            // Check if exam has ended (for exam type only)
-            if ($typeFilterForDetails === 'exam' && $examFilter) {
-                $exam = Examination::where('examID', $examFilter)
-                    ->where('schoolID', $schoolID)
-                    ->first();
-
-                if ($exam) {
-                    // Check if exam has ended (for Weekly/Monthly tests, check differently)
-                    $isWeeklyTest = ($exam->exam_name === 'Weekly Test' || $exam->start_date === 'every_week' || $exam->end_date === 'every_week');
-                    $isMonthlyTest = ($exam->exam_name === 'Monthly Test' || $exam->start_date === 'every_month' || $exam->end_date === 'every_month');
-
-                    $examHasEnded = false;
-                    if (!$isWeeklyTest && !$isMonthlyTest) {
-                        try {
-                            $today = now()->startOfDay();
-                            $endDate = \Carbon\Carbon::parse($exam->end_date)->startOfDay();
-                            $examHasEnded = $endDate < $today;
-                        } catch (\Exception $e) {
-                            // If date parsing fails, assume exam has ended
-                            $examHasEnded = true;
-                        }
-                    } else {
-                        // For Weekly/Monthly tests, they are always ongoing, so allow viewing
-                        $examHasEnded = true;
-                    }
-
-                    // If exam hasn't ended, don't allow viewing results
-                    if (!$examHasEnded) {
-                        return response()->json([
-                            'error' => "Can't view result for this exam because it's still taken.",
-                            'error_type' => 'exam_not_ended'
-                        ], 422);
-                    }
-                }
-            }
-
+            // Removed view permissions validation as requested
+            
             // Get results for this student
             if ($typeFilterForDetails === 'report') {
                 // For term report: get all exams in the term
                 $examinationsQuery = Examination::where('schoolID', $schoolID)
                     ->where('year', $yearFilter)
                     ->where('term', $termFilter)
-                    ->where('approval_status', 'Approved')
                     ->orderBy('start_date');
                 $examinations = $examinationsQuery->get();
                 $examIDs = $examinations->pluck('examID')->toArray();
 
                 $results = Result::where('studentID', $studentIDFilter)
                     ->whereIn('examID', $examIDs)
-                    ->whereNotNull('marks')
-                    ->where('status', 'allowed')
                     ->with(['classSubject.subject', 'examination'])
                     ->get();
             } else {
                 // For exam: get results for specific exam
-                $results = Result::where('studentID', $studentIDFilter)
-                    ->where('examID', $examFilter)
-                    ->whereNotNull('marks')
-                    ->where('status', 'allowed')
-                    ->with(['classSubject.subject'])
+                $resultsQuery = Result::where('studentID', $studentIDFilter)
+                    ->where('examID', $examFilter);
+                
+                if ($weekFilter && $weekFilter !== 'all') {
+                    $resultsQuery->where('test_week', $weekFilter);
+                }
+
+                $results = $resultsQuery->with(['classSubject.subject'])
                     ->get();
             }
 
@@ -526,8 +493,11 @@ class ResultManagementController extends Controller
                 }
             }
 
-            // Calculate grade/division
-            $gradeDivision = $this->calculateGradeDivision($totalMarks, $averageMarks, $subjectCount, $schoolType, $className, $totalPoints, $classID);
+            // Calculate grade/division (SKIPPED if specific week is selected for weekly/monthly tests)
+            $gradeDivision = ['grade' => null, 'division' => null];
+            if (!$weekFilter || $weekFilter === 'all') {
+                $gradeDivision = $this->calculateGradeDivision($totalMarks, $averageMarks, $subjectCount, $schoolType, $className, $totalPoints, $classID);
+            }
 
             // Get total students count and position for this student in their class
             // Position should be calculated per class (not overall)
@@ -793,9 +763,97 @@ class ResultManagementController extends Controller
             $availableExams = Examination::where('schoolID', $schoolID)
                 ->where('year', $yearFilter)
                 ->where('term', $termFilter)
-                ->where('approval_status', 'Approved')
+                // ->where('approval_status', 'Approved') // Removed check
                 ->orderBy('start_date')
                 ->get();
+        }
+
+        // Get Available Weeks if it's a test
+        $availableWeeks = [];
+        $examStatusMessage = null;
+        if ($examFilter) {
+            $selExam = Examination::find($examFilter);
+            if ($selExam && $selExam->exam_category === 'test') {
+                $weeksInfo = ExamPaper::where('examID', $examFilter)
+                    ->whereNotNull('test_week')
+                    ->select('test_week', 'test_week_range',
+                        \DB::raw('MIN(test_date) as start_date'), 
+                        \DB::raw('MAX(test_date) as end_date'));
+                
+                if ($subclassFilter) {
+                    $weeksInfo->whereHas('classSubject', function($q) use ($subclassFilter) {
+                        $q->where('subclassID', $subclassFilter);
+                    });
+                } elseif ($classFilter) {
+                    $weeksInfo->whereHas('classSubject', function($q) use ($classFilter) {
+                        $q->where('classID', $classFilter);
+                    });
+                }
+
+                $weeksData = $weeksInfo->groupBy('test_week', 'test_week_range')
+                    ->orderByRaw("CAST(REPLACE(test_week, 'Week ', '') AS UNSIGNED) ASC")
+                    ->get();
+
+                $availableWeeks = [];
+                $today = date('Y-m-d');
+                foreach ($weeksData as $winfo) {
+                    $isCurrent = ($today >= $winfo->start_date && $today <= $winfo->end_date);
+                    
+                    $rangeDisplay = $winfo->test_week_range;
+                    if (empty($rangeDisplay) && $winfo->start_date && $winfo->end_date) {
+                         $rangeDisplay = date('d M', strtotime($winfo->start_date)) . " - " . date('d M', strtotime($winfo->end_date));
+                    }
+
+                    $label = $winfo->test_week;
+                    if (!empty($rangeDisplay)) {
+                        $label .= " (" . $rangeDisplay . ")";
+                    }
+
+                    if ($isCurrent) {
+                        $label = "CURRENT: " . $label;
+                    } else if ($winfo->end_date < $today) {
+                        $label = "OLD: " . $label;
+                    }
+                    
+                    $availableWeeks[] = [
+                        'week' => $winfo->test_week,
+                        'display' => $label
+                    ];
+                }
+
+                // Determine Exam Status Message
+                // Check if there are any papers with test_date >= today
+                $ongoing = ExamPaper::where('examID', $examFilter)
+                    ->where('test_date', '>=', date('Y-m-d'))
+                    ->exists();
+                
+                if ($ongoing) {
+                    $examStatusMessage = "This exam is ongoing";
+                    
+                    try {
+                        if ($selExam->end_date && !in_array($selExam->end_date, ['every_week', 'every_month'])) {
+                            $today = \Carbon\Carbon::now()->startOfDay();
+                            $endDate = \Carbon\Carbon::parse($selExam->end_date)->startOfDay();
+                            
+                            if ($endDate->gt($today)) {
+                                $weeks = $today->diffInWeeks($endDate);
+                                if ($weeks > 0) {
+                                    $examStatusMessage .= " (" . $weeks . " " . ($weeks == 1 ? "week" : "weeks") . " remaining)";
+                                } else {
+                                    $days = $today->diffInDays($endDate);
+                                    $examStatusMessage .= " (" . $days . " " . ($days == 1 ? "day" : "days") . " remaining)";
+                                }
+                            } elseif ($endDate->eq($today)) {
+                                $examStatusMessage .= " (Ends today)";
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        // Keep simple message if date parsing fails
+                    }
+                } else if (!empty($availableWeeks)) {
+                    $examStatusMessage = "This exam has ended. You can view the results for all weeks.";
+                }
+            }
         }
 
         // Check result approvals if exam filter is selected
@@ -805,144 +863,6 @@ class ResultManagementController extends Controller
                 ->first();
 
             if ($exam) {
-                // Check if exam has ended (for Weekly/Monthly tests, check differently)
-                $isWeeklyTest = ($exam->exam_name === 'Weekly Test' || $exam->start_date === 'every_week' || $exam->end_date === 'every_week');
-                $isMonthlyTest = ($exam->exam_name === 'Monthly Test' || $exam->start_date === 'every_month' || $exam->end_date === 'every_month');
-
-                $examHasEnded = false;
-                if (!$isWeeklyTest && !$isMonthlyTest) {
-                    try {
-                        $today = now()->startOfDay();
-                        $endDate = \Carbon\Carbon::parse($exam->end_date)->startOfDay();
-                        $examHasEnded = $endDate < $today;
-                    } catch (\Exception $e) {
-                        // If date parsing fails, assume exam has ended
-                        $examHasEnded = true;
-                    }
-                } else {
-                    // For Weekly/Monthly tests, they are always ongoing, so allow viewing
-                    $examHasEnded = true;
-                }
-
-                // If exam hasn't ended, don't allow viewing results
-                if (!$examHasEnded) {
-                    return view('Admin.result_management', [
-                        'error' => "Can't view result for this exam because it's still taken.",
-                        'error_type' => 'exam_not_ended',
-                        'availableYears' => $availableYears,
-                        'classes' => $classes,
-                        'subclasses' => $subclasses,
-                        'availableExams' => $availableExams,
-                        'schoolSubjects' => SchoolSubject::where('schoolID', $schoolID)
-                            ->where('status', 'Active')
-                            ->orderBy('subject_name')
-                            ->get(),
-                            'students' => collect(),
-                        'filters' => [
-                            'term' => $termFilter,
-                            'year' => $yearFilter,
-                            'type' => $typeFilter,
-                            'status' => $statusFilter,
-                            'class' => $classFilter,
-                            'subclass' => $subclassFilter,
-                            'examID' => $examFilter,
-                        ],
-                        'isTeacherView' => $isTeacherView,
-                        'schoolType' => $schoolType,
-                        'resultsData' => [],
-                    ]);
-                }
-
-                // Get all result approvals for this exam
-                $resultApprovals = ResultApproval::where('examID', $examFilter)
-                    ->orderBy('approval_order')
-                    ->get();
-
-                // If result approval chain exists, check if all approvals are done
-                if ($resultApprovals->count() > 0) {
-                    // Check if all approvals are approved
-                    $allApproved = $resultApprovals->every(function ($approval) {
-                        return $approval->status === 'approved';
-                    });
-
-                    if (! $allApproved) {
-                        // Find the first pending approval
-                        $firstPendingApproval = $resultApprovals->firstWhere('status', 'pending');
-
-                        if ($firstPendingApproval) {
-                            // Get role name
-                            $role = Role::find($firstPendingApproval->role_id);
-                            $roleName = $role ? ($role->name ?? $role->role_name ?? 'Unknown Role') : 'Unknown Role';
-                            // Use accessor if available
-                            if ($role && method_exists($role, 'getNameAttribute')) {
-                                $roleName = $role->name ?? 'Unknown Role';
-                            }
-
-                            return view('Admin.result_management', [
-                                'error' => "Result unavailable. Wait approval of {$roleName}.",
-                                'error_type' => 'approval_pending',
-                                'availableYears' => $availableYears,
-                                'classes' => $classes,
-                                'subclasses' => $subclasses,
-                                'availableExams' => $availableExams,
-                                'schoolSubjects' => SchoolSubject::where('schoolID', $schoolID)
-                                    ->where('status', 'Active')
-                                    ->orderBy('subject_name')
-                                    ->get(),
-                                'students' => collect(),
-                                'filters' => [
-                                    'term' => $termFilter,
-                                    'year' => $yearFilter,
-                                    'type' => $typeFilter,
-                                    'status' => $statusFilter,
-                                    'class' => $classFilter,
-                                    'subclass' => $subclassFilter,
-                                    'examID' => $examFilter,
-                                ],
-                                'isTeacherView' => $isTeacherView,
-                                'schoolType' => $schoolType,
-                                'resultsData' => [],
-                            ]);
-                        } else {
-                            // Check if any approval was rejected
-                            $rejectedApproval = $resultApprovals->firstWhere('status', 'rejected');
-                            if ($rejectedApproval) {
-                                $role = Role::find($rejectedApproval->role_id);
-                                $roleName = $role ? ($role->name ?? $role->role_name ?? 'Unknown Role') : 'Unknown Role';
-                                // Use accessor if available
-                                if ($role && method_exists($role, 'getNameAttribute')) {
-                                    $roleName = $role->name ?? 'Unknown Role';
-                                }
-
-                                return view('Admin.result_management', [
-                                    'error' => "Result unavailable. Approval was rejected by {$roleName}.",
-                                    'error_type' => 'approval_rejected',
-                                    'availableYears' => $availableYears,
-                                    'classes' => $classes,
-                                    'subclasses' => $subclasses,
-                                    'availableExams' => $availableExams,
-                                    'schoolSubjects' => SchoolSubject::where('schoolID', $schoolID)
-                                        ->where('status', 'Active')
-                                        ->orderBy('subject_name')
-                                        ->get(),
-                                        'students' => collect(),
-                                    'filters' => [
-                                        'term' => $termFilter,
-                                        'year' => $yearFilter,
-                                        'type' => $typeFilter,
-                                        'status' => $statusFilter,
-                                        'class' => $classFilter,
-                                        'subclass' => $subclassFilter,
-                                        'examID' => $examFilter,
-                                    ],
-                                    'isTeacherView' => $isTeacherView,
-                                    'schoolType' => $schoolType,
-                                    'resultsData' => [],
-                                ]);
-                            }
-                        }
-                    }
-                }
             }
         }
 
@@ -1019,7 +939,7 @@ class ResultManagementController extends Controller
         if ($termFilter && $yearFilter) {
             if ($typeFilter === 'exam') {
                 // Get exam results
-                $resultsData = $this->getExamResults($students, $termFilter, $yearFilter, $schoolType, $examFilter);
+                $resultsData = $this->getExamResults($students, $termFilter, $yearFilter, $schoolType, $examFilter, $weekFilter);
                 
                 // Debug: Check why results might be empty
                 if (empty($resultsData) && $students->count() > 0) {
@@ -1087,110 +1007,6 @@ class ResultManagementController extends Controller
                         $debugInfo[] = "No results found in database for selected students and exam.";
                     }
                 }
-            } else {
-                // Get report (term average)
-                $resultsData = $this->getTermReport($students, $termFilter, $yearFilter, $schoolType);
-                
-                // Debug: Check why term report might be empty
-                if (empty($resultsData) && $students->count() > 0) {
-                    $examsQuery = Examination::where('schoolID', $schoolID)
-                        ->where('year', $yearFilter)
-                        ->where('term', $termFilter)
-                        ->where('approval_status', 'Approved');
-                    $exams = $examsQuery->get();
-                    
-                    if ($exams->isEmpty()) {
-                        $debugInfo[] = "No approved exams found for {$termFilter} term, {$yearFilter}.";
-                    } else {
-                        $endedExams = $exams->filter(function($exam) {
-                            $isWeeklyTest = ($exam->exam_name === 'Weekly Test' || $exam->start_date === 'every_week' || $exam->end_date === 'every_week');
-                            $isMonthlyTest = ($exam->exam_name === 'Monthly Test' || $exam->start_date === 'every_month' || $exam->end_date === 'every_month');
-                            if ($isWeeklyTest || $isMonthlyTest) {
-                                return true;
-                            }
-                            try {
-                                $today = now()->startOfDay();
-                                $endDate = \Carbon\Carbon::parse($exam->end_date)->startOfDay();
-                                return $endDate < $today;
-                            } catch (\Exception $e) {
-                                return true;
-                            }
-                        });
-                        
-                        if ($endedExams->isEmpty()) {
-                            $debugInfo[] = "All exams for {$termFilter} term, {$yearFilter} have not ended yet.";
-                        } else {
-                            $examIDs = $endedExams->pluck('examID')->toArray();
-                            $studentIDs = $students->pluck('studentID')->toArray();
-                            $totalResults = \App\Models\Result::whereIn('studentID', $studentIDs)
-                                ->whereIn('examID', $examIDs)
-                                ->count();
-                            
-                            if ($totalResults == 0) {
-                                $debugInfo[] = "No results found in database for selected students in {$termFilter} term, {$yearFilter}.";
-                            } else {
-                                $allowedCount = \App\Models\Result::whereIn('studentID', $studentIDs)
-                                    ->whereIn('examID', $examIDs)
-                                    ->where('status', 'allowed')
-                                    ->count();
-                                $notAllowedCount = $totalResults - $allowedCount;
-                                
-                                $allowedWithMarksCount = \App\Models\Result::whereIn('studentID', $studentIDs)
-                                    ->whereIn('examID', $examIDs)
-                                    ->where('status', 'allowed')
-                                    ->whereNotNull('marks')
-                                    ->count();
-                                
-                                if ($allowedWithMarksCount < $totalResults) {
-                                    if ($notAllowedCount > 0) {
-                                        $debugInfo[] = "Found {$totalResults} results total. {$notAllowedCount} results have status 'not_allowed' and need to be changed to 'allowed' first. Go to Manage Examinations to update results status.";
-                                    } else {
-                                        $debugInfo[] = "Found {$totalResults} results, but only {$allowedWithMarksCount} have status 'allowed' and marks entered.";
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-
-            // Sort students by grade (best first) - only for term report
-            if ($typeFilter === 'report' && !empty($resultsData)) {
-                // Create a collection of students with their results for sorting
-                $studentsWithResults = $students->filter(function($student) use ($resultsData) {
-                    return isset($resultsData[$student->studentID]);
-                })->map(function($student) use ($resultsData) {
-                    return [
-                        'student' => $student,
-                        'result' => $resultsData[$student->studentID]
-                    ];
-                });
-
-                // Sort by grade (A is best, then B, C, D, F)
-                $gradeOrder = ['A' => 1, 'B' => 2, 'C' => 3, 'D' => 4, 'E' => 5, 'F' => 6];
-                $studentsWithResults = $studentsWithResults->sortBy(function($item) use ($gradeOrder, $schoolType) {
-                    $grade = $item['result']['grade'] ?? 'F';
-                    $order = $gradeOrder[strtoupper($grade)] ?? 999;
-
-                    // For secondary, also consider division if grade is not available
-                    if ($schoolType === 'Secondary' && ($order === 999 || !isset($item['result']['grade']))) {
-                        $division = $item['result']['division'] ?? '';
-                        // Extract division number (e.g., I.7 -> 7, II.18 -> 18)
-                        if (preg_match('/^([IVX]+)\.(\d+)$/', $division, $matches)) {
-                            $order = (int)$matches[2]; // Lower points = better
-                        }
-                    }
-
-                    return $order;
-                });
-
-                // Rebuild students collection in sorted order
-                $sortedStudents = collect();
-                foreach ($studentsWithResults as $item) {
-                    $sortedStudents->push($item['student']);
-                }
-                $students = $sortedStudents;
             }
         }
 
@@ -1202,6 +1018,8 @@ class ResultManagementController extends Controller
             'classes' => $classes,
             'subclasses' => $subclasses,
             'availableYears' => $availableYears,
+            'availableWeeks' => $availableWeeks,
+            'examStatusMessage' => $examStatusMessage,
             'filters' => [
                 'term' => $termFilter,
                 'year' => $yearFilter,
@@ -1210,6 +1028,7 @@ class ResultManagementController extends Controller
                 'class' => $classFilter,
                 'subclass' => $subclassFilter,
                 'examID' => $examFilter,
+                'week' => $weekFilter,
             ],
             'availableExams' => $availableExams,
             'schoolSubjects' => SchoolSubject::where('schoolID', $schoolID)
@@ -1219,7 +1038,6 @@ class ResultManagementController extends Controller
             'isTeacherView' => $isTeacherView, // Pass teacher view flag
             'isCoordinatorResultsView' => $isCoordinatorResultsView ?? false,
             'debugInfo' => $debugInfo ?? [],
-            'isCoordinatorResultsView' => $isCoordinatorResultsView, // Pass coordinator results view flag
             'user_type' => $userType, // Pass user type for navigation
             'error' => null, // No error if we reach here
         ]);
@@ -1328,10 +1146,12 @@ class ResultManagementController extends Controller
                     return $row['marks'] !== null;
                 });
                 $passCount = $answeredRows->filter(function ($row) {
-                    return $row['marks'] >= 50;
+                    $grade = strtoupper($row['grade'] ?? '');
+                    return in_array($grade, ['A', 'B', 'C', 'D']);
                 })->count();
                 $failCount = $answeredRows->filter(function ($row) {
-                    return $row['marks'] < 50;
+                    $grade = strtoupper($row['grade'] ?? '');
+                    return $grade === 'F';
                 })->count();
                 $overallRemark = $answeredRows->count() > 0
                     ? ($passCount >= $failCount ? 'Pass' : 'Fail')
@@ -1396,6 +1216,10 @@ class ResultManagementController extends Controller
                     }
                 }
 
+                $totalAnswered = $answeredRows->count();
+                $passRate = $totalAnswered > 0 ? round(($passCount / $totalAnswered) * 100, 1) : 0;
+                $failRate = $totalAnswered > 0 ? round(($failCount / $totalAnswered) * 100, 1) : 0;
+
                 $analysisData[] = [
                     'class_subjectID' => $classSubjectID,
                     'subject_name' => $subjectName,
@@ -1410,9 +1234,11 @@ class ResultManagementController extends Controller
                     'worst_question' => $worstQuestion,
                     'student_question_marks' => $studentQuestionMarks,
                     'overall_stats' => [
-                        'answered' => $answeredRows->count(),
+                        'answered' => $totalAnswered,
                         'pass' => $passCount,
                         'fail' => $failCount,
+                        'pass_rate' => $passRate,
+                        'fail_rate' => $failRate,
                         'remark' => $overallRemark,
                         'remark_class' => $overallClass,
                     ],
@@ -1537,10 +1363,147 @@ class ResultManagementController extends Controller
         return response()->json(['success' => true]);
     }
 
+    public function sendResultSms(Request $request)
+    {
+        \Illuminate\Support\Facades\Log::info("sendResultSms method reached", $request->all());
+        $schoolID = Session::get('schoolID');
+        if (!$schoolID) {
+            \Log::error("sendResultSms: Access denied - No schoolID in session");
+            return response()->json(['success' => false, 'error' => 'Access denied'], 403);
+        }
+
+        $studentID = $request->input('studentID');
+        $subject = $request->input('subject');
+        $marks = $request->input('marks');
+        $grade = $request->input('grade');
+        $week = $request->input('week');
+        $examID = $request->input('examID');
+
+        $student = Student::with(['parent', 'subclass.class', 'oldSubclass.class'])->find($studentID);
+        if (!$student) {
+            \Log::warning("sendResultSms: Student not found for ID {$studentID}");
+            return response()->json(['success' => false, 'error' => 'Student not found']);
+        }
+
+        $parentPhone = (isset($student->parent) && !empty($student->parent->phone)) ? $student->parent->phone : null;
+        if (!$parentPhone || $parentPhone === 'null' || $parentPhone === 'undefined') {
+            $parentPhone = !empty($student->emergency_contact_phone) ? $student->emergency_contact_phone : null;
+        }
+
+        if (empty($parentPhone) || $parentPhone === 'null' || $parentPhone === 'undefined') {
+            \Log::warning("sendResultSms: No valid phone for student {$studentID}");
+            return response()->json(['success' => false, 'error' => 'No valid contact phone found for student or parent']);
+        }
+
+        $studentName = trim($student->first_name . ' ' . $student->middle_name . ' ' . $student->last_name);
+        $studentFirstName = $student->first_name;
+        
+        $className = '';
+        if ($student->subclass && $student->subclass->class) {
+            $className = $student->subclass->class->class_name;
+        } elseif ($student->oldSubclass && $student->oldSubclass->class) {
+            $className = $student->oldSubclass->class->class_name;
+        }
+
+        // Initialize message parts
+        $resultsString = "";
+
+        if ($subject) {
+            // Single subject mode (existing)
+            $resultsString = "{$subject}-({$marks})-({$grade})";
+        } else {
+            // Multi-subject mode
+            $allResults = Result::where('studentID', $studentID);
+            
+            if ($examID && $examID !== 'null' && $examID !== 'undefined' && $examID !== '1') {
+                $allResults->where('examID', $examID);
+            } else {
+                // If examID is 1 or empty, it might be a frontend bug. 
+                \Log::info("sendResultSms: Using flexible exam search for student {$studentID}, week {$week}");
+            }
+            
+            if ($week && $week !== 'all') {
+                $allResults->where('test_week', $week);
+            }
+            
+            $results = $allResults->with('classSubject.subject')->get();
+            \Log::info("sendResultSms: Found " . $results->count() . " results for student {$studentID}");
+            
+            if ($results->isEmpty()) {
+                \Log::warning("sendResultSms: No results found for student {$studentID} in exam {$examID}, week {$week}");
+                return response()->json(['success' => false, 'error' => 'No results found for this student']);
+            }
+
+            $formattedResults = [];
+            foreach ($results as $res) {
+                $sName = $res->classSubject->subject->subject_name ?? 'N/A';
+                $sMarks = $res->marks ?? 'Incomplete';
+                $sGrade = $res->grade ?? '-';
+                $formattedResults[] = "{$sName}-({$sMarks})-({$sGrade})";
+            }
+            $resultsString = implode(", ", $formattedResults);
+        }
+
+        // Get week range
+        $weekRange = '';
+        $actualExamID = ($examID && $examID !== '1' && $examID !== 'null') ? $examID : null;
+        
+        // If we have results, use the examID from the first result if the provided one was generic
+        if (!$actualExamID && !$results->isEmpty()) {
+            $actualExamID = $results->first()->examID;
+        }
+
+        if ($week && $actualExamID) {
+            $paper = ExamPaper::where('examID', $actualExamID)
+                ->where('test_week', $week)
+                ->select('test_week_range', 'test_date')
+                ->first();
+            
+            if ($paper) {
+                $weekRange = $paper->test_week_range;
+                if (empty($weekRange) && $paper->test_date) {
+                    $weekRange = date('d M Y', strtotime($paper->test_date));
+                }
+            }
+        }
+        
+        if (empty($weekRange)) $weekRange = $week;
+
+        $school = \App\Models\School::find($schoolID);
+        $schoolName = $school ? $school->school_name : 'ShuleLink';
+
+        $weekLabel = $week;
+        if (str_contains(strtolower($week), 'week')) {
+            $weekLabel = "wiki ya {$weekRange}";
+        } elseif (str_contains(strtolower($week), 'month')) {
+            $weekLabel = "mwezi wa {$weekRange}";
+        } elseif ($weekRange) {
+            $weekLabel = $weekRange;
+        }
+
+        $message = "{$schoolName}: Mzazi wa {$studentName}, mwanao {$studentFirstName} wa darasa {$className} amepata alama zifuatazo katika {$weekLabel}: {$resultsString}. Asante.";
+
+        try {
+            $smsService = new SmsService();
+            $result = $smsService->sendSms($parentPhone, $message);
+            
+            if ($result['success']) {
+                \Log::info("Result SMS sent successfully to {$parentPhone} for student {$studentName}. Message: {$message}");
+                return response()->json(['success' => true]);
+            } else {
+                \Log::error("Result SMS failed for {$parentPhone} (Student: {$studentName}): " . ($result['message'] ?? 'Unknown gateway error'));
+                return response()->json(['success' => false, 'error' => $result['message'] ?? 'Failed to send SMS']);
+            }
+        } catch (\Exception $e) {
+            \Log::error("Result SMS exception for student {$studentName}: " . $e->getMessage());
+            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
     /**
      * Get exam results for students
      */
-    private function getExamResults($students, $term, $year, $schoolType, $examID = null)
+    private function getExamResults($students, $term, $year, $schoolType, $examID = null, $weekFilter = null)
     {
         $resultsData = [];
 
@@ -1549,8 +1512,7 @@ class ResultManagementController extends Controller
 
             // Get examinations for this term and year
             $examinationsQuery = Examination::where('schoolID', Session::get('schoolID'))
-                ->where('year', $year)
-                ->where('approval_status', 'Approved');
+                ->where('year', $year);
 
             if ($term) {
                 $examinationsQuery->where('term', $term);
@@ -1565,40 +1527,81 @@ class ResultManagementController extends Controller
                 ->get();
 
             foreach ($examinations as $exam) {
-                // Check if exam has ended (for Weekly/Monthly tests, check differently)
-                $isWeeklyTest = ($exam->exam_name === 'Weekly Test' || $exam->start_date === 'every_week' || $exam->end_date === 'every_week');
-                $isMonthlyTest = ($exam->exam_name === 'Monthly Test' || $exam->start_date === 'every_month' || $exam->end_date === 'every_month');
-
-                $examHasEnded = false;
-                if (!$isWeeklyTest && !$isMonthlyTest) {
-                    try {
-                        $today = now()->startOfDay();
-                        $endDate = \Carbon\Carbon::parse($exam->end_date)->startOfDay();
-                        $examHasEnded = $endDate < $today;
-                    } catch (\Exception $e) {
-                        // If date parsing fails, assume exam has ended
-                        $examHasEnded = true;
-                    }
-                } else {
-                    // For Weekly/Monthly tests, they are always ongoing, so allow viewing
-                    $examHasEnded = true;
+                // Get results for this student and exam
+                $resultsQuery = Result::where('studentID', $student->studentID)
+                    ->where('examID', $exam->examID);
+                
+                if ($exam->exam_name === 'Weekly Test' && $weekFilter && $weekFilter !== 'all') {
+                    $resultsQuery->where('test_week', $weekFilter);
                 }
 
-                // Skip this exam if it hasn't ended yet
-                if (!$examHasEnded) {
-                    continue;
-                }
-
-                // Get results for this student and exam - only get results with marks and allowed status
-                $results = Result::where('studentID', $student->studentID)
-                    ->where('examID', $exam->examID)
-                    ->whereNotNull('marks')
-                    ->where('status', 'allowed')
-                    ->with(['classSubject.subject', 'examination'])
+                $results = $resultsQuery->with(['classSubject.subject', 'examination'])
                     ->get();
 
                 if ($results->isEmpty()) {
                     continue;
+                }
+
+                // If Weekly Test and (All Weeks selected or no week filter), aggregate results by subject (Average marks)
+                // For other exams, do not aggregate (take first result per subject if multiple exist, though usually 1-to-1)
+                $isWeeklyTest = $exam->exam_name === 'Weekly Test';
+                
+                if ($isWeeklyTest && ($weekFilter === 'all' || !$weekFilter)) {
+                    $results = $results->groupBy('classSubjectID')->map(function($group) {
+                        $marks = $group->filter(function($r) {
+                            return $r->marks !== null && $r->marks !== '';
+                        });
+                        $avgMarks = $marks->count() > 0 ? $marks->avg('marks') : null;
+                        
+                        $first = $group->first();
+                        $first->marks = $avgMarks;
+                        $first->grade = null; // Reset grade to allow recalculation based on average
+                        return $first;
+                    });
+                }
+
+                // If Weekly Test and specific week is selected, fetch detailed breakdown
+                if ($isWeeklyTest && $weekFilter && $weekFilter !== 'all') {
+                    foreach ($results as $result) {
+                        try {
+                            $paper = ExamPaper::where('examID', $exam->examID)
+                                ->where('class_subjectID', $result->class_subjectID)
+                                ->where('test_week', $weekFilter)
+                                ->first();
+
+                            if ($paper) {
+                                // Get all questions for this paper
+                                $allQuestions = \App\Models\ExamPaperQuestion::where('exam_paperID', $paper->exam_paperID)
+                                    ->orderBy('question_number')
+                                    ->get();
+
+                                // Get existing marks for this student
+                                $qMarks = ExamPaperQuestionMark::where('studentID', $student->studentID)
+                                    ->whereIn('exam_paper_questionID', $allQuestions->pluck('exam_paper_questionID'))
+                                    ->with('question')
+                                    ->get()
+                                    ->keyBy('exam_paper_questionID');
+                                
+                                // Merge questions with marks
+                                $mergedQuestions = $allQuestions->map(function($q) use ($qMarks) {
+                                    $hasMark = $qMarks->has($q->exam_paper_questionID);
+                                    $markEntry = $hasMark ? $qMarks->get($q->exam_paper_questionID) : null;
+                                    
+                                    return (object) [
+                                        'question' => $q->question_number,
+                                        'question_description' => $q->question_description, // In case you want to show description
+                                        'marks' => $hasMark ? $markEntry->marks : 'Incomplete',
+                                        'max_marks' => $q->marks,
+                                        'is_optional' => $q->is_optional
+                                    ];
+                                });
+
+                                $result->question_details = $mergedQuestions;
+                            }
+                        } catch (\Exception $e) {
+                            // Ignore
+                        }
+                    }
                 }
 
                 // Calculate totals
@@ -1628,20 +1631,24 @@ class ResultManagementController extends Controller
                         if ($gradePoints['points'] !== null) {
                             $subjectPoints[] = $gradePoints['points'];
                         }
+                    } else {
+                        // Include incomplete subjects in the count to allow viewing
+                        $subjectCount++;
                     }
                     $gradePointsForSubject = $this->calculateGradePoints($result->marks, $schoolType, $className, $classID);
                     $subjectsData[] = [
                         'subject_name' => $result->classSubject->subject->subject_name ?? 'N/A',
-                        'marks' => $result->marks,
+                        'marks' => $result->marks ?? 'incomplete',
                         'grade' => $result->grade ?? $gradePointsForSubject['grade'],
                         'points' => $gradePointsForSubject['points'],
+                        'question_marks' => $result->question_details ?? [],
                     ];
                 }
 
-                // Only add if student has at least one subject with marks
-                if ($subjectCount == 0) {
-                    continue;
-                }
+                // Removed validation: Only add if student has at least one subject with marks
+                // if ($subjectCount == 0) {
+                //     continue;
+                // }
 
                 $averageMarks = $subjectCount > 0 ? $totalMarks / $subjectCount : 0;
 
@@ -1691,8 +1698,11 @@ class ResultManagementController extends Controller
                     }
                 }
 
-                // Calculate grade/division with points
-                $gradeDivision = $this->calculateGradeDivision($totalMarks, $averageMarks, $subjectCount, $schoolType, $className, $totalPoints, $classID);
+                // Calculate grade/division with points (SKIPPED if specific week is selected)
+                $gradeDivision = ['grade' => null, 'division' => null];
+                if (!$weekFilter || $weekFilter === 'all') {
+                    $gradeDivision = $this->calculateGradeDivision($totalMarks, $averageMarks, $subjectCount, $schoolType, $className, $totalPoints, $classID);
+                }
 
                 $studentResults[] = [
                     'exam' => $exam,
@@ -1725,35 +1735,11 @@ class ResultManagementController extends Controller
 
         // OPTIMIZATION: Query examinations once for all students instead of inside the loop
         $examinationsQuery = Examination::where('schoolID', $schoolID)
-            ->where('year', $year)
-            ->where('approval_status', 'Approved');
-
-        if ($term) {
-            $examinationsQuery->where('term', $term);
-        }
-
+            ->where('year', $year);
         $examinations = $examinationsQuery->orderBy('start_date')->get();
 
-        // Filter out exams that haven't ended yet
-        $endedExaminations = $examinations->filter(function($exam) {
-            // Check if exam has ended (for Weekly/Monthly tests, check differently)
-            $isWeeklyTest = ($exam->exam_name === 'Weekly Test' || $exam->start_date === 'every_week' || $exam->end_date === 'every_week');
-            $isMonthlyTest = ($exam->exam_name === 'Monthly Test' || $exam->start_date === 'every_month' || $exam->end_date === 'every_month');
-
-            if ($isWeeklyTest || $isMonthlyTest) {
-                // For Weekly/Monthly tests, they are always ongoing, so allow viewing
-                return true;
-            }
-
-            try {
-                $today = now()->startOfDay();
-                $endDate = \Carbon\Carbon::parse($exam->end_date)->startOfDay();
-                return $endDate < $today;
-            } catch (\Exception $e) {
-                // If date parsing fails, assume exam has ended
-                return true;
-            }
-        });
+        // No longer filtering by ended status
+        $endedExaminations = $examinations;
 
         $examIDs = $endedExaminations->pluck('examID')->toArray();
 
@@ -1764,11 +1750,9 @@ class ResultManagementController extends Controller
         // OPTIMIZATION: Get all student IDs
         $studentIDs = $students->pluck('studentID')->toArray();
 
-        // OPTIMIZATION: Fetch all results in batch instead of per student/exam
+        // Fetch all results in batch
         $allResults = Result::whereIn('studentID', $studentIDs)
             ->whereIn('examID', $examIDs)
-            ->whereNotNull('marks')
-            ->where('status', 'allowed')
             ->with(['classSubject.subject'])
             ->get()
             ->groupBy('studentID');

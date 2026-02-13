@@ -9,6 +9,7 @@ use App\Models\ExamPaper;
 use App\Models\ExamPaperNotification;
 use App\Models\ExamPaperQuestion;
 use App\Models\ExamPaperOptionalRange;
+use App\Models\Holiday;
 use App\Models\Result;
 use App\Models\ResultApproval;
 use App\Models\Role;
@@ -17,6 +18,7 @@ use App\Models\Student;
 use App\Models\Subclass;
 use App\Models\SubjectElector;
 use App\Models\Teacher;
+use App\Models\WeeklyTestSchedule;
 use App\Services\SmsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -41,10 +43,31 @@ class ManageExaminationController extends Controller
             return redirect()->route('login')->with('error', 'Access denied');
         }
 
-        $assignments = $this->fetchSupervisorAssignments($teacherID, $schoolID);
+        $category = request()->input('category');
+        $year = request()->input('year');
+
+        $assignments = $this->fetchSupervisorAssignments($teacherID, $schoolID, $category, $year);
+
+        // Get unique years for filtering (include both start and end years)
+        $startYears = DB::table('examinations')
+            ->where('schoolID', $schoolID)
+            ->selectRaw('YEAR(start_date) as year')
+            ->distinct()
+            ->pluck('year');
+        
+        $endYears = DB::table('examinations')
+            ->where('schoolID', $schoolID)
+            ->selectRaw('YEAR(end_date) as year')
+            ->distinct()
+            ->pluck('year');
+            
+        $years = $startYears->merge($endYears)->unique()->sortDesc();
 
         return view('Teacher.supervise_exams', [
             'assignments' => $assignments,
+            'years' => $years,
+            'selectedCategory' => $category ?: 'all',
+            'selectedYear' => $year,
         ]);
     }
 
@@ -78,10 +101,29 @@ class ManageExaminationController extends Controller
             ->orderBy('start_date', 'desc')
             ->get();
 
-        // Get teacher's uploaded exam papers
+        // Get teacher's uploaded exam papers (actual uploads/wait approval/rejected)
         $myExamPapers = ExamPaper::where('teacherID', $teacherID)
+            ->where('status', '!=', 'pending')
             ->with(['examination', 'classSubject.subject', 'classSubject.class', 'classSubject.subclass'])
             ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Get pending upload slots for this teacher (current week and next week only)
+        $today = now()->startOfDay();
+        $nextWeekEnd = now()->addWeek()->endOfWeek();
+        
+        $pendingSlots = ExamPaper::where('teacherID', $teacherID)
+            ->where('status', 'pending')
+            ->whereHas('examination', function($q) use ($schoolID) {
+                $q->where('schoolID', $schoolID);
+            })
+            ->where(function($q) use ($today, $nextWeekEnd) {
+                // Include if test_date is today or in the future (up to next week)
+                $q->where('test_date', '>=', $today)
+                  ->where('test_date', '<=', $nextWeekEnd);
+            })
+            ->with(['examination', 'classSubject.subject', 'classSubject.class', 'classSubject.subclass'])
+            ->orderBy('test_date', 'asc')
             ->get();
 
         // Check for exam rejection notifications
@@ -97,6 +139,7 @@ class ManageExaminationController extends Controller
             'teacherSubjects' => $teacherSubjects,
             'examinations' => $examinations,
             'myExamPapers' => $myExamPapers,
+            'pendingSlots' => $pendingSlots,
             'rejectionNotifications' => $rejectionNotifications,
             'schoolType' => $schoolType,
         ]);
@@ -413,6 +456,119 @@ class ManageExaminationController extends Controller
                 $exam->days_remaining = $daysRemaining;
                 $exam->results_status = $resultsStatus ? $resultsStatus->status : 'not_allowed';
 
+                // Calculate dynamic stats for Weekly/Monthly Tests
+                $exam->total_weeks_count = 0;
+                $exam->test_end_date_range = null;
+                $exam->test_breakdown = [];
+                
+                if ($exam->exam_category === 'test') {
+                    // 1. Try to get data from exam_papers first (this represents actual generated slots)
+                    $latestPaper = \App\Models\ExamPaper::where('examID', $exam->examID)
+                        ->orderByDesc('test_date')
+                        ->first();
+                    
+                    if ($latestPaper) {
+                        try {
+                            $maxDate = \Carbon\Carbon::parse($latestPaper->test_date);
+                            $weekNumStr = str_replace('Week ', '', $latestPaper->test_week);
+                            $exam->total_weeks_count = (int)$weekNumStr;
+                            
+                            // Get range for this specific latest paper if available
+                            if ($latestPaper->test_week_range) {
+                                $exam->test_end_date_range = "Week {$weekNumStr} ({$latestPaper->test_week_range})";
+                            } else {
+                                $wStart = $maxDate->copy()->startOfWeek();
+                                $wEnd = $wStart->copy()->endOfWeek();
+                                $exam->test_end_date_range = "Week {$weekNumStr} (" . $wStart->format('M d') . ' - ' . $wEnd->format('M d, Y') . ")";
+                            }
+
+                            // 2. Get breakdown by subclass from exam_papers
+                            $subclassLatestDates = \App\Models\ExamPaper::where('examID', $exam->examID)
+                                ->select('class_subjectID', 'test_week', 'test_date', 'test_week_range')
+                                ->with(['classSubject.subclass.class'])
+                                ->get()
+                                ->groupBy(function($paper) {
+                                    return $paper->classSubject->subclassID ?? 0;
+                                });
+
+                            $breakdown = [];
+                            foreach ($subclassLatestDates as $subclassID => $papers) {
+                                if (!$subclassID) continue;
+                                
+                                $latest = $papers->sortByDesc('test_date')->first();
+                                $sc = $latest->classSubject->subclass;
+                                if (!$sc) continue;
+
+                                $name = $sc->class->class_name . ' ' . $sc->subclass_name;
+                                $wNum = str_replace('Week ', '', $latest->test_week);
+                                
+                                $range = "";
+                                if ($latest->test_week_range) {
+                                    $range = $latest->test_week_range;
+                                } else {
+                                    $ws = \Carbon\Carbon::parse($latest->test_date)->startOfWeek();
+                                    $we = $ws->copy()->endOfWeek();
+                                    $range = $ws->format('M d') . ' - ' . $we->format('M d');
+                                }
+
+                                $breakdown[] = [
+                                    'name' => $name,
+                                    'week' => $wNum,
+                                    'date_range' => $range,
+                                    'sort_date' => $latest->test_date
+                                ];
+                            }
+                            
+                            // Sort breakdown so the subclass finishing latest is at the top in the list
+                            usort($breakdown, function($a, $b) {
+                                return strcmp($b['sort_date'], $a['sort_date']);
+                            });
+                            
+                            $exam->test_breakdown = $breakdown;
+                            
+                        } catch (\Exception $e) {
+                            \Log::error("Error calculating test stats: " . $e->getMessage());
+                        }
+                    } else {
+                        // 3. Fallback to schedules if no papers generated yet
+                        $maxWeekSchedule = \App\Models\WeeklyTestSchedule::where('examID', $exam->examID)->max('week_number');
+                        if ($maxWeekSchedule) {
+                            $exam->total_weeks_count = $maxWeekSchedule;
+                            $startDate = \Carbon\Carbon::parse($exam->start_date);
+                            $finalWeekStart = $startDate->copy()->addWeeks($maxWeekSchedule - 1)->startOfWeek();
+                            $finalWeekEnd = $finalWeekStart->copy()->endOfWeek();
+                            $exam->test_end_date_range = "Week {$maxWeekSchedule} (" . $finalWeekStart->format('M d') . ' - ' . $finalWeekEnd->format('M d, Y') . ")";
+                            
+                            // Simple breakdown from schedules
+                            $classSchedules = \App\Models\WeeklyTestSchedule::where('examID', $exam->examID)
+                                ->select('scope_id', 'scope', DB::raw('max(week_number) as max_week'))
+                                ->groupBy('scope_id', 'scope')
+                                ->get();
+                                
+                            foreach ($classSchedules as $cs) {
+                                $name = "";
+                                if ($cs->scope === 'class') {
+                                    $c = \App\Models\ClassModel::find($cs->scope_id);
+                                    $name = $c ? $c->class_name : "Class " . $cs->scope_id;
+                                } elseif ($cs->scope === 'subclass') {
+                                    $sc = \App\Models\Subclass::with('class')->find($cs->scope_id);
+                                    $name = $sc ? ($sc->class->class_name . " " . $sc->subclass_name) : "Stream " . $cs->scope_id;
+                                } else { $name = "School Wide"; }
+                                
+                                $wStart = $startDate->copy()->addWeeks($cs->max_week - 1)->startOfWeek();
+                                $wEnd = $wStart->copy()->endOfWeek();
+                                
+                                $breakdown[] = [
+                                    'name' => $name,
+                                    'week' => $cs->max_week,
+                                    'date_range' => $wStart->format('M d') . ' - ' . $wEnd->format('M d')
+                                ];
+                            }
+                            $exam->test_breakdown = $breakdown;
+                        }
+                    }
+                }
+
                 return $exam;
             });
 
@@ -638,7 +794,7 @@ class ManageExaminationController extends Controller
                 'exam_category' => 'required|in:school_exams,test,special_exams',
                 'exam_name' => 'required|string|max:200',
                 'exam_name_type' => 'required_if:exam_category,school_exams|in:Midterm,Terminal,Annual Exam',
-                'term' => 'required_if:exam_category,school_exams|required_if:exam_category,test|required_if:exam_category,special_exams|in:first_term,second_term',
+                'term' => 'required_if:exam_category,school_exams|required_if:exam_category,test|required_if:exam_category,special_exams|in:first_term,second_term,all_terms',
                 'start_date' => 'required|date',
                 'end_date' => 'required|date|after_or_equal:start_date',
                 'year' => 'required|integer|min:2000|max:2100',
@@ -727,12 +883,25 @@ class ManageExaminationController extends Controller
                 ], 422);
             }
 
-            $schoolID = Session::get('schoolID');
-
             if (! $schoolID) {
                 return response()->json([
                     'error' => 'School ID not found in session.',
                 ], 400);
+            }
+
+            // Prevent duplicate creation of Weekly/Monthly tests for the same school and year
+            if ($request->exam_category === 'test' && in_array($request->exam_name, ['Weekly Test', 'Monthly Test'])) {
+                $existingTest = Examination::where('schoolID', $schoolID)
+                    ->where('exam_category', 'test')
+                    ->where('exam_name', $request->exam_name)
+                    ->where('year', $request->year)
+                    ->exists();
+
+                if ($existingTest) {
+                    return response()->json([
+                        'error' => $request->exam_name . ' already created for the year ' . $request->year . '. You can only have one "' . $request->exam_name . '" per year.',
+                    ], 422);
+                }
             }
 
             DB::beginTransaction();
@@ -850,7 +1019,10 @@ class ManageExaminationController extends Controller
             // Create results based on exam category
             $results = [];
 
-            if ($request->exam_category === 'school_exams' || $request->exam_category === 'test') {
+            // Skip result pre-creation for weekly/monthly tests as they are inserted on-the-fly by teachers
+            $isWeeklyOrMonthlyTest = $request->exam_category === 'test' && in_array($request->test_type, ['weekly_test', 'monthly_test']);
+
+            if (($request->exam_category === 'school_exams' || $request->exam_category === 'test') && !$isWeeklyOrMonthlyTest) {
                 // School Exams: All students in the school, except excluded classes
                 $query = Student::with('subclass.class')
                     ->where('schoolID', $schoolID)
@@ -1153,7 +1325,7 @@ class ManageExaminationController extends Controller
             }
 
             // Create exam attendance if enabled
-            if ($request->has('enable_exam_attendance') && $request->enable_exam_attendance == '1') {
+            if ($request->has('enable_exam_attendance') && $request->enable_exam_attendance == '1' && !$isWeeklyOrMonthlyTest) {
                 $examAttendanceRecords = [];
                 
                 // Get all students participating in this exam (same logic as results)
@@ -1599,7 +1771,7 @@ class ManageExaminationController extends Controller
                 'exam_category' => 'required|in:school_exams,test,special_exams',
                 'exam_name' => 'required|string|max:200',
                 'exam_name_type' => 'required_if:exam_category,school_exams|in:Midterm,Terminal,Annual Exam',
-                'term' => 'required_if:exam_category,school_exams|required_if:exam_category,test|required_if:exam_category,special_exams|in:first_term,second_term',
+                'term' => 'required_if:exam_category,school_exams|required_if:exam_category,test|required_if:exam_category,special_exams|in:first_term,second_term,all_terms',
                 'start_date' => 'required|date',
                 'end_date' => 'required|date|after_or_equal:start_date',
                 'year' => 'required|integer|min:2000|max:2100',
@@ -1658,6 +1830,22 @@ class ManageExaminationController extends Controller
                 return response()->json([
                     'error' => 'Examination not found.',
                 ], 404);
+            }
+
+            // Prevent duplicate Weekly/Monthly tests for the same school and year
+            if ($request->exam_category === 'test' && in_array($request->exam_name, ['Weekly Test', 'Monthly Test'])) {
+                $existingTest = Examination::where('schoolID', $schoolID)
+                    ->where('exam_category', 'test')
+                    ->where('exam_name', $request->exam_name)
+                    ->where('year', $request->year)
+                    ->where('examID', '!=', $examID)
+                    ->exists();
+
+                if ($existingTest) {
+                    return response()->json([
+                        'error' => $request->exam_name . ' already created for the year ' . $request->year . '.',
+                    ], 422);
+                }
             }
 
             DB::beginTransaction();
@@ -3859,8 +4047,11 @@ class ManageExaminationController extends Controller
             'examID' => 'required|exists:examinations,examID',
             'class_subjectID' => 'required|exists:class_subjects,class_subjectID',
             'upload_type' => 'required|in:upload',
+            'test_week' => 'nullable|string',
+            'test_date' => 'nullable|date',
             'file' => 'nullable|file|mimes:pdf,doc,docx|max:10240',
             'existing_exam_paper_id' => 'nullable|integer',
+            'placeholder_id' => 'nullable|integer',
             'optional_ranges' => 'nullable|array',
             'optional_ranges.*' => 'integer|min:1|max:100',
             'optional_required_counts' => 'nullable|array',
@@ -4016,13 +4207,33 @@ class ManageExaminationController extends Controller
             return response()->json(['error' => 'You can only upload exam papers for examinations with upload paper enabled'], 422);
         }
 
-        $existingPaper = ExamPaper::where('examID', $request->examID)
+        $query = ExamPaper::where('examID', $request->examID)
             ->where('class_subjectID', $request->class_subjectID)
-            ->where('teacherID', $teacherID)
-            ->orderBy('created_at', 'desc')
-            ->first();
+            ->where('teacherID', $teacherID);
 
-        if ($existingPaper && $existingPaper->status !== 'rejected') {
+        if ($request->test_week) {
+            $query->where('test_week', $request->test_week);
+        } else {
+            $query->whereNull('test_week');
+        }
+
+        $existingPaper = $query->orderBy('created_at', 'desc')->first();
+
+        // Check if the existing paper is just a placeholder (no content uploaded yet)
+        $isPlaceholder = $existingPaper && empty($existingPaper->file_path) && empty($existingPaper->question_content);
+        $targetPlaceholderID = $request->input('placeholder_id');
+
+        // Allow submission if:
+        // 1. No existing paper found
+        // 2. Existing paper was rejected
+        // 3. Existing paper is a placeholder (waiting for content)
+        // 4. We are explicitly targeting the existing paper via placeholder_id
+        $canSubmit = !$existingPaper || 
+                     $existingPaper->status === 'rejected' || 
+                     $isPlaceholder || 
+                     ($targetPlaceholderID && $existingPaper->exam_paperID == $targetPlaceholderID);
+
+        if (!$canSubmit) {
             return response()->json([
                 'error' => 'You already submitted this exam paper. Please use the edit option to update.',
             ], 422);
@@ -4061,11 +4272,28 @@ class ManageExaminationController extends Controller
                 }
             }
 
-            $examPaper = new ExamPaper;
+            if ($request->filled('placeholder_id')) {
+                $examPaper = ExamPaper::where('exam_paperID', $request->placeholder_id)
+                    ->where('teacherID', $teacherID)
+                    ->first();
+                
+                if (!$examPaper) {
+                    DB::rollBack();
+                    return response()->json(['error' => 'Pending slot not found.'], 404);
+                }
+            } elseif ($isPlaceholder) {
+                // Automatically use the existing placeholder found by query
+                $examPaper = $existingPaper;
+            } else {
+                $examPaper = new ExamPaper;
+            }
+
             $examPaper->examID = $request->examID;
             $examPaper->class_subjectID = $request->class_subjectID;
             $examPaper->teacherID = $teacherID;
             $examPaper->upload_type = 'upload';
+            $examPaper->test_week = $request->test_week;
+            $examPaper->test_date = $request->test_date;
             $examPaper->status = 'wait_approval';
 
             if ($request->hasFile('file')) {
@@ -4167,9 +4395,18 @@ class ManageExaminationController extends Controller
                     $subclassName = $classSubject->subclass->subclass_name ?? '';
                     $classDisplay = trim($mainClass . ' ' . $subclassName);
                     $examName = $examination->exam_name ?? 'Mtihani';
-                    $dateText = now()->format('Y-m-d H:i');
-
-                    $smsMessage = "New exam paper {$examName} uploaded by teacher: {$teacherName}, subject: {$subjectName}, class: {$classDisplay}, date: {$dateText}. Login to approve now.";
+                    
+                    // Check if it's a weekly/monthly test and format message accordingly
+                    $isWeeklyTest = stripos($examName, 'weekly') !== false;
+                    $isMonthlyTest = stripos($examName, 'monthly') !== false;
+                    
+                    if (($isWeeklyTest || $isMonthlyTest) && $examPaper->test_week_range) {
+                        $weekInfo = $examPaper->test_week . ' (' . $examPaper->test_week_range . ')';
+                        $smsMessage = "New exam paper uploaded: {$examName}, {$weekInfo}, Teacher: {$teacherName}, Subject: {$subjectName}, Class: {$classDisplay}. Login to approve.";
+                    } else {
+                        $dateText = now()->format('d M Y');
+                        $smsMessage = "New exam paper uploaded: {$examName}, Teacher: {$teacherName}, Subject: {$subjectName}, Class: {$classDisplay}, Date: {$dateText}. Login to approve.";
+                    }
 
                     $smsService = new SmsService();
                     $smsResult = $smsService->sendSms($schoolPhone, $smsMessage);
@@ -4227,6 +4464,16 @@ class ManageExaminationController extends Controller
         $search = $request->input('search', '');
         $status = $request->input('status', '');
         $class_subjectID = $request->input('class_subjectID', '');
+        $week = $request->input('week', '');
+
+        // Get examination details
+        $examination = Examination::find($examID);
+        
+        // Check if any papers already have week data - if so, it's definitely a periodic test
+        $hasWeekData = ExamPaper::where('examID', $examID)->whereNotNull('test_week')->exists();
+        
+        $isWeeklyTest = $examination && (stripos($examination->exam_name, 'weekly') !== false || ($examination->exam_type ?? $examination->test_type) === 'weekly_test') || ($hasWeekData && stripos($examination->exam_name, 'monthly') === false);
+        $isMonthlyTest = $examination && (stripos($examination->exam_name, 'monthly') !== false || ($examination->exam_type ?? $examination->test_type) === 'monthly_test') || ($hasWeekData && stripos($examination->exam_name, 'weekly') === false && stripos($examination->exam_name, 'monthly') !== false);
 
         $query = ExamPaper::where('examID', $examID)
             ->with([
@@ -4236,6 +4483,12 @@ class ManageExaminationController extends Controller
                 'classSubject.subclass',
                 'teacher',
             ]);
+
+        // Filter out placeholders (empty content) - Admin only wants to see actual submissions
+        $query->where(function($q) {
+            $q->whereNotNull('file_path')
+              ->orWhereNotNull('question_content');
+        });
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -4260,13 +4513,75 @@ class ManageExaminationController extends Controller
             $query->where('class_subjectID', $class_subjectID);
         }
 
+        if ($week) {
+            $query->where('test_week', $week);
+        }
+
         $examPapers = $query->orderBy('created_at', 'desc')
             ->with(['questions', 'optionalRanges'])
             ->get();
 
+        // Get available weeks for weekly/monthly tests
+        $availableWeeks = [];
+        if ($isWeeklyTest || $isMonthlyTest || $hasWeekData) {
+            // Query available weeks from ALL papers (including placeholders) to allow navigation
+            $availableWeeks = ExamPaper::where('examID', $examID)
+                ->whereNotNull('test_week')
+                ->whereNotNull('test_week_range')
+                ->select('test_week', 'test_week_range', 'test_date')
+                ->distinct()
+                ->get()
+                ->sortBy(function($item) {
+                    // Try to sort by test_date, fallback to week number
+                    if ($item->test_date) return $item->test_date;
+                    preg_match('/\d+/', $item->test_week, $matches);
+                    return (int)($matches[0] ?? 0);
+                })
+                ->map(function($item) use ($examination) {
+                    $isCurrent = false;
+                    try {
+                        // Range format: "01 Feb - 07 Feb"
+                        $range = $item->test_week_range;
+                        $dates = explode(' - ', $range);
+                        if (count($dates) == 2) {
+                            $year = ($examination ? $examination->year : null) ?? date('Y');
+                            $start = \Carbon\Carbon::createFromFormat('d M Y', $dates[0] . ' ' . $year)->startOfDay();
+                            $end = \Carbon\Carbon::createFromFormat('d M Y', $dates[1] . ' ' . $year)->endOfDay();
+                            $today = now();
+                            
+                            $isCurrent = $today->betweenIncluded($start, $end);
+                        }
+                    } catch (\Exception $e) {
+                        // Ignore parsing errors
+                    }
+
+                    return [
+                        'week' => $item->test_week,
+                        'range' => $item->test_week_range,
+                        'is_current' => $isCurrent
+                    ];
+                })
+                ->values()
+                ->toArray();
+                
+            // Final fallback: if we have week data but no ranges, still try to return weeks
+            if (empty($availableWeeks) && $hasWeekData) {
+                 $availableWeeks = ExamPaper::where('examID', $examID)
+                    ->whereNotNull('test_week')
+                    ->distinct()
+                    ->pluck('test_week')
+                    ->map(function($week) {
+                        return ['week' => $week, 'range' => '', 'is_current' => false];
+                    })->toArray();
+            }
+        }
+
         return response()->json([
             'success' => true,
             'exam_papers' => $examPapers,
+            'is_weekly_test' => $isWeeklyTest || $hasWeekData,
+            'is_monthly_test' => $isMonthlyTest,
+            'available_weeks' => $availableWeeks,
         ]);
     }
 
@@ -4675,6 +4990,12 @@ class ManageExaminationController extends Controller
 
         $count = ExamPaperNotification::where('schoolID', $schoolID)
             ->where('is_read', false)
+            ->whereHas('examPaper', function($query) {
+                $query->where(function($q) {
+                    $q->whereNotNull('file_path')
+                      ->orWhereNotNull('question_content');
+                });
+            })
             ->count();
 
         return response()->json(['success' => true, 'count' => $count]);
@@ -4693,6 +5014,10 @@ class ManageExaminationController extends Controller
             ->join('exam_papers', 'exam_paper_notifications.exam_paperID', '=', 'exam_papers.exam_paperID')
             ->where('exam_paper_notifications.schoolID', $schoolID)
             ->where('exam_paper_notifications.is_read', 0)
+            ->where(function($query) {
+                $query->whereNotNull('exam_papers.file_path')
+                      ->orWhereNotNull('exam_papers.question_content');
+            })
             ->groupBy('exam_papers.examID')
             ->select('exam_papers.examID', DB::raw('COUNT(*) as count'))
             ->pluck('count', 'exam_papers.examID');
@@ -5297,6 +5622,31 @@ class ManageExaminationController extends Controller
                 ], 400);
             }
 
+            // Bulk update check
+            if ($request->has('attendance') && is_array($request->attendance)) {
+                $subjectID = $request->input('subjectID');
+                
+                foreach ($request->attendance as $att) {
+                    if (isset($att['studentID']) && isset($att['status'])) {
+                        DB::table('exam_attendance')
+                            ->updateOrInsert(
+                                [
+                                    'examID' => $examID,
+                                    'studentID' => $att['studentID'],
+                                    'subjectID' => $subjectID,
+                                ],
+                                [
+                                    'status' => $att['status'],
+                                    'updated_at' => now(),
+                                ]
+                            );
+                    }
+                }
+
+                return response()->json(['success' => 'Bulk attendance updated successfully!']);
+            }
+
+            // --- Original Single Update Logic ---
             $validator = Validator::make($request->all(), [
                 'studentID' => 'required|exists:students,studentID',
                 'subjectID' => 'required|exists:school_subjects,subjectID',
@@ -5463,6 +5813,7 @@ class ManageExaminationController extends Controller
     {
         $payload = [];
         $errors = [];
+        $seenNames = [];
 
         $countNames = is_array($names) ? count($names) : 0;
         for ($i = 0; $i < $countNames; $i++) {
@@ -5474,6 +5825,13 @@ class ManageExaminationController extends Controller
             if (! $hallName || ! $classID || ! $capacity || ! $gender) {
                 continue;
             }
+
+            // Check for duplicate hall names in the current payload
+            if (in_array(strtolower($hallName), $seenNames)) {
+                 $errors[] = "Hall name '{$hallName}' is duplicated. Please use unique names for each hall assignment.";
+                 continue;
+            }
+            $seenNames[] = strtolower($hallName);
 
             $class = ClassModel::where('classID', $classID)->where('schoolID', $schoolID)->first();
             if (! $class) {
@@ -5742,19 +6100,43 @@ class ManageExaminationController extends Controller
     /**
      * Get counts of students per class for halls listing (reuse).
      */
-    private function fetchSupervisorAssignments($teacherID, $schoolID)
+    private function fetchSupervisorAssignments($teacherID, $schoolID, $category = null, $year = null)
     {
         $today = now()->startOfDay();
 
-        return DB::table('exam_hall_supervisors as ehs')
+        // 1. Standard Exam Assignments
+        $standardQuery = DB::table('exam_hall_supervisors as ehs')
             ->join('exam_halls as eh', 'eh.exam_hallID', '=', 'ehs.exam_hallID')
             ->join('examinations as ex', 'ex.examID', '=', 'ehs.examID')
             ->join('classes as c', 'c.classID', '=', 'eh.classID')
             ->leftJoin('school_subjects as ss', 'ss.subjectID', '=', 'ehs.subjectID')
             ->leftJoin('exam_timetable as et', 'et.exam_timetableID', '=', 'ehs.exam_timetableID')
             ->where('ehs.teacherID', $teacherID)
-            ->where('ex.schoolID', $schoolID)
-            ->select(
+            ->where('ex.schoolID', $schoolID);
+
+        // Filter: Category
+        if ($category && $category !== 'all') {
+            $standardQuery->where('ex.exam_category', $category);
+        }
+
+        // Filter: Year
+        if ($year) {
+            $standardQuery->where(function($q) use ($year) {
+                $q->whereYear('ex.start_date', $year)
+                  ->orWhereYear('ex.end_date', $year);
+            });
+        }
+
+        // Only future or today's exams
+        $standardQuery->where(function($q) use ($today) {
+            $q->where('et.exam_date', '>=', $today->format('Y-m-d'))
+              ->orWhere(function($sub) use ($today) {
+                  $sub->whereNull('et.exam_date')
+                      ->where('ex.end_date', '>=', $today->format('Y-m-d'));
+              });
+        });
+
+        $standardAssignments = $standardQuery->select(
                 'ehs.exam_hall_supervisorID',
                 'ehs.examID',
                 'ehs.exam_hallID',
@@ -5776,11 +6158,167 @@ class ManageExaminationController extends Controller
                 'et.end_time'
             )
             ->selectRaw('(select count(*) from student_exam_halls seh where seh.exam_hallID = eh.exam_hallID) as students_count')
-            ->selectRaw('CASE WHEN ex.end_date >= ? THEN 1 ELSE 0 END as is_active', [$today])
-            ->orderBy('ex.start_date', 'desc')
-            ->orderBy('et.exam_date', 'asc')
-            ->orderBy('et.start_time', 'asc')
             ->get();
+
+        // 2. Weekly Test Assignments
+        $testSchedulesQuery = \App\Models\WeeklyTestSchedule::with(['examination', 'subject'])
+            ->where('schoolID', $schoolID)
+            ->where(function($q) use ($teacherID) {
+                $q->whereJsonContains('supervisor_ids', (string)$teacherID)
+                  ->orWhereJsonContains('supervisor_ids', (int)$teacherID);
+            });
+
+        if ($year) {
+            $testSchedulesQuery->whereHas('examination', function($q) use ($year) {
+                $q->where(function($sub) use ($year) {
+                    $sub->whereYear('start_date', $year)
+                        ->orWhereYear('end_date', $year);
+                });
+            });
+        }
+
+        $testSchedules = $testSchedulesQuery->get();
+
+        // Calculate cycle lengths per exam/type/scope
+        $cycleLengths = \App\Models\WeeklyTestSchedule::where('schoolID', $schoolID)
+            ->select('examID', 'test_type', 'scope', 'scope_id', DB::raw('MAX(week_number) as max_week'))
+            ->groupBy('examID', 'test_type', 'scope', 'scope_id')
+            ->get()
+            ->keyBy(function($item) {
+                return $item->examID . '_' . $item->test_type . '_' . $item->scope . '_' . $item->scope_id;
+            });
+
+        $calculatedTestAssignments = collect();
+        foreach ($testSchedules as $test) {
+            if (!$test->examination) continue;
+            // Filter: Category
+            if ($category && $category !== 'all' && $category !== 'test') continue;
+
+            $examStartDate = \Carbon\Carbon::parse($test->examination->start_date);
+            $examEndDate = \Carbon\Carbon::parse($test->examination->end_date);
+            
+            // Align with calendar weeks (Monday start)
+            $anchorDate = $examStartDate->copy()->startOfWeek();
+            
+            // Determine cycle rotation
+            $key = $test->examID . '_' . $test->test_type . '_' . $test->scope . '_' . $test->scope_id;
+            $cycleLength = isset($cycleLengths[$key]) ? $cycleLengths[$key]->max_week : 1;
+            
+            $daysSinceAnchor = $anchorDate->diffInDays($today, false);
+            $currentAbsWeek = $daysSinceAnchor < 0 ? 1 : (int)floor($daysSinceAnchor / 7) + 1;
+            
+            // Current week index in the cycle (1 to cycleLength)
+            $currentCycleWeek = (($currentAbsWeek - 1) % $cycleLength) + 1;
+            
+            // We want to show the occurrence for this test's week number in the CURRENT cycle
+            // AND potentially the occurrence in the NEXT cycle.
+            
+            $cyclesToShow = [0, 1]; // Current cycle (0) and Next cycle (1)
+            
+            foreach ($cyclesToShow as $cycleOffset) {
+                $absWeekOfOccurrence = (int)($currentAbsWeek - ($currentCycleWeek - 1)) + ($test->week_number - 1) + ($cycleOffset * $cycleLength);
+                
+                // If this absolute week is far in the past (before the first week of exam), skip
+                if ($absWeekOfOccurrence < 1 && $cycleOffset == 0) continue;
+
+                // Calculate specific date
+                $weekStart = $anchorDate->copy()->addWeeks($absWeekOfOccurrence - 1)->startOfWeek();
+                $testDate = $weekStart->copy()->modify($test->day);
+                
+                // --- VISIBILITY LOGIC ---
+                // 1. If test date is today or future -> SHOW
+                // 2. If test date is past BUT within the CURRENT calendar week -> SHOW (per user request)
+                // 3. Otherwise -> HIDE
+                
+                $currentCalendarWeekStart = $today->copy()->startOfWeek();
+                $currentCalendarWeekEnd = $today->copy()->endOfWeek();
+                
+                $isInCurrentWeek = $testDate->between($currentCalendarWeekStart, $currentCalendarWeekEnd);
+                
+                if (!$testDate->isToday() && $testDate->lt($today) && !$isInCurrentWeek) {
+                    continue;
+                }
+                
+                // Exclude if it's beyond the examination end date
+                if ($testDate->gt($examEndDate)) {
+                    continue;
+                }
+                
+                // Exclude if it's before the examination start date (unless it's in the same week and we want to be lenient)
+                if ($testDate->lt($examStartDate) && !$testDate->isSameDay($examStartDate)) {
+                    // If it's in the first week but before the official start day, we usually hide it
+                    // but for weekly tests, users might expect it. We'll skip it if it's strictly before.
+                    continue;
+                }
+
+                $assignment = new \stdClass();
+                // Unique ID including date to allow multiple occurrences
+                $assignment->exam_hall_supervisorID = 'test_' . $test->id . '_' . $testDate->format('Ymd');
+                $assignment->examID = $test->examID;
+                $assignment->exam_hallID = null;
+                $assignment->subjectID = $test->subjectID;
+                $assignment->exam_timetableID = null;
+                $assignment->hall_name = $test->scope === 'school_wide' ? 'School Wide' : ($test->scope === 'class' ? 'Class Assignment' : 'Subclass Assignment');
+                $assignment->gender_allowed = 'both';
+                $assignment->capacity = 0;
+                $assignment->classID = $test->scope_id;
+                
+                if ($test->scope === 'class') {
+                    $assignment->class_name = \App\Models\ClassModel::find($test->scope_id)->class_name ?? 'Class';
+                } elseif ($test->scope === 'subclass') {
+                    $sub = \App\Models\Subclass::with('class')->find($test->scope_id);
+                    $assignment->class_name = ($sub && $sub->class) ? ($sub->class->class_name . ' ' . $sub->subclass_name) : 'Subclass';
+                } else {
+                    $assignment->class_name = 'All Classes';
+                }
+
+                $assignment->exam_name = $test->examination->exam_name . " (Week {$test->week_number})";
+                
+                // Show the specific date range for THIS occurrence
+                $weekStartOccurrence = $testDate->copy()->startOfWeek();
+                $weekEndOccurrence = $testDate->copy()->endOfWeek();
+                $assignment->week_range = $weekStartOccurrence->format('d/m/Y') . ' - ' . $weekEndOccurrence->format('d/m/Y');
+                
+                $assignment->start_date = $test->examination->start_date;
+                $assignment->end_date = $test->examination->end_date;
+                $assignment->term = $test->examination->term;
+                $assignment->exam_category = 'test';
+                $assignment->scope = $test->scope;
+                $assignment->subject_name = $test->subject->subject_name ?? 'N/A';
+                $assignment->exam_date = $testDate->format('Y-m-d');
+                $assignment->start_time = $test->start_time;
+                $assignment->end_time = $test->end_time;
+                
+                // Set is_active based on today
+                $assignment->is_active = $testDate->isSameDay($today) ? 1 : 0;
+                $assignment->is_past = $testDate->lt($today) && !$testDate->isToday() ? 1 : 0;
+
+                // Student count
+                $studentCount = 0;
+                if ($test->scope === 'class') {
+                    $studentCount = \App\Models\Student::whereHas('subclass', function($q) use ($test) {
+                        $q->where('classID', $test->scope_id);
+                    })->where('schoolID', $schoolID)->where('status', 'Active')->count();
+                } elseif ($test->scope === 'subclass') {
+                    $studentCount = \App\Models\Student::where('subclassID', $test->scope_id)->where('status', 'Active')->count();
+                } else {
+                    $studentCount = \App\Models\Student::where('schoolID', $schoolID)->where('status', 'Active')->count();
+                }
+                
+                $assignment->students_count = $studentCount;
+                $assignment->capacity = $studentCount;
+
+                $calculatedTestAssignments->push($assignment);
+            }
+        }
+
+        // Merge and sort
+        return collect($standardAssignments)->merge($calculatedTestAssignments)
+            ->sortBy([
+                ['is_active', 'desc'],
+                ['exam_date', 'asc'],
+                ['start_time', 'asc']
+            ]);
     }
 
     public function getMySuperviseExams()
@@ -5793,7 +6331,10 @@ class ManageExaminationController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        $assignments = $this->fetchSupervisorAssignments($teacherID, $schoolID);
+        $category = request()->input('category');
+        $year = request()->input('year');
+
+        $assignments = $this->fetchSupervisorAssignments($teacherID, $schoolID, $category, $year);
 
         return response()->json([
             'success' => true,
@@ -5801,7 +6342,75 @@ class ManageExaminationController extends Controller
         ]);
     }
 
-    public function getHallStudents($examHallID)
+    public function viewHallStudentsPage()
+    {
+        $teacherID = Session::get('teacherID');
+        $schoolID = Session::get('schoolID');
+        $userType = Session::get('user_type');
+
+        if ($userType !== 'Teacher' || ! $teacherID || ! $schoolID) {
+            return redirect()->route('login');
+        }
+
+        $hallID = request()->input('hall_id');
+        $subjectID = request()->input('subject_id');
+        $examID = request()->input('examID');
+        $exam_category = request()->input('exam_category');
+
+        $exam = \App\Models\Examination::find($examID);
+        $subject = \App\Models\SchoolSubject::find($subjectID);
+        $hall = $hallID ? \App\Models\ExamHall::find($hallID) : null;
+
+        return view('Teacher.supervise_students_list', [
+            'hallID' => $hallID,
+            'subjectID' => $subjectID,
+            'examID' => $examID,
+            'exam_category' => $exam_category,
+            'exam' => $exam,
+            'subject' => $subject,
+            'hall' => $hall,
+            'timetable_id' => request()->input('timetable_id'),
+            'classID' => request()->input('classID'),
+            'scope' => request()->input('scope')
+        ]);
+    }
+
+    public function takeAttendancePage()
+    {
+        $teacherID = Session::get('teacherID');
+        $schoolID = Session::get('schoolID');
+        $userType = Session::get('user_type');
+
+        if ($userType !== 'Teacher' || ! $teacherID || ! $schoolID) {
+            return redirect()->route('login');
+        }
+
+        $hallID = request()->input('hall_id');
+        $subjectID = request()->input('subject_id');
+        $examID = request()->input('examID');
+        $exam_category = request()->input('exam_category');
+        $date = request()->input('date');
+
+        $exam = \App\Models\Examination::find($examID);
+        $subject = \App\Models\SchoolSubject::find($subjectID);
+        $hall = $hallID ? \App\Models\ExamHall::find($hallID) : null;
+
+        return view('Teacher.supervise_attendance', [
+            'hallID' => $hallID,
+            'subjectID' => $subjectID,
+            'examID' => $examID,
+            'exam_category' => $exam_category,
+            'exam' => $exam,
+            'subject' => $subject,
+            'hall' => $hall,
+            'date' => $date,
+            'timetable_id' => request()->input('timetable_id'),
+            'classID' => request()->input('classID'),
+            'scope' => request()->input('scope')
+        ]);
+    }
+
+    public function getHallStudents($examHallID = null)
     {
         $teacherID = Session::get('teacherID');
         $userType = Session::get('user_type');
@@ -5811,9 +6420,58 @@ class ManageExaminationController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        // Get optional subjectID and exam_timetableID from request
-        $subjectID = request()->input('subjectID');
-        $examTimetableID = request()->input('exam_timetableID');
+        $exam_category = request()->input('exam_category');
+        $subjectID = request()->input('subject_id') ?: request()->input('subjectID');
+        $examID = request()->input('examID');
+        $classID = request()->input('classID');
+
+        if ($exam_category === 'test') {
+            // Fetch students based on scope for Weekly/Monthly tests
+            $studentsQuery = \App\Models\Student::with(['subclass', 'subclass.class'])
+                ->where('schoolID', $schoolID)
+                ->where('status', 'Active');
+
+            if (request()->input('scope') === 'subclass') {
+                $studentsQuery->where('subclassID', $classID);
+            } elseif (request()->input('scope') === 'class') {
+                $studentsQuery->whereHas('subclass', function($q) use ($classID) {
+                    $q->where('classID', $classID);
+                });
+            }
+
+            $studentsRaw = $studentsQuery->orderBy('first_name')->get();
+
+            $attendanceStatuses = DB::table('exam_attendance')
+                ->where('examID', $examID)
+                ->where('subjectID', $subjectID)
+                ->whereIn('studentID', $studentsRaw->pluck('studentID'))
+                ->pluck('status', 'studentID')
+                ->toArray();
+
+            $students = $studentsRaw->map(function ($s) use ($attendanceStatuses) {
+                $status = $attendanceStatuses[$s->studentID] ?? 'Absent';
+                return [
+                    'studentID' => $s->studentID,
+                    'name' => trim($s->first_name.' '.$s->last_name),
+                    'gender' => $s->gender,
+                    'subclass' => $s->subclass->subclass_name ?? 'N/A',
+                    'class_name' => $s->subclass->class->class_name ?? 'N/A',
+                    'is_present' => $status === 'Present' ? 1 : 0,
+                    'status' => $status,
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'examID' => $examID,
+                'students' => $students,
+                'subjectID' => $subjectID,
+                'halls' => []
+            ]);
+        }
+
+        // --- Standard Exam Logic (Original) ---
+        $examTimetableID = request()->input('exam_timetableID') ?: request()->input('timetable_id');
 
         $assignmentQuery = DB::table('exam_hall_supervisors as ehs')
             ->join('exam_halls as eh', 'eh.exam_hallID', '=', 'ehs.exam_hallID')
@@ -5822,12 +6480,10 @@ class ManageExaminationController extends Controller
             ->where('ehs.teacherID', $teacherID)
             ->where('ex.schoolID', $schoolID);
 
-        // If subjectID is provided, filter by it
         if ($subjectID) {
             $assignmentQuery->where('ehs.subjectID', $subjectID);
         }
 
-        // If exam_timetableID is provided, filter by it
         if ($examTimetableID) {
             $assignmentQuery->where('ehs.exam_timetableID', $examTimetableID);
         }
@@ -5843,13 +6499,6 @@ class ManageExaminationController extends Controller
         $classID = $assignment->classID;
         $assignedSubjectID = $assignment->subjectID;
 
-        // Get attendance status for students
-        $attendanceStatuses = DB::table('exam_attendance')
-            ->where('examID', $examID)
-            ->where('subjectID', $assignedSubjectID)
-            ->pluck('status', 'studentID')
-            ->toArray();
-        
         $students = DB::table('student_exam_halls as seh')
             ->join('students as s', 's.studentID', '=', 'seh.studentID')
             ->leftJoin('subclasses as sub', 'sub.subclassID', '=', 'seh.subclassID')
@@ -5868,21 +6517,12 @@ class ManageExaminationController extends Controller
             ->orderBy('s.last_name')
             ->get();
 
-        // Get attendance for this specific subject (if provided) or overall
-        $attendanceQuery = DB::table('exam_attendance')
+        $attendanceStatuses = DB::table('exam_attendance')
             ->where('examID', $examID)
-            ->whereIn('studentID', $students->pluck('studentID'));
-
-        if ($assignedSubjectID) {
-            $attendanceQuery->where('subjectID', $assignedSubjectID);
-        } else {
-            $attendanceQuery->whereNull('subjectID');
-        }
-
-        $attendance = $attendanceQuery
-            ->select('studentID', DB::raw("max(case when status='Present' then 1 else 0 end) as is_present"))
-            ->groupBy('studentID')
-            ->pluck('is_present', 'studentID');
+            ->where('subjectID', $assignedSubjectID)
+            ->whereIn('studentID', $students->pluck('studentID'))
+            ->pluck('status', 'studentID')
+            ->toArray();
 
         $hallOptions = DB::table('exam_halls')
             ->where('examID', $examID)
@@ -5890,26 +6530,13 @@ class ManageExaminationController extends Controller
             ->select('exam_hallID', 'hall_name', 'capacity', 'gender_allowed')
             ->get();
 
-        // Get attendance status for each student
-        $attendanceStatuses = DB::table('exam_attendance')
-            ->where('examID', $examID)
-            ->whereIn('studentID', $students->pluck('studentID'));
-        
-        if ($assignedSubjectID) {
-            $attendanceStatuses->where('subjectID', $assignedSubjectID);
-        } else {
-            $attendanceStatuses->whereNull('subjectID');
-        }
-        
-        $attendanceStatuses = $attendanceStatuses->pluck('status', 'studentID')->toArray();
-
         return response()->json([
             'success' => true,
             'examID' => $examID,
-            'students' => $students->map(function ($s) use ($attendance, $attendanceStatuses) {
+            'students' => $students->map(function ($s) use ($attendanceStatuses) {
                 $status = $attendanceStatuses[$s->studentID] ?? 'Absent';
                 return [
-                    'student_exam_hallID' => $s->student_exam_hallID,
+                    'student_exam_hallID' => $s->student_exam_hallID ?? null,
                     'studentID' => $s->studentID,
                     'name' => trim($s->first_name.' '.$s->last_name),
                     'gender' => $s->gender,
@@ -6540,6 +7167,194 @@ class ManageExaminationController extends Controller
         } catch (\Exception $e) {
             Log::error('Error filtering printing unit: ' . $e->getMessage());
             return response()->json(['success' => false, 'error' => 'Error filtering data: ' . $e->getMessage()], 500);
+        }
+    }
+    public function getTestByTypeYear(Request $request)
+    {
+        try {
+            $schoolID = Session::get('schoolID');
+            if (!$schoolID) {
+                return response()->json(['success' => false, 'error' => 'School ID not found in session'], 400);
+            }
+
+            $type = $request->type; // 'weekly_test' or 'monthly_test'
+            $year = $request->year;
+
+            if (!$type || !$year) {
+                return response()->json(['success' => false, 'error' => 'Type and year are required'], 400);
+            }
+
+            $examName = ($type === 'weekly_test') ? 'Weekly Test' : 'Monthly Test';
+
+            $examination = Examination::where('schoolID', $schoolID)
+                ->where('exam_category', 'test')
+                ->where('exam_name', $examName)
+                ->where('year', $year)
+                ->first();
+
+            if ($examination) {
+                return response()->json(['success' => true, 'examination' => $examination]);
+            }
+
+            return response()->json(['success' => false, 'message' => 'No ' . $examName . ' found for the year ' . $year]);
+        } catch (\Exception $e) {
+            \Log::error('Error in getTestByTypeYear: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => 'Failed to fetch test: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function getAvailablePeriods(Request $request)
+    {
+        try {
+            $schoolID = Session::get('schoolID');
+            $teacherID = Session::get('teacherID');
+            if (!$schoolID || !$teacherID) {
+                return response()->json(['success' => false, 'error' => 'Session data not found'], 400);
+            }
+
+            $examID = $request->examID;
+            $testType = $request->test_type; // 'weekly_test' or 'monthly_test'
+
+            if (!$examID) {
+                return response()->json(['success' => true, 'periods' => []]);
+            }
+
+            $exam = Examination::find($examID);
+            if (!$exam) {
+                return response()->json(['success' => false, 'error' => 'Examination not found'], 404);
+            }
+
+            $startDate = \Carbon\Carbon::parse($exam->start_date);
+            $endDate = \Carbon\Carbon::parse($exam->end_date);
+            $today = \Carbon\Carbon::now();
+            
+            // Align with calendar weeks (Monday start)
+            $anchorDate = $startDate->copy()->startOfWeek();
+
+            // Calculate cycle length for this specific exam
+            $cycleLength = WeeklyTestSchedule::where('examID', $exam->examID)
+                ->where('test_type', $testType === 'weekly_test' ? 'weekly' : 'monthly')
+                ->max('week_number') ?: 1;
+
+            $periods = [];
+            
+            // Loop through all weeks in the exam range
+            $current = $anchorDate->copy();
+            while ($current <= $endDate) {
+                $weekStart = $current->copy()->startOfWeek();
+                $weekEnd = $current->copy()->endOfWeek();
+                
+                // Only show future or current weeks
+                if ($weekEnd->lt($today->copy()->startOfDay())) {
+                    $current->addWeek();
+                    continue;
+                }
+
+                $daysSinceAnchor = $anchorDate->diffInDays($weekStart, false);
+                $absWeek = (int)floor($daysSinceAnchor / 7) + 1;
+                
+                // Week index in the cycle (1 to cycleLength)
+                $cycleWeek = (($absWeek - 1) % $cycleLength) + 1;
+
+                // Simple check if ANY schedule exists for this cycle week that the teacher might be part of
+                $hasScheduleForCycle = WeeklyTestSchedule::where('examID', $exam->examID)
+                    ->where('test_type', $testType === 'weekly_test' ? 'weekly' : 'monthly')
+                    ->where('week_number', $cycleWeek)
+                    ->exists();
+
+                if ($hasScheduleForCycle) {
+                    $periodText = "Week $cycleWeek (" . $weekStart->format('d M') . " - " . $weekEnd->format('d M') . ")";
+                    $periods[] = [
+                        'id' => $absWeek,
+                        'text' => $periodText
+                    ];
+                }
+                
+                $current->addWeek();
+                if ($current->year > $startDate->year + 2) break; // Hard safety
+            }
+
+            return response()->json(['success' => true, 'periods' => $periods]);
+        } catch (\Exception $e) {
+            \Log::error('Error in getAvailablePeriods: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function getScheduledSubjects(Request $request)
+    {
+        try {
+            $schoolID = Session::get('schoolID');
+            $teacherID = Session::get('teacherID');
+            $examID = $request->examID;
+            $testWeekAbs = $request->test_week;
+
+            if (!$schoolID || !$teacherID || !$examID || !$testWeekAbs) {
+                return response()->json(['success' => false, 'error' => 'Missing required data'], 400);
+            }
+
+            $exam = Examination::find($examID);
+            if (!$exam) {
+                return response()->json(['success' => false, 'error' => 'Exam not found'], 404);
+            }
+
+            $startDate = \Carbon\Carbon::parse($exam->start_date);
+            $anchorDate = $startDate->copy()->startOfWeek();
+            
+            // Calculate cycle week from absolute week
+            $isWeekly = (strpos(strtolower($exam->exam_name), 'weekly') !== false);
+            $testType = $isWeekly ? 'weekly' : 'monthly';
+
+            $cycleLength = WeeklyTestSchedule::where('examID', $examID)
+                ->where('test_type', $testType)
+                ->max('week_number') ?: 1;
+                
+            $cycleWeek = (($testWeekAbs - 1) % $cycleLength) + 1;
+
+            // Find all schedules for this cycle week
+            $schedules = WeeklyTestSchedule::where('examID', $examID)
+                ->where('week_number', $cycleWeek)
+                ->where('test_type', $testType)
+                ->get();
+            
+            $subjects = [];
+            foreach ($schedules as $schedule) {
+                // Find teacher's ClassSubject entries that match this schedule
+                $query = ClassSubject::where('teacherID', $teacherID)
+                    ->where('subjectID', $schedule->subjectID)
+                    ->where('status', 'Active');
+
+                if ($schedule->scope === 'class') {
+                    $query->where('classID', $schedule->scope_id);
+                } elseif ($schedule->scope === 'subclass') {
+                    $query->where('subclassID', $schedule->scope_id);
+                }
+                // school_wide doesn't need extra filter beyond teacherID + subjectID
+
+                // Special case: direct teacher assignment in schedule
+                if ($schedule->teacher_id && $schedule->teacher_id != $teacherID) {
+                    continue;
+                }
+
+                $csList = $query->with(['subject', 'class', 'subclass'])->get();
+                foreach ($csList as $cs) {
+                    $subjects[] = [
+                        'class_subjectID' => $cs->class_subjectID,
+                        'subject_name' => $cs->subject->subject_name ?? 'N/A',
+                        'class_name' => trim(($cs->class->class_name ?? '') . ' ' . ($cs->subclass->subclass_name ?? '')),
+                        'day' => $schedule->day,
+                        'time' => \Carbon\Carbon::parse($schedule->start_time)->format('h:i A') . ' - ' . \Carbon\Carbon::parse($schedule->end_time)->format('h:i A')
+                    ];
+                }
+            }
+
+            return response()->json([
+                'success' => true, 
+                'subjects' => collect($subjects)->unique('class_subjectID')->values()
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in getScheduledSubjects: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
 }

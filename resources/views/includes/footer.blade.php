@@ -331,7 +331,7 @@
 <footer class="site-footer">
   <div class="container">
     <p class="mb-1">
-      &copy; 2025 <strong>ShuleXpert</strong>. All Rights Reserved.
+      &copy; 2026 <strong>ShuleXpert</strong>. All Rights Reserved.
     </p>
     <p class="small mb-0">
       Powered by: <a href="#">EmCa Techonologies LTD
@@ -340,9 +340,6 @@
     </p>
   </div>
 </footer>
-<script src="{{ asset('vendors/jquery/dist/jquery.min.js') }}"></script>
- <script src="{{ asset('vendors/popper.js/dist/umd/popper.min.js') }}"></script>
- <script src="{{ asset('vendors/bootstrap/dist/js/bootstrap.min.js') }}"></script>
  <script src="{{ asset('assets/js/main.js') }}"></script>
  <script src="{{ asset('assets/js/widgets.js') }}"></script>
 <!-- ======= Custom Footer End ======= -->

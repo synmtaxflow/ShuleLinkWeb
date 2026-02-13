@@ -3979,7 +3979,7 @@ class TeachersController extends Controller
         }
     }
 
-    public function getSubjectResults($classSubjectID, $examID = null)
+    public function getSubjectResults(Request $request, $classSubjectID, $examID = null)
     {
         try {
             $teacherID = Session::get('teacherID');
@@ -4013,6 +4013,10 @@ class TeachersController extends Controller
 
             if ($examID) {
                 $query->where('examID', $examID);
+            }
+
+            if ($request->has('test_week')) {
+                $query->where('test_week', $request->test_week);
             }
 
             $results = $query->get();
@@ -4143,19 +4147,10 @@ class TeachersController extends Controller
             $school = School::find($schoolID);
             $schoolType = $school && $school->school_type ? strtolower($school->school_type) : 'secondary';
 
-            if ($schoolType !== 'secondary') {
-                return response()->json([
-                    'success' => true,
-                    'questions' => [],
-                    'marks_by_student' => [],
-                    'max_total' => 0,
-                ], 200);
-            }
 
             $examPaper = ExamPaper::where('class_subjectID', $classSubjectID)
                 ->where('examID', $examID)
                 ->where('teacherID', $teacherID)
-                ->where('status', 'approved')
                 ->orderBy('created_at', 'desc')
                 ->first();
 
@@ -4165,7 +4160,28 @@ class TeachersController extends Controller
                     'questions' => [],
                     'marks_by_student' => [],
                     'max_total' => 0,
-                    'message' => 'No approved exam paper with question formats found.',
+                    'message' => 'No exam paper question formats found. Please upload/format questions first.',
+                ], 200);
+            }
+
+            if ($examPaper->status !== 'approved') {
+                return response()->json([
+                    'success' => true,
+                    'questions' => [],
+                    'marks_by_student' => [],
+                    'max_total' => 0,
+                    'test_week' => $examPaper->test_week,
+                    'message' => 'Your exam paper status is currently \'' . ucfirst($examPaper->status) . '\'. Results can only be entered for approved exam papers.',
+                ], 200);
+            }
+
+            if ($schoolType !== 'secondary') {
+                return response()->json([
+                    'success' => true,
+                    'questions' => [],
+                    'marks_by_student' => [],
+                    'max_total' => 0,
+                    'test_week' => $examPaper->test_week,
                 ], 200);
             }
 
@@ -4211,6 +4227,7 @@ class TeachersController extends Controller
                 'max_total' => $maxTotal,
                 'optional_total' => $optionalTotal,
                 'optional_ranges' => $optionalRanges,
+                'test_week' => $examPaper->test_week,
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -4242,6 +4259,7 @@ class TeachersController extends Controller
                 'results.*.question_marks' => 'nullable|array',
                 'results.*.question_marks.*.question_id' => 'required_with:results.*.question_marks|exists:exam_paper_questions,exam_paper_questionID',
                 'results.*.question_marks.*.marks' => 'nullable|numeric|min:0',
+                'test_week' => 'nullable|string|max:100',
             ]);
 
             if ($validator->fails()) {
@@ -4276,6 +4294,50 @@ class TeachersController extends Controller
                 return response()->json([
                     'error' => 'You are not allowed to enter results for this examination. Result entry has been disabled.'
                 ], 403);
+            }
+
+            // Check if there is an approved exam paper for this subject/exam
+            $examPaper = \App\Models\ExamPaper::where('class_subjectID', $classSubject->class_subjectID)
+                ->where('examID', $request->examID)
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            if (!$examPaper) {
+                return response()->json([
+                    'error' => 'No exam paper found for this subject. Please upload an exam paper first.'
+                ], 403);
+            }
+
+            if ($examPaper->status !== 'approved') {
+                return response()->json([
+                    'error' => 'Your exam paper status is currently \'' . ucfirst($examPaper->status) . '\'. Results can only be entered for approved exam papers.'
+                ], 403);
+            }
+
+            // If it is a weekly/monthly test, check if results for this week already exist for other students
+            // to prevent multiple entries if not intended, but specifically we check per student in the loop below.
+            // For weekly/monthly tests, use the week from the exam paper
+            $testWeek = $request->test_week;
+            if ($examination->exam_category === 'test' && in_array($examination->test_type, ['weekly_test', 'monthly_test'])) {
+                $testWeek = $examPaper->test_week;
+                if (!$testWeek) {
+                    return response()->json([
+                        'error' => 'The approved exam paper for this subject does not have a week range specified. Please update the exam paper first.'
+                    ], 422);
+                }
+
+                // Check if results already exist for this week for THIS class subject
+                $existingCount = Result::where('examID', $request->examID)
+                    ->where('class_subjectID', $request->class_subjectID)
+                    ->where('test_week', $testWeek)
+                    ->count();
+                
+                if ($existingCount > 0 && !$request->has('confirm_overwrite')) {
+                    return response()->json([
+                        'error' => 'You cannot add results twice in the same week for this subject. Results already exist for ' . $testWeek . '.',
+                        'requires_confirmation' => true
+                    ], 409);
+                }
             }
 
             // Check if term is closed - prevent editing results for closed terms
@@ -4365,10 +4427,20 @@ class TeachersController extends Controller
             $savedCount = 0;
             foreach ($request->results as $resultData) {
                 // Find existing result or create new one
-                $result = Result::where('studentID', $resultData['studentID'])
+                $query = Result::where('studentID', $resultData['studentID'])
                     ->where('examID', $request->examID)
-                    ->where('class_subjectID', $request->class_subjectID)
-                    ->first();
+                    ->where('class_subjectID', $request->class_subjectID);
+                
+                if ($testWeek) {
+                    $query->where('test_week', $testWeek);
+                } else {
+                    $query->whereNull('test_week');
+                }
+
+                $result = $query->first();
+
+                // If no result and it's a test, check if ANY result exists for this student/exam/subject this week
+                // (Though the query above already covers it if $testWeek is provided)
 
                 $finalMarks = $resultData['marks'] ?? null;
                 $finalGrade = $resultData['grade'] ?? null;
@@ -4503,6 +4575,8 @@ class TeachersController extends Controller
                             'marks' => $finalMarks ?? null,
                             'grade' => $finalGrade ?? null,
                             'remark' => $finalRemark ?? null,
+                            'test_week' => $testWeek,
+                            'test_date' => $testWeek ? \Illuminate\Support\Carbon::now() : null,
                         ]);
                     }
                 }

@@ -244,7 +244,7 @@
 </div>
 
 <!-- View Students Modal -->
-<div class="modal fade" id="viewStudentsModal" tabindex="-1" role="dialog" aria-labelledby="viewStudentsModalLabel" aria-hidden="true">
+<div class="modal" id="viewStudentsModal" role="dialog" aria-labelledby="viewStudentsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl" role="document" style="max-width: 95%;">
         <div class="modal-content">
             <div class="modal-header bg-primary-custom text-white">
@@ -279,7 +279,7 @@
 </div>
 
 <!-- Session Attendance Modal -->
-<div class="modal fade" id="sessionAttendanceModal" tabindex="-1" role="dialog" aria-labelledby="sessionAttendanceModalLabel" aria-hidden="true">
+<div class="modal" id="sessionAttendanceModal" role="dialog" aria-labelledby="sessionAttendanceModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl" role="document" style="max-width: 95%;">
         <div class="modal-content">
             <div class="modal-header bg-primary-custom text-white">
@@ -314,7 +314,7 @@
 </div>
 
 <!-- Exam Attendance Modal -->
-<div class="modal fade" id="examAttendanceModal" tabindex="-1" role="dialog" aria-labelledby="examAttendanceModalLabel" aria-hidden="true">
+<div class="modal" id="examAttendanceModal" role="dialog" aria-labelledby="examAttendanceModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl" role="document" style="max-width: 95%;">
         <div class="modal-content">
             <div class="modal-header bg-primary-custom text-white">
@@ -349,7 +349,7 @@
 </div>
 
 <!-- View Results Modal -->
-<div class="modal fade" id="viewResultsModal" tabindex="-1" role="dialog" aria-labelledby="viewResultsModalLabel" aria-hidden="true">
+<div class="modal" id="viewResultsModal" role="dialog" aria-labelledby="viewResultsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl" role="document" style="max-width: 95%;">
         <div class="modal-content">
             <div class="modal-header bg-primary-custom text-white">
@@ -384,7 +384,7 @@
 </div>
 
 <!-- Add/Edit Results Modal -->
-<div class="modal fade" id="addEditResultsModal" tabindex="-1" role="dialog" aria-labelledby="addEditResultsModalLabel" aria-hidden="true">
+<div class="modal" id="addEditResultsModal" role="dialog" aria-labelledby="addEditResultsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl" role="document" style="max-width: 95%;">
         <div class="modal-content">
             <div class="modal-header bg-primary-custom text-white">
@@ -419,7 +419,7 @@
 </div>
 
 <!-- Upload Excel Modal -->
-<div class="modal fade" id="uploadExcelModal" tabindex="-1" role="dialog" aria-labelledby="uploadExcelModalLabel" aria-hidden="true">
+<div class="modal" id="uploadExcelModal" role="dialog" aria-labelledby="uploadExcelModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header bg-primary-custom text-white">
@@ -462,8 +462,6 @@
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
@@ -478,7 +476,7 @@ let examQuestionData = {
     optionalRanges: []
 };
 
-$(document).ready(function() {
+jQuery(document).ready(function($) {
     $.ajaxSetup({
         headers: {
             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
@@ -607,13 +605,11 @@ function resetQuestionData() {
         $('.question-details-row').addClass('d-none').removeClass('loaded');
         $('.question-detail-container').html('<div class="text-muted small">Select examination to load question formats.</div>');
     }
+    $('#test_week_display_group').hide();
+    $('#selected_week_label').text('');
 }
 
 function loadExamQuestionData(classSubjectID, examID) {
-    if (!isSecondarySchool) {
-        return;
-    }
-
     resetQuestionData();
 
     if (!examID) {
@@ -634,10 +630,27 @@ function loadExamQuestionData(classSubjectID, examID) {
             examQuestionData.optionalTotal = response.optional_total || 0;
             examQuestionData.optionalRanges = response.optional_ranges || [];
 
-            if (examQuestionData.questions.length === 0) {
+            if (response.test_week) {
+                // Set the week value and hide the selection as it should be default from the paper
+                $('#test_week_group').hide();
+                $('#test_week_display_group').show();
+                $('#selected_week_label').text(response.test_week);
+                
+                const $tw = $('#test_week');
+                if ($tw.find(`option[value="${response.test_week}"]`).length === 0) {
+                    $tw.append(`<option value="${response.test_week}">${response.test_week}</option>`);
+                }
+                $tw.val(response.test_week);
+                // Reload existing results for this specific week
+                loadExistingResults(classSubjectID, examID, response.test_week);
+            } else {
+                $('#test_week_display_group').hide();
+            }
+
+            if (examQuestionData.questions.length === 0 && isSecondarySchool) {
                 $('.question-detail-container').html(
                     '<div class="alert alert-warning mb-0">' +
-                    '<i class="bi bi-exclamation-triangle"></i> No approved exam paper question formats found for this subject.' +
+                    '<i class="bi bi-exclamation-triangle"></i> ' + (response.message || 'No approved exam paper question formats found for this subject.') +
                     '</div>'
                 );
                 return;
@@ -933,7 +946,7 @@ function viewResults(classSubjectID) {
                 let html = `
                     <div class="mb-3">
                         <label>Select Examination:</label>
-                        <select class="form-control" id="examSelector" onchange="loadResultsForExam(${classSubjectID}, this.value)">
+                        <select class="form-control" id="examSelector" onchange="handleViewResultsExamSelection(${classSubjectID}, this.value)">
                             <option value="">All Examinations</option>
                 `;
 
@@ -945,6 +958,13 @@ function viewResults(classSubjectID) {
                 });
 
                 html += `
+                        </select>
+                    </div>
+                    <!-- Week selection for Weekly Tests in View Modal -->
+                    <div class="mb-3" id="view_test_week_group" style="display: none;">
+                        <label>Select Week:</label>
+                        <select class="form-control" id="view_test_week" onchange="loadResultsForExam(${classSubjectID}, $('#examSelector').val(), this.value)">
+                            <option value="">All Weeks</option>
                         </select>
                     </div>
                     <div id="resultsContent"></div>
@@ -967,14 +987,74 @@ function viewResults(classSubjectID) {
     });
 }
 
-function loadResultsForExam(classSubjectID, examID) {
-    const url = examID ? `/get_subject_results/${classSubjectID}/${examID}` : `/get_subject_results/${classSubjectID}`;
+function handleViewResultsExamSelection(classSubjectID, examID) {
+    if (!examID) {
+        $('#view_test_week_group').hide();
+        loadResultsForExam(classSubjectID, '');
+        return;
+    }
+
+    const examData = window.examDataCache && window.examDataCache[examID];
+    if (examData && examData.exam_category === 'test') {
+        $('#view_test_week_group').show();
+        const $weekSelect = $('#view_test_week');
+        $weekSelect.empty().append('<option value="">All Periods</option>');
+        
+        const today = new Date();
+        const currentYear = today.getFullYear();
+
+        if (examData.test_type === 'monthly_test') {
+            const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            for (let i = 0; i < 12; i++) {
+                const periodVal = `Month of ${months[i]} ${currentYear}`;
+                $weekSelect.append(`<option value="${periodVal}">${periodVal}</option>`);
+            }
+        } else {
+            const startDate = new Date(currentYear, 0, 1);
+            while (startDate.getDay() !== 1) startDate.setDate(startDate.getDate() + 1);
+            
+            const monthNamesShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            function fmtRange(start, end) {
+                const sM = monthNamesShort[start.getMonth()];
+                const eM = monthNamesShort[end.getMonth()];
+                const sD = start.getDate();
+                const eD = end.getDate();
+                const y = end.getFullYear();
+                return `${sM} ${sD} to ${eM} ${eD}, ${y}`;
+            }
+
+            for (let i = 0; i < 52; i++) {
+                const weekStart = new Date(startDate);
+                weekStart.setDate(startDate.getDate() + (i * 7));
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekStart.getDate() + 6);
+                const startStr = weekStart.toISOString().split('T')[0];
+                const endStr = weekEnd.toISOString().split('T')[0];
+                const weekVal = `Week of ${startStr} to ${endStr}`;
+                const weekLabel = fmtRange(weekStart, weekEnd);
+                if (weekStart <= new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)) {
+                    $weekSelect.append(`<option value="${weekVal}">${weekLabel}</option>`);
+                }
+            }
+        }
+    } else {
+        $('#view_test_week_group').hide();
+    }
+    
+    loadResultsForExam(classSubjectID, examID);
+}
+
+function loadResultsForExam(classSubjectID, examID, testWeek = null) {
+    let url = examID ? `/get_subject_results/${classSubjectID}/${examID}` : `/get_subject_results/${classSubjectID}`;
+    const data = {};
+    if (testWeek) data.test_week = testWeek;
 
     $('#resultsContent').html('<div class="text-center"><div class="spinner-border text-primary-custom" role="status"></div></div>');
 
     $.ajax({
         url: url,
         method: 'GET',
+        data: data,
         success: function(response) {
             if (response.success && response.results) {
                 const baseUrl = '{{ asset("") }}';
@@ -1046,7 +1126,10 @@ function loadResultsForExam(classSubjectID, examID) {
                             </td>
                             <td>${studentName || 'N/A'}${healthAlarmIcon}</td>
                             <td>${student.admission_number || 'N/A'}</td>
-                            <td>${result.examination ? result.examination.exam_name : 'N/A'}</td>
+                            <td>
+                                ${result.examination ? result.examination.exam_name : 'N/A'}
+                                ${result.test_week ? `<br><small class="badge badge-info">${result.test_week}</small>` : ''}
+                            </td>
                             <td><strong>${marks !== null ? marks : '<span class="text-muted">-</span>'}</strong></td>
                             <td><span class="badge ${gradeClass}" style="font-size: 0.9rem; padding: 0.4rem 0.6rem;">${grade || '<span class="text-muted">-</span>'}</span></td>
                             <td>${remark || '<span class="text-muted">-</span>'}</td>
@@ -1288,16 +1371,20 @@ function editResults(classSubjectID) {
     });
 }
 
-function loadExistingResults(classSubjectID, examID) {
+function loadExistingResults(classSubjectID, examID, testWeek = null) {
     if (!examID) {
         // Clear all inputs
         $('.marks-input, .grade-input, .remark-input').val('');
         return;
     }
 
+    const data = {};
+    if (testWeek) data.test_week = testWeek;
+
     $.ajax({
         url: `/get_subject_results/${classSubjectID}/${examID}`,
         method: 'GET',
+        data: data,
         success: function(response) {
             if (response.success && response.results) {
                 // Clear all inputs first
@@ -1395,6 +1482,22 @@ function addResults(classSubjectID, isEdit = false) {
                                 </select>
                                 <small class="text-muted d-block mt-2">
                                     <i class="bi bi-info-circle"></i> Only examinations with "Enter Result" enabled can be used.
+                                </small>
+                            </div>
+                            <!-- Auto-selected Week Display -->
+                            <div id="test_week_display_group" style="display: none;" class="alert alert-info py-2 mb-3">
+                                <strong><i class="bi bi-calendar-event"></i> Recording Results for:</strong> 
+                                <span id="selected_week_label" class="ml-1"></span>
+                            </div>
+
+                            <!-- Week selection for Weekly Tests -->
+                            <div class="form-group" id="test_week_group" style="display: none;">
+                                <label for="test_week">Select Week <span class="text-danger">*</span></label>
+                                <select class="form-control" id="test_week" name="test_week">
+                                    <option value="">Select Week</option>
+                                </select>
+                                <small class="text-muted d-block mt-2">
+                                    <i class="bi bi-calendar-event"></i> Results will be recorded for the selected week.
                                 </small>
                             </div>
                             ${isSecondarySchool ? `
@@ -1694,6 +1797,7 @@ $(document).on('submit', '#resultsForm', function(e) {
         data: {
             class_subjectID: classSubjectID,
             examID: examID,
+            test_week: $('#test_week').val(),
             results: results
         },
         success: function(response) {
@@ -1707,12 +1811,21 @@ $(document).on('submit', '#resultsForm', function(e) {
             });
         },
         error: function(xhr) {
-            Swal.fire({
-                title: 'Error!',
-                text: xhr.responseJSON?.error || 'Failed to save results',
-                icon: 'error',
-                confirmButtonColor: '#940000'
-            });
+            if (xhr.status === 409) {
+                Swal.fire({
+                    title: 'Existing Results!',
+                    text: xhr.responseJSON?.error || 'Results already exist for this week. You cannot enter results twice.',
+                    icon: 'warning',
+                    confirmButtonColor: '#940000'
+                });
+            } else {
+                Swal.fire({
+                    title: 'Error!',
+                    text: xhr.responseJSON?.error || 'Failed to save results',
+                    icon: 'error',
+                    confirmButtonColor: '#940000'
+                });
+            }
         }
     });
 
@@ -1785,9 +1898,11 @@ $(document).on('submit', '#resultsForm', function(e) {
 
 // Handle exam selection - enable/disable Excel buttons
 function handleExamSelection(classSubjectID, examID) {
+    $('#downloadExcelBtn, #uploadExcelBtn').prop('disabled', true);
+    $('#test_week_group, #test_week_display_group').hide();
+    $('#test_week').prop('required', false).val('');
+    
     if (!examID) {
-        $('#downloadExcelBtn').prop('disabled', true);
-        $('#uploadExcelBtn').prop('disabled', true);
         disableResultsForm();
         resetQuestionData();
         return;
@@ -1815,6 +1930,7 @@ function handleExamSelection(classSubjectID, examID) {
         $('#downloadExcelBtn').prop('disabled', false);
         $('#uploadExcelBtn').prop('disabled', false);
         $('.results-status-error').remove();
+
         
         // Load existing results after enabling form
         loadExistingResults(classSubjectID, examID);
@@ -2099,6 +2215,77 @@ function viewExamAttendance(classSubjectID, subjectID) {
     .fail(function(xhr) {
         $('#examAttendanceModalBody').html('<div class="alert alert-danger">Failed to load exam attendance. Please try again.</div>');
     });
+}
+// Helper function to generate weeks for the current year
+// Helper function to generate periods (weeks/months) for the current year
+function generatePeriods(examID, classSubjectID, testType) {
+    const $weekSelect = $('#test_week');
+    $weekSelect.empty().append('<option value="">Select Period</option>');
+    
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    function formatDateRange(start, end) {
+        const startMonth = monthNames[start.getMonth()];
+        const endMonth = monthNames[end.getMonth()];
+        const startDay = start.getDate();
+        const endDay = end.getDate();
+        const year = end.getFullYear();
+        
+        return `${startMonth} ${startDay} to ${endMonth} ${endDay}, ${year}`;
+    }
+
+    if (testType === 'monthly_test') {
+        const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        for (let i = 0; i < 12; i++) {
+            const periodVal = `Month of ${months[i]} ${currentYear}`;
+            $weekSelect.append(`<option value="${periodVal}">${periodVal}</option>`);
+            // Auto-select current month
+            if (i === today.getMonth()) {
+                $weekSelect.val(periodVal);
+            }
+        }
+    } else {
+        // Find current week Monday
+        const curr = new Date(today);
+        const day = curr.getDay(); // 0 is Sunday, 1 is Monday...
+        const diff = curr.getDate() - day + (day == 0 ? -6 : 1); 
+        const monday = new Date(curr.setDate(diff));
+        monday.setHours(0,0,0,0);
+
+        // Previous Week (Optional, but user said currently and one ahead)
+        // Let's add current and next week as requested
+        for (let i = 0; i < 2; i++) {
+            const weekStart = new Date(monday);
+            weekStart.setDate(monday.getDate() + (i * 7));
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            
+            const startStr = weekStart.toISOString().split('T')[0];
+            const endStr = weekEnd.toISOString().split('T')[0];
+            const weekVal = `Week of ${startStr} to ${endStr}`;
+            const weekLabel = formatDateRange(weekStart, weekEnd) + (i === 0 ? " (Current Week)" : " (Next Week)");
+            
+            $weekSelect.append(`<option value="${weekVal}">${weekLabel}</option>`);
+            if (i === 0) {
+                $weekSelect.val(weekVal);
+            }
+        }
+    }
+
+    // Add listener for period change
+    $weekSelect.off('change').on('change', function() {
+        if ($(this).val()) {
+            loadExistingResults(classSubjectID, examID, $(this).val());
+        } else {
+            $('.marks-input, .grade-input, .remark-input').val('');
+        }
+    });
+
+    if ($weekSelect.val()) {
+        $weekSelect.trigger('change');
+    }
 }
 </script>
 

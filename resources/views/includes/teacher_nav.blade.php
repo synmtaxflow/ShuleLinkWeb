@@ -18,6 +18,13 @@
     <link rel="stylesheet" href="{{ asset('vendors/selectFX/css/cs-skin-elastic.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}">
     <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,600,700,800' rel='stylesheet' type='text/css'>
+    
+    <script src="{{ asset('vendors/jquery/dist/jquery.min.js') }}"></script>
+    <script src="{{ asset('vendors/popper.js/dist/umd/popper.min.js') }}"></script>
+    <script src="{{ asset('vendors/bootstrap/dist/js/bootstrap.min.js') }}"></script>
+    <script>
+        window.$ = window.jQuery;
+    </script>
 
     <style>
 /* Badilisha rangi ya background ya sidebar */
@@ -821,11 +828,8 @@
 <script>
 // Function to initialize menu and dropdowns
 function initializeMenuDropdowns() {
-    // Wait for jQuery to be available
-    if (typeof jQuery === 'undefined') {
-        setTimeout(initializeMenuDropdowns, 100);
-        return;
-    }
+    // Use jQuery explicitly to avoid conflicts
+    const $ = jQuery;
     
     // Get all sidebar menu links
     const menuLinks = document.querySelectorAll('#left-panel .nav-link');

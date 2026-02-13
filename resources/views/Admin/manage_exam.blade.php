@@ -217,6 +217,150 @@
         z-index: 9999 !important;
         position: relative !important;
     }
+
+    /* Mobile responsiveness improvements */
+    @media (max-width: 768px) {
+        html, body {
+            overflow-x: hidden;
+            width: 100%;
+            position: relative;
+        }
+
+        .container-fluid {
+            padding-left: 15px !important;
+            padding-right: 15px !important;
+            width: 100%;
+            overflow-x: hidden;
+        }
+
+        .row {
+            margin-left: -10px !important;
+            margin-right: -10px !important;
+        }
+
+        .col-12, .col-md-12, .col-lg-12 {
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+        }
+
+        .card-body {
+            padding: 0.75rem;
+        }
+
+        .nav-tabs {
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-bottom: 2px solid #ddd;
+            margin-bottom: 1rem !important;
+            width: 100%;
+        }
+
+        .nav-tabs .nav-item {
+            white-space: nowrap;
+        }
+
+        .nav-tabs .nav-link {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+        }
+
+        .search-filters .col-md-3, 
+        .search-filters .col-md-4, 
+        .search-filters .col-md-2 {
+            margin-bottom: 15px !important;
+        }
+
+        .manage-exam-wrapper .card-body h4 {
+            font-size: 1.15rem;
+            word-wrap: break-word;
+        }
+
+        .btn-primary-custom, .btn-light, .exam-widget-action {
+            width: 100% !important;
+            margin-top: 5px;
+            margin-bottom: 5px;
+            min-width: 0 !important;
+            justify-content: center;
+        }
+
+        .modal-dialog {
+            margin: 0.5rem;
+            max-width: calc(100% - 1rem) !important;
+        }
+        
+        .modal-header {
+            padding: 1rem;
+        }
+        
+        .modal-body {
+            padding: 1rem;
+        }
+        
+        .modal-footer {
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .modal-footer .btn {
+            width: 100%;
+            margin: 0 !important;
+        }
+        
+        /* Table fixes */
+        .table-responsive table {
+            font-size: 0.85rem;
+        }
+
+        /* Prevent long text overflow */
+        * {
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Week navigator mobile fixes */
+        #week_filter_container {
+            flex-direction: column !important;
+            gap: 10px !important;
+        }
+
+        #week_filter_container button {
+            width: 100% !important;
+        }
+
+        #current_week_display {
+            width: 100% !important;
+            text-align: center;
+            font-size: 0.9rem;
+            padding: 8px !important;
+        }
+    }
+
+    
+    /* Touch target improvements */
+    .btn, .form-control, .nav-link, .dropdown-item {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
+    
+    .btn, .nav-link, .dropdown-item {
+        justify-content: center;
+    }
+
+    .transition-transform {
+        transition: transform 0.3s ease;
+    }
+    
+    [aria-expanded="true"] .bi-chevron-down {
+        transform: rotate(180deg);
+    }
+    
+    .cursor-pointer {
+        cursor: pointer;
+    }
+
 </style>
 
 <!-- Bootstrap Icons -->
@@ -245,12 +389,12 @@
 
             <!-- Page Header -->
             <div class="card border-0 shadow-sm mb-4">
-                <div class="card-body bg-primary-custom text-white rounded">
-                    <div class="d-flex justify-content-between align-items-center">
+                <div class="card-body bg-primary-custom text-white rounded p-3 p-md-4">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                         <h4 class="mb-0">
                             <i class="bi bi-clipboard-check"></i> Manage Examinations
                             @if($totalExams ?? 0 > 0)
-                            <small class="ml-2" style="font-size: 0.85rem; opacity: 0.9;">
+                            <small class="ms-md-2" style="font-size: 0.85rem; opacity: 0.9; display: block; display: md-inline;">
                                 ({{ $totalExams ?? 0 }} {{ $totalExams == 1 ? 'Exam' : 'Exams' }})
                             </small>
                             @endif
@@ -258,13 +402,10 @@
                         @php
                             // Check examination permissions - New format: examination_create, examination_update, examination_delete, examination_read_only
                             $canCreate = ($user_type ?? '') == 'Admin' || ($teacherPermissions ?? collect())->contains('examination_create');
-                            $canUpdate = ($user_type ?? '') == 'Admin' || ($teacherPermissions ?? collect())->contains('examination_update');
-                            $canDelete = ($user_type ?? '') == 'Admin' || ($teacherPermissions ?? collect())->contains('examination_delete');
-                            $canRead = ($user_type ?? '') == 'Admin' || ($teacherPermissions ?? collect())->contains('examination_read_only');
                         @endphp
                         @if($canCreate)
-                        <button class="btn btn-light text-primary-custom fw-bold" type="button" data-toggle="modal" data-target="#createExamModal">
-                            <i class="bi bi-plus-circle"></i> Create New Examination
+                        <button class="btn btn-light text-primary-custom fw-bold mt-2 mt-md-0 d-flex align-items-center justify-content-center" type="button" data-toggle="modal" data-target="#createExamModal">
+                            <i class="bi bi-plus-circle me-2"></i> Create New Examination
                         </button>
                         @endif
                     </div>
@@ -275,7 +416,7 @@
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body">
                     <form id="searchExamForm" method="GET" action="{{ route('manageExamination') }}">
-                        <div class="row">
+                        <div class="row search-filters">
                             <div class="col-md-4 mb-3">
                                 <label for="filter_exam_category" class="form-label">
                                     <i class="bi bi-grid"></i> Filter by Category
@@ -481,6 +622,7 @@
                             <option value="second_term" {{ in_array(2, $closedTerms ?? []) ? 'disabled style="background-color: #f0f0f0; color: #999;"' : '' }}>
                                 Second Term @if(in_array(2, $closedTerms ?? [])) (Closed) @endif
                             </option>
+                            <option value="all_terms">All Terms (For Weekly/Monthly Tests)</option>
                         </select>
                         <small class="form-text text-muted">
                             <i class="bi bi-info-circle"></i> Select which term this examination is for. Closed terms are disabled.
@@ -536,6 +678,7 @@
                                     <tr>
                                         <th>Hall Name</th>
                                         <th>Main Class</th>
+                                        <th>Subclass (Optional)</th> <!-- Added Subclass -->
                                         <th>Class Students</th>
                                         <th>Capacity</th>
                                         <th>Gender</th>
@@ -544,7 +687,7 @@
                                 </thead>
                                 <tbody id="exam_halls_body">
                                     <tr class="text-center text-muted" id="exam_halls_empty_row">
-                                        <td colspan="6">No hall added yet.</td>
+                                        <td colspan="7">No hall added yet.</td> <!-- Updated colspan -->
                                     </tr>
                                 </tbody>
                             </table>
@@ -789,6 +932,7 @@
                             <option value="second_term" {{ in_array(2, $closedTerms ?? []) ? 'disabled style="background-color: #f0f0f0; color: #999;"' : '' }}>
                                 Second Term @if(in_array(2, $closedTerms ?? [])) (Closed) @endif
                             </option>
+                            <option value="all_terms">All Terms (For Weekly/Monthly Tests)</option>
                         </select>
                         <small class="form-text text-muted">
                             <i class="bi bi-info-circle"></i> Select which term this examination is for. Closed terms are disabled.
@@ -844,6 +988,7 @@
                                     <tr>
                                         <th>Hall Name</th>
                                         <th>Main Class</th>
+                                        <th>Subclass (Optional)</th>
                                         <th>Class Students</th>
                                         <th>Capacity</th>
                                         <th>Gender</th>
@@ -852,7 +997,7 @@
                                 </thead>
                                 <tbody id="edit_exam_halls_body">
                                     <tr class="text-center text-muted" id="edit_exam_halls_empty_row">
-                                        <td colspan="6">No hall added yet.</td>
+                                        <td colspan="7">No hall added yet.</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -1048,6 +1193,36 @@ $(document).ready(function() {
         errorBox.hide().html('');
     }
 
+    function fetchSubclasses(classID, selectElement, selectedSubclassID = null) {
+        if (!classID) {
+            selectElement.html('<option value="">All Subclasses</option>');
+            return;
+        }
+        
+        // Assuming we have a route get_subclasses/{classID}
+        // If not, we might need a different route. Let's try /get_subclasses_by_class_id which is common, or just /get_subclasses/
+        // I'll search for exact route pattern first to be safe, but assuming /get_subclasses/ is standard.
+        // Based on previous search, 'get_subclasses' exists.
+        
+        $.get('/get_subclasses/' + classID, function(data) {
+            let html = '<option value="">All Subclasses</option>';
+            if (data && data.length > 0) {
+                // Determine if data structure is array of objects or key-value
+                // Usually it returns [{subclassID: 1, subclass_name: 'A'}, ...]
+                data.forEach(sub => {
+                   html += `<option value="${sub.subclassID}">${sub.subclass_name}</option>`; 
+                });
+            }
+            selectElement.html(html);
+            if (selectedSubclassID) {
+                selectElement.val(selectedSubclassID);
+            }
+        }).fail(function() {
+            console.error('Failed to fetch subclasses');
+            selectElement.html('<option value="">All Subclasses</option>');
+        });
+    }
+
     function renderHallRow(scope = 'create', data = {}) {
         hallRowId++;
         const tbody = scope === 'create' ? $('#exam_halls_body') : $('#edit_exam_halls_body');
@@ -1064,6 +1239,11 @@ $(document).ready(function() {
                         @foreach($classes ?? [] as $class)
                             <option value="{{ $class->classID }}">{{ $class->class_name }}</option>
                         @endforeach
+                    </select>
+                </td>
+                <td>
+                    <select class="form-control hall-subclass-select" name="${prefix}hall_subclass_id[]">
+                        <option value="">All Subclasses</option>
                     </select>
                 </td>
                 <td class="text-center hall-class-count text-muted" style="min-width: 130px;">--</td>
@@ -1084,8 +1264,21 @@ $(document).ready(function() {
         tbody.append(row);
 
         if (data.classID) {
-            row.find('.hall-class-select').val(data.classID).trigger('change');
+            row.find('.hall-class-select').val(data.classID);
+            // Fetch subclasses and set value
+            fetchSubclasses(data.classID, row.find('.hall-subclass-select'), data.subclassID);
+            
+            // Trigger update counts (existing logic will handle this via change event if we trigger it, OR we call explicitly)
+            // Existing logic uses 'change' on .hall-class-select. So triggering change is easiest, BUT it might clear subclass select if we are not careful.
+            // My fetchSubclasses is async.
+            // Better to just call fetchClassCounts directly.
+             fetchClassCounts(data.classID, counts => {
+                if (counts) {
+                   row.find('.hall-class-count').html(`<div>Total: ${counts.total}<br><small>♂ ${counts.male} / ♀ ${counts.female}</small></div>`);
+                }
+            });
         }
+        
         if (data.capacity) {
             row.find('.hall-capacity-input').val(data.capacity);
         }
@@ -1196,6 +1389,10 @@ $(document).ready(function() {
     $(document).on('change', '.hall-class-select', function() {
         const row = $(this).closest('tr');
         const classId = $(this).val();
+        
+        // Fetch Subclasses
+        fetchSubclasses(classId, row.find('.hall-subclass-select'));
+        
         const cell = row.find('.hall-class-count');
         cell.text('...');
         fetchClassCounts(classId, counts => {
@@ -1266,7 +1463,7 @@ $(document).ready(function() {
             
             // Show term selection
             $('#term_group').show();
-            $('#term').prop('required', true);
+            $('#term').prop('required', true).val('all_terms');
             
             // Show except classes option, hide include classes
             $('#except_classes_group').show();
@@ -1319,32 +1516,38 @@ $(document).ready(function() {
         $('#exam_name').val('');
         $('#exam_name_type').val('');
         
+        // Handle Term Selection Visibility
+        if (testType === 'weekly_test' || testType === 'monthly_test') {
+             $('#term option[value="all_terms"]').hide();
+             if ($('#term').val() === 'all_terms') {
+                 $('#term').val('');
+             }
+        } else {
+             $('#term option[value="all_terms"]').show();
+        }
+        
         if (testType === 'weekly_test') {
-            // For weekly test, set exam name automatically and hide date fields
+            // For weekly test, set exam name automatically
             $('#exam_name_text_group').hide();
             $('#exam_name_select_group').hide();
             $('#exam_name').val('Weekly Test');
             $('#exam_name').prop('required', false);
             
-            // Hide date fields (every week, no need for start/end date)
+            // Hide date fields (auto-handled)
             $('#date_fields_group').hide();
             $('#start_date').prop('required', false);
             $('#end_date').prop('required', false);
-            $('#start_date_help').hide();
-            $('#end_date_help').hide();
         } else if (testType === 'monthly_test') {
-            // For monthly test, set exam name automatically and hide date fields
+            // For monthly test, set exam name automatically
             $('#exam_name_text_group').hide();
             $('#exam_name_select_group').hide();
             $('#exam_name').val('Monthly Test');
             $('#exam_name').prop('required', false);
             
-            // Hide date fields (every month, no need for start/end date)
+            // Hide date fields (auto-handled)
             $('#date_fields_group').hide();
             $('#start_date').prop('required', false);
             $('#end_date').prop('required', false);
-            $('#start_date_help').hide();
-            $('#end_date_help').hide();
         } else if (testType === 'other_test') {
             // For other test, show text input for custom exam name and show date fields
             $('#exam_name_text_group').show();
@@ -1367,6 +1570,15 @@ $(document).ready(function() {
             $('#date_fields_group').show();
             $('#start_date').prop('required', true);
             $('#end_date').prop('required', true);
+
+            // If category is test, set all terms ONLY if allowed (but here we are in 'else' meaning no test type selected or unknown)
+            // We should respect the visibility logic above.
+            // If we are here, testType is empty. So allow all terms.
+            if ($('#exam_category').val() === 'test') {
+               // Logic was: $('#term').val('all_terms');
+               // But now we hide it for weekly/monthly.
+               // If testType is empty, leave it as is.
+            }
         }
     });
 
@@ -1601,16 +1813,13 @@ $(document).ready(function() {
             }
         }
 
-        $.ajaxSetup({
-            headers: {
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-            }
-        });
-
         $.ajax({
             url: '/get_class_subjects_by_subclass',
             method: 'POST',
             data: { subclass_ids: subclassIds },
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
             success: function(response) {
                 if (response.success && response.class_subjects) {
                     let options = '<option value="">Select Subject</option>';
@@ -1630,6 +1839,31 @@ $(document).ready(function() {
             error: function(xhr) {
                 selectElement.html('<option value="">Error loading subjects</option>');
                 console.error('Error loading subjects:', xhr);
+            }
+        });
+    }
+
+    // Helper function to fetch subclasses
+    function fetchSubclasses(classID, subclassSelect, selectedSubclassID = null) {
+        subclassSelect.html('<option value="">Loading...</option>').prop('disabled', true);
+        
+        $.ajax({
+            url: '/get_class_subclasses/' + classID, // Corrected URL to match web.php
+            method: 'GET',
+            success: function(response) {
+                subclassSelect.html('<option value="">Select Subclass (Optional)</option>');
+                if (response.subclasses && response.subclasses.length > 0) {
+                    response.subclasses.forEach(function(subclass) {
+                        let isSelected = (selectedSubclassID && subclass.subclassID == selectedSubclassID) ? 'selected' : '';
+                        subclassSelect.append(`<option value="${subclass.subclassID}" ${isSelected}>${subclass.subclass_name}</option>`);
+                    });
+                    subclassSelect.prop('disabled', false);
+                } else {
+                    subclassSelect.append('<option value="">No subclasses found</option>');
+                }
+            },
+            error: function() {
+                subclassSelect.html('<option value="">Error loading</option>');
             }
         });
     }
@@ -1843,22 +2077,21 @@ $(document).ready(function() {
         validateHallCapacities('create').then(valid => {
             if (!valid) return;
             
-            // Show progress bar
+            // Show loading progress bar
+            Swal.fire({
+                title: 'Creating Examination...',
+                html: 'Please wait while we process your request.<br><br><div class="progress mt-2" style="height: 10px; border-radius: 5px; overflow: hidden;"><div class="progress-bar progress-bar-striped progress-bar-animated bg-danger" role="progressbar" style="width: 100%"></div></div>',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
             const submitBtn = $('#createExamForm button[type="submit"]');
             const originalBtnText = submitBtn.html();
-            submitBtn.prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> Creating Examination...');
-            
-            // Add progress bar to modal
-            if ($('#examProgressBar').length === 0) {
-                $('#createExamModal .modal-body').prepend(`
-                    <div id="examProgressBar" class="progress mb-3" style="display: none;">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%">
-                            Creating Examination...
-                        </div>
-                    </div>
-                `);
-            }
-            $('#examProgressBar').show();
+            submitBtn.prop('disabled', true);
             
             $.ajax({
                 url: '{{ route("store_examination") }}',
@@ -1867,7 +2100,6 @@ $(document).ready(function() {
                 processData: false,
                 contentType: false,
                 success: function(response) {
-                    $('#examProgressBar').hide();
                     submitBtn.prop('disabled', false).html(originalBtnText);
                     $('#createExamModal').modal('hide');
                     Swal.fire({
@@ -1880,7 +2112,6 @@ $(document).ready(function() {
                     });
                 },
                 error: function(xhr) {
-                    $('#examProgressBar').hide();
                     submitBtn.prop('disabled', false).html(originalBtnText);
                     let errorMessage = '';
 
@@ -3978,10 +4209,24 @@ window.updateResultsStatus = function(examID, permission, status, statusName, st
             <div class="modal-body" style="max-height: calc(100vh - 200px); overflow-y: auto; padding: 2rem;">
                 <!-- Search and Filter -->
                 <div class="row mb-3">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <input type="text" class="form-control" id="search_exam_papers" placeholder="Search by subject, class, or teacher...">
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4" id="week_filter_container" style="display: none;">
+                        <input type="hidden" id="filter_exam_paper_week" value="">
+                        <div class="d-flex justify-content-between align-items-center bg-white rounded border p-1" style="height: 38px;">
+                            <button class="btn btn-sm btn-light text-primary-custom font-weight-bold" id="prev_week_btn" title="Previous Week">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <span class="font-weight-bold small text-center flex-grow-1 text-truncate px-2" id="current_week_display" style="font-size: 0.85rem;">
+                                Loading...
+                            </span>
+                            <button class="btn btn-sm btn-light text-primary-custom font-weight-bold" id="next_week_btn" title="Next Week">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
                         <select class="form-control" id="filter_exam_paper_status">
                             <option value="">All Status</option>
                             <option value="wait_approval">Waiting Approval</option>
@@ -4218,16 +4463,53 @@ function markExamPaperNotificationsReadForExam(examID) {
     });
 }
 
-function loadExamPapers(examID, search = '', status = '') {
+function loadExamPapers(examID, search = '', status = '', week = '') {
     $.ajax({
         url: '/get_exam_papers/' + examID,
         method: 'GET',
         data: {
             search: search,
-            status: status
+            status: status,
+            week: week
         },
         success: function(response) {
             if (response.success && response.exam_papers) {
+                // Handle week filter visibility and population
+                // Handle week filter visibility and population
+                if (response.is_weekly_test || response.is_monthly_test) {
+                    $('#week_filter_container').show();
+                    
+                    // Initialize or update global weeks data
+                    window.examPaperWeeks = response.available_weeks || [];
+                    
+                    // Logic to set default week if not set (Initial Load)
+                    if (!week && window.examPaperWeeks.length > 0) {
+                        // Find current week index
+                        let idx = window.examPaperWeeks.findIndex(w => w.is_current);
+                        if (idx === -1) {
+                            // If not found, default to first week available? Or the last uploaded one?
+                            // Let's default to the first one available in the list 
+                            idx = 0;
+                        }
+                        
+                        window.currentWeekIndex = idx;
+                        const defaultWeek = window.examPaperWeeks[idx].week;
+                        
+                        // Reload with specific week filter
+                        loadExamPapers(examID, search, status, defaultWeek);
+                        return; // Stop processing this response as we are reloading
+                    } 
+                    else if (week) {
+                        // Sync index with currently loaded week
+                        window.currentWeekIndex = window.examPaperWeeks.findIndex(w => w.week === week);
+                    }
+                    
+                    updateWeekNavigatorUI();
+
+                } else {
+                    $('#week_filter_container').hide();
+                }
+
                 let html = '';
 
                 if (response.exam_papers.length === 0) {
@@ -4280,35 +4562,35 @@ function loadExamPapers(examID, search = '', status = '') {
                                 </div>
                                 <div class="card-body">
                                     <div class="row mb-3">
-                                        <div class="col-md-3">
-                                            <div class="card bg-info" style="background-color: #17a2b8 !important;">
-                                                <div class="card-body text-center" style="color: #ffffff !important;">
-                                                    <h4 style="color: #ffffff !important; font-weight: bold;">${totalPapers}</h4>
-                                                    <p class="mb-0" style="color: #ffffff !important; font-weight: 500;">Total Papers</p>
+                                        <div class="col-6 col-md-3 mb-2">
+                                            <div class="card bg-info h-100" style="background-color: #17a2b8 !important;">
+                                                <div class="card-body text-center p-2 p-md-3" style="color: #ffffff !important;">
+                                                    <h4 style="color: #ffffff !important; font-weight: bold; font-size: 1.2rem;">${totalPapers}</h4>
+                                                    <p class="mb-0 small" style="color: #ffffff !important; font-weight: 500;">Total Papers</p>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-md-3">
-                                            <div class="card bg-primary" style="background-color: #007bff !important;">
-                                                <div class="card-body text-center" style="color: #ffffff !important;">
-                                                    <h4 style="color: #ffffff !important; font-weight: bold;">${totalSubjects}</h4>
-                                                    <p class="mb-0" style="color: #ffffff !important; font-weight: 500;">Subjects</p>
+                                        <div class="col-6 col-md-3 mb-2">
+                                            <div class="card bg-primary h-100" style="background-color: #007bff !important;">
+                                                <div class="card-body text-center p-2 p-md-3" style="color: #ffffff !important;">
+                                                    <h4 style="color: #ffffff !important; font-weight: bold; font-size: 1.2rem;">${totalSubjects}</h4>
+                                                    <p class="mb-0 small" style="color: #ffffff !important; font-weight: 500;">Subjects</p>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-md-3">
-                                            <div class="card bg-success" style="background-color: #28a745 !important;">
-                                                <div class="card-body text-center" style="color: #ffffff !important;">
-                                                    <h4 style="color: #ffffff !important; font-weight: bold;">${approvedCount}</h4>
-                                                    <p class="mb-0" style="color: #ffffff !important; font-weight: 500;">Approved</p>
+                                        <div class="col-6 col-md-3 mb-2">
+                                            <div class="card bg-success h-100" style="background-color: #28a745 !important;">
+                                                <div class="card-body text-center p-2 p-md-3" style="color: #ffffff !important;">
+                                                    <h4 style="color: #ffffff !important; font-weight: bold; font-size: 1.2rem;">${approvedCount}</h4>
+                                                    <p class="mb-0 small" style="color: #ffffff !important; font-weight: 500;">Approved</p>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-md-3">
-                                            <div class="card bg-warning" style="background-color: #ffc107 !important;">
-                                                <div class="card-body text-center" style="color: #000000 !important;">
-                                                    <h4 style="color: #000000 !important; font-weight: bold;">${pendingCount}</h4>
-                                                    <p class="mb-0" style="color: #000000 !important; font-weight: 500;">Pending</p>
+                                        <div class="col-6 col-md-3 mb-2">
+                                            <div class="card bg-warning h-100" style="background-color: #ffc107 !important;">
+                                                <div class="card-body text-center p-2 p-md-3" style="color: #000000 !important;">
+                                                    <h4 style="color: #000000 !important; font-weight: bold; font-size: 1.2rem;">${pendingCount}</h4>
+                                                    <p class="mb-0 small" style="color: #000000 !important; font-weight: 500;">Pending</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -4383,6 +4665,8 @@ function loadExamPapers(examID, search = '', status = '') {
                                                 <strong>Class:</strong> ${className}<br>
                                                 <strong>Subclass:</strong> ${subclassName}<br>
                                                 <strong>Teacher:</strong> ${teacherName}<br>
+                                                ${paper.test_week ? `<strong>Week:</strong> ${paper.test_week}${paper.test_week_range ? ` (${paper.test_week_range})` : ''}<br>` : ''}
+                                                ${paper.test_date ? `<strong>Test Date:</strong> ${new Date(paper.test_date).toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'})}<br>` : ''}
                                                 <strong>Type:</strong> <span class="badge badge-info">${paper.upload_type === 'upload' ? 'File Upload' : 'Created'}</span><br>
                                                 <strong>Status:</strong> ${statusBadge}
                                             </p>
@@ -4403,47 +4687,47 @@ function loadExamPapers(examID, search = '', status = '') {
                                             </p>
                                             ${renderQuestionFormats(paper)}
                                         </div>
-                                        <div class="col-md-4 text-right">
+                                        <div class="col-md-4 text-md-right mt-3 mt-md-0">
                                             ${hasPermission('view_exam_papers') ? `
-                                                <button class="btn btn-sm btn-info view-paper-btn mb-2" data-paper-id="${paper.exam_paperID}" data-exam-id="${examID}" title="View Exam Paper">
+                                                <button class="btn btn-sm btn-info view-paper-btn mb-2 w-100 w-md-auto" data-paper-id="${paper.exam_paperID}" data-exam-id="${examID}" title="View Exam Paper">
                                                     <i class="bi bi-eye"></i> View
-                                                </button><br>
+                                                </button><br class="d-none d-md-block">
                                             ` : ''}
                                             ${paper.upload_type === 'upload' && paper.file_path ? `
-                                                <a href="/download_exam_paper/${paper.exam_paperID}" class="btn btn-sm btn-primary-custom mb-2" title="Download">
+                                                <a href="/download_exam_paper/${paper.exam_paperID}" class="btn btn-sm btn-primary-custom mb-2 w-100 w-md-auto" title="Download">
                                                     <i class="bi bi-download"></i> Download
-                                                </a><br>
-                                                <button class="btn btn-sm btn-success print-exam-paper-btn mb-2" data-paper-id="${paper.exam_paperID}" data-class-name="${className}" data-subclass-name="${subclassName}" title="Print Exam Paper">
+                                                </a><br class="d-none d-md-block">
+                                                <button class="btn btn-sm btn-success print-exam-paper-btn mb-2 w-100 w-md-auto" data-paper-id="${paper.exam_paperID}" data-class-name="${className}" data-subclass-name="${subclassName}" title="Print Exam Paper">
                                                     <i class="bi bi-printer"></i> Print
-                                                </button><br>
+                                                </button><br class="d-none d-md-block">
                                             ` : ''}
                                             ${paper.status === 'wait_approval' ? `
                                                 <div class="approve-reject-actions" data-paper-id="${paper.exam_paperID}">
                                                     ${hasPermission('approve_exam_paper') ? `
-                                                        <button class="btn btn-sm btn-success show-approve-form-btn mb-2" data-paper-id="${paper.exam_paperID}" title="Approve">
+                                                        <button class="btn btn-sm btn-success show-approve-form-btn mb-2 w-100 w-md-auto" data-paper-id="${paper.exam_paperID}" title="Approve">
                                                             <i class="bi bi-check-circle"></i> Approve
-                                                        </button><br>
+                                                        </button><br class="d-none d-md-block">
                                                     ` : ''}
                                                     ${hasPermission('reject_exam_paper') ? `
-                                                        <button class="btn btn-sm btn-danger show-reject-form-btn mb-2" data-paper-id="${paper.exam_paperID}" title="Reject">
+                                                        <button class="btn btn-sm btn-danger show-reject-form-btn mb-2 w-100 w-md-auto" data-paper-id="${paper.exam_paperID}" title="Reject">
                                                             <i class="bi bi-x-circle"></i> Reject
                                                         </button>
                                                     ` : ''}
                                                     <div class="approve-form mt-2" id="approve-form-${paper.exam_paperID}" style="display: none;">
                                                         <textarea class="form-control mb-2" rows="3" placeholder="Approval comment (optional)..." id="approval-comment-${paper.exam_paperID}"></textarea>
-                                                        <button class="btn btn-sm btn-success submit-approve-btn" data-paper-id="${paper.exam_paperID}">
+                                                        <button class="btn btn-sm btn-success submit-approve-btn w-100" data-paper-id="${paper.exam_paperID}">
                                                             <i class="bi bi-check-circle"></i> Submit Approval
                                                         </button>
-                                                        <button class="btn btn-sm btn-secondary cancel-approve-btn" data-paper-id="${paper.exam_paperID}">
+                                                        <button class="btn btn-sm btn-secondary cancel-approve-btn w-100 mt-1" data-paper-id="${paper.exam_paperID}">
                                                             Cancel
                                                         </button>
                                                     </div>
                                                     <div class="reject-form mt-2" id="reject-form-${paper.exam_paperID}" style="display: none;">
                                                         <textarea class="form-control mb-2" rows="3" placeholder="Rejection reason (required)..." id="rejection-reason-${paper.exam_paperID}" required></textarea>
-                                                        <button class="btn btn-sm btn-danger submit-reject-btn" data-paper-id="${paper.exam_paperID}">
+                                                        <button class="btn btn-sm btn-danger submit-reject-btn w-100" data-paper-id="${paper.exam_paperID}">
                                                             <i class="bi bi-x-circle"></i> Submit Rejection
                                                         </button>
-                                                        <button class="btn btn-sm btn-secondary cancel-reject-btn" data-paper-id="${paper.exam_paperID}">
+                                                        <button class="btn btn-sm btn-secondary cancel-reject-btn w-100 mt-1" data-paper-id="${paper.exam_paperID}">
                                                             Cancel
                                                         </button>
                                                     </div>
@@ -4491,8 +4775,9 @@ $('#search_exam_papers').on('input', function() {
     const examID = $('#viewExamPapersModal').data('exam-id');
     const search = $(this).val();
     const status = $('#filter_exam_paper_status').val();
+    const week = $('#filter_exam_paper_week').val();
     if (examID) {
-        loadExamPapers(examID, search, status);
+        loadExamPapers(examID, search, status, week);
     }
 });
 
@@ -4501,8 +4786,20 @@ $('#filter_exam_paper_status').on('change', function() {
     const examID = $('#viewExamPapersModal').data('exam-id');
     const search = $('#search_exam_papers').val();
     const status = $(this).val();
+    const week = $('#filter_exam_paper_week').val();
     if (examID) {
-        loadExamPapers(examID, search, status);
+        loadExamPapers(examID, search, status, week);
+    }
+});
+
+// Filter by week
+$('#filter_exam_paper_week').on('change', function() {
+    const examID = $('#viewExamPapersModal').data('exam-id');
+    const search = $('#search_exam_papers').val();
+    const status = $('#filter_exam_paper_status').val();
+    const week = $(this).val();
+    if (examID) {
+        loadExamPapers(examID, search, status, week);
     }
 });
 
@@ -4570,8 +4867,9 @@ $(document).on('click', '.submit-approve-btn', function() {
                 const examID = $('#viewExamPapersModal').data('exam-id');
                 const search = $('#search_exam_papers').val();
                 const status = $('#filter_exam_paper_status').val();
+                const week = $('#filter_exam_paper_week').val();
                 if (examID) {
-                    loadExamPapers(examID, search, status);
+                    loadExamPapers(examID, search, status, week);
                 }
             });
         },
@@ -4671,8 +4969,9 @@ $(document).on('click', '.submit-reject-btn', function() {
                 const examID = $('#viewExamPapersModal').data('exam-id');
                 const search = $('#search_exam_papers').val();
                 const status = $('#filter_exam_paper_status').val();
+                const week = $('#filter_exam_paper_week').val();
                 if (examID) {
-                    loadExamPapers(examID, search, status);
+                    loadExamPapers(examID, search, status, week);
                 }
             });
         },
@@ -4698,6 +4997,23 @@ $(document).on('click', '.submit-reject-btn', function() {
 });
 
 // Toggle subclass papers view
+// Toggle for Exam Widget Test Breakdown
+$(document).on('click', '.test-breakdown-toggle', function(e) {
+    e.preventDefault();
+    const target = $(this).data('target');
+    const $target = $(target);
+    const $this = $(this);
+    
+    // Toggle the visible state
+    if ($target.is(':visible')) {
+        $target.slideUp(300);
+        $this.attr('aria-expanded', 'false').addClass('collapsed');
+    } else {
+        $target.slideDown(300);
+        $this.attr('aria-expanded', 'true').removeClass('collapsed');
+    }
+});
+
 $(document).on('click', '.toggle-subclass-btn', function() {
     const subclassID = $(this).data('subclass-id');
     const papersDiv = $('#subclass-papers-' + subclassID);
@@ -4901,6 +5217,76 @@ $(document).on('click', '.view-paper-btn', function() {
         }
     });
 });
+
+// --- Week Navigator Logic ---
+function updateWeekNavigatorUI() {
+    if (!window.examPaperWeeks || window.examPaperWeeks.length === 0) {
+        $('#current_week_display').text('No weeks available');
+        $('#prev_week_btn').prop('disabled', true);
+        $('#next_week_btn').prop('disabled', true);
+        return;
+    }
+
+    const idx = window.currentWeekIndex;
+
+    if (idx < 0 || idx >= window.examPaperWeeks.length) {
+        $('#current_week_display').text('Unknown Week');
+        return;
+    }
+
+    const currentData = window.examPaperWeeks[idx];
+    
+    // Display Format: "Week X (Date - Date)"
+    // Add "This Week" prefix if it's the current week
+    let displayText = `${currentData.week} (${currentData.range})`;
+    if (currentData.is_current) {
+        displayText = `This Week (${displayText})`;
+    }
+
+    $('#current_week_display').text(displayText);
+    
+    // Disable buttons at boundaries
+    $('#prev_week_btn').prop('disabled', idx <= 0);
+    $('#next_week_btn').prop('disabled', idx >= window.examPaperWeeks.length - 1);
+    
+    // Update hidden input used for filtering logic if referenced elsewhere
+    $('#filter_exam_paper_week').val(currentData.week);
+}
+
+// Navigator Event Handlers
+$(document).on('click', '#prev_week_btn', function(e) {
+    e.preventDefault();
+    if (window.examPaperWeeks && window.currentWeekIndex > 0) {
+        window.currentWeekIndex--;
+        const week = window.examPaperWeeks[window.currentWeekIndex].week;
+        
+        // Fetch current filter states
+        const examID = $('#viewExamPapersModal').data('exam-id');
+        const search = $('#search_exam_papers').val();
+        const status = $('#filter_exam_paper_status').val();
+        
+        updateWeekNavigatorUI(); // Optimistic Update
+        loadExamPapers(examID, search, status, week);
+    }
+});
+
+$(document).on('click', '#next_week_btn', function(e) {
+    e.preventDefault();
+    if (window.examPaperWeeks && window.currentWeekIndex < window.examPaperWeeks.length - 1) {
+        window.currentWeekIndex++;
+        const week = window.examPaperWeeks[window.currentWeekIndex].week;
+        
+        // Fetch current filter states
+        const examID = $('#viewExamPapersModal').data('exam-id');
+        const search = $('#search_exam_papers').val();
+        const status = $('#filter_exam_paper_status').val();
+        
+        updateWeekNavigatorUI(); // Optimistic Update
+        loadExamPapers(examID, search, status, week);
+    }
+});
+// Week filter is now a hidden input managed by the navigator, so no Select2 initialization needed.
+
 // Old form submission handler removed - now using SweetAlert2 directly
 </script>
 

@@ -4,6 +4,8 @@
 
 <style>
     /* Color scheme for #940000 */
+
+    
     .bg-primary-custom {
         background-color: #940000 !important;
     }
@@ -48,6 +50,153 @@
         background-color: #dc3545;
         color: white;
     }
+
+    /* Mobile Responsiveness Improvements */
+    @media (max-width: 768px) {
+        html, body {
+            overflow-x: hidden;
+            width: 100%;
+            position: relative;
+        }
+
+        .container-fluid {
+            padding-left: 15px !important;
+            padding-right: 15px !important;
+            width: 100%;
+            overflow-x: hidden;
+        }
+        
+        .row {
+            margin-left: -10px !important;
+            margin-right: -10px !important;
+        }
+
+        .col-12, .col-md-12, .col-lg-12 {
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+        }
+        
+        .card-body {
+            padding: 0.75rem;
+        }
+
+        .page-title {
+            font-size: 1.1rem;
+            word-wrap: break-word;
+        }
+
+        .nav-tabs {
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-bottom: 2px solid #ddd;
+            margin-bottom: 1rem !important;
+            width: 100%;
+        }
+
+        .nav-tabs .nav-item {
+            white-space: nowrap;
+        }
+
+        .nav-tabs .nav-link {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+        }
+
+        .exam-paper-card .d-flex {
+            flex-direction: column !important;
+        }
+
+        .exam-paper-card .ml-3 {
+            margin-left: 0 !important;
+            margin-top: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .exam-paper-card .btn {
+            flex: 1 1 45%;
+            font-size: 0.8rem;
+            padding: 8px 5px;
+        }
+
+        .question-row > div {
+            margin-bottom: 15px;
+        }
+
+        /* Prevent long text overflow */
+        * {
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        
+        /* Table to cards for pending uploads */
+        #pending-uploads .table-responsive {
+            border: none;
+            overflow-x: hidden;
+        }
+
+        #pending-uploads .table-responsive table thead {
+            display: none;
+        }
+        
+        #pending-uploads .table-responsive table tbody tr {
+            display: block;
+            margin-bottom: 1.5rem;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 15px;
+            background: #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        
+        #pending-uploads .table-responsive table tbody td {
+            display: block;
+            text-align: left !important;
+            border: none;
+            padding: 8px 0;
+            position: relative;
+        }
+        
+        #pending-uploads .table-responsive table tbody td::before {
+            content: attr(data-label);
+            font-weight: 700;
+            display: block;
+            color: #940000;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+
+        #pending-uploads .table-responsive table tbody td .btn {
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .modal-dialog {
+            margin: 0.5rem;
+            max-width: calc(100% - 1rem) !important;
+        }
+    }
+
+    /* Touch targets */
+    .btn, .form-control, .nav-link {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .form-control {
+        display: block; /* reset flex for input */
+    }
+
+    .nav-link {
+        justify-content: center;
+    }
+
 </style>
 
 <!-- Bootstrap Icons -->
@@ -95,12 +244,12 @@
 
             <!-- Page Header -->
             <div class="card border-0 shadow-sm mb-4">
-                <div class="card-body bg-primary-custom text-white rounded">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h4 class="mb-0">
+                <div class="card-body bg-primary-custom text-white rounded p-3 p-md-4">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                        <h4 class="mb-0 page-title">
                             <i class="bi bi-file-earmark-text"></i> Exam Papers Management
                         </h4>
-                        <button class="btn btn-light text-primary-custom fw-bold" type="button" data-toggle="modal" data-target="#uploadExamPaperModal">
+                        <button class="btn btn-light text-primary-custom fw-bold mt-2 mt-md-0" type="button" data-toggle="modal" data-target="#uploadExamPaperModal">
                             <i class="bi bi-plus-circle"></i> Upload Exam Paper
                         </button>
                     </div>
@@ -112,6 +261,14 @@
                 <li class="nav-item" role="presentation">
                     <a class="nav-link active" id="upload-tab" data-toggle="tab" href="#upload" role="tab">
                         <i class="bi bi-cloud-upload"></i> Upload Exam Paper
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="pending-uploads-tab" data-toggle="tab" href="#pending-uploads" role="tab">
+                        <i class="bi bi-clock-history"></i> Pending Uploads
+                        @if($pendingSlots->count() > 0)
+                            <span class="badge badge-danger ml-1">{{ $pendingSlots->count() }}</span>
+                        @endif
                     </a>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -127,6 +284,7 @@
                     <div class="card border-0 shadow-sm">
                         <div class="card-body">
                             <form id="uploadExamPaperForm">
+                                <input type="hidden" name="placeholder_id" id="placeholder_id">
                                 <div class="row">
                                     <div class="col-md-12 mb-3">
                                         <label for="selected_exam" class="form-label">
@@ -160,7 +318,45 @@
                                     </div>
                                 </div>
 
-                                <div class="row">
+                                <!-- Weekly/Monthly Test Fields (Hidden by default) -->
+                                <div id="test_fields_container" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="test_year" class="form-label">
+                                                <i class="bi bi-calendar"></i> Select Year <span class="text-danger">*</span>
+                                            </label>
+                                            <select class="form-control" id="test_year" name="test_year">
+                                                <option value="">Select Year</option>
+                                                @for($y = date('Y'); $y >= date('Y') - 2; $y--)
+                                                    <option value="{{ $y }}" {{ $y == date('Y') ? 'selected' : '' }}>{{ $y }}</option>
+                                                @endfor
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="test_period" class="form-label">
+                                                <i class="bi bi-calendar-week"></i> Select Period <span class="text-danger">*</span>
+                                            </label>
+                                            <select class="form-control" id="test_period" name="test_week">
+                                                <option value="">Select Period</option>
+                                            </select>
+                                            <small class="form-text text-muted">Periods exclude holidays</small>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-12 mb-3">
+                                            <label for="test_subject" class="form-label">
+                                                <i class="bi bi-book"></i> Select Scheduled Subject <span class="text-danger">*</span>
+                                            </label>
+                                            <select class="form-control" id="test_subject" name="class_subjectID">
+                                                <option value="">Select a period first</option>
+                                            </select>
+                                            <small class="form-text text-muted">Only subjects scheduled for this test period are shown</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Regular Subject Selection (for non-test exams) -->
+                                <div class="row" id="regular_subject_container">
                                     <div class="col-md-12 mb-3">
                                         <label for="class_subject" class="form-label">
                                             <i class="bi bi-book"></i> Select Subject <span class="text-danger">*</span>
@@ -250,6 +446,79 @@
                                     </div>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pending Uploads Tab -->
+                <div class="tab-pane fade" id="pending-uploads" role="tabpanel">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary-custom mb-4">
+                                <i class="bi bi-clock-history"></i> Scheduled Tests (Pending Paper Upload)
+                            </h5>
+                            @if($pendingSlots && $pendingSlots->count() > 0)
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="bg-light">
+                                            <tr>
+                                                <th>Examination</th>
+                                                <th>Subject</th>
+                                                <th>Class</th>
+                                                <th>Week</th>
+                                                <th>Test Date</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($pendingSlots as $slot)
+                                                <tr>
+                                                    <td data-label="Examination">
+                                                        <strong>{{ $slot->examination->exam_name }}</strong>
+                                                        <br><small class="text-muted">{{ $slot->examination->year }}</small>
+                                                    </td>
+                                                    <td data-label="Subject">{{ $slot->classSubject->subject->subject_name ?? 'N/A' }}</td>
+                                                    <td data-label="Class">
+                                                        @if($slot->classSubject->subclass)
+                                                            {{ $slot->classSubject->subclass->class->class_name ?? 'N/A' }} {{ $slot->classSubject->subclass->subclass_name }}
+                                                        @else
+                                                            {{ $slot->classSubject->class->class_name ?? 'N/A' }}
+                                                        @endif
+                                                    </td>
+                                                    <td data-label="Week">
+                                                        <strong>{{ $slot->test_week }}</strong>
+                                                        <br><small class="text-info">{{ $slot->test_week_range }}</small>
+                                                    </td>
+                                                    <td data-label="Test Date">{{ \Carbon\Carbon::parse($slot->test_date)->format('D, d M Y') }}</td>
+                                                    <td data-label="Action">
+                                                        @php
+                                                            $subjectName = $slot->classSubject->subject->subject_name ?? 'N/A';
+                                                            $classNameRaw = $slot->classSubject->subclass ? ($slot->classSubject->subclass->class->class_name ?? '') . ' ' . ($slot->classSubject->subclass->subclass_name ?? '') : ($slot->classSubject->class->class_name ?? '');
+                                                            $fullSubjectDisplay = $subjectName . ' - ' . trim($classNameRaw);
+                                                        @endphp
+                                                        <button class="btn btn-sm btn-primary-custom upload-pending-btn w-100" 
+                                                            data-exam-id="{{ $slot->examID }}"
+                                                            data-class-subject-id="{{ $slot->class_subjectID }}"
+                                                            data-test-week="{{ $slot->test_week }}"
+                                                            data-test-week-range="{{ $slot->test_week_range }}"
+                                                            data-test-date="{{ $slot->test_date }}"
+                                                            data-full-subject-display="{{ $fullSubjectDisplay }}"
+                                                            data-slot-id="{{ $slot->exam_paperID }}">
+                                                            <i class="bi bi-cloud-upload"></i> Upload Now
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @else
+                                <div class="text-center py-5">
+                                    <i class="bi bi-check-circle text-success display-4"></i>
+                                    <h5 class="mt-3">No pending uploads!</h5>
+                                    <p class="text-muted">All scheduled tests have had their papers uploaded or there are no upcoming scheduled tests.</p>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -1015,10 +1284,252 @@ $(document).ready(function() {
         });
     }
 
-    $('#selected_exam').on('change', function() {
-        fetchAllowedClasses($(this).val());
-        fetchExistingPapers($(this).val());
+    // Handle "Upload Now" from pending slots
+    $(document).on('click', '.upload-pending-btn', function() {
+        const examID = $(this).data('exam-id');
+        const classSubjectID = $(this).data('class-subject-id');
+        const testWeek = $(this).data('test-week');
+        const testDate = $(this).data('test-date');
+        const slotID = $(this).data('slot-id');
+
+        // Reset form first
+        $('#uploadExamPaperForm')[0].reset();
+        $('#placeholder_id').val(slotID);
+
+        // Set Exam - this will trigger the change event that shows test fields
+        $('#selected_exam').val(examID);
+        
+        // Manually trigger the exam change logic
+        const examName = $('#selected_exam').find('option:selected').text();
+        const isWeeklyTest = examName.includes('Weekly Test');
+        const isMonthlyTest = examName.includes('Monthly Test');
+        const isTestType = isWeeklyTest || isMonthlyTest;
+        
+        if (isTestType) {
+            // Show test fields, hide regular subject selection
+            $('#test_fields_container').show();
+            $('#regular_subject_container').hide();
+            $('#class_subject').prop('required', false);
+            $('#test_subject').prop('required', true);
+            
+            // Load available periods for the current year
+            const currentYear = $('#test_year').val() || new Date().getFullYear();
+            const fullSubjectDisplay = $(this).data('full-subject-display');
+            const testWeekRange = $(this).data('test-week-range');
+            const displayWeek = testWeekRange ? `${testWeek} (${testWeekRange})` : testWeek;
+            
+            // DIRECTLY SET VALUES FIRST (Instant Feedback)
+            
+            // 1. Set Period (Test Week)
+            const $periodSelect = $('#test_period');
+            // Ensure option exists
+            if ($periodSelect.find(`option[value="${testWeek}"]`).length === 0) {
+                 // Clear existing if it only has 'Select Period' to avoid clutter or duplicates if logic differs
+                 if ($periodSelect.children().length <= 1) $periodSelect.html('<option value="">Select Period</option>');
+                 $periodSelect.append(`<option value="${testWeek}">${displayWeek}</option>`);
+            }
+            $periodSelect.val(testWeek);
+            
+            // 2. Set Subject
+            const $subjectSelect = $('#test_subject');
+            if ($subjectSelect.find(`option[value="${classSubjectID}"]`).length === 0) {
+                 if ($subjectSelect.children().length <= 1) $subjectSelect.html('<option value="">Select Subject</option>');
+                 $subjectSelect.append(`<option value="${classSubjectID}">${fullSubjectDisplay}</option>`);
+            }
+            $subjectSelect.val(classSubjectID);
+            
+            // 3. Set Date
+            $('#test_date').val(testDate);
+
+            // BACKGROUND LOAD (To populate other options)
+            // Load periods
+            $.ajax({
+                url: '/get_available_periods',
+                method: 'GET',
+                data: {
+                    year: currentYear,
+                    test_type: isWeeklyTest ? 'weekly_test' : 'monthly_test',
+                    examID: examID
+                },
+                success: function(response) {
+                    if (response.success && response.periods) {
+                        // Remember current selection
+                        const selectedPeriod = $periodSelect.val();
+                        $periodSelect.html('<option value="">Select Period</option>');
+                        
+                        let periodExists = false;
+                        response.periods.forEach(function(period) {
+                            const displayText = period.range ? `${period.week} (${period.range})` : period.week;
+                            $periodSelect.append(`<option value="${period.week}">${displayText}</option>`);
+                            if (period.week === selectedPeriod) periodExists = true;
+                        });
+                        
+                        // Restore selection if valid, otherwise keep what we injected if not in list (edge case)
+                        if (periodExists) {
+                            $periodSelect.val(selectedPeriod);
+                        } else if (selectedPeriod) {
+                             $periodSelect.append(`<option value="${selectedPeriod}">${displayWeek}</option>`);
+                             $periodSelect.val(selectedPeriod);
+                        }
+                        
+                        // Load subjects for this week (Background)
+                        $.ajax({
+                            url: '/get_scheduled_subjects',
+                            method: 'GET',
+                            data: {
+                                examID: examID,
+                                week: selectedPeriod
+                            },
+                            success: function(subjectResponse) {
+                                if (subjectResponse.success && subjectResponse.subjects) {
+                                    // Remember current subject
+                                    const selectedSubject = $subjectSelect.val();
+                                    $subjectSelect.html('<option value="">Select Subject</option>');
+                                    
+                                    let subjectExists = false;
+                                    subjectResponse.subjects.forEach(function(subject) {
+                                        $subjectSelect.append(`<option value="${subject.class_subjectID}">${subject.subject_name} - ${subject.class_display}</option>`);
+                                        if (subject.class_subjectID == selectedSubject) subjectExists = true;
+                                    });
+                                    
+                                    // Restore selection
+                                    if (subjectExists) {
+                                        $subjectSelect.val(selectedSubject);
+                                    } else if (selectedSubject) {
+                                        $subjectSelect.append(`<option value="${selectedSubject}">${fullSubjectDisplay}</option>`);
+                                        $subjectSelect.val(selectedSubject);
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+        }
+        
+        // Fetch allowed classes
+        fetchAllowedClasses(examID);
+        fetchExistingPapers(examID);
+
+        // Switch Tab
+        $('#upload-tab').tab('show');
     });
+
+    $('#selected_exam').on('change', function() {
+        const examID = $(this).val();
+        const examName = $(this).find('option:selected').text();
+        
+        // Check if this is a Weekly Test or Monthly Test
+        const isWeeklyTest = examName.includes('Weekly Test');
+        const isMonthlyTest = examName.includes('Monthly Test');
+        const isTestType = isWeeklyTest || isMonthlyTest;
+        
+        if (isTestType) {
+            // Show test fields, hide regular subject selection
+            $('#test_fields_container').show();
+            $('#regular_subject_container').hide();
+            $('#class_subject').prop('required', false);
+            $('#test_subject').prop('required', true);
+            
+            // Load available periods for the current year
+            const currentYear = $('#test_year').val() || new Date().getFullYear();
+            loadAvailablePeriods(currentYear, isWeeklyTest ? 'weekly_test' : 'monthly_test', examID);
+        } else {
+            // Hide test fields, show regular subject selection
+            $('#test_fields_container').hide();
+            $('#regular_subject_container').show();
+            $('#class_subject').prop('required', true);
+            $('#test_subject').prop('required', false);
+            
+            // Clear test fields
+            $('#test_period').html('<option value="">Select Period</option>');
+            $('#test_subject').html('<option value="">Select a period first</option>');
+        }
+        
+        fetchAllowedClasses(examID);
+        fetchExistingPapers(examID);
+    });
+
+    // Handle year change for tests
+    $('#test_year').on('change', function() {
+        const year = $(this).val();
+        const examName = $('#selected_exam').find('option:selected').text();
+        const isWeeklyTest = examName.includes('Weekly Test');
+        const isMonthlyTest = examName.includes('Monthly Test');
+        
+        if (year && (isWeeklyTest || isMonthlyTest)) {
+            loadAvailablePeriods(year, isWeeklyTest ? 'weekly_test' : 'monthly_test');
+        }
+    });
+
+    // Handle period change for tests
+    $('#test_period').on('change', function() {
+        const period = $(this).val();
+        const examID = $('#selected_exam').val();
+        
+        if (period && examID) {
+            loadScheduledSubjects(examID, period);
+        } else {
+            $('#test_subject').html('<option value="">Select a period first</option>');
+        }
+    });
+
+    // Function to load available periods (weeks/months) excluding holidays
+    function loadAvailablePeriods(year, testType, examID) {
+        $.ajax({
+            url: '/get_available_periods',
+            method: 'GET',
+            data: {
+                year: year,
+                test_type: testType,
+                examID: examID
+            },
+            success: function(response) {
+                if (response.success && response.periods) {
+                    const $periodSelect = $('#test_period');
+                    $periodSelect.html('<option value="">Select Period</option>');
+                    
+                    response.periods.forEach(function(period) {
+                        $periodSelect.append(`<option value="${period.id}">${period.text}</option>`);
+                    });
+                }
+            },
+            error: function(xhr) {
+                console.error('Failed to load periods:', xhr);
+                Swal.fire('Error', 'Failed to load available periods', 'error');
+            }
+        });
+    }
+
+    // Function to load scheduled subjects for a specific test period
+    function loadScheduledSubjects(examID, testWeek) {
+        $.ajax({
+            url: '/get_scheduled_subjects',
+            method: 'GET',
+            data: {
+                examID: examID,
+                test_week: testWeek
+            },
+            success: function(response) {
+                if (response.success && response.subjects) {
+                    const $subjectSelect = $('#test_subject');
+                    $subjectSelect.html('<option value="">Select Subject</option>');
+                    
+                    if (response.subjects.length === 0) {
+                        $subjectSelect.html('<option value="">No subjects scheduled for this period</option>');
+                    } else {
+                        response.subjects.forEach(function(subject) {
+                            $subjectSelect.append(`<option value="${subject.class_subjectID}">${subject.subject_name} (${subject.class_name}) - ${subject.day} ${subject.time}</option>`);
+                        });
+                    }
+                }
+            },
+            error: function(xhr) {
+                console.error('Failed to load subjects:', xhr);
+                $('#test_subject').html('<option value="">Error loading subjects</option>');
+            }
+        });
+    }
 
     $('#modal_selected_exam').on('change', function() {
         fetchAllowedClasses($(this).val());
@@ -1094,7 +1605,10 @@ $(document).ready(function() {
 
     function submitExamPaper(form, isModal) {
         const examID = isModal ? $('#modal_selected_exam').val() : $('#selected_exam').val();
-        const classSubjectID = isModal ? $('#modal_class_subject').val() : $('#class_subject').val();
+        const isTestMode = !isModal && $('#test_fields_container').is(':visible');
+        const classSubjectID = isModal 
+            ? $('#modal_class_subject').val() 
+            : (isTestMode ? $('#test_subject').val() : $('#class_subject').val());
         const existingUploadId = isModal ? $('#existing_upload_modal').val() : $('#existing_upload_main').val();
 
         if (!examID) {
@@ -1214,6 +1728,21 @@ $(document).ready(function() {
         }
         formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
 
+        // Add test-specific fields if applicable
+        const testWeek = isModal ? $('#modal_test_week').val() : $('#test_period').val();
+        const testDate = isModal ? $('#modal_test_date').val() : $('#test_date').val();
+        const placeholderId = $('#placeholder_id').val();
+        
+        if (testWeek) {
+            formData.append('test_week', testWeek);
+        }
+        if (testDate) {
+            formData.append('test_date', testDate);
+        }
+        if (placeholderId) {
+            formData.append('placeholder_id', placeholderId);
+        }
+
         if (isSecondarySchool) {
             const $questionContainer = isModal ? $('#question-rows-modal') : $('#question-rows-main');
             $questionContainer.find('.question-description').each(function() {
@@ -1236,12 +1765,42 @@ $(document).ready(function() {
             });
         }
 
+        // Show loading progress bar
+        Swal.fire({
+            title: 'Uploading Exam Paper...',
+            html: 'Please wait while we process your request.<br><br><b id="upload-percentage">0%</b><br><div class="progress mt-2" style="height: 10px; border-radius: 5px; overflow: hidden;"><div id="upload-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-danger" role="progressbar" style="width: 0%"></div></div>',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
         $.ajax({
             url: '{{ route("store_exam_paper") }}',
             method: 'POST',
             data: formData,
             processData: false,
             contentType: false,
+            xhr: function() {
+                var xhr = new window.XMLHttpRequest();
+                xhr.upload.addEventListener("progress", function(evt) {
+                    if (evt.lengthComputable) {
+                        var percentComplete = evt.loaded / evt.total;
+                        percentComplete = parseInt(percentComplete * 100);
+                        $('#upload-progress-bar').css('width', percentComplete + '%');
+                        $('#upload-percentage').text(percentComplete + '%');
+                        if (percentComplete === 100) {
+                            Swal.update({
+                                title: 'Processing...',
+                                html: 'File uploaded. Finalizing submission, please wait...'
+                            });
+                        }
+                    }
+                }, false);
+                return xhr;
+            },
             success: function(response) {
                 Swal.fire('Success', response.success || 'Exam paper submitted successfully', 'success').then(() => {
                     if (isModal) {
@@ -1295,12 +1854,42 @@ $(document).ready(function() {
         formData.append('file', fileInput.files[0]);
         formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
 
+        // Show loading progress bar
+        Swal.fire({
+            title: 'Updating Exam Paper...',
+            html: 'Please wait while we process your request.<br><br><b id="upload-percentage-edit">0%</b><br><div class="progress mt-2" style="height: 10px; border-radius: 5px; overflow: hidden;"><div id="upload-progress-bar-edit" class="progress-bar progress-bar-striped progress-bar-animated bg-danger" role="progressbar" style="width: 0%"></div></div>',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
         $.ajax({
             url: '/update_exam_paper/' + paperID,
             method: 'POST',
             data: formData,
             processData: false,
             contentType: false,
+            xhr: function() {
+                var xhr = new window.XMLHttpRequest();
+                xhr.upload.addEventListener("progress", function(evt) {
+                    if (evt.lengthComputable) {
+                        var percentComplete = evt.loaded / evt.total;
+                        percentComplete = parseInt(percentComplete * 100);
+                        $('#upload-progress-bar-edit').css('width', percentComplete + '%');
+                        $('#upload-percentage-edit').text(percentComplete + '%');
+                        if (percentComplete === 100) {
+                            Swal.update({
+                                title: 'Processing...',
+                                html: 'File uploaded. Finalizing update, please wait...'
+                            });
+                        }
+                    }
+                }, false);
+                return xhr;
+            },
             success: function(response) {
                 Swal.fire('Success', response.success || 'Exam paper updated successfully', 'success').then(() => {
                     $('#editExamPaperModal').modal('hide');
@@ -1331,6 +1920,18 @@ $(document).ready(function() {
             confirmButtonText: 'Yes, delete it!'
         }).then((result) => {
             if (result.isConfirmed) {
+                // Show loading
+                Swal.fire({
+                    title: 'Deleting...',
+                    text: 'Please wait while we delete the exam paper.',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
                 $.ajax({
                     url: '/delete_exam_paper/' + paperID,
                     method: 'DELETE',
@@ -1511,6 +2112,18 @@ $(document).ready(function() {
             formData.append(`optional_ranges[${rangeNumber}]`, optionalTotals[rangeNumber]);
         });
         formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
+
+        // Show loading
+        Swal.fire({
+            title: 'Updating Questions...',
+            text: 'Please wait while we update the question formats.',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
 
         $.ajax({
             url: `/update_exam_paper_questions/${paperID}`,

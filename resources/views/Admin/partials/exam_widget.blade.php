@@ -62,6 +62,46 @@
                     {{ ucfirst(str_replace('_', ' ', $exam->term)) }} • 
                 @endif
                 {{ $exam->year }}
+                
+                @if(isset($exam->test_end_date_range) && $exam->test_end_date_range)
+                    <br>
+                    <div class="mt-2">
+                        <button class="btn btn-link p-0 d-flex align-items-center cursor-pointer text-primary-custom text-decoration-none w-100 collapsed test-breakdown-toggle" 
+                                style="font-size: 0.85rem; font-weight: 600;" 
+                                type="button"
+                                data-target="#breakdown_{{ $exam->examID }}"
+                                aria-expanded="false"
+                                aria-controls="breakdown_{{ $exam->examID }}">
+                            <i class="bi bi-calendar-check me-1"></i> 
+                            Final Week: {{ $exam->test_end_date_range }}
+                            <i class="bi bi-chevron-down ms-auto transition-transform" style="font-size: 0.7rem;"></i>
+                        </button>
+                        
+                        @if(isset($exam->test_breakdown) && count($exam->test_breakdown) > 0)
+                        <div class="mt-2" id="breakdown_{{ $exam->examID }}" style="display: none;">
+                            <div class="p-2 rounded border" style="background-color: #fafafa; border-color: #f1d7d7 !important;">
+                                <ul class="list-unstyled mb-0" style="font-size: 0.75rem; color: #444;">
+                                    @foreach($exam->test_breakdown as $item)
+                                    <li class="mb-1 d-flex justify-content-between align-items-start border-bottom pb-1" style="border-bottom-style: dotted !important;">
+                                        <span class="fw-bold text-dark" style="max-width: 60%;">{{ $item['name'] }}</span>
+                                        <div class="text-end">
+                                            <div class="fw-bold">Week {{ $item['week'] }}</div>
+                                            <div class="text-muted" style="font-size: 0.65rem;">{{ $item['date_range'] }}</div>
+                                        </div>
+                                    </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </div>
+                        @endif
+                    </div>
+                @elseif(isset($exam->total_weeks_count) && $exam->total_weeks_count > 0)
+                    <br>
+                    <span class="text-info mt-1 d-inline-block" style="font-size: 0.8rem;">
+                        <i class="bi bi-calendar-range"></i> 
+                        Total Weeks: {{ $exam->total_weeks_count }}
+                    </span>
+                @endif
             </small>
         </div>
 

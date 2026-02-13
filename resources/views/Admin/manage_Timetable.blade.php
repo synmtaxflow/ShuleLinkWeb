@@ -5,6 +5,7 @@
 @else
 @include('includes.teacher_nav')
 @endif
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
 <style>
@@ -119,6 +120,12 @@
                 </div>
             @endif
 
+            @php
+                $canCreate = ($user_type ?? '') == 'Admin' || ($teacherPermissions ?? collect())->contains('timetable_create');
+                $canUpdate = ($user_type ?? '') == 'Admin' || ($teacherPermissions ?? collect())->contains('timetable_update');
+                $canDelete = ($user_type ?? '') == 'Admin' || ($teacherPermissions ?? collect())->contains('timetable_delete');
+            @endphp
+
             <!-- Page Header -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body bg-primary-custom text-white rounded">
@@ -126,31 +133,16 @@
                         <h4 class="mb-0">
                             <i class="bi bi-calendar-week"></i> Timetable Management
                         </h4>
+                        @if($canCreate)
+                        <button class="btn btn-light btn-sm font-weight-bold" id="createTimetableBtn" style="border-radius: 20px !important; padding: 5px 15px;">
+                            <i class="bi bi-plus-circle"></i> Create Timetable
+                        </button>
+                        @endif
                     </div>
                 </div>
             </div>
 
-            <!-- Create Timetable Widget -->
-            @php
-                $canCreate = ($user_type ?? '') == 'Admin' || ($teacherPermissions ?? collect())->contains('timetable_create');
-                $canUpdate = ($user_type ?? '') == 'Admin' || ($teacherPermissions ?? collect())->contains('timetable_update');
-                $canDelete = ($user_type ?? '') == 'Admin' || ($teacherPermissions ?? collect())->contains('timetable_delete');
-            @endphp
-            @if($canCreate)
-            <div class="row g-4 mb-4">
-                <div class="col-12 col-sm-6 col-md-3">
-                    <div class="card shadow-sm widget-card h-100" id="createTimetableBtn">
-                        <div class="card-body text-center">
-                            <div class="mb-3">
-                                <i class="bi bi-plus-circle-fill text-primary-custom" style="font-size: 3rem;"></i>
-                            </div>
-                            <h6 class="card-title mb-0 fw-bold">Create Timetable</h6>
-                            <small class="text-muted">Create new timetable</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            @endif
+
 
             <!-- View Timetables Tabs -->
             <div class="card border-0 shadow-sm">
@@ -164,6 +156,11 @@
                         <li class="nav-item" role="presentation">
                             <a class="nav-link" id="exam-timetable-tab" data-toggle="tab" href="#exam-timetable" role="tab">
                                 <i class="bi bi-clipboard-check"></i> Exam Timetable
+                            </a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link" id="test-timetable-tab" data-toggle="tab" href="#test-timetable" role="tab">
+                                <i class="bi bi-clock-history"></i> Test Schedules
                             </a>
                         </li>
                     </ul>
@@ -276,7 +273,11 @@
                                     <select class="form-control" id="view_exam_select">
                                         <option value="">Select Examination</option>
                                         @foreach($examinations ?? [] as $exam)
-                                            <option value="{{ $exam->examID }}">{{ $exam->exam_name }} ({{ \Carbon\Carbon::parse($exam->start_date)->format('M d') }} - {{ \Carbon\Carbon::parse($exam->end_date)->format('M d, Y') }})</option>
+                                            <option value="{{ $exam->examID }}" 
+                                                    data-category="{{ $exam->exam_category }}" 
+                                                    data-year="{{ $exam->year }}">
+                                                {{ $exam->exam_name }} ({{ \Carbon\Carbon::parse($exam->start_date)->format('M d') }} - {{ \Carbon\Carbon::parse($exam->end_date)->format('M d, Y') }})
+                                            </option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -311,6 +312,44 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Test Schedules Tab -->
+                        <div class="tab-pane fade" id="test-timetable" role="tabpanel">
+                             <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <label for="view_test_type">Test Type</label>
+                                    <select class="form-control" id="view_test_type">
+                                        <option value="weekly">Weekly Test</option>
+                                        <option value="monthly">Monthly Test</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="view_test_scope">Scope</label>
+                                    <select class="form-control" id="view_test_scope">
+                                        <option value="school_wide" selected>All School</option>
+                                        <option value="class">Specific Class</option>
+                                        <option value="subclass">Specific Subclass</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3" id="view_test_scope_id_group" style="display: none;">
+                                    <label for="view_test_scope_id">Select Class/Subclass</label>
+                                    <select class="form-control" id="view_test_scope_id">
+                                        <option value="">Select...</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label>&nbsp;</label>
+                                     <button class="btn btn-primary-custom w-100" id="loadTestScheduleBtn">
+                                        <i class="bi bi-search"></i> Load Schedule
+                                    </button>
+                                </div>
+                             </div>
+                             <div id="testScheduleDisplay">
+                                <div class="alert alert-info text-center">
+                                    <i class="bi bi-info-circle"></i> Select test type and scope to view schedule.
+                                </div>
+                             </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -336,15 +375,16 @@
 
                     <!-- Timetable Type -->
                     <div class="form-group">
-                        <label>Timetable Type <span class="text-danger">*</span></label>
+                        <label>Timetable Category <span class="text-danger">*</span></label>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="timetable_category" id="exam_timetable_radio" value="exam" checked>
+                            <input class="form-check-input" type="radio" name="timetable_category_main" id="exam_timetable_radio" value="exam" checked>
                             <label class="form-check-label" for="exam_timetable_radio">
-                                Exam Timetable
+                                Exam/Test Schedule
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="timetable_category" id="class_timetable_radio" value="class">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="timetable_category_main" id="class_timetable_radio" value="class">
                             <label class="form-check-label" for="class_timetable_radio">
                                 Class Session Timetable
                             </label>
@@ -352,20 +392,156 @@
                     </div>
 
                     <div id="examTimetableForm">
-                        <!-- Exam Selection -->
+                        <!-- Exam/Test Category Selection -->
                         <div class="form-group">
-                            <label for="examID">Examination <span class="text-danger">*</span></label>
-                            <select class="form-control" id="examID" name="examID" required>
-                                <option value="">Select Examination</option>
-                                @foreach($examinations ?? [] as $exam)
-                                    <option value="{{ $exam->examID }}">{{ $exam->exam_name }} ({{ \Carbon\Carbon::parse($exam->start_date)->format('M d') }} - {{ \Carbon\Carbon::parse($exam->end_date)->format('M d, Y') }})</option>
-                                @endforeach
+                            <label for="exam_category_select">Schedule Type <span class="text-danger">*</span></label>
+                            <select class="form-control" id="exam_category_select" name="exam_category_select">
+                                <option value="school_exam">School Exam (Seasonal/Termly)</option>
+                                <option value="test">Test (Recurring/Cycles)</option>
                             </select>
-                            <small class="text-muted">Only scheduled and approved examinations are shown</small>
                         </div>
 
-                        <!-- Timetable Type (Class Specific or School Wide) -->
-                        <div class="form-group">
+                        <!-- SECTION A: Standard School Exam (Existing Logic) -->
+                        <div id="school_exam_section">
+                            <div class="form-group">
+                                <label for="examID">Examination <span class="text-danger">*</span></label>
+                                <select class="form-control" id="examID" name="examID">
+                                    <option value="">Select Examination</option>
+                                    @foreach($examinations ?? [] as $exam)
+                                        <option value="{{ $exam->examID }}" 
+                                                data-category="{{ $exam->exam_category }}" 
+                                                data-year="{{ $exam->year }}">
+                                            {{ $exam->exam_name }} ({{ \Carbon\Carbon::parse($exam->start_date)->format('M d') }} - {{ \Carbon\Carbon::parse($exam->start_date)->format('M d, Y') }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <small class="text-muted">Approved examinations are shown</small>
+                            </div>
+                        </div>
+
+                        <!-- SECTION B: Test Schedule (New Logic) -->
+                        <div id="test_schedule_section" style="display: none;">
+                            <!-- Link to Examination -->
+                            <div class="form-group">
+                                <label for="test_exam_id">Link to Examination <span class="text-danger">*</span></label>
+                                <select class="form-control" id="test_exam_id" name="test_exam_id">
+                                    <option value="">Select Examination</option>
+                                    @foreach($examinations ?? [] as $exam)
+                                        <option value="{{ $exam->examID }}" 
+                                                data-category="{{ $exam->exam_category }}" 
+                                                data-year="{{ $exam->year }}"
+                                                data-start-date="{{ $exam->start_date }}">
+                                            {{ $exam->exam_name }} ({{ \Carbon\Carbon::parse($exam->start_date)->format('M d') }} - {{ \Carbon\Carbon::parse($exam->start_date)->format('M d, Y') }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <small class="text-muted">Select the examination to store results for.</small>
+                            </div>
+
+                            <!-- Start Date Override -->
+                            <div class="form-group">
+                                <label for="test_start_date">Cycle Start Date (Optional)</label>
+                                <input type="date" class="form-control" id="test_start_date" name="start_date">
+                                <small class="text-muted">If set, Cycle 1 will start on this date. Otherwise, it uses the examination start date.</small>
+                            </div>
+
+                            <!-- Test Type -->
+                            <div class="form-group">
+                                <label for="test_type_select">Test Type <span class="text-danger">*</span></label>
+                                <select class="form-control" id="test_type_select" name="test_type">
+                                    <option value="">Select Test Type</option>
+                                    <option value="weekly">Weekly Test</option>
+                                    <option value="monthly">Monthly Test</option>
+                                </select>
+                            </div>
+
+                            <!-- TEST BUILDER CONFIGURATION -->
+                            <div id="test_builder_config" style="display: none;">
+                                <div class="alert alert-info py-2" id="test_mode_alert">
+                                    <i class="bi bi-info-circle"></i> <strong>Test Mode:</strong> Create recurring cycles. This schedule will rotate automatically.
+                                </div>
+
+                                <!-- Scope Selection -->
+                                <div class="form-group">
+                                    <label for="test_scope">Target Audience (Scope) <span class="text-danger">*</span></label>
+                                    <select class="form-control" id="test_scope" name="test_scope">
+                                        <option value="">Select Scope</option>
+                                        <option value="school_wide">All School (School Wide)</option>
+                                        <option value="class">Specific Main Class</option>
+                                        <option value="subclass">Specific Subclass (Stream)</option>
+                                    </select>
+                                </div>
+
+                                <!-- Dynamic Scope Inputs -->
+                                <div class="form-group" id="scope_class_group" style="display: none;">
+                                    <label for="test_class_id">Select Class <span class="text-danger">*</span></label>
+                                    <select class="form-control" id="test_class_id" name="test_class_id">
+                                        <option value="">Select Class</option>
+                                        @foreach($classes ?? [] as $class)
+                                            <option value="{{ $class->classID }}">{{ $class->class_name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="form-group" id="scope_subclass_group" style="display: none;">
+                                    <label for="test_subclass_id">Select Subclass <span class="text-danger">*</span></label>
+                                    <select class="form-control subclass-select" id="test_subclass_id" name="test_subclass_id">
+                                        <option value="">Select Subclass</option>
+                                        @foreach($subclasses ?? [] as $subclass)
+                                            <option value="{{ $subclass->subclassID }}">
+                                                {{ $subclass->class->class_name ?? '' }} {{ $subclass->subclass_name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <!-- Constraints & Automation -->
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="test_duration" class="fw-bold">Time per Exam (Minutes) <span class="text-danger">*</span></label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="test_duration" name="test_duration" min="15" max="300" value="60">
+                                            <span class="input-group-text">min</span>
+                                        </div>
+                                        <small class="text-muted">Used to calculate end times automatically.</small>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="exams_per_week_limit" id="limit_label" class="fw-bold">Max Exams Per Cycle <span class="text-danger">*</span></label>
+                                        <input type="number" class="form-control" id="exams_per_week_limit" name="exams_per_week_limit" min="1" max="20" placeholder="e.g. 2">
+                                        <small class="text-muted" id="limit_help">How many exams allowed in one cycle.</small>
+                                    </div>
+                                </div>
+
+                                <!-- Slot Configuration -->
+                                <div id="test_slots_config_section" class="card bg-light border-0 mb-4" style="display: none;">
+                                    <div class="card-body p-3">
+                                        <p class="small fw-bold mb-2 text-primary-custom"><i class="bi bi-clock-history"></i> Set Default Start Times for each Slot:</p>
+                                        <div id="test_slots_container" class="row gx-2 gy-2">
+                                            <!-- Dynamic Start Times will be injected here -->
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted"><i class="bi bi-info-circle"></i> These times will auto-fill when you add subjects below.</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <hr class="my-4">
+
+                                <!-- Weeks/Months Builder -->
+                                <div id="weeks_container">
+                                    <!-- Dynamic Cycles go here -->
+                                </div>
+
+                                <button type="button" class="btn btn-outline-primary btn-block dashed-border mt-3" id="add_week_btn">
+                                    <i class="bi bi-plus-lg"></i> Add Another Cycle
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Additional Standard Exam Configuration (Hidden for Tests) -->
+                        <div id="standard_exam_additional_fields">
+                            <!-- Timetable Type (Class Specific or School Wide) -->
+                            <div class="form-group">
                             <label for="timetable_type">Timetable Type <span class="text-danger">*</span></label>
                             <select class="form-control" id="timetable_type" name="timetable_type" required>
                                 <option value="class_specific">Class Specific</option>
@@ -598,11 +774,12 @@
                             </div>
                         </div>
 
-                        <!-- Notes -->
-                        <div class="form-group">
-                            <label for="notes">Notes (Optional)</label>
-                            <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Additional notes..."></textarea>
-                        </div>
+                            <!-- Notes -->
+                            <div class="form-group">
+                                <label for="notes">Notes (Optional)</label>
+                                <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Additional notes..."></textarea>
+                            </div>
+                        </div> <!-- End standard_exam_additional_fields -->
                     </div>
 
                     <!-- Class Session Timetable Form -->
@@ -765,15 +942,38 @@ function disableSubclassesWithTimetables() {
             if (option.length > 0) {
                 option.prop('disabled', true);
                 let currentText = option.text();
-                if (!currentText.includes('(Has Timetable)')) {
-                    option.text(currentText + ' (Has Timetable)');
+                if (!currentText.includes('(READY)')) {
+                    option.text(currentText + ' (READY)');
                 }
+                option.css('background-color', '#f8f9fa');
+                option.css('color', '#6c757d');
             }
         });
     });
 }
 
 $(document).ready(function() {
+    // Utility for Select2 Initialization to prevent errors
+    function initSelect2(selector, options) {
+        if (typeof $.fn.select2 === 'function') {
+            $(selector).select2(options || {
+                placeholder: "Select Option",
+                allowClear: true,
+                width: '100%',
+                dropdownParent: $(selector).closest('.modal').length ? $(selector).closest('.modal') : null
+            });
+        } else {
+            console.warn('Select2 not found for:', selector);
+        }
+    }
+
+    // Initialize Select2 for any existing supervisor dropdowns
+    initSelect2('.test-supervisor-dropdown', {
+        placeholder: "Select Supervisors",
+        allowClear: true,
+        width: '100%'
+    });
+
     // Load subclasses with timetables on page load
     loadSubclassesWithTimetables();
     
@@ -782,8 +982,13 @@ $(document).ready(function() {
         $('#createTimetableModal').modal('show');
         // Reload subclasses with timetables when modal opens
         loadSubclassesWithTimetables();
-        // Ensure required attributes are set correctly based on selected category
-        const category = $('input[name="timetable_category"]:checked').val();
+        
+        // Reset selections to default
+        $('input[name="timetable_category_main"][value="exam"]').prop('checked', true).trigger('change');
+        $('#exam_category_select').val('school_exam').trigger('change');
+        
+        // Ensure required attributes are set correctly based on selected category (Original logic preserved but updated for new structure)
+        const category = $('input[name="timetable_category_main"]:checked').val();
         if (category === 'exam') {
             $('#session_start_time, #session_end_time, #prepo_start_time, #prepo_end_time').removeAttr('required').prop('disabled', true);
         } else {
@@ -791,6 +996,824 @@ $(document).ready(function() {
             $('#prepo_start_time, #prepo_end_time').prop('disabled', false);
         }
     });
+
+    // Check if Swal is defined, if not, define a simple fallback
+    if (typeof Swal === 'undefined') {
+        window.Swal = {
+            fire: function(data) {
+                alert(data.title + "\n" + data.text);
+            }
+        };
+    }
+
+    // --- TIMETABLE CATEGORY & TYPE HANDLING ---
+    
+    // Toggle between Exam/Test and Class Session Timetable logic (Top Level Radio)
+    $('input[name="timetable_category_main"]').on('change', function() {
+        const val = $(this).val();
+        if (val === 'exam') {
+            $('#examTimetableForm').show();
+            $('#classSessionTimetableForm').hide();
+            // Reset required attributes
+            $('#session_start_time, #session_end_time, #prepo_start_time, #prepo_end_time').removeAttr('required').prop('disabled', true);
+        } else {
+            $('#examTimetableForm').hide();
+            $('#classSessionTimetableForm').show();
+            // Set required attributes
+            $('#session_start_time, #session_end_time').prop('disabled', false).attr('required', 'required');
+            // Prepo fields only required if has_prepo is checked
+            $('#prepo_start_time, #prepo_end_time').prop('disabled', false);
+            // Check if definition exists
+            checkExistingDefinition();
+        }
+    });
+
+    // Toggle between School Exam and Test (Recursive)
+    $('#exam_category_select').on('change', function() {
+        const type = $(this).val();
+        
+        if (type === 'test') {
+            $('#school_exam_section').hide();
+            $('#test_schedule_section').show();
+            $('#standard_exam_additional_fields').hide();
+            
+            // Disable inputs in school exam to prevent validation errors
+            $('#examID').removeAttr('required');
+            $('#test_type_select').attr('required', 'required');
+            $('#test_exam_id').attr('required', 'required'); // Enable test exam ID
+
+            // Filter test_exam_id to show only category 'test'
+            $('#test_exam_id option').each(function() {
+                const opt = $(this);
+                const val = opt.val();
+                if (val === "") return;
+                
+                const cat = opt.data('category');
+                
+                if (cat === 'test') {
+                    opt.show().prop('disabled', false);
+                } else {
+                    opt.hide().prop('disabled', true);
+                }
+            });
+            $('#test_exam_id').val(''); // Reset selection
+            
+        } else {
+            $('#school_exam_section').show();
+            $('#test_schedule_section').hide();
+            $('#standard_exam_additional_fields').show();
+            
+            $('#examID').attr('required', 'required');
+            $('#test_type_select').removeAttr('required');
+            $('#test_exam_id').removeAttr('required'); // Disable test exam ID
+
+            // Filter examID to hide test category exams
+            $('#examID option').each(function() {
+                const opt = $(this);
+                const val = opt.val();
+                if (val === "") return;
+                
+                const cat = opt.data('category');
+                
+                // Show only school_exam (seasonal/termly)
+                if (cat !== 'test') {
+                    opt.show().prop('disabled', false);
+                } else {
+                    opt.hide().prop('disabled', true);
+                }
+            });
+            $('#examID').val(''); // Reset
+        }
+    });
+
+    // Toggle Test Types (Weekly vs Monthly)
+    $('#test_type_select').on('change', function() {
+        const val = $(this).val();
+        if (val === 'weekly' || val === 'monthly') {
+            $('#test_builder_config').show();
+            const text = val === 'weekly' ? 'Week' : 'Month';
+            $('#test_mode_alert').html(`<i class="bi bi-info-circle"></i> <strong>${text}ly Test Mode:</strong> Create a recurring cycle (e.g., ${text} 1, ${text} 2). This schedule will rotate automatically.`);
+            $('#limit_label').html(`Max Exams Per ${text} <span class="text-danger">*</span>`);
+            $('#limit_help').text(`You will be restricted to this number when adding exams below.`);
+            $('#add_week_btn').html(`<i class="bi bi-plus-lg"></i> Add Another ${text} Cycle`);
+        } else {
+            $('#test_builder_config').hide();
+        }
+    });
+
+    // Handle Scope Selection for Weekly Tests (Creation Modal)
+    $('#test_scope').on('change', function() {
+        const scope = $(this).val();
+        $('#scope_class_group, #scope_subclass_group').hide();
+        $('#test_class_id, #test_subclass_id').removeAttr('required');
+
+        if (scope === 'class') {
+            $('#scope_class_group').show();
+            $('#test_class_id').attr('required', 'required');
+        } else if (scope === 'subclass') {
+            $('#scope_subclass_group').show();
+            $('#test_subclass_id').attr('required', 'required');
+        }
+
+        // Automatic loading based on scope
+        if (scope === 'school_wide') {
+            loadTestSubjects('school_wide', null);
+            loadExistingScheduleForBuilder('school_wide', null);
+        }
+    });
+
+    // Restore listeners for class/subclass selection in builder
+    $('#test_class_id').on('change', function() {
+        if($(this).val()) {
+            loadTestSubjects('class', $(this).val());
+            loadExistingScheduleForBuilder('class', $(this).val());
+        }
+    });
+    
+    $('#test_subclass_id').on('change', function() {
+        if($(this).val()) {
+            loadTestSubjects('subclass', $(this).val());
+            loadExistingScheduleForBuilder('subclass', $(this).val());
+        }
+    });
+
+    // --- TEST BUILDER LOGIC ---
+    let weekCount = 0;
+    let cachedSubjects = []; // To store subjects for this scope
+    const cachedTeachers = @json($teachers->map(function($t) { 
+        return ['id' => $t->id, 'name' => $t->first_name . ' ' . $t->last_name]; 
+    }));
+
+    // Helper: Calculate end time based on start time and duration
+    function calculateEndTime(startTime, durationMinutes) {
+        if (!startTime) return '';
+        const [hours, minutes] = startTime.split(':').map(Number);
+        const date = new Date();
+        date.setHours(hours, minutes, 0);
+        date.setMinutes(date.getMinutes() + parseInt(durationMinutes));
+        const h = String(date.getHours()).padStart(2, '0');
+        const m = String(date.getMinutes()).padStart(2, '0');
+        return `${h}:${m}`;
+    }
+
+    // Handle Auto-Time Slots Generation
+    $('#exams_per_week_limit').on('input change', function() {
+        const count = parseInt($(this).val());
+        const container = $('#test_slots_container');
+        const section = $('#test_slots_config_section');
+        
+        if (count > 0) {
+            section.fadeIn();
+            const existingValues = [];
+            container.find('input').each(function() {
+                existingValues.push($(this).val());
+            });
+
+            container.empty();
+            for (let i = 1; i <= count; i++) {
+                const val = existingValues[i-1] || '';
+                container.append(`
+                    <div class="col-md-2 col-6 mb-2">
+                        <label class="small text-muted mb-0 d-block">Slot ${i} Start</label>
+                        <input type="time" class="form-control form-control-sm slot-start-time" data-slot="${i}" value="${val}">
+                    </div>
+                `);
+            }
+        } else {
+            section.fadeOut();
+        }
+    });
+
+    // When a slot start time changes, update all existing rows for that slot in the builder
+    $(document).on('input change', '.slot-start-time', function() {
+        const slotIdx = $(this).data('slot');
+        const startTime = $(this).val();
+        const duration = parseInt($('#test_duration').val()) || 60;
+        const endTime = calculateEndTime(startTime, duration);
+
+        // Update every row that belongs to this slot across all weeks/cycles
+        $(`.exam-row[data-slot="${slotIdx}"]`).each(function() {
+            $(this).find('.row-start-time').val(startTime);
+            $(this).find('.row-end-time').val(endTime);
+        });
+    });
+
+    // Update all end times when duration changes
+    $('#test_duration').on('change input', function() {
+        const duration = parseInt($(this).val()) || 60;
+        // Update slots visual end times? (They only have start)
+        // Update all builder rows
+        $('.exam-row').each(function() {
+            const start = $(this).find('input[type="time"]').first().val();
+            if (start) {
+                $(this).find('input[type="time"]').last().val(calculateEndTime(start, duration));
+            }
+        });
+        
+        // Also trigger slot-start-time update to refresh cycles
+        $('.slot-start-time').first().trigger('change');
+    });
+
+    $('#add_week_btn').on('click', function() {
+        const testType = $('#test_type_select').val();
+        const cycleLabel = testType === 'weekly' ? 'Week' : 'Month';
+        
+        weekCount++;
+        const weekHtml = `
+            <div class="card mb-3 week-card" id="week_card_${weekCount}" data-week="${weekCount}">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold">${cycleLabel} ${weekCount} Cycle</h6>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-week-btn" onclick="removeWeek(${weekCount})">
+                        <i class="bi bi-trash"></i> Remove ${cycleLabel}
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="exams-container" id="exams_container_week_${weekCount}">
+                        <!-- Exams rows go here -->
+                    </div>
+                    <button type="button" class="btn btn-sm btn-primary-custom mt-2" onclick="addExamRow(${weekCount})">
+                        <i class="bi bi-plus-circle"></i> Add Exam to ${cycleLabel} ${weekCount}
+                    </button>
+                </div>
+            </div>
+        `;
+        $('#weeks_container').append(weekHtml);
+        // Add first exam row automatically
+        addExamRow(weekCount);
+    });
+
+    window.removeWeek = function(id) {
+        $(`#week_card_${id}`).remove();
+        // optionally re-index weeks
+    };
+
+    window.addExamRow = function(weekId) {
+        // Validate against limit
+        const limit = parseInt($('#exams_per_week_limit').val());
+        const currentCount = $(`#exams_container_week_${weekId} .exam-row`).length;
+        const testType = $('#test_type_select').val();
+        const cycleLabel = testType === 'weekly' ? 'week' : 'month';
+
+        if (!limit || limit <= 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Limit Required',
+                text: `Please set the "Max Exams Per ${cycleLabel.charAt(0).toUpperCase() + cycleLabel.slice(1)}" first.`
+            });
+            return;
+        }
+
+        if (currentCount >= limit) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Limit Reached',
+                text: `You can only add ${limit} exams per ${cycleLabel} as per your configuration.`
+            });
+            return;
+        }
+
+        const rowCount = Date.now(); // unique id
+        
+        // Auto-fill times based on slot
+        const slotIdx = currentCount + 1;
+        const defaultStart = $(`.slot-start-time[data-slot="${slotIdx}"]`).val() || '';
+        const duration = parseInt($('#test_duration').val()) || 60;
+        const defaultEnd = defaultStart ? calculateEndTime(defaultStart, duration) : '';
+
+        let subjectOptions = '<option value="">Select Subject</option>';
+        cachedSubjects.forEach(sub => {
+            subjectOptions += `<option value="${sub.id}" data-teacher-id="${sub.teacher_id}" data-teacher-name="${sub.teacher_name}">${sub.name} (${sub.code})</option>`;
+        });
+
+        let teacherOptions = '';
+        cachedTeachers.forEach(t => {
+            teacherOptions += `<option value="${t.id}">${t.name}</option>`;
+        });
+
+        const rowHtml = `
+            <div class="row align-items-end mb-3 border-bottom pb-3 exam-row" id="exam_row_${rowCount}" data-slot="${slotIdx}">
+                <div class="col-md-2">
+                    <label class="small text-muted">Day</label>
+                    <select class="form-control form-control-sm" name="schedule[week_${weekId}][${rowCount}][day]" required>
+                        <option value="Monday">Monday</option>
+                        <option value="Tuesday">Tuesday</option>
+                        <option value="Wednesday">Wednesday</option>
+                        <option value="Thursday">Thursday</option>
+                        <option value="Friday">Friday</option>
+                        <option value="Saturday">Saturday</option>
+                        <option value="Sunday">Sunday</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="small text-muted">Subject</label>
+                    <select class="form-control form-control-sm test-subject-dropdown" name="schedule[week_${weekId}][${rowCount}][subject_id]" onchange="preventDuplicateSubjects()" required>
+                        ${subjectOptions}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="small text-muted">Supervisor(s)</label>
+                    <select class="form-control form-control-sm test-supervisor-dropdown" name="schedule[week_${weekId}][${rowCount}][supervisor_ids][]" multiple>
+                        ${teacherOptions}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="small text-muted">Time (Start - End)</label>
+                    <div class="d-flex">
+                        <input type="time" class="form-control form-control-sm mr-1 row-start-time" name="schedule[week_${weekId}][${rowCount}][start]" value="${defaultStart}" required>
+                        <input type="time" class="form-control form-control-sm row-end-time" name="schedule[week_${weekId}][${rowCount}][end]" value="${defaultEnd}" required>
+                    </div>
+                </div>
+                <div class="col-md-1 text-right">
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeExamRow(${rowCount}); preventDuplicateSubjects();">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        $(`#exams_container_week_${weekId}`).append(rowHtml);
+
+        // Add listener for row start time manual changes to auto-update end time
+        $(`#exam_row_${rowCount} .row-start-time`).on('change', function() {
+            const start = $(this).val();
+            const dur = parseInt($('#test_duration').val()) || 60;
+            $(`#exam_row_${rowCount} .row-end-time`).val(calculateEndTime(start, dur));
+        });
+        preventDuplicateSubjects();
+
+        // Initialize Select2 for supervisors
+        initSelect2(`#exam_row_${rowCount} .test-supervisor-dropdown`, {
+            placeholder: "Select Supervisors",
+            allowClear: true,
+            width: '100%'
+        });
+
+        return rowCount;
+    };
+
+    window.preventDuplicateSubjects = function() {
+        const selectedIds = [];
+        $('.test-subject-dropdown').each(function() {
+            const val = $(this).val();
+            if (val) selectedIds.push(val);
+        });
+
+        $('.test-subject-dropdown').each(function() {
+            const currentVal = $(this).val();
+            $(this).find('option').each(function() {
+                const optId = $(this).val();
+                if (optId && optId !== currentVal && selectedIds.includes(optId)) {
+                    $(this).prop('disabled', true).css('color', '#ccc');
+                } else {
+                    $(this).prop('disabled', false).css('color', '');
+                }
+            });
+        });
+    };
+
+    window.loadExistingScheduleForBuilder = function(scope, scopeId) {
+        const testType = $('#test_type_select').val();
+        if (!testType) return;
+
+        $('#weeks_container').html('<div class="text-center p-5"><i class="bi bi-hourglass-split fs-2"></i><br>Loading existing schedule...</div>');
+
+        // First ensure subjects are loaded for this scope to populate dropdowns correctly
+        $.ajax({
+            url: '/admin/api/get-subjects-for-timetable',
+            method: 'GET',
+            data: { scope: scope, scope_id: scopeId },
+            success: function(subResponse) {
+                if (subResponse.success) {
+                    cachedSubjects = subResponse.subjects;
+                    
+                    // Now load the actual schedule entries
+                    $.ajax({
+                        url: '/admin/api/get-test-schedules',
+                        method: 'GET',
+                        data: { test_type: testType, scope: scope, scope_id: scopeId },
+                        success: function(response) {
+                            if (response.success && Object.keys(response.schedules).length > 0) {
+                                $('#weeks_container').empty();
+                                
+                                // Link to the correct examination automatically
+                                for (const w in response.schedules) {
+                                    if (response.schedules[w].length > 0) {
+                                        $('#test_exam_id').val(response.schedules[w][0].examID);
+                                        break;
+                                    }
+                                }
+                                
+                                // Calculate max exams found in any week to set the UI limit
+                                let maxInWeek = 0;
+                                for (const w in response.schedules) {
+                                    maxInWeek = Math.max(maxInWeek, response.schedules[w].length);
+                                }
+                                $('#exams_per_week_limit').val(maxInWeek || 2).trigger('change');
+
+                                // Fill Slot Config with times from the first week found
+                                const firstWeekKey = Object.keys(response.schedules)[0];
+                                if (firstWeekKey) {
+                                    response.schedules[firstWeekKey].forEach((ex, idx) => {
+                                        $(`.slot-start-time[data-slot="${idx + 1}"]`).val(ex.start_time.substring(0,5));
+                                    });
+                                }
+
+                                const sortedWeeks = Object.keys(response.schedules).sort((a,b) => parseInt(a) - parseInt(b));
+                                weekCount = 0;
+
+                                sortedWeeks.forEach(weekNum => {
+                                    weekCount = Math.max(weekCount, parseInt(weekNum));
+                                    const exams = response.schedules[weekNum];
+                                    
+                                    const cycleLabel = testType === 'weekly' ? 'Week' : 'Month';
+                                    const weekHtml = `
+                                        <div class="card mb-3 week-card" id="week_card_${weekNum}" data-week="${weekNum}">
+                                            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                                <h6 class="mb-0 fw-bold">${cycleLabel} ${weekNum} Cycle</h6>
+                                                <button type="button" class="btn btn-sm btn-outline-danger remove-week-btn" onclick="removeWeek(${weekNum})">
+                                                    <i class="bi bi-trash"></i> Remove ${cycleLabel}
+                                                </button>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="exams-container" id="exams_container_week_${weekNum}"></div>
+                                                <button type="button" class="btn btn-sm btn-primary-custom mt-2" onclick="addExamRow(${weekNum})">
+                                                    <i class="bi bi-plus-circle"></i> Add Exam to ${cycleLabel} ${weekNum}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    `;
+                                    $('#weeks_container').append(weekHtml);
+                                    
+                                    exams.forEach(ex => {
+                                        const rowId = addExamRow(weekNum);
+                                        const row = $(`#exam_row_${rowId}`);
+                                        if (row.length) {
+                                            row.find('select[name*="[day]"]').val(ex.day);
+                                            row.find('select[name*="[subject_id]"]').val(ex.subjectID);
+                                            row.find('input[name*="[start]"]').val(ex.start_time.substring(0,5));
+                                            row.find('input[name*="[end]"]').val(ex.end_time.substring(0,5));
+                                            
+                                            // Pre-fill supervisors
+                                            if (ex.supervisor_ids) {
+                                                let supIds = [];
+                                                try {
+                                                    supIds = JSON.parse(ex.supervisor_ids);
+                                                } catch(e) {
+                                                    supIds = String(ex.supervisor_ids).split(',');
+                                                }
+                                                // Handle case where it might be a single string or non-array
+                                                if (!Array.isArray(supIds)) {
+                                                    supIds = [String(supIds)];
+                                                }
+                                                row.find('select[name*="[supervisor_ids]"]').val(supIds);
+                                            }
+                                        }
+                                    });
+                                });
+                                preventDuplicateSubjects();
+                            } else {
+                                $('#weeks_container').empty();
+                                weekCount = 0;
+                            }
+                        }
+                    });
+                }
+            }
+        });
+    };
+
+    window.removeExamRow = function(rowId) {
+        $(`#exam_row_${rowId}`).remove();
+    };
+
+    // Toggle Scope in View Tab
+    $('#view_test_scope').on('change', function() {
+        const scope = $(this).val();
+        const showGroup = (scope === 'class' || scope === 'subclass');
+        
+        // Use flex/none for bootstrap behavior consistency
+        if (showGroup) {
+            $('#view_test_scope_id_group').show().css('display', 'block');
+        } else {
+            $('#view_test_scope_id_group').hide();
+        }
+        
+        $('#view_test_scope_id').empty();
+
+        if (scope === 'class') {
+            const classes = @json($classes ?? []);
+            $('#view_test_scope_id').append('<option value="">Select Class...</option>');
+            classes.forEach(c => {
+                $('#view_test_scope_id').append(`<option value="${c.classID}">${c.class_name}</option>`);
+            });
+        } else if (scope === 'subclass') {
+            const subclasses = @json($subclasses ?? []);
+            $('#view_test_scope_id').append('<option value="">Select Subclass...</option>');
+            subclasses.forEach(s => {
+                const className = s.class ? s.class.class_name : (s.class_name || '');
+                $('#view_test_scope_id').append(`<option value="${s.subclassID}">${className} ${s.subclass_name}</option>`);
+            });
+        }
+    }).trigger('change');
+
+    // Load Test Schedule
+    $('#loadTestScheduleBtn').on('click', function() {
+        const type = $('#view_test_type').val();
+        const scope = $('#view_test_scope').val();
+        const scopeId = $('#view_test_scope_id').val();
+
+        if (scope !== 'school_wide' && !scopeId) {
+            Swal.fire('Selection Required', 'Please select a specific class/subclass first', 'warning');
+            return;
+        }
+
+        const btn = $(this);
+        const originalHtml = btn.html();
+        btn.prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> Loading...');
+
+        $.ajax({
+            url: '/admin/api/get-test-schedules',
+            method: 'GET',
+            data: { test_type: type, scope: scope, scope_id: scopeId },
+            success: function(response) {
+                if (response.success) {
+                    renderTestSchedule(response.schedules);
+                } else {
+                    Swal.fire('Error', 'Failed to load schedule', 'error');
+                }
+                btn.prop('disabled', false).html(originalHtml);
+            },
+            error: function() {
+                Swal.fire('Error', 'Server error occurred while loading schedule', 'error');
+                btn.prop('disabled', false).html(originalHtml);
+            }
+        });
+    });
+
+    function getWeekDates(weeksFromNow = 0) {
+        const now = new Date();
+        const day = now.getDay(); 
+        const diff = now.getDate() - day + (day === 0 ? -6 : 1); 
+        const monday = new Date(now.getFullYear(), now.getMonth(), diff + (weeksFromNow * 7));
+        const sunday = new Date(now.getFullYear(), now.getMonth(), diff + (weeksFromNow * 7) + 6);
+        
+        const options = { day: 'numeric', month: 'short' };
+        const startStr = monday.toLocaleDateString('en-GB', options);
+        const endStr = sunday.toLocaleDateString('en-GB', options);
+        const year = sunday.getFullYear();
+        
+        return `${startStr} to ${endStr}, ${year}`;
+    }
+
+    function renderTestSchedule(schedules) {
+        const container = $('#testScheduleDisplay');
+        container.empty();
+        const testType = $('#view_test_type').val();
+        const cycleLabel = testType === 'weekly' ? 'Week' : 'Month';
+
+        if (!schedules || Object.keys(schedules).length === 0) {
+            container.html('<div class="alert alert-info text-center py-5"><i class="bi bi-info-circle fs-2"></i><br>No schedule found for this selection.</div>');
+            return;
+        }
+
+        let html = `
+            <div class="d-flex justify-content-end mb-3 gap-2">
+                <button class="btn btn-sm btn-danger mr-2" onclick="downloadTestSchedulePDF(window.lastLoadedSchedules)">
+                    <i class="bi bi-file-earmark-pdf"></i> Download PDF
+                </button>
+                <button class="btn btn-sm btn-warning mr-2" onclick="triggerEditTestSchedule()">
+                    <i class="bi bi-pencil"></i> Edit Schedule
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteTestSchedule()">
+                    <i class="bi bi-trash"></i> Delete All
+                </button>
+            </div>
+        `;
+        const sortedWeeks = Object.keys(schedules).sort((a,b) => parseInt(a) - parseInt(b));
+        window.lastLoadedSchedules = schedules;
+        
+        sortedWeeks.forEach(weekNum => {
+            const exams = schedules[weekNum];
+            const displayTitle = (testType === 'weekly') 
+                ? `Week No ${weekNum} (${getWeekDates(parseInt(weekNum) - 1)})` 
+                : `${cycleLabel} ${weekNum} Cycle`;
+
+            html += `
+                <div class="card mb-4 border-0 shadow-sm overflow-hidden animate__animated animate__fadeIn">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #940000; color: white; border: none;">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-calendar3 mr-2"></i> ${displayTitle}</h6>
+                         <span class="badge bg-success text-white px-3 py-2" style="font-size: 0.85rem;">${exams.length} Exams scheduled</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0">
+                            <thead class="bg-light text-muted">
+                                <tr>
+                                    <th class="pl-4 border-0">Day</th>
+                                    <th class="border-0">Subject</th>
+                                    <th class="text-center border-0">Time Range</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+
+            exams.forEach(ex => {
+                html += `
+                    <tr>
+                        <td class="pl-4 fw-bold text-dark">${ex.day}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle bg-light d-flex align-items-center justify-content-center mr-2" style="width: 32px; height: 32px; color: #940000; border: 1px solid #eee;">
+                                    <i class="bi bi-book"></i>
+                                </div>
+                                <div class="d-flex flex-column">
+                                    <span class="fw-bold">${ex.subject ? ex.subject.subject_name : 'N/A'}</span>
+                                    <small class="text-muted">${ex.teacher ? ex.teacher.first_name + ' ' + ex.teacher.last_name : ''}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge badge-pill py-2 px-3" style="background-color: #f8f9fa; color: #940000; border: 1px solid #94000022;">
+                                <i class="bi bi-clock mr-1"></i> ${ex.start_time.substring(0,5)} - ${ex.end_time.substring(0,5)}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table></div></div>`;
+        });
+
+        container.html(html);
+    }
+
+    window.lastLoadedSchedules = null;
+
+    window.downloadTestSchedulePDF = function(schedules) {
+        if (!schedules) {
+            Swal.fire('Error', 'No schedule data available to download', 'error');
+            return;
+        }
+        
+        if (typeof window.jspdf === 'undefined') {
+            Swal.fire('Error', 'PDF library not loaded', 'error');
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        const schoolName = '{{ $school->school_name ?? "SCHOOL TIMETABLE" }}';
+        const testType = $('#view_test_type').val() === 'weekly' ? 'WEEKLY' : 'MONTHLY';
+        const scope = $('#view_test_scope option:selected').text();
+        const target = $('#view_test_scope_id option:selected').text();
+        
+        doc.setFontSize(18);
+        doc.setTextColor(148, 0, 0); // #940000
+        doc.text(schoolName.toUpperCase(), 105, 15, { align: 'center' });
+        
+        doc.setFontSize(14);
+        doc.setTextColor(0, 0, 0);
+        doc.text(`${testType} TEST SCHEDULE`, 105, 23, { align: 'center' });
+        
+        doc.setFontSize(11);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Scope: ${scope} ${target ? '- ' + target : ''}`, 105, 30, { align: 'center' });
+
+        let yPos = 40;
+        
+        Object.keys(schedules).sort((a,b) => parseInt(a) - parseInt(b)).forEach(weekNum => {
+            const exams = schedules[weekNum];
+            const cycleLabel = $('#view_test_type').val() === 'weekly' ? 'Week' : 'Month';
+            const displayTitle = ($('#view_test_type').val() === 'weekly') 
+                ? `Week No ${weekNum} (${getWeekDates(parseInt(weekNum) - 1)})` 
+                : `${cycleLabel} ${weekNum} Cycle`;
+            
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0,0,0);
+            doc.text(displayTitle, 14, yPos);
+            yPos += 5;
+            
+            const tableData = exams.map(ex => [
+                ex.day,
+                ex.subject ? ex.subject.subject_name : 'N/A',
+                ex.teacher ? ex.teacher.first_name + ' ' + ex.teacher.last_name : '',
+                `${ex.start_time.substring(0,5)} - ${ex.end_time.substring(0,5)}`
+            ]);
+            
+            doc.autoTable({
+                startY: yPos,
+                head: [['Day', 'Subject', 'Teacher', 'Time']],
+                body: tableData,
+                theme: 'grid',
+                headStyles: { fillColor: [148, 0, 0] }, // #940000
+                margin: { top: 10 },
+                styles: { fontSize: 9 }
+            });
+            
+            yPos = doc.lastAutoTable.finalY + 15;
+            
+            if (yPos > 260) {
+                doc.addPage();
+                yPos = 20;
+            }
+        });
+
+        doc.save(`Test_Schedule_${testType}_${new Date().getTime()}.pdf`);
+    };
+
+    window.deleteTestSchedule = function() {
+        const type = $('#view_test_type').val();
+        const scope = $('#view_test_scope').val();
+        const scopeId = $('#view_test_scope_id').val();
+
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "This will permanently delete all cycles for this test schedule.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '/admin/api/delete-all-test-schedules',
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
+                    data: { test_type: type, scope: scope, scope_id: scopeId },
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire('Deleted!', 'Schedule has been deleted.', 'success');
+                            $('#loadTestScheduleBtn').click(); // Reload view
+                        } else {
+                            Swal.fire('Error', response.error || 'Failed to delete schedule', 'error');
+                        }
+                    },
+                    error: function() {
+                        Swal.fire('Error', 'Server error occurred', 'error');
+                    }
+                });
+            }
+        });
+    };
+
+    window.triggerEditTestSchedule = function() {
+        const type = $('#view_test_type').val();
+        const scope = $('#view_test_scope').val();
+        const scopeId = $('#view_test_scope_id').val();
+
+        $('#createTimetableBtn').click(); // Open modal
+        
+        // Switch to Test Tab if not already
+        $('input[name="timetable_category_main"][value="exam"]').prop('checked', true).trigger('change');
+        $('#exam_category_select').val('test').trigger('change');
+        
+        // Set values
+        $('#test_type_select').val(type).trigger('change');
+        $('#test_scope').val(scope).trigger('change');
+        
+        setTimeout(() => {
+            if (scope === 'class') {
+                $('#test_class_id').val(scopeId).trigger('change');
+            } else if (scope === 'subclass') {
+                $('#test_subclass_id').val(scopeId).trigger('change');
+            } else {
+                window.loadExistingScheduleForBuilder('school_wide', null);
+            }
+            
+            // Scroll to the builder section
+            $('#test_builder_config')[0].scrollIntoView({ behavior: 'smooth' });
+        }, 500);
+    };
+
+    function loadTestSubjects(scope, id) {
+        // Constructing AJAX payload
+        $.ajax({
+            url: '/admin/api/get-subjects-for-timetable',
+            method: 'GET',
+            data: { scope: scope, scope_id: id },
+            success: function(response) {
+                 if(response.success) {
+                     cachedSubjects = response.subjects; // Expecting [{id, name, code, teacher_id, teacher_name}, ...]
+                     // If weeks already exist, we might want to warn user that subjects might need re-selection
+                     Swal.close();
+                 } else {
+                     Swal.fire('Error', 'Could not load subjects.', 'error');
+                 }
+            },
+            error: function() {
+                // Fallback for demonstration/mock if backend route not yet created by user
+                console.warn('Backend route /admin/api/get-subjects-for-timetable not found. Using Mock Data.');
+                cachedSubjects = [
+                    {id: 1, name: 'Mathematics', code: 'MAT', teacher_id: 101, teacher_name: 'Mr. Juma'},
+                    {id: 2, name: 'English', code: 'ENG', teacher_id: 102, teacher_name: 'Ms. Sarah'},
+                    {id: 3, name: 'Kiswahili', code: 'KIS', teacher_id: 103, teacher_name: 'Mr. Baraka'},
+                    {id: 4, name: 'Science', code: 'SCI', teacher_id: 104, teacher_name: 'Mrs. Komba'},
+                    {id: 5, name: 'Geography', code: 'GEO', teacher_id: 105, teacher_name: 'Mr. John'}
+                ];
+                Swal.close();
+            }
+        });
+    }
 
     // Load Session Timetable
     $('#loadSessionTimetableBtn').on('click', function() {
@@ -2023,7 +3046,7 @@ $(document).ready(function() {
                 if (response.success) {
                     // Open create modal and switch to class session timetable
                     $('#createTimetableModal').modal('show');
-                    $('input[name="timetable_category"][value="class"]').prop('checked', true).trigger('change');
+                    $('input[name="timetable_category_main"][value="class"]').prop('checked', true).trigger('change');
                     
                     // Wait for form to be ready
                     setTimeout(function() {
@@ -2364,7 +3387,7 @@ $(document).ready(function() {
         $('#days_timetable').html('');
         $('#days_info').hide();
         // Reset required attributes based on selected category
-        const category = $('input[name="timetable_category"]:checked').val();
+        const category = $('input[name="timetable_category_main"]:checked').val();
         if (category === 'exam') {
             $('#session_start_time, #session_end_time, #prepo_start_time, #prepo_end_time').removeAttr('required').prop('disabled', true);
         } else {
@@ -2780,25 +3803,7 @@ $(document).ready(function() {
         });
     }
 
-    // Handle timetable category radio button change
-    $('input[name="timetable_category"]').on('change', function() {
-        const category = $(this).val();
-        if (category === 'exam') {
-            $('#examTimetableForm').show();
-            $('#classSessionTimetableForm').hide();
-            // Remove required attribute from hidden fields to prevent validation errors
-            $('#session_start_time, #session_end_time, #prepo_start_time, #prepo_end_time').removeAttr('required').prop('disabled', true);
-        } else if (category === 'class') {
-            $('#examTimetableForm').hide();
-            $('#classSessionTimetableForm').show();
-            // Re-enable and add required attribute back when form is shown
-            $('#session_start_time, #session_end_time').prop('disabled', false).attr('required', 'required');
-            // Prepo fields only required if has_prepo is checked
-            $('#prepo_start_time, #prepo_end_time').prop('disabled', false);
-            // Check if definition exists
-            checkExistingDefinition();
-        }
-    });
+    // Consolidated listener at line 944 handles this now
 
     // Check for existing timetable definition
     function checkExistingDefinition() {
@@ -4234,7 +5239,7 @@ $(document).ready(function() {
         if ($(this).is(':checked')) {
             $('#prepoTimeSection').show();
             // Only add required if class session timetable is selected
-            if ($('input[name="timetable_category"]:checked').val() === 'class') {
+            if ($('input[name="timetable_category_main"]:checked').val() === 'class') {
                 $('#prepo_start_time, #prepo_end_time').prop('required', true).prop('disabled', false);
             }
         } else {
@@ -5443,16 +6448,51 @@ $(document).ready(function() {
         e.preventDefault();
 
         // Remove required from hidden fields before validation
-        const category = $('input[name="timetable_category"]:checked').val();
-        if (category === 'exam') {
-            // Ensure session fields are not required when exam timetable is selected
+        const mainCategory = $('input[name="timetable_category_main"]:checked').val();
+        const subCategory = $('#exam_category_select').val();
+
+        if (mainCategory === 'exam') {
+            // Ensure session fields are not required
             $('#session_start_time, #session_end_time, #prepo_start_time, #prepo_end_time').removeAttr('required').prop('disabled', true);
         }
 
         const timetableType = $('#timetable_type').val();
         let requestData = {};
 
-        if (timetableType === 'class_specific') {
+        // --- BRANCH FOR TEST SCHEDULE ---
+        if (mainCategory === 'exam' && subCategory === 'test') {
+            const schedule = {};
+            $('.week-card').each(function() {
+                const weekNum = $(this).data('week');
+                const weekExams = [];
+                $(this).find('.exam-row').each(function() {
+                    const row = $(this);
+                    weekExams.push({
+                        day: row.find('select[name*="[day]"]').val(),
+                        subject_id: row.find('select[name*="[subject_id]"]').val(),
+                        teacher_id: row.find('select[name*="[subject_id]"] option:selected').data('teacher-id'),
+                        supervisor_ids: row.find('select[name*="[supervisor_ids]"]').val(), // Multi-select array
+                        start: row.find('input[name*="[start]"]').val(),
+                        end: row.find('input[name*="[end]"]').val()
+                    });
+                });
+                if (weekExams.length > 0) {
+                    schedule[`week_${weekNum}`] = weekExams;
+                }
+            });
+
+            requestData = {
+                exam_category_select: 'test',
+                test_type: $('#test_type_select').val(),
+                test_scope: $('#test_scope').val(),
+                test_class_id: $('#test_class_id').val(),
+                test_subclass_id: $('#test_subclass_id').val(),
+                test_exam_id: $('#test_exam_id').val(),
+                start_date: $('#test_start_date').val(),
+                schedule: schedule
+            };
+        } 
+        else if (timetableType === 'class_specific') {
             // Class specific - simple form data
             requestData = {
                 examID: $('#examID').val(),
@@ -5465,7 +6505,13 @@ $(document).ready(function() {
                 class_subjectID: $('#class_subjectID').val(),
                 notes: $('#notes').val()
             };
-        } else {
+        } 
+        else if (mainCategory === 'session') {
+           // Handle session timetable if needed, but the original code had it in a separate logic or partially here.
+           // For now, preservation of original logic for school-wide/etc.
+           requestData = $(this).serialize(); // Fallback for simple fields
+        }
+        else {
             // School wide - check creation method
             const creationMethod = $('#creation_method').val();
             const supervisorMethod = $('#supervisor_assignment_method').val();

@@ -430,6 +430,26 @@
                             </ul>
                         </li>
 
+                        <!-- Student Identity Cards -->
+                        <li class="dropdown-nav-item">
+                            <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#studentIDCards" aria-expanded="false">
+                                <i class="fa fa-id-card-o"></i> Student Identity Card <i class="fa fa-chevron-down float-right"></i>
+                            </a>
+                            <ul id="studentIDCards" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
+                                @php
+                                    $navSchoolID = Session::get('schoolID');
+                                    $navClasses = $navSchoolID ? \App\Models\ClassModel::where('schoolID', $navSchoolID)->where('status', 'Active')->orderBy('class_name', 'asc')->get() : collect();
+                                @endphp
+                                @if($navClasses->isEmpty())
+                                    <li><a href="#" class="nav-link text-muted small">No Classes Available</a></li>
+                                @else
+                                    @foreach($navClasses as $nc)
+                                        <li><a href="{{ route('admin.student_id_cards', $nc->classID) }}" class="nav-link"><i class="fa fa-chevron-right small"></i> {{ $nc->class_name }}</a></li>
+                                    @endforeach
+                                @endif
+                            </ul>
+                        </li>
+
                         <!-- Planning & Scheduling -->
                         <li class="dropdown-nav-item">
                             <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#planningScheduling" aria-expanded="false">
@@ -567,15 +587,15 @@
                         </li>
 
                         <!-- Revenue and Expenses -->
-                        <li class="dropdown-nav-item">
-                            <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#revenueExpenses" aria-expanded="false">
+                        <!-- <li class="dropdown-nav-item">
+                            <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#revenueExpenses" aria-expanded="false"> -->
                                 <!-- <i class="fa fa-money"></i> Revenue and Expenses <i class="fa fa-chevron-down float-right"></i> -->
-                            </a>
+                            <!-- </a>
                             <ul id="revenueExpenses" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
                                 {{-- <li><a href="{{ route('manage_revenue') }}" class="nav-link"><i class="fa fa-arrow-up"></i> Manage Revenue</a></li>
                                 <li><a href="{{ route('manage_expenses') }}" class="nav-link"><i class="fa fa-arrow-down"></i> Manage Expenses</a></li> --}}
                             </ul>
-                        </li>
+                        </li> -->
 
                         <!-- School Resources -->
                         <li class="dropdown-nav-item">
@@ -673,12 +693,19 @@
                                 if ($isAdmin && $schoolID) {
                                     $teacherHasImage = \Illuminate\Support\Facades\Schema::hasColumn('teachers', 'image');
                                     $teacherHasGender = \Illuminate\Support\Facades\Schema::hasColumn('teachers', 'gender');
+                                    
+                                    // Count only notifications for papers that HAVE content
                                     $examPaperNotificationCount = \Illuminate\Support\Facades\DB::table('exam_paper_notifications')
-                                        ->where('schoolID', $schoolID)
-                                        ->where('is_read', 0)
+                                        ->join('exam_papers', 'exam_paper_notifications.exam_paperID', '=', 'exam_papers.exam_paperID')
+                                        ->where('exam_paper_notifications.schoolID', $schoolID)
+                                        ->where('exam_paper_notifications.is_read', 0)
+                                        ->where(function($query) {
+                                            $query->whereNotNull('exam_papers.file_path')
+                                                  ->orWhereNotNull('exam_papers.question_content');
+                                        })
                                         ->count();
 
-                                    $examPaperNotifications = \Illuminate\Support\Facades\DB::table('exam_paper_notifications')
+                                    $examPaperNotificationsQuery = \Illuminate\Support\Facades\DB::table('exam_paper_notifications')
                                         ->join('exam_papers', 'exam_paper_notifications.exam_paperID', '=', 'exam_papers.exam_paperID')
                                         ->join('examinations', 'exam_papers.examID', '=', 'examinations.examID')
                                         ->join('class_subjects', 'exam_papers.class_subjectID', '=', 'class_subjects.class_subjectID')
@@ -687,6 +714,10 @@
                                         ->leftJoin('classes', 'class_subjects.classID', '=', 'classes.classID')
                                         ->join('teachers', 'exam_paper_notifications.teacherID', '=', 'teachers.id')
                                         ->where('exam_paper_notifications.schoolID', $schoolID)
+                                        ->where(function($query) {
+                                            $query->whereNotNull('exam_papers.file_path')
+                                                  ->orWhereNotNull('exam_papers.question_content');
+                                        })
                                         ->orderBy('exam_paper_notifications.created_at', 'desc')
                                         ->limit(5);
 
@@ -708,7 +739,7 @@
                                         $selectColumns[] = 'teachers.gender';
                                     }
 
-                                    $examPaperNotifications = $examPaperNotifications->get($selectColumns);
+                                    $examPaperNotifications = $examPaperNotificationsQuery->get($selectColumns);
                                 }
                             @endphp
                             <button class="btn btn-secondary dropdown-toggle" type="button"

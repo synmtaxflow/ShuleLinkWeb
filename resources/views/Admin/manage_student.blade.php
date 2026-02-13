@@ -99,6 +99,18 @@
         margin: 0;
     }
 
+    /* Custom Modal Width and Scroll Fix */
+    @media (min-width: 1200px) {
+        .modal-xl {
+            max-width: 95% !important;
+        }
+    }
+    .modal-body-scrollable {
+        max-height: 80vh !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+    }
+    
     .school-logo-preview {
         width: 80px;
         height: 80px;
@@ -789,9 +801,9 @@
 </div>
 
 <!-- Register Student Modal -->
-<div class="modal fade" id="addStudentModal" tabindex="-1" aria-labelledby="addStudentModalLabel" aria-hidden="true" style="width: 80%">
-    <div style="width: 80%" class="modal-dialog modal-lg">
-        <div style="width: 80%" class="modal-content">
+<div class="modal fade" id="addStudentModal" tabindex="-1" aria-labelledby="addStudentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
             <div class="modal-header bg-primary-custom text-white">
                 <h5 class="modal-title" id="addStudentModalLabel">
                     <i class="bi bi-person-plus"></i> Register New Student
@@ -800,7 +812,7 @@
             </div>
             <form id="addStudentForm" enctype="multipart/form-data">
                 @csrf
-                <div class="modal-body">
+                <div class="modal-body modal-body-scrollable">
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label for="first_name" class="form-label">First Name <span class="text-danger">*</span></label>
@@ -873,6 +885,24 @@
                         <small class="text-muted">Max size: 2MB (jpg, jpeg, png)</small>
                     </div>
 
+                    <!-- Additional Particulars Section -->
+                    <hr class="my-4">
+                    <h6 class="mb-3 text-primary-custom"><i class="bi bi-person-vcard"></i> Additional Particulars</h6>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="birth_certificate_number" class="form-label">Birth Certificate No.</label>
+                            <input type="text" class="form-control" id="birth_certificate_number" name="birth_certificate_number">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="religion" class="form-label">Religion</label>
+                            <input type="text" class="form-control" id="religion" name="religion">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="nationality" class="form-label">Nationality</label>
+                            <input type="text" class="form-control" id="nationality" name="nationality" value="Tanzanian">
+                        </div>
+                    </div>
+
                     <!-- Sponsorship Information Section -->
                     <hr class="my-4">
                     <h6 class="mb-3 text-primary-custom"><i class="bi bi-handshake-fill"></i> Sponsorship Information</h6>
@@ -894,47 +924,108 @@
                     </div>
                     <div class="mb-3" id="sponsorshipPercentageContainer" style="display: none;">
                         <label for="sponsorship_percentage" class="form-label">Sponsorship Percentage (%)</label>
-                        <input type="number" class="form-control" id="sponsorship_percentage" name="sponsorship_percentage" min="0" max="100" step="any" onfocus="this.select()" placeholder="e.g., 50.00">
-                        <small class="text-muted">Enter the percentage of fees covered by the sponsor (0-100)</small>
+                        <input type="number" class="form-control" id="sponsorship_percentage" name="sponsorship_percentage" min="0" max="100" step="any" placeholder="e.g., 50.00">
                     </div>
 
                     <!-- Health Information Section -->
                     <hr class="my-4">
                     <h6 class="mb-3 text-primary-custom"><i class="bi bi-heart-pulse"></i> Health Information</h6>
+                    <div class="mb-3">
+                        <label for="general_health_condition" class="form-label">General Health Condition</label>
+                        <textarea class="form-control" id="general_health_condition" name="general_health_condition" rows="2" placeholder="Healthy, Good, etc."></textarea>
+                    </div>
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="is_disabled" name="is_disabled" value="1">
-                                <label class="form-check-label" for="is_disabled">
-                                    Disabled
-                                </label>
+                                <input class="form-check-input" type="checkbox" id="has_disability" name="has_disability" value="1">
+                                <label class="form-check-label" for="has_disability">Has Disability</label>
                             </div>
                         </div>
                         <div class="col-md-4 mb-3">
                             <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="has_chronic_illness" name="has_chronic_illness" value="1">
+                                <label class="form-check-label" for="has_chronic_illness">Has Chronic Illness</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_disabled" name="is_disabled" value="1">
+                                <label class="form-check-label" for="is_disabled">Disabled</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="has_epilepsy" name="has_epilepsy" value="1">
-                                <label class="form-check-label" for="has_epilepsy">
-                                    Epilepsy/Seizure Disorder
-                                </label>
+                                <label class="form-check-label" for="has_epilepsy">Epilepsy</label>
                             </div>
                         </div>
                         <div class="col-md-4 mb-3">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="has_allergies" name="has_allergies" value="1">
-                                <label class="form-check-label" for="has_allergies">
-                                    Allergies
-                                </label>
+                                <label class="form-check-label" for="has_allergies">Allergies</label>
                             </div>
                         </div>
                     </div>
-                    <div class="mb-3" id="allergiesDetailsContainer" style="display: none;">
-                        <label for="allergies_details" class="form-label">Allergies Details</label>
-                        <textarea class="form-control" id="allergies_details" name="allergies_details" rows="2" placeholder="Please specify the allergies"></textarea>
+                    <div id="addHealthDetailsSection">
+                        <div class="mb-3" id="disabilityDetailsContainer" style="display: none;">
+                            <label for="disability_details" class="form-label">Disability Details</label>
+                            <textarea class="form-control" id="disability_details" name="disability_details" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3" id="chronicIllnessDetailsContainer" style="display: none;">
+                            <label for="chronic_illness_details" class="form-label">Chronic Illness Details</label>
+                            <textarea class="form-control" id="chronic_illness_details" name="chronic_illness_details" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3" id="allergiesDetailsContainer" style="display: none;">
+                            <label for="allergies_details" class="form-label">Allergies Details</label>
+                            <textarea class="form-control" id="allergies_details" name="allergies_details" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="immunization_details" class="form-label">Immunization Details</label>
+                        <textarea class="form-control" id="immunization_details" name="immunization_details" rows="2"></textarea>
+                    </div>
+
+                    <!-- Emergency Contact Section -->
+                    <hr class="my-4">
+                    <h6 class="mb-3 text-primary-custom"><i class="bi bi-telephone"></i> Emergency Contact</h6>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="emergency_contact_name" class="form-label">Contact Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="emergency_contact_name" name="emergency_contact_name" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="emergency_contact_relationship" class="form-label">Relationship <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="emergency_contact_relationship" name="emergency_contact_relationship" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="emergency_contact_phone" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="emergency_contact_phone" name="emergency_contact_phone" required>
+                        </div>
+                    </div>
+
+                    <!-- Official Use Section -->
+                    <hr class="my-4">
+                    <h6 class="mb-3 text-primary-custom"><i class="bi bi-person-badge"></i> Official Use & Declaration</h6>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="declaration_date" class="form-label">Declaration Date</label>
+                            <input type="date" class="form-control" id="declaration_date" name="declaration_date" value="{{ date('Y-m-d') }}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="registering_officer_name" class="form-label">Registering Officer</label>
+                            <input type="text" class="form-control" id="registering_officer_name" name="registering_officer_name">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="registering_officer_title" class="form-label">Officer Title</label>
+                            <input type="text" class="form-control" id="registering_officer_title" name="registering_officer_title">
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary-custom">
+                    <button type="submit" class="btn btn-primary-custom px-4">
                         <i class="bi bi-check-circle"></i> Register Student
                     </button>
                 </div>
@@ -967,7 +1058,7 @@
 
 <!-- Edit Student Modal -->
 <div class="modal fade" id="editStudentModal" tabindex="-1" aria-labelledby="editStudentModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header bg-warning text-dark">
                 <h5 class="modal-title" id="editStudentModalLabel">
@@ -977,7 +1068,7 @@
             </div>
             <form id="editStudentForm" enctype="multipart/form-data">
                 @csrf
-                <div class="modal-body">
+                <div class="modal-body modal-body-scrollable">
                     <input type="hidden" id="editStudentID" name="studentID">
 
                     <!-- Photo Preview -->
@@ -1052,6 +1143,13 @@
                         <textarea class="form-control" id="edit_address" name="address" rows="2"></textarea>
                     </div>
                     
+                    <!-- Photo Section -->
+                    <div class="mb-3">
+                        <label for="edit_photo" class="form-label">Update Photo</label>
+                        <input type="file" class="form-control" id="edit_photo" name="photo" accept="image/*">
+                        <small class="text-muted">Max size: 2MB (jpg, jpeg, png). Leave empty to keep current photo.</small>
+                    </div>
+
                     <!-- Additional Particulars Section -->
                     <hr class="my-4">
                     <h6 class="mb-3 text-primary-custom"><i class="bi bi-person-vcard"></i> Additional Particulars</h6>
@@ -1068,9 +1166,6 @@
                             <label for="edit_nationality" class="form-label">Nationality</label>
                             <input type="text" class="form-control" id="edit_nationality" name="nationality">
                         </div>
-                    </div>
-                    
-                        <small class="text-muted">Max size: 2MB (jpg, jpeg, png). Leave empty to keep current photo.</small>
                     </div>
                     
                     <!-- Sponsorship Information Section -->
@@ -1109,25 +1204,19 @@
                         <div class="col-md-4 mb-3">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="edit_has_disability" name="has_disability" value="1">
-                                <label class="form-check-label" for="edit_has_disability">
-                                    Has Disability
-                                </label>
+                                <label class="form-check-label" for="edit_has_disability">Has Disability</label>
                             </div>
                         </div>
                         <div class="col-md-4 mb-3">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="edit_has_chronic_illness" name="has_chronic_illness" value="1">
-                                <label class="form-check-label" for="edit_has_chronic_illness">
-                                    Has Chronic Illness
-                                </label>
+                                <label class="form-check-label" for="edit_has_chronic_illness">Has Chronic Illness</label>
                             </div>
                         </div>
                         <div class="col-md-4 mb-3">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="edit_is_disabled" name="is_disabled" value="1">
-                                <label class="form-check-label" for="edit_is_disabled">
-                                    Disabled
-                                </label>
+                                <label class="form-check-label" for="edit_is_disabled">Disabled</label>
                             </div>
                         </div>
                     </div>
@@ -1135,35 +1224,34 @@
                         <div class="col-md-4 mb-3">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="edit_has_epilepsy" name="has_epilepsy" value="1">
-                                <label class="form-check-label" for="edit_has_epilepsy">
-                                    Epilepsy/Seizure Disorder
-                                </label>
+                                <label class="form-check-label" for="edit_has_epilepsy">Epilepsy</label>
                             </div>
                         </div>
                         <div class="col-md-4 mb-3">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="edit_has_allergies" name="has_allergies" value="1">
-                                <label class="form-check-label" for="edit_has_allergies">
-                                    Allergies
-                                </label>
+                                <label class="form-check-label" for="edit_has_allergies">Allergies</label>
                             </div>
                         </div>
                     </div>
-                    <div class="mb-3" id="editDisabilityDetailsContainer" style="display: none;">
-                        <label for="edit_disability_details" class="form-label">Disability Details</label>
-                        <textarea class="form-control" id="edit_disability_details" name="disability_details" rows="2" placeholder="Please specify the disability"></textarea>
-                    </div>
-                    <div class="mb-3" id="editChronicIllnessDetailsContainer" style="display: none;">
-                        <label for="edit_chronic_illness_details" class="form-label">Chronic Illness Details</label>
-                        <textarea class="form-control" id="edit_chronic_illness_details" name="chronic_illness_details" rows="2" placeholder="Please specify the chronic illness"></textarea>
-                    </div>
-                    <div class="mb-3" id="editAllergiesDetailsContainer" style="display: none;">
-                        <label for="edit_allergies_details" class="form-label">Allergies Details</label>
-                        <textarea class="form-control" id="edit_allergies_details" name="allergies_details" rows="2" placeholder="Please specify the allergies"></textarea>
+
+                    <div id="editHealthDetailsSection">
+                        <div class="mb-3" id="editDisabilityDetailsContainer" style="display: none;">
+                            <label for="edit_disability_details" class="form-label">Disability Details</label>
+                            <textarea class="form-control" id="edit_disability_details" name="disability_details" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3" id="editChronicIllnessDetailsContainer" style="display: none;">
+                            <label for="edit_chronic_illness_details" class="form-label">Chronic Illness Details</label>
+                            <textarea class="form-control" id="edit_chronic_illness_details" name="chronic_illness_details" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3" id="editAllergiesDetailsContainer" style="display: none;">
+                            <label for="edit_allergies_details" class="form-label">Allergies Details</label>
+                            <textarea class="form-control" id="edit_allergies_details" name="allergies_details" rows="2"></textarea>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label for="edit_immunization_details" class="form-label">Immunization Details</label>
-                        <textarea class="form-control" id="edit_immunization_details" name="immunization_details" rows="2" placeholder="Enter immunization/vaccination details"></textarea>
+                        <textarea class="form-control" id="edit_immunization_details" name="immunization_details" rows="2"></textarea>
                     </div>
                     
                     <!-- Emergency Contact Section -->
@@ -1171,23 +1259,43 @@
                     <h6 class="mb-3 text-primary-custom"><i class="bi bi-telephone"></i> Emergency Contact</h6>
                     <div class="row">
                         <div class="col-md-4 mb-3">
-                            <label for="edit_emergency_contact_name" class="form-label">Contact Name</label>
-                            <input type="text" class="form-control" id="edit_emergency_contact_name" name="emergency_contact_name">
+                            <label for="edit_emergency_contact_name" class="form-label">Contact Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="edit_emergency_contact_name" name="emergency_contact_name" required>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label for="edit_emergency_contact_relationship" class="form-label">Relationship</label>
-                            <input type="text" class="form-control" id="edit_emergency_contact_relationship" name="emergency_contact_relationship" placeholder="e.g., Father, Mother, Guardian">
+                            <label for="edit_emergency_contact_relationship" class="form-label">Relationship <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="edit_emergency_contact_relationship" name="emergency_contact_relationship" required>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label for="edit_emergency_contact_phone" class="form-label">Phone Number</label>
-                            <input type="text" class="form-control" id="edit_emergency_contact_phone" name="emergency_contact_phone">
+                            <label for="edit_emergency_contact_phone" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="edit_emergency_contact_phone" name="emergency_contact_phone" required>
+                        </div>
+                    </div>
+
+                    <!-- Official Use Section -->
+                    <hr class="my-4">
+                    <h6 class="mb-3 text-primary-custom"><i class="bi bi-person-badge"></i> Official Use & Declaration</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_declaration_date" class="form-label">Declaration Date</label>
+                            <input type="date" class="form-control" id="edit_declaration_date" name="declaration_date">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_registering_officer_name" class="form-label">Registering Officer</label>
+                            <input type="text" class="form-control" id="edit_registering_officer_name" name="registering_officer_name">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_registering_officer_title" class="form-label">Officer Title</label>
+                            <input type="text" class="form-control" id="edit_registering_officer_title" name="registering_officer_title">
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-warning">
-                        <i class="bi bi-check-circle"></i> Update Student
+                    <button type="submit" class="btn btn-warning px-4">
+                        <i class="bi bi-check-circle"></i> Save Changes
                     </button>
                 </div>
             </form>
@@ -2179,7 +2287,14 @@
                         $('#edit_has_allergies').prop('checked', student.has_allergies == 1 || student.has_allergies === true);
                         $('#edit_allergies_details').val(student.allergies_details || '');
                         
+                        $('#edit_emergency_contact_name').val(student.emergency_contact_name || '');
+                        $('#edit_emergency_contact_relationship').val(student.emergency_contact_relationship || '');
                         $('#edit_emergency_contact_phone').val(student.emergency_contact_phone || '');
+                        
+                        // Official Use fields
+                        $('#edit_declaration_date').val(student.declaration_date || '');
+                        $('#edit_registering_officer_name').val(student.registering_officer_name || '');
+                        $('#edit_registering_officer_title').val(student.registering_officer_title || '');
                         
                         // Set sponsorship fields
                         if (student.sponsor_id) {
@@ -2225,7 +2340,7 @@
                         $('#editPhotoPreview').html(photoPreview);
 
                         // Load subclasses and parents
-                        loadEditFormData();
+                        loadEditFormData(student.subclassID, student.parentID);
 
                         // Show modal
                         showModal('editStudentModal');
@@ -2248,7 +2363,7 @@
         });
 
         // Load form data for edit modal
-        function loadEditFormData() {
+        function loadEditFormData(targetSubclassID = null, targetParentID = null) {
             // Load subclasses
             $.ajax({
                 url: '{{ route("get_subclasses_for_school") }}',
@@ -2257,8 +2372,7 @@
                 success: function(response) {
                     if (response.success) {
                         let subclassSelect = $('#edit_subclassID');
-                        let currentSubclassID = subclassSelect.val();
-
+                        
                         // Destroy existing Select2 if it exists
                         if (subclassSelect.hasClass('select2-hidden-accessible')) {
                             subclassSelect.select2('destroy');
@@ -2266,13 +2380,11 @@
 
                         subclassSelect.html('<option value="">Choose a class...</option>');
                         response.subclasses.forEach(function(subclass) {
-                            // Display display_name (class_name + subclass_name) e.g., "Form Four A"
                             const displayName = subclass.display_name || (subclass.class_name + ' ' + subclass.subclass_name) || subclass.subclass_name;
-                            let selected = (subclass.subclassID == currentSubclassID) ? 'selected' : '';
+                            let selected = (subclass.subclassID == targetSubclassID) ? 'selected' : '';
                             subclassSelect.append('<option value="' + subclass.subclassID + '" ' + selected + '>' + displayName + '</option>');
                         });
 
-                        // Initialize Select2 for class select with search
                         subclassSelect.select2({
                             theme: 'bootstrap-5',
                             placeholder: 'Search and select a class...',
@@ -2281,9 +2393,8 @@
                             dropdownParent: $('#editStudentModal')
                         });
 
-                        // Set the selected value after initialization
-                        if (currentSubclassID) {
-                            subclassSelect.val(currentSubclassID).trigger('change');
+                        if (targetSubclassID) {
+                            subclassSelect.val(targetSubclassID).trigger('change');
                         }
                     }
                 }
@@ -2297,24 +2408,20 @@
                 success: function(response) {
                     if (response.success) {
                         let parentSelect = $('#edit_parentID');
-                        let currentParentID = parentSelect.val();
-
-                        // Destroy existing Select2 if it exists
+                        
                         if (parentSelect.hasClass('select2-hidden-accessible')) {
                             parentSelect.select2('destroy');
                         }
 
                         parentSelect.html('<option value="">Choose a parent...</option>');
                         response.parents.forEach(function(parent) {
-                            // Build full name from first_name, middle_name, last_name
                             let fullName = (parent.first_name || '') + ' ' + (parent.middle_name || '') + ' ' + (parent.last_name || '');
-                            fullName = fullName.trim().replace(/\s+/g, ' '); // Clean up extra spaces
+                            fullName = fullName.trim().replace(/\s+/g, ' ');
                             let displayText = fullName + (parent.phone ? ' (' + parent.phone + ')' : '');
-                            let selected = (parent.parentID == currentParentID) ? 'selected' : '';
+                            let selected = (parent.parentID == targetParentID) ? 'selected' : '';
                             parentSelect.append('<option value="' + parent.parentID + '" ' + selected + '>' + displayText + '</option>');
                         });
 
-                        // Initialize Select2 for parent select with search
                         parentSelect.select2({
                             theme: 'bootstrap-5',
                             placeholder: 'Search and select a parent...',
@@ -2323,9 +2430,8 @@
                             dropdownParent: $('#editStudentModal')
                         });
 
-                        // Set the selected value after initialization
-                        if (currentParentID) {
-                            parentSelect.val(currentParentID).trigger('change');
+                        if (targetParentID) {
+                            parentSelect.val(targetParentID).trigger('change');
                         }
                     }
                 }
