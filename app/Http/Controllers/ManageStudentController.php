@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ManageStudentController extends Controller
 {
@@ -4069,5 +4070,57 @@ class ManageStudentController extends Controller
             'selectedClassID', 
             'selectedSubclassID'
         ));
+    }
+
+    /**
+     * Download Student ID Card(s) as PDF
+     */
+    public function downloadStudentIdCard(Request $request, $id = null)
+    {
+        $schoolID = Session::get('schoolID');
+        if (!$schoolID) return redirect()->route('login');
+
+        $students = collect();
+
+        if ($id == 'all') {
+            $classID = $request->input('classID');
+            $subclassID = $request->input('subclassID');
+
+            $query = Student::where('schoolID', $schoolID)->where('status', 'Active');
+
+            if ($classID) {
+                $query->whereHas('subclass', function($q) use ($classID) {
+                    $q->where('classID', $classID);
+                });
+            }
+            
+            if ($subclassID) {
+                $query->where('subclassID', $subclassID);
+            }
+
+            $students = $query->with(['subclass.class', 'parent', 'school'])->get();
+            $filename = 'All_Student_ID_Cards_' . date('Y-m-d') . '.pdf';
+
+        } else {
+            $student = Student::where('studentID', $id)
+                ->where('schoolID', $schoolID)
+                ->with(['subclass.class', 'parent', 'school'])
+                ->firstOrFail();
+            $students->push($student);
+            $filename = 'ID_Card_' . str_replace(' ', '_', $student->first_name . '_' . $student->last_name) . '.pdf';
+        }
+
+        /* CR80 Dimensions in Points:
+         * Width: 85.6mm = 242.65pt
+         * Height: 54mm = 153.07pt
+         */
+        
+        $primaryColor = $request->input('primaryColor', '#940000');
+        $secondaryColor = $request->input('secondaryColor', '#ffffff');
+
+        $pdf = Pdf::loadView('Admin.student_id_card_pdf', compact('students', 'primaryColor', 'secondaryColor'))
+            ->setPaper([0, 0, 242.65, 153.07], 'landscape');
+
+        return $pdf->download($filename);
     }
 }

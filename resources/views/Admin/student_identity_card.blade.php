@@ -18,6 +18,11 @@
         --id-accent-color: #2f2f2f;
     }
 
+    /* Import Century Gothic font */
+    body {
+        font-family: 'Century Gothic', 'Arial', sans-serif;
+    }
+
     .id-cards-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -39,10 +44,14 @@
         }
     }
 
+    /* CR80 Standard Card Container - 85.6mm × 54mm */
     .id-card-container {
         perspective: 1000px;
         width: 100%;
-        height: 220px;
+        /* Aspect ratio for CR80: 85.6:54 = 1.585 */
+        aspect-ratio: 1.585;
+        max-width: 340px;
+        margin: 0 auto;
     }
 
     .id-card-inner {
@@ -53,26 +62,25 @@
         transition: transform 0.8s;
         transform-style: preserve-3d;
         box-shadow: 0 10px 20px rgba(0,0,0,0.15);
-        border-radius: 15px;
+        border-radius: 8px;
     }
 
     .id-card-container.flipped .id-card-inner {
         transform: rotateY(180deg);
     }
 
+    /* Card Faces - CR80 Landscape */
     .id-card-front, .id-card-back {
         position: absolute;
         width: 100%;
         height: 100%;
         backface-visibility: hidden;
-        border-radius: 15px;
+        border-radius: 8px;
         overflow: hidden;
         display: flex;
         flex-direction: column;
         background-color: #fff;
         border: 1px solid rgba(0,0,0,0.1);
-        background-image: radial-gradient(circle at 20% 20%, rgba(var(--id-primary-color-rgb), 0.05) 0%, transparent 40%),
-                          radial-gradient(circle at 80% 80%, rgba(var(--id-primary-color-rgb), 0.05) 0%, transparent 40%);
     }
 
     .id-card-back {
@@ -104,139 +112,197 @@
         transform: rotate(180deg) scale(1.1);
     }
 
-    /* Front Design */
+    /* FRONT DESIGN - Professional Layout */
     .id-header {
         background-color: var(--id-primary-color);
         color: var(--id-secondary-color);
-        padding: 5px 15px;
-        height: 60px;
+        padding: 6px 12px;
+        min-height: 48px;
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
         position: relative;
     }
-    .id-header::after {
-        content: '';
-        position: absolute;
-        bottom: -15px;
-        right: -15px;
-        width: 100px;
-        height: 100px;
-        background: rgba(255,255,255,0.1);
-        border-radius: 50%;
-    }
-    .id-header h6 {
-        margin: 0;
-        font-weight: 800;
-        font-size: 0.9rem;
-        text-align: left;
-        line-height: 1.2;
-        letter-spacing: 0.5px;
-        z-index: 1;
-    }
     .id-header img {
-        height: 42px;
-        width: 42px;
+        height: 36px;
+        width: 36px;
         border-radius: 50%;
         background: #fff;
         padding: 2px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        z-index: 1;
+        object-fit: contain;
+    }
+    .id-header h6 {
+        margin: 0;
+        font-family: 'Century Gothic', sans-serif;
+        font-weight: 700;
+        font-size: 0.75rem;
+        text-align: left;
+        line-height: 1.2;
+        letter-spacing: 0.3px;
+        flex: 1;
+    }
+    .id-header small {
+        font-size: 0.65rem;
+        font-weight: 400;
+        opacity: 0.95;
     }
 
+    /* Body - Photo + Details */
     .id-body {
         flex: 1;
         display: flex;
-        padding: 12px;
-        gap: 18px;
+        padding: 10px 12px;
+        gap: 12px;
         position: relative;
+        background: #fff;
     }
+
+    /* Photo - CR80 Standard: 25mm × 30mm */
     .id-photo-container {
         position: relative;
-        z-index: 1;
+        flex-shrink: 0;
     }
     .id-photo {
-        width: 95px;
-        height: 115px;
-        border: 3px solid #fff;
-        border-radius: 10px;
+        width: 94px;   /* ~25mm at 96 DPI */
+        height: 113px; /* ~30mm at 96 DPI */
+        border: 2px solid #e0e0e0;
+        border-radius: 4px;
         object-fit: cover;
         background: #f8f9fa;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
+
+    /* Student Details */
     .id-details {
         flex: 1;
         text-align: left;
         display: flex;
         flex-direction: column;
         justify-content: center;
+        padding-right: 5px;
     }
     .id-name {
-        font-weight: 900;
-        font-size: 1.1rem;
-        color: var(--id-accent-color);
-        margin-bottom: 8px;
-        line-height: 1.1;
         font-family: 'Century Gothic', sans-serif;
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: var(--id-accent-color);
+        margin-bottom: 6px;
+        line-height: 1.1;
+        text-transform: uppercase;
     }
     .id-info-row {
-        font-size: 0.7rem;
-        margin-bottom: 4px;
+        font-family: 'Century Gothic', sans-serif;
+        font-size: 0.65rem;
+        margin-bottom: 3px;
         color: #444;
         display: flex;
-        align-items: center;
-        gap: 5px;
-    }
-    .id-info-row i {
-        color: var(--id-primary-color);
-        width: 12px;
-        text-align: center;
+        align-items: flex-start;
+        line-height: 1.3;
     }
     .id-info-row strong {
         color: var(--id-primary-color);
-        min-width: 45px;
+        font-weight: 600;
+        min-width: 42px;
         display: inline-block;
     }
-
-    .id-footer {
-        background: linear-gradient(90deg, var(--id-primary-color) 0%, #000 100%);
-        height: 10px;
+    .id-info-row span {
+        flex: 1;
     }
 
-    /* Back Design */
+    /* Footer Stripe */
+    .id-footer {
+        background: linear-gradient(90deg, var(--id-primary-color) 0%, #000 100%);
+        height: 8px;
+    }
+
+    /* BACK DESIGN - Professional */
     .id-back-content {
-        padding: 20px;
+        padding: 15px 12px;
         display: flex;
         flex-direction: column;
         height: 100%;
         text-align: left;
-        font-size: 0.72rem;
+        font-size: 0.65rem;
         position: relative;
+        background: #f8f9fa;
     }
     .id-back-title {
+        font-family: 'Century Gothic', sans-serif;
         color: var(--id-primary-color);
-        font-weight: 800;
+        font-weight: 700;
+        font-size: 0.75rem;
         border-bottom: 2px solid var(--id-primary-color);
-        padding-bottom: 5px;
-        margin-bottom: 12px;
+        padding-bottom: 4px;
+        margin-bottom: 10px;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 0.5px;
     }
     .id-back-content p {
-        margin-bottom: 6px;
+        font-family: 'Century Gothic', sans-serif;
+        margin-bottom: 5px;
         line-height: 1.4;
+        font-size: 0.65rem;
     }
+    .id-back-content strong {
+        font-weight: 600;
+        color: var(--id-accent-color);
+    }
+
+    /* QR Code - 18mm × 18mm standard */
     .id-qr {
         position: absolute;
-        bottom: 15px;
-        right: 15px;
-        width: 55px;
-        height: 55px;
+        bottom: 12px;
+        right: 12px;
+        width: 68px;  /* ~18mm at 96 DPI */
+        height: 68px;
         background: #fff;
         padding: 3px;
-        border-radius: 5px;
+        border-radius: 4px;
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        border: 1px solid #e0e0e0;
     }
+    .id-qr img {
+        width: 100%;
+        height: 100%;
+        display: block;
+    }
+
+    /* Download button inside card at bottom */
+    .download-card-btn {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        z-index: 100;
+        background: rgba(0, 0, 0, 0.85);
+        border: 1px solid rgba(0,0,0,0.2);
+        border-radius: 50%;
+        width: 34px;
+        height: 34px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        color: #fff;
+    }
+    .download-card-btn:hover {
+        background: #000;
+        transform: scale(1.15);
+        box-shadow: 0 6px 10px rgba(0,0,0,0.3);
+    }
+
+
+
+    .breadcrumb-custom {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 20px;
+        font-size: 0.9rem;
+    }
+    .breadcrumb-custom i { color: var(--id-primary-color); }
 
     /* Controls Area */
     .controls-card {
@@ -267,16 +333,9 @@
         cursor: pointer;
         background: none;
     }
-
-    .breadcrumb-custom {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 20px;
-        font-size: 0.9rem;
-    }
-    .breadcrumb-custom i { color: var(--id-primary-color); }
 </style>
+
+<!-- Removed jsPDF and html2canvas scripts as we now use server-side generation -->
 
 <div class="content mt-3">
     <div class="animated fadeIn">
@@ -319,9 +378,9 @@
                             </div>
 
                             <div class="col-md-6 text-right">
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="window.print()">
-                                    <i class="fa fa-print"></i> Print ID Cards
-                                </button>
+                                <a href="#" id="downloadAllBtn" class="btn btn-sm btn-success" target="_blank">
+                                    <i class="fa fa-download"></i> Download All Cards (PDF)
+                                </a>
                                 <button type="button" class="btn btn-sm btn-primary" id="flipAllBtn">
                                     <i class="fa fa-refresh"></i> Flip All
                                 </button>
@@ -337,7 +396,8 @@
                 @else
                     <div class="id-cards-grid">
                         @foreach($students as $student)
-                            <div class="id-card-container">
+                            <div class="id-card-container" data-student-id="{{ $student->studentID }}" data-student-name="{{ $student->first_name }} {{ $student->last_name }}">
+                                <a href="#" data-id="{{ $student->studentID }}" class="download-card-btn" title="Download PDF" target="_blank"><i class="fa fa-download"></i></a>
                                 <button class="flip-btn"><i class="fa fa-rotate-right"></i></button>
                                 <div class="id-card-inner">
                                     <!-- Front Side -->
@@ -406,8 +466,81 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
     $(document).ready(function() {
+        // Base URL for download
+        const baseUrl = "{{ route('admin.download_student_id_card', ['id' => ':id']) }}";
+        const classID = "{{ $selectedClassID }}";
+        const subclassID = "{{ $selectedSubclassID }}";
+        
+        // AJAX Download Handler
+        async function handleDownload(e) {
+            e.preventDefault();
+            e.stopPropagation(); // Stop card flip if bubbling
+            
+            const btn = $(this);
+            const originalContent = btn.html();
+            const url = btn.attr('href');
+            
+            // Show loading state
+            btn.html('<i class="fa fa-spinner fa-spin" style="color: #ffffff !important;"></i>').addClass('disabled');
+            
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Download failed');
+                
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                
+                // Try to get filename from headers or generate one
+                let filename = 'ID_Card.pdf';
+                const disposition = response.headers.get('Content-Disposition');
+                if (disposition && disposition.indexOf('attachment') !== -1) {
+                    const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                    const matches = filenameRegex.exec(disposition);
+                    if (matches != null && matches[1]) { 
+                        filename = matches[1].replace(/['"]/g, '');
+                    }
+                }
+                
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(downloadUrl);
+                document.body.removeChild(a);
+                
+            } catch (error) {
+                console.error('Download error:', error);
+                alert('Failed to download PDF. Please try again.');
+            } finally {
+                // Restore button state
+                btn.html(originalContent).removeClass('disabled');
+            }
+        }
+        
+        // Update links with colors (keep this to set base href)
+        function updateDownloadLinks() {
+            const primary = $('#primaryColorPicker').val().replace('#', '');
+            const secondary = $('#secondaryColorPicker').val().replace('#', '');
+            
+            // Update "Download All" link
+            let allUrl = baseUrl.replace(':id', 'all') + `?classID=${classID}&subclassID=${subclassID}&primaryColor=%23${primary}&secondaryColor=%23${secondary}`;
+            $('#downloadAllBtn').attr('href', allUrl).off('click').on('click', handleDownload);
+            
+            // Update individual download links
+            $('.download-card-btn').each(function() {
+                const id = $(this).data('id');
+                const url = baseUrl.replace(':id', id) + `?primaryColor=%23${primary}&secondaryColor=%23${secondary}`;
+                $(this).attr('href', url).off('click').on('click', handleDownload);
+            });
+        }
+        
+        // Initial setup
+        updateDownloadLinks();
+
         // Individual Flip
-        $('.flip-btn').on('click', function() {
+        $('.flip-btn').on('click', function(e) {
+            e.stopPropagation();
             $(this).parent('.id-card-container').toggleClass('flipped');
         });
 
@@ -425,10 +558,12 @@
         // Color Customization
         $('#primaryColorPicker').on('input', function() {
             document.documentElement.style.setProperty('--id-primary-color', $(this).val());
+            updateDownloadLinks();
         });
 
         $('#secondaryColorPicker').on('input', function() {
             document.documentElement.style.setProperty('--id-secondary-color', $(this).val());
+            updateDownloadLinks();
         });
     });
 </script>

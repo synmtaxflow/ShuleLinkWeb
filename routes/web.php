@@ -96,6 +96,7 @@ Route::get('admin/get-teacher-tasks', [AdminController::class, 'getTeacherTasks'
 Route::post('approve-task/{taskID}', [AdminController::class, 'approveTask'])->name('approve_task');
 Route::post('reject-task/{taskID}', [AdminController::class, 'rejectTask'])->name('reject_task');
 Route::get('admin/student-id-cards/{classID?}', [ManageStudentController::class, 'studentIdCards'])->name('admin.student_id_cards');
+Route::get('admin/student-id-cards/download/{id?}', [ManageStudentController::class, 'downloadStudentIdCard'])->name('admin.download_student_id_card');
 
 // Parents Routes
 Route::get('parentDashboard', [ParentsContoller::class, 'parentDashboard'])->name('parentDashboard');
