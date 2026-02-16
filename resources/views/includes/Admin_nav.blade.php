@@ -27,6 +27,11 @@
 <!-- Bootstrap Bundle JS (includes Popper) -->
     <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}">
     <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,600,700,800' rel='stylesheet' type='text/css'>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    
+    <!-- jQuery (Must be loaded before other scripts that depend on it) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <style>
 /* Badilisha rangi ya background ya sidebar */
@@ -597,15 +602,16 @@
                             </ul>
                         </li> -->
 
-                        <!-- School Resources -->
+                        <!-- Strategic Management (SGPM) -->
                         <li class="dropdown-nav-item">
-                            <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#schoolResources" aria-expanded="false">
-                                <i class="fa fa-cubes"></i> School Resources <i class="fa fa-chevron-down float-right"></i>
+                            <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#strategicManagement" aria-expanded="false">
+                                <i class="fa fa-bullseye"></i> Strategic Management <i class="fa fa-chevron-down float-right"></i>
                             </a>
-                            <ul id="schoolResources" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
-                                <li><a href="{{ route('manage_incoming_resources') }}" class="nav-link"><i class="fa fa-arrow-circle-down"></i> Incoming Resources</a></li>
-                                <li><a href="{{ route('manage_outgoing_resources') }}" class="nav-link"><i class="fa fa-arrow-circle-up"></i> Outgoing Resources</a></li>
-                                <li><a href="{{ route('manage_damaged_lost_items') }}" class="nav-link"><i class="fa fa-exclamation-triangle"></i> Damaged / Lost Items</a></li>
+                            <ul id="strategicManagement" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
+                                <li><a href="{{ route('sgpm.departments.index') }}" class="nav-link"><i class="fa fa-sitemap"></i> Departments</a></li>
+                                <li><a href="{{ route('sgpm.goals.index') }}" class="nav-link"><i class="fa fa-flag-checkered"></i> Strategic Goals</a></li>
+                                <li><a href="{{ route('sgpm.objectives.index') }}" class="nav-link"><i class="fa fa-crosshairs"></i> Objectives</a></li>
+                                <li><a href="{{ route('sgpm.performance.index') }}" class="nav-link"><i class="fa fa-line-chart"></i> Performance</a></li>
                             </ul>
                         </li>
                     </ul>
@@ -682,6 +688,8 @@
                                 @endif
                             </div>
                         </div>
+
+                        @include('includes.sgpm_notifications')
 
                         <div class="dropdown for-message">
                             @php

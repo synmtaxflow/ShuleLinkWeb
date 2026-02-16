@@ -378,6 +378,32 @@
                             </ul>
                         </li>
 
+                        @if($isHOD)
+                        <!-- Strategic Management (SGPM) - HOD View -->
+                        <li class="dropdown-nav-item">
+                            <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#strategicManagementHOD" aria-expanded="false">
+                                <i class="fa fa-bullseye"></i> Dept Management <i class="fa fa-chevron-down float-right"></i>
+                            </a>
+                            <ul id="strategicManagementHOD" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
+                                <li><a href="{{ route('sgpm.departments.index') }}" class="nav-link"><i class="fa fa-sitemap"></i> My Department</a></li>
+                                <li><a href="{{ route('sgpm.objectives.index') }}" class="nav-link"><i class="fa fa-crosshairs"></i> Dept Objectives</a></li>
+                                <li><a href="{{ route('sgpm.tasks.index') }}" class="nav-link"><i class="fa fa-tasks"></i> Assign Tasks</a></li>
+                                <li><a href="{{ route('sgpm.performance.hod') }}" class="nav-link"><i class="fa fa-line-chart"></i> Dept Performance</a></li>
+                            </ul>
+                        </li>
+                        @endif
+
+                        <!-- My Performance Tasks -->
+                        <li class="dropdown-nav-item">
+                            <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#myPerformance" aria-expanded="false">
+                                <i class="fa fa-star"></i> My Tasks & KPIs <i class="fa fa-chevron-down float-right"></i>
+                            </a>
+                            <ul id="myPerformance" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
+                                <li><a href="{{ route('sgpm.tasks.index') }}" class="nav-link"><i class="fa fa-tasks"></i> My Tasks</a></li>
+                                <li><a href="{{ route('sgpm.performance.staff') }}" class="nav-link"><i class="fa fa-briefcase"></i> My Scorecard</a></li>
+                            </ul>
+                        </li>
+
                         @php
                             $hasExaminationPermission = false;
                             $hasSubjectPermission = false;
@@ -508,10 +534,43 @@
                             <button class="search-close" type="submit"><i class="fa fa-close"></i></button>
                         </form>
                     </div>
+
+                    <div class="dropdown for-notification">
+                        @php
+                            $notifications = $teacherNotifications ?? collect();
+                            $notificationCount = $notifications->count();
+                        @endphp
+                        <button class="btn btn-secondary dropdown-toggle position-relative" type="button" id="notification" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="background: transparent; border: none;">
+                            <i class="fa fa-bell-o" style="color: #666; font-size: 1.2rem;"></i>
+                            @if($notificationCount > 0)
+                                <span class="count bg-danger" style="position: absolute; top: -5px; right: -5px; border-radius: 50%; padding: 2px 5px; font-size: 0.7rem; color: white;">{{ $notificationCount }}</span>
+                            @endif
+                        </button>
+                        <div class="dropdown-menu" aria-labelledby="notification" style="max-width: 350px; min-width: 250px; padding: 0; box-shadow: 0 5px 15px rgba(0,0,0,0.1); border-radius: 10px; border: none;">
+                            @if($notificationCount > 0)
+                                <p class="px-3 py-2 mb-0" style="font-weight: bold; border-bottom: 1px solid #f0f0f0;">Notifications</p>
+                                <div style="max-height: 300px; overflow-y: auto;">
+                                    @foreach($notifications as $notification)
+                                        <a class="dropdown-item media" href="{{ $notification['link'] ?? '#' }}" style="padding: 10px 15px; border-bottom: 1px solid #f8f8f8;">
+                                            <i class="fa {{ $notification['icon'] ?? 'fa-bell' }}" style="margin-right: 10px; color: #940000;"></i>
+                                            <div class="media-body">
+                                                <p style="margin: 0; font-size: 0.85rem; color: #333; white-space: normal;">{{ $notification['message'] }}</p>
+                                                <small style="color: #888;">{{ \Carbon\Carbon::parse($notification['date'])->diffForHumans() }}</small>
+                                            </div>
+                                        </a>
+                                    @endforeach
+                                </div>
+                            @else
+                                <p class="px-3 py-3 mb-0 text-center text-muted">No new notifications</p>
+                            @endif
+                        </div>
+                    </div>
+                    @include('includes.sgpm_notifications')
                 </div>
             </div>
 
             <div class="col-sm-5">
+
                 <div class="user-area dropdown float-right">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <img class="user-avatar rounded-circle" src="{{ $imgPath }}" alt="User Avatar" style="width: 40px; height: 40px; object-fit: cover;">

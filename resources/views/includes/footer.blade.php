@@ -340,6 +340,102 @@
     </p>
   </div>
 </footer>
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+// Universal AJAX Form Handler for SGPM and other modules
+$(document).on('submit', 'form.ajax-form', function(e) {
+    e.preventDefault();
+    const $form = $(this);
+    const $submitBtn = $form.find('button[type="submit"]');
+    const originalBtnText = $submitBtn.html();
+
+    // Show loading state
+    $submitBtn.html('<i class="fa fa-spinner fa-spin"></i> Processing...').prop('disabled', true);
+
+    $.ajax({
+        url: $form.attr('action'),
+        method: $form.attr('method') || 'POST',
+        data: new FormData(this),
+        processData: false,
+        contentType: false,
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        },
+        success: function(response) {
+            if (response.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success!',
+                    text: response.message,
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => {
+                    if (response.redirect) {
+                        window.location.href = response.redirect;
+                    } else {
+                        location.reload();
+                    }
+                });
+            } else {
+                Swal.fire('Error', response.message || 'Something went wrong', 'error');
+            }
+        },
+        error: function(xhr) {
+            let errorMsg = 'An error occurred';
+            if (xhr.responseJSON) {
+                if (xhr.responseJSON.errors) {
+                    if (Array.isArray(xhr.responseJSON.errors)) {
+                        errorMsg = xhr.responseJSON.errors.join('<br>');
+                    } else {
+                        errorMsg = Object.values(xhr.responseJSON.errors).flat().join('<br>');
+                    }
+                } else if (xhr.responseJSON.message) {
+                    errorMsg = xhr.responseJSON.message;
+                }
+            }
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                html: errorMsg
+            });
+        },
+        complete: function() {
+            $submitBtn.html(originalBtnText).prop('disabled', false);
+        }
+    });
+});
+
+// Confirmation for Delete buttons
+$(document).on('click', '.confirm-delete', function(e) {
+    e.preventDefault();
+    const $btn = $(this);
+    const $form = $btn.closest('form');
+
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "You won't be able to revert this!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#940000',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, delete it!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // If it's an AJAX form, trigger submit, otherwise submit directly
+            if ($form.hasClass('ajax-form')) {
+                $form.submit();
+            } else {
+                $form.submit();
+            }
+        }
+    });
+});
+</script>
+
  <script src="{{ asset('assets/js/main.js') }}"></script>
+
  <script src="{{ asset('assets/js/widgets.js') }}"></script>
 <!-- ======= Custom Footer End ======= -->

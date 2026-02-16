@@ -879,3 +879,47 @@ Route::get('populate-results', function () {
 
     return implode('', $output);
 })->name('populate.results');
+
+// Strategic Goal & Performance Management (SGPM) Routes
+Route::prefix('sgpm')->name('sgpm.')->group(function () {
+    // Departments
+    Route::resource('departments', \App\Http\Controllers\DepartmentController::class);
+    Route::get('departments/{id}/members', [\App\Http\Controllers\DepartmentController::class, 'manageMembers'])->name('departments.members');
+    Route::post('departments/{id}/members', [\App\Http\Controllers\DepartmentController::class, 'addMember'])->name('departments.members.add');
+    Route::delete('departments/members/{memberId}', [\App\Http\Controllers\DepartmentController::class, 'removeMember'])->name('departments.members.remove');
+    Route::post('departments/{id}/send-sms', [\App\Http\Controllers\DepartmentController::class, 'sendSmsToMembers'])->name('departments.members.sms');
+    Route::post('departments/hods/send-sms', [\App\Http\Controllers\DepartmentController::class, 'sendSmsToHODs'])->name('departments.hods.sms');
+    
+    // Strategic Goals
+    Route::resource('goals', \App\Http\Controllers\StrategicGoalController::class);
+    Route::post('goals/{id}/publish', [\App\Http\Controllers\StrategicGoalController::class, 'publish'])->name('goals.publish');
+    
+    // Departmental Objectives
+    Route::resource('objectives', \App\Http\Controllers\DepartmentalObjectiveController::class);
+    
+    // Action Plans
+    Route::post('action-plans', [\App\Http\Controllers\DepartmentalObjectiveController::class, 'storeActionPlan'])->name('objectives.storeActionPlan');
+    
+    // Tasks
+    Route::resource('tasks', \App\Http\Controllers\SgpmTaskController::class);
+    Route::post('tasks/{id}/submit', [\App\Http\Controllers\SgpmTaskController::class, 'submitProgress'])->name('tasks.submit');
+    Route::post('tasks/{id}/evaluate', [\App\Http\Controllers\SgpmTaskController::class, 'evaluate'])->name('tasks.evaluate');
+    
+    // Subtasks
+    Route::post('subtasks', [\App\Http\Controllers\SgpmTaskController::class, 'storeSubtask'])->name('subtasks.store');
+    Route::post('subtasks/{id}/submit', [\App\Http\Controllers\SgpmTaskController::class, 'submitSubtask'])->name('subtasks.submit');
+    Route::post('subtasks/{id}/approve', [\App\Http\Controllers\SgpmTaskController::class, 'approveSubtask'])->name('subtasks.approve');
+    Route::post('subtasks/{id}/reject', [\App\Http\Controllers\SgpmTaskController::class, 'rejectSubtask'])->name('subtasks.reject');
+    
+    // Performance Dashboards
+    Route::get('performance', [\App\Http\Controllers\SgpmPerformanceController::class, 'index'])->name('performance.index');
+    Route::get('performance/board', [\App\Http\Controllers\SgpmPerformanceController::class, 'boardDashboard'])->name('performance.board');
+    Route::get('performance/head', [\App\Http\Controllers\SgpmPerformanceController::class, 'headDashboard'])->name('performance.head');
+    Route::get('performance/hod', [\App\Http\Controllers\SgpmPerformanceController::class, 'hodDashboard'])->name('performance.hod');
+    Route::get('performance/staff', [\App\Http\Controllers\SgpmPerformanceController::class, 'staffDashboard'])->name('performance.staff');
+
+    // Notifications
+    Route::post('/notifications/read', [App\Http\Controllers\SgpmNotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [App\Http\Controllers\SgpmNotificationController::class, 'markAllAsRead'])->name('notifications.read_all');
+});
+

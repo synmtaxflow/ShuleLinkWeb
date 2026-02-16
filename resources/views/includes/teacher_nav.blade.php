@@ -436,6 +436,32 @@
                             </ul>
                         </li>
 
+                        @if($isHOD)
+                        <!-- Strategic Management (SGPM) - HOD View -->
+                        <li class="dropdown-nav-item">
+                            <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#strategicManagementHOD" aria-expanded="false">
+                                <i class="fa fa-bullseye"></i> Dept Management <i class="fa fa-chevron-down float-right"></i>
+                            </a>
+                            <ul id="strategicManagementHOD" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
+                                <li><a href="{{ route('sgpm.departments.index') }}" class="nav-link"><i class="fa fa-sitemap"></i> My Department</a></li>
+                                <li><a href="{{ route('sgpm.objectives.index') }}" class="nav-link"><i class="fa fa-crosshairs"></i> Dept Objectives</a></li>
+                                <li><a href="{{ route('sgpm.tasks.index') }}" class="nav-link"><i class="fa fa-tasks"></i> Assign Tasks</a></li>
+                                <li><a href="{{ route('sgpm.performance.hod') }}" class="nav-link"><i class="fa fa-line-chart"></i> Dept Performance</a></li>
+                            </ul>
+                        </li>
+                        @endif
+
+                        <!-- My Performance Tasks (For both HOD and normal Teachers) -->
+                        <li class="dropdown-nav-item">
+                            <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#myPerformance" aria-expanded="false">
+                                <i class="fa fa-star"></i> My Tasks & KPIs <i class="fa fa-chevron-down float-right"></i>
+                            </a>
+                            <ul id="myPerformance" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
+                                <li><a href="{{ route('sgpm.tasks.index') }}" class="nav-link"><i class="fa fa-tasks"></i> My Tasks</a></li>
+                                <li><a href="{{ route('sgpm.performance.staff') }}" class="nav-link"><i class="fa fa-briefcase"></i> My Scorecard</a></li>
+                            </ul>
+                        </li>
+
                         <!-- Suggestions & Incidents -->
                         <li class="dropdown-nav-item">
                             <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#teacherFeedback" aria-expanded="false">
@@ -728,6 +754,8 @@
                                 @endif
                             </div>
                         </div>
+
+                        @include('includes.sgpm_notifications')
 
                         <div class="dropdown for-message">
                             <button class="btn btn-secondary dropdown-toggle position-relative" type="button"

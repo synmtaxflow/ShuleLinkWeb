@@ -10,6 +10,7 @@ use App\Models\Teacher;
 use App\Models\User;
 use App\Models\Examination;
 use App\Models\ClassSessionTimetable;
+use App\Models\Department;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -223,16 +224,105 @@ class AppServiceProvider extends ServiceProvider
         }
     }
     
+    // SGPM Notifications (Task assignments)
+    try {
+        $sgpmTasks = DB::table('sgpm_tasks')
+            ->where('assigned_to', Session::get('userID'))
+            ->where('status', 'Pending')
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
+        
+        foreach ($sgpmTasks as $task) {
+            $teacherNotifications->push([
+                'type' => 'sgpm_task',
+                'icon' => 'fa-tasks',
+                'color' => 'warning',
+                'title' => 'Performance Task',
+                'message' => $task->kpi,
+                'date' => $task->created_at,
+                'link' => route('sgpm.tasks.index')
+            ]);
+        }
+
+        // HOD Assignment Notification
+        $hodDepts = Department::where('schoolID', $schoolID)
+            ->where(function($q) use ($teacherID) {
+                $q->where('head_teacherID', $teacherID);
+            })->get();
+        
+        foreach ($hodDepts as $dept) {
+            $teacherNotifications->push([
+                'type' => 'hod_assignment',
+                'icon' => 'fa-star',
+                'color' => 'success',
+                'title' => 'Head of Department',
+                'message' => 'Umeteuliwa kuwa Mkuu wa Idara (HoD) ya ' . $dept->department_name,
+                'date' => $dept->updated_at,
+                'link' => route('sgpm.departments.index')
+            ]);
+        }
+        $isHOD = $hodDepts->isNotEmpty();
+    } catch (\Exception $e) { $isHOD = false; }
+
     // Sort notifications by date
     $teacherNotifications = $teacherNotifications->sortByDesc(function($notification) {
-        return $notification['date'];
+        return $notification['date'] ?? now();
     })->values()->take(10);
+            } elseif ($user_type == 'Staff') {
+                // Initialize staff notifications if needed
+                $teacherNotifications = collect();
+                try {
+                    $sgpmTasks = DB::table('sgpm_tasks')
+                        ->where('assigned_to', Session::get('userID'))
+                        ->where('status', 'Pending')
+                        ->orderBy('created_at', 'desc')
+                        ->limit(5)
+                        ->get();
+                    
+                    foreach ($sgpmTasks as $task) {
+                        $teacherNotifications->push([
+                            'type' => 'sgpm_task',
+                            'icon' => 'fa-tasks',
+                            'color' => 'warning',
+                            'title' => 'Performance Task',
+                            'message' => $task->kpi,
+                            'date' => $task->created_at,
+                            'link' => route('sgpm.tasks.index')
+                        ]);
+                    }
+
+                    // HOD Assignment Notification for Staff
+                    $staffID = Session::get('staffID');
+                    $hodDepts = Department::where('schoolID', $schoolID)
+                        ->where('head_staffID', $staffID)
+                        ->get();
+                    
+                    foreach ($hodDepts as $dept) {
+                        $teacherNotifications->push([
+                            'type' => 'hod_assignment',
+                            'icon' => 'fa-star',
+                            'color' => 'success',
+                            'title' => 'Head of Department',
+                            'message' => 'Umeteuliwa kuwa Mkuu wa Idara (HoD) ya ' . $dept->department_name,
+                            'date' => $dept->updated_at,
+                            'link' => route('sgpm.departments.index')
+                        ]);
+                    }
+                    $isHOD = $isHOD || $hodDepts->isNotEmpty();
+                } catch (\Exception $e) {}
+                
+                $teacherNotifications = $teacherNotifications->sortByDesc(function($notification) {
+                    return $notification['date'] ?? now();
+                })->values()->take(10);
             }
         }
 
        // Set locale from session for all views
        $locale = Session::get('locale', 'sw');
        app()->setLocale($locale);
+
+       $isHOD = $isHOD ?? false;
 
        $view->with([
     'role'   => $role,
@@ -245,6 +335,7 @@ class AppServiceProvider extends ServiceProvider
     'user_type'    => $user_type,
     'teacher' => $teacher,
     'locale' => $locale,
+    'isHOD' => $isHOD,
     'teacherNotifications' => $teacherNotifications ?? collect(),
 ]);
 

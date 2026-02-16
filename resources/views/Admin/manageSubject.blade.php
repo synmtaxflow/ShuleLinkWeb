@@ -75,6 +75,14 @@
     #viewClassSubjectsModal .modal-backdrop {
         z-index: 1054 !important;
     }
+    
+    /* Ensure View Subclass Subjects Modal appears ON TOP of View Class Subjects Modal */
+    #viewSubclassSubjectsModal {
+        z-index: 1070 !important;
+    }
+    #viewSubclassSubjectsModal .modal-backdrop {
+        z-index: 1069 !important;
+    }
     /* Scrollbar for Add Class Subject Modal */
     #addClassSubjectModal .modal-body {
         overflow-y: scroll !important;
@@ -1873,6 +1881,9 @@
                 '</div>'
             );
 
+            // Close the Class Subjects modal first
+            $('#viewClassSubjectsModal').modal('hide');
+
             // Open modal
             $('#viewSubclassSubjectsModal').modal('show');
 
@@ -1953,6 +1964,9 @@
             // Store classSubjectID for save button
             $('#saveElectionBtn').data('class-subject-id', classSubjectID);
             $('#saveElectionBtn').data('subclass-id', subclassID);
+
+            // Close Subclass Subjects modal
+            $('#viewSubclassSubjectsModal').modal('hide');
 
             // Open modal
             $('#subjectElectionModal').modal('show');
@@ -2356,6 +2370,9 @@
             $('#editClassSubjectModal').find('#edit_subject_name').val(subjectName);
             $('#editClassSubjectModal').find('#edit_teacher_select').val(teacherID || '');
 
+            // Close Subclass Subjects modal
+            $('#viewSubclassSubjectsModal').modal('hide');
+
             // Show modal
             $('#editClassSubjectModal').modal('show');
         });
@@ -2464,6 +2481,9 @@
 
             var classSubjectID = $(this).data('class-subject-id');
             var subjectName = $(this).data('subject-name');
+
+            // Close Subclass Modal if open
+            $('#viewSubclassSubjectsModal').modal('hide');
 
             Swal.fire({
                 title: 'Are you sure?',
@@ -2583,6 +2603,9 @@
             var subjectName = $(this).data('subject-name');
             var currentStatus = $(this).data('current-status');
             var action = currentStatus === 'Active' ? 'deactivate' : 'activate';
+
+            // Close Subclass Modal if open
+            $('#viewSubclassSubjectsModal').modal('hide');
 
             Swal.fire({
                 title: 'Are you sure?',

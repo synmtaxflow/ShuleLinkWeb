@@ -47,4 +47,14 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function teacher()
+    {
+        return $this->hasOne(Teacher::class, 'employee_number', 'name');
+    }
+
+    public function staff()
+    {
+        return $this->hasOne(OtherStaff::class, 'employee_number', 'name');
+    }
 }

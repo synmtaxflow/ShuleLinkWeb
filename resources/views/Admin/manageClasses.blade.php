@@ -450,7 +450,7 @@
                             @endif
                         </div>
                         <div class="card-footer bg-light p-2">
-                            <div class="d-flex flex-row justify-content-between align-items-center gap-2">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                                 <!-- View Subclasses Button -->
                                 <button class="btn btn-sm btn-primary-custom text-white view-class-subclasses-btn" 
                                         data-class-id="{{ $class['classID'] }}"
