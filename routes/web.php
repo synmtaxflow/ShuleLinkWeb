@@ -390,6 +390,19 @@ Route::get('debug/ping', function () {
 // Staff Permissions/Duties Routes
 Route::post('save_staff_permissions', [ManageOtherStaffController::class, 'save_staff_permissions'])->name('save_staff_permissions');
 
+// Teacher Duties Routes
+use App\Http\Controllers\TeacherDutyController;
+Route::get('admin/teacher-duties', [TeacherDutyController::class, 'index'])->name('admin.teacher_duties');
+Route::post('admin/teacher-duties/store', [TeacherDutyController::class, 'store'])->name('admin.teacher_duties.store');
+Route::delete('admin/teacher-duties/destroy', [TeacherDutyController::class, 'destroy'])->name('admin.teacher_duties.destroy');
+Route::get('admin/teacher-duties/export-pdf', [TeacherDutyController::class, 'export_pdf'])->name('admin.teacher_duties.export_pdf');
+Route::get('admin/teacher-duties/report', [TeacherDutyController::class, 'report'])->name('admin.teacher_duties.report');
+Route::get('teacher/duty-book', [TeacherDutyController::class, 'teacherIndex'])->name('teacher.duty_book');
+Route::get('teacher/duty-book/export', [TeacherDutyController::class, 'export_pdf'])->name('teacher.duty_book.export');
+Route::get('teacher/duty-book/export-report', [TeacherDutyController::class, 'exportDailyReportPdf'])->name('teacher.duty_book.export_report');
+Route::get('teacher/duty-book/report', [TeacherDutyController::class, 'getDailyReport'])->name('teacher.duty_book.report');
+Route::post('teacher/duty-book/save', [TeacherDutyController::class, 'saveDailyReport'])->name('teacher.duty_book.save');
+
 // Accountant Module Routes
 Route::prefix('accountant')->name('accountant.')->group(function () {
     Route::get('expenses', [ExpenseController::class, 'index'])->name('expenses.index');
@@ -911,12 +924,14 @@ Route::prefix('sgpm')->name('sgpm.')->group(function () {
     Route::post('subtasks/{id}/approve', [\App\Http\Controllers\SgpmTaskController::class, 'approveSubtask'])->name('subtasks.approve');
     Route::post('subtasks/{id}/reject', [\App\Http\Controllers\SgpmTaskController::class, 'rejectSubtask'])->name('subtasks.reject');
     
-    // Performance Dashboards
+    // Performance Dashboard
     Route::get('performance', [\App\Http\Controllers\SgpmPerformanceController::class, 'index'])->name('performance.index');
-    Route::get('performance/board', [\App\Http\Controllers\SgpmPerformanceController::class, 'boardDashboard'])->name('performance.board');
-    Route::get('performance/head', [\App\Http\Controllers\SgpmPerformanceController::class, 'headDashboard'])->name('performance.head');
     Route::get('performance/hod', [\App\Http\Controllers\SgpmPerformanceController::class, 'hodDashboard'])->name('performance.hod');
     Route::get('performance/staff', [\App\Http\Controllers\SgpmPerformanceController::class, 'staffDashboard'])->name('performance.staff');
+    Route::get('performance/goal/{id}', [\App\Http\Controllers\SgpmPerformanceController::class, 'adminReviewGoal'])->name('performance.goal.review');
+    Route::post('performance/subtasks/{id}/approve', [\App\Http\Controllers\SgpmPerformanceController::class, 'adminApproveSubtask'])->name('performance.subtasks.approve');
+    Route::post('performance/subtasks/{id}/reject', [\App\Http\Controllers\SgpmPerformanceController::class, 'adminRejectSubtask'])->name('performance.subtasks.reject');
+
 
     // Notifications
     Route::post('/notifications/read', [App\Http\Controllers\SgpmNotificationController::class, 'markAsRead'])->name('notifications.read');

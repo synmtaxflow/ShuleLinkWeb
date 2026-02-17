@@ -2492,6 +2492,17 @@ class ManageClassessController extends Controller
                 $studentQuery = Student::whereIn('subclassID', $subclassIDs)
                     ->with(['parent', 'subclass.class']);
                 
+                // Get attendance date for pre-filling
+                $attendanceDate = $request->get('attendance_date');
+                if ($attendanceDate) {
+                    $studentQuery->leftJoin('attendances', function($join) use ($attendanceDate, $schoolID) {
+                        $join->on('students.studentID', '=', 'attendances.studentID')
+                             ->where('attendances.attendance_date', '=', $attendanceDate)
+                             ->where('attendances.schoolID', '=', $schoolID);
+                    })
+                    ->select('students.*', 'attendances.status as attendance_status', 'attendances.remark as attendance_remark');
+                }
+                
                 // Apply subclass filter if provided
                 if ($subclassFilter) {
                     $studentQuery->where('subclassID', $subclassFilter);
@@ -2574,9 +2585,21 @@ class ManageClassessController extends Controller
                 $school = \App\Models\School::find($schoolID);
                 $schoolType = $school ? $school->school_type : 'Secondary';
 
-                $students = Student::where('subclassID', $subclassID)
-                    ->with(['parent', 'subclass.class'])
-                    ->get();
+                // Get attendance date for pre-filling
+                $attendanceDate = $request->get('attendance_date');
+                $studentQuery = Student::where('students.subclassID', $subclassID)
+                    ->with(['parent', 'subclass.class']);
+
+                if ($attendanceDate) {
+                    $studentQuery->leftJoin('attendances', function($join) use ($attendanceDate, $schoolID) {
+                        $join->on('students.studentID', '=', 'attendances.studentID')
+                             ->where('attendances.attendance_date', '=', $attendanceDate)
+                             ->where('attendances.schoolID', '=', $schoolID);
+                    })
+                    ->select('students.*', 'attendances.status as attendance_status', 'attendances.remark as attendance_remark');
+                }
+
+                $students = $studentQuery->get();
             }
 
             $students = $students
@@ -2674,7 +2697,9 @@ class ManageClassessController extends Controller
                         'class_name' => $className, // Class name only
                         'subclass_display' => $subclassDisplay, // Format: "MainClass - Subclass"
                         'subclassID' => $subclassID, // Subclass ID for filtering
-                        'has_health_issues' => $hasHealthIssues // For statistics
+                        'has_health_issues' => $hasHealthIssues, // For statistics
+                        'attendance_status' => $student->attendance_status ?? null,
+                        'attendance_remark' => $student->attendance_remark ?? null
                     ];
                 });
 
@@ -4241,7 +4266,7 @@ class ManageClassessController extends Controller
 
             $present = $attendances->where('status', 'Present')->count();
             $absent = $attendances->where('status', 'Absent')->count();
-            $late = $attendances->where('status', 'Late')->count();
+            $sick = $attendances->where('status', 'Sick')->count();
             $excused = $attendances->where('status', 'Excused')->count();
 
             // Calculate attendance rate
@@ -4276,7 +4301,7 @@ class ManageClassessController extends Controller
                     'total_students' => $totalStudents,
                     'present' => $present,
                     'absent' => $absent,
-                    'late' => $late,
+                    'sick' => $sick,
                     'excused' => $excused,
                     'attendance_rate' => $attendanceRate,
                     'chart_labels' => $chartLabels,

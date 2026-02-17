@@ -31,6 +31,64 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Strategic Goals Overview -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h4 class="mb-3" style="color: #444; font-weight: 600;">Strategic Goals Progress (Board Level)</h4>
+            </div>
+            @forelse($goals as $goal)
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 border-0 shadow-sm" style="border-radius: 12px;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title fw-bold text-dark">{{ $goal->title }}</h5>
+                            <span class="badge bg-primary">{{ number_format($goal->progress_percent, 0) }}%</span>
+                        </div>
+                        <p class="text-muted small mb-3">{{ Str::limit($goal->description, 100) }}</p>
+                        
+                        <div class="mb-3">
+                            <label class="small text-muted fw-bold">Overall Progress</label>
+                            <div class="progress" style="height: 10px; border-radius: 5px;">
+                                <div class="progress-bar bg-{{ $goal->progress_percent >= 100 ? 'success' : ($goal->progress_percent >= 50 ? 'info' : 'warning') }}" 
+                                     role="progressbar" 
+                                     style="width: {{ $goal->progress_percent }}%"></div>
+                            </div>
+                        </div>
+
+                        <div class="row text-center small text-muted mb-3">
+                            <div class="col-4 border-end">
+                                <strong class="d-block text-dark h5 mb-0">{{ $goal->stats['total_objectives'] }}</strong>
+                                Dept. Objectives
+                            </div>
+                            <div class="col-4 border-end">
+                                <strong class="d-block text-dark h5 mb-0">{{ $goal->stats['total_tasks'] }}</strong>
+                                Total Tasks
+                            </div>
+                            <div class="col-4">
+                                <strong class="d-block text-dark h5 mb-0">{{ $goal->stats['completed_tasks'] }}</strong>
+                                Completed
+                            </div>
+                        </div>
+
+                        <a href="{{ route('sgpm.performance.goal.review', $goal->strategic_goalID) }}" class="btn btn-sm btn-outline-dark w-100">
+                            <i class="fa fa-search"></i> Review Execution & Tasks
+                        </a>
+                    </div>
+                </div>
+            </div>
+            @empty
+            <div class="col-12">
+                <div class="alert alert-info">No Strategic Goals defined yet.</div>
+            </div>
+            @endforelse
+        </div>
+        
+        <div class="row mb-3">
+            <div class="col-12">
+                <h4 class="mb-3" style="color: #444; font-weight: 600;">Departmental Performance</h4>
+            </div>
+        </div>
 
         <div class="row">
             @foreach($departments as $dept)

@@ -361,7 +361,31 @@
                 <!-- Sidebar Links -->
                 <li class="sidebar-links-container">
                     <ul style="list-style: none; padding: 0; margin: 0; font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif;">
+                        @php
+                            $teacherID = Session::get('teacherID');
+                            $schoolID = Session::get('schoolID');
+                            $isOnDuty = false;
+                            
+                            if ($teacherID && $schoolID) {
+                                $today = \Carbon\Carbon::today();
+                                $isOnDuty = \App\Models\TeacherDuty::where('schoolID', $schoolID)
+                                    ->where('teacherID', $teacherID)
+                                    ->whereDate('start_date', '<=', $today)
+                                    ->whereDate('end_date', '>=', $today)
+                                    ->exists();
+                            }
+                        @endphp
+
+                        @if($isOnDuty)
+                        <li class="p-2 text-center">
+                            <div class="alert alert-warning mb-0 p-1" style="font-size: 0.8rem; font-weight: bold; border: 1px solid #ffc107; color: #856404;">
+                                <i class="fa fa-exclamation-circle"></i> You are on duty this week!
+                            </div>
+                        </li>
+                        @endif
+
                         <li><a href="{{ route('teachersDashboard') }}" class="nav-link"><i class="fa fa-building"></i> Dashboard</a></li>
+                        <li><a href="{{ route('teacher.duty_book') }}" class="nav-link"><i class="fa fa-book"></i> Duty Book</a></li>
                         
                         <!-- Teaching Activities -->
                         <li class="dropdown-nav-item">

@@ -133,6 +133,26 @@
 </div>
 @endif
 
+@if(isset($isOnDuty) && $isOnDuty)
+<div class="alert alert-info alert-dismissible fade show" role="alert" style="border-left: 4px solid #17a2b8; background-color: #e3f2fd;">
+    <h5 class="alert-heading text-primary">
+        <i class="fa fa-bullhorn"></i> Duty Notification
+    </h5>
+    <p class="mb-2">You are <strong>Teacher on Duty</strong> for this week!</p>
+    <p class="mb-0">Please ensure all duty responsibilities are fulfilled as scheduled.</p>
+    <hr>
+    <div class="d-flex justify-content-between align-items-center">
+        <span>Check the duty roster for more details.</span>
+        <a href="{{ route('teacher.duty_book') }}" class="btn btn-primary-custom btn-sm">
+            <i class="fa fa-book"></i> Go to Manage
+        </a>
+    </div>
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+    </button>
+</div>
+@endif
+
 
 <!-- Dashboard Statistics Section -->
 @if(isset($dashboardStats))

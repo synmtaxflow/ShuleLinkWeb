@@ -506,6 +506,17 @@
                             </ul>
                         </li>
 
+                        <!-- Duties Book -->
+                        <li class="dropdown-nav-item">
+                            <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#dutiesBook" aria-expanded="false">
+                                <i class="fa fa-book"></i> Duties Book <i class="fa fa-chevron-down float-right"></i>
+                            </a>
+                            <ul id="dutiesBook" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
+                                <li><a href="{{ route('admin.teacher_duties') }}" class="nav-link"><i class="fa fa-calendar-check-o"></i> Teacher on Duties</a></li>
+                                <li><a href="{{ route('admin.teacher_duties.report') }}" class="nav-link"><i class="fa fa-file-text-o"></i> Report</a></li>
+                            </ul>
+                        </li>
+
                         <!-- Reports & Analytics -->
                         <li class="dropdown-nav-item">
                             <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#reportsAnalytics" aria-expanded="false">

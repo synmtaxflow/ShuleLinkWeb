@@ -6307,9 +6307,16 @@
             $('#attendanceSubclassSelect').off('change').on('change', function() {
                 var selectedSubclassID = $(this).val();
                 if (selectedSubclassID) {
+                    // Update global subclassID for consistency
+                    if (isCoordinatorView) {
+                        subclassID = selectedSubclassID;
+                    }
                     loadStudentsForAttendance(selectedSubclassID);
                 } else {
                     $('#attendanceStudentsList').html('<tr><td colspan="6" class="text-center text-muted">Please select a subclass</td></tr>');
+                    if (isCoordinatorView) {
+                        subclassID = null;
+                    }
                 }
             });
         }
@@ -6322,9 +6329,16 @@
                 return;
             }
 
+            var attendanceDate = $('#attendance_date').val();
+
             $.ajax({
                 url: '{{ url("get_subclass_students") }}/' + targetSubclassID,
                 type: 'GET',
+                data: {
+                    attendance_date: attendanceDate,
+                    coordinator: isCoordinatorView ? 'true' : 'false',
+                    classID: typeof classID !== 'undefined' ? classID : null
+                },
                 dataType: 'json',
                 success: function(response) {
                     var tbody = $('#attendanceStudentsList');
@@ -6356,6 +6370,9 @@
                                 photoHtml = '<div class="rounded-circle d-flex align-items-center justify-content-center text-white" style="width: 40px; height: 40px; background-color: ' + placeholderColor + '; font-size: 16px; font-weight: bold; border: 2px solid #940000;">' + firstLetter + '</div>';
                             }
 
+                            var status = student.attendance_status || 'Present';
+                            var remark = student.attendance_remark || '';
+
                             var row = '<tr>' +
                                 '<td>' + (studentIndex + 1) + '</td>' +
                                 '<td>' + photoHtml + '</td>' +
@@ -6363,14 +6380,14 @@
                                 '<td>' + (student.first_name || '') + ' ' + (student.middle_name || '') + ' ' + (student.last_name || '') + '</td>' +
                                 '<td>' +
                                     '<select class="form-control form-control-sm attendance-status" name="attendance[' + student.studentID + '][status]" data-student-id="' + student.studentID + '">' +
-                                        '<option value="Present" selected>Present</option>' +
-                                        '<option value="Absent">Absent</option>' +
-                                        '<option value="Late">Late</option>' +
-                                        '<option value="Excused">Excused</option>' +
+                                        '<option value="Present"' + (status === 'Present' ? ' selected' : '') + '>Present</option>' +
+                                        '<option value="Absent"' + (status === 'Absent' ? ' selected' : '') + '>Absent</option>' +
+                                        '<option value="Sick"' + (status === 'Sick' ? ' selected' : '') + '>Sick</option>' +
+                                        '<option value="Excused"' + (status === 'Excused' ? ' selected' : '') + '>Permission</option>' +
                                     '</select>' +
                                 '</td>' +
                                 '<td>' +
-                                    '<input type="text" class="form-control form-control-sm" name="attendance[' + student.studentID + '][remark]" placeholder="Optional remark">' +
+                                    '<input type="text" class="form-control form-control-sm" name="attendance[' + student.studentID + '][remark]" placeholder="Optional remark" value="' + remark + '">' +
                                     '<input type="hidden" name="attendance[' + student.studentID + '][studentID]" value="' + student.studentID + '">' +
                                 '</td>' +
                             '</tr>';

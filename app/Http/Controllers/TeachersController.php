@@ -778,6 +778,17 @@ class TeachersController extends Controller
             })->values()->take(10);
         }
         
+        // Check if current teacher is on duty
+        $isOnDuty = false;
+        if ($teacherID && $schoolID) {
+            $today = Carbon::today();
+            $isOnDuty = \App\Models\TeacherDuty::where('schoolID', $schoolID)
+                ->where('teacherID', $teacherID)
+                ->whereDate('start_date', '<=', $today)
+                ->whereDate('end_date', '>=', $today)
+                ->exists();
+        }
+
         // Get graph data
         $graphData = $this->getDashboardGraphData($teacherID, $schoolID);
         
@@ -832,7 +843,7 @@ class TeachersController extends Controller
         // Pass teacherNotifications to nav
         $teacherNotifications = $notifications;
         
-        return view('Teacher.dashboard', compact('rejectionNotifications', 'pendingApprovals', 'specialRoleApprovals', 'waitingApprovals', 'approvalChainExams', 'superviseExamCount', 'hasAssignedClass', 'dashboardStats', 'notifications', 'graphData', 'teacherNotifications', 'managementPermissions'));
+        return view('Teacher.dashboard', compact('rejectionNotifications', 'pendingApprovals', 'specialRoleApprovals', 'waitingApprovals', 'approvalChainExams', 'superviseExamCount', 'hasAssignedClass', 'dashboardStats', 'notifications', 'graphData', 'teacherNotifications', 'managementPermissions', 'isOnDuty'));
     }
 
     public function manageTeacherFeedback(Request $request)

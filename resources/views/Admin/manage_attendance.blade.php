@@ -1935,8 +1935,8 @@
                             <div class="col-md-3">
                                 <div class="card bg-warning">
                                     <div class="card-body text-center" style="color: #000000;">
-                                        <h4 style="color: #000000; font-weight: bold;">${classData.late_percentage}%</h4>
-                                        <p class="mb-0" style="color: #000000; font-weight: 500;">Late (${classData.late})</p>
+                                        <h4 style="color: #000000; font-weight: bold;">${classData.sick_percentage}%</h4>
+                                        <p class="mb-0" style="color: #000000; font-weight: 500;">Sick (${classData.sick})</p>
                                     </div>
                                 </div>
                             </div>
@@ -1944,7 +1944,7 @@
                                 <div class="card bg-info">
                                     <div class="card-body text-center" style="color: #ffffff;">
                                         <h4 style="color: #ffffff; font-weight: bold;">${classData.excused_percentage}%</h4>
-                                        <p class="mb-0" style="color: #ffffff; font-weight: 500;">Excused (${classData.excused})</p>
+                                        <p class="mb-0" style="color: #ffffff; font-weight: 500;">Permission (${classData.excused})</p>
                                     </div>
                                 </div>
                             </div>
@@ -1971,8 +1971,8 @@
                             <div class="col-md-3">
                                 <div class="card bg-warning">
                                     <div class="card-body text-center" style="color: #000000;">
-                                        <h4 style="color: #000000; font-weight: bold;">${classData.late || 0}</h4>
-                                        <p class="mb-0" style="color: #000000; font-weight: 500;">Late</p>
+                                        <h4 style="color: #000000; font-weight: bold;">${classData.sick || 0}</h4>
+                                        <p class="mb-0" style="color: #000000; font-weight: 500;">Sick</p>
                                     </div>
                                 </div>
                             </div>
@@ -1980,7 +1980,7 @@
                                 <div class="card bg-info">
                                     <div class="card-body text-center" style="color: #ffffff;">
                                         <h4 style="color: #ffffff; font-weight: bold;">${classData.excused || 0}</h4>
-                                        <p class="mb-0" style="color: #ffffff; font-weight: 500;">Excused</p>
+                                        <p class="mb-0" style="color: #ffffff; font-weight: 500;">Permission</p>
                                     </div>
                                 </div>
                             </div>
@@ -2015,8 +2015,8 @@
                                             <th>Gender</th>
                                             <th>Days Present</th>
                                             <th>Days Absent</th>
-                                            <th>Days Late</th>
-                                            <th>Days Excused</th>
+                                            <th>Days Sick</th>
+                                            <th>Days Permission</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
@@ -2033,7 +2033,7 @@
                             <td>${student.gender || 'N/A'}</td>
                             <td><span class="badge bg-success">${student.days_present || 0}</span></td>
                             <td><span class="badge bg-danger">${student.days_absent || 0}</span></td>
-                            <td><span class="badge bg-warning">${student.days_late || 0}</span></td>
+                            <td><span class="badge bg-warning">${student.days_sick || 0}</span></td>
                             <td><span class="badge bg-info">${student.days_excused || 0}</span></td>
                             <td>
                                 <button class="btn btn-sm btn-view" onclick="viewStudentDetails(${student.studentID}, '${searchType}')">
@@ -2103,23 +2103,30 @@
                     
                     if (searchType === 'month' || searchType === 'year') {
                         // Show percentages for month/year
-                        labels = ['Present', 'Absent', 'Late', 'Excused'];
+                        labels = ['Present', 'Absent', 'Sick', 'Permission'];
                         dataValues = [
                             classData.present_percentage || 0,
                             classData.absent_percentage || 0,
-                            classData.late_percentage || 0,
+                            classData.sick_percentage || 0,
                             classData.excused_percentage || 0
                         ];
                         backgroundColor = ['#28a745', '#dc3545', '#ffc107', '#17a2b8'];
                     } else {
                         // Show counts for date
-                        labels = ['Present', 'Absent', 'Late', 'Excused'];
-                        const total = (classData.present || 0) + (classData.absent || 0) + (classData.late || 0) + (classData.excused || 0);
+                        labels = ['Present', 'Absent', 'Sick', 'Permission'];
+                        // Ensure values are numbers to avoid string concatenation
+                        const present = Number(classData.present || 0);
+                        const absent = Number(classData.absent || 0);
+                        const sick = Number(classData.sick || 0);
+                        const excused = Number(classData.excused || 0);
+                        
+                        const total = present + absent + sick + excused;
+                        
                         dataValues = [
-                            total > 0 ? ((classData.present || 0) / total * 100).toFixed(2) : 0,
-                            total > 0 ? ((classData.absent || 0) / total * 100).toFixed(2) : 0,
-                            total > 0 ? ((classData.late || 0) / total * 100).toFixed(2) : 0,
-                            total > 0 ? ((classData.excused || 0) / total * 100).toFixed(2) : 0
+                            total > 0 ? (present / total * 100).toFixed(2) : 0,
+                            total > 0 ? (absent / total * 100).toFixed(2) : 0,
+                            total > 0 ? (sick / total * 100).toFixed(2) : 0,
+                            total > 0 ? (excused / total * 100).toFixed(2) : 0
                         ];
                         backgroundColor = ['#28a745', '#dc3545', '#ffc107', '#17a2b8'];
                     }
@@ -2129,7 +2136,7 @@
                         data: {
                             labels: labels,
                             datasets: [{
-                                label: searchType === 'month' || searchType === 'year' ? 'Percentage (%)' : 'Percentage (%)',
+                                label: 'Percentage (%)',
                                 data: dataValues,
                                 backgroundColor: backgroundColor,
                                 borderColor: backgroundColor,
@@ -2318,8 +2325,8 @@
                 <div class="col-md-3">
                     <div class="card bg-warning">
                         <div class="card-body text-center" style="color: #000000;">
-                            <h4 style="color: #000000; font-weight: bold;">${stats.late || 0}</h4>
-                            <p class="mb-0" style="color: #000000; font-weight: 500;">Late</p>
+                            <h4 style="color: #000000; font-weight: bold;">${stats.sick || 0}</h4>
+                            <p class="mb-0" style="color: #000000; font-weight: 500;">Sick</p>
                         </div>
                     </div>
                 </div>
@@ -2327,7 +2334,7 @@
                     <div class="card bg-info">
                         <div class="card-body text-center" style="color: #ffffff;">
                             <h4 style="color: #ffffff; font-weight: bold;">${stats.excused || 0}</h4>
-                            <p class="mb-0" style="color: #ffffff; font-weight: 500;">Excused</p>
+                            <p class="mb-0" style="color: #ffffff; font-weight: 500;">Permission</p>
                         </div>
                     </div>
                 </div>
@@ -2342,8 +2349,8 @@
                     <p><strong>Total Days:</strong> ${stats.total_days || 0}</p>
                     <p><strong>Total Present:</strong> ${stats.present || 0}</p>
                     <p><strong>Total Absent:</strong> ${stats.absent || 0}</p>
-                    <p><strong>Total Late:</strong> ${stats.late || 0}</p>
-                    <p><strong>Total Excused:</strong> ${stats.excused || 0}</p>
+                    <p><strong>Total Sick:</strong> ${stats.sick || 0}</p>
+                    <p><strong>Total Permission:</strong> ${stats.excused || 0}</p>
                 </div>
             </div>
 
@@ -2385,13 +2392,13 @@
                                             const statusClass = {
                                                 'Present': 'bg-success',
                                                 'Absent': 'bg-danger',
-                                                'Late': 'bg-warning',
+                                                'Sick': 'bg-warning',
                                                 'Excused': 'bg-info'
                                             }[att.status] || 'bg-secondary';
                                             return `
                                                 <tr>
                                                     <td>${new Date(att.attendance_date).toLocaleDateString()}</td>
-                                                    <td><span class="badge ${statusClass}">${att.status}</span></td>
+                                                    <td><span class="badge ${statusClass}">${att.status === 'Excused' ? 'Permission' : att.status}</span></td>
                                                     <td>${att.remark || '-'}</td>
                                                 </tr>
                                             `;
@@ -2429,21 +2436,21 @@
         // Calculate percentages
         let presentPercentage = 0;
         let absentPercentage = 0;
-        let latePercentage = 0;
+        let sickPercentage = 0;
         let excusedPercentage = 0;
 
         if (totalDays > 0) {
             presentPercentage = ((stats.present || 0) / totalDays * 100).toFixed(2);
             absentPercentage = ((stats.absent || 0) / totalDays * 100).toFixed(2);
-            latePercentage = ((stats.late || 0) / totalDays * 100).toFixed(2);
+            sickPercentage = ((stats.sick || 0) / totalDays * 100).toFixed(2);
             excusedPercentage = ((stats.excused || 0) / totalDays * 100).toFixed(2);
         }
 
-        const labels = ['Present', 'Absent', 'Late', 'Excused'];
+        const labels = ['Present', 'Absent', 'Sick', 'Permission'];
         const dataValues = [
             parseFloat(presentPercentage),
             parseFloat(absentPercentage),
-            parseFloat(latePercentage),
+            parseFloat(sickPercentage),
             parseFloat(excusedPercentage)
         ];
 

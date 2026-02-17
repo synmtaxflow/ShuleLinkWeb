@@ -248,12 +248,11 @@ class ManageAttendanceController extends Controller
                 ->orderBy('subclasses.subclass_name')
                 ->orderBy('students.first_name')
                 ->get();
-
             // Calculate statistics
             $stats = $this->calculateAttendanceStats($attendances, $searchType, $date, $year, $month, $week, $subclassID, $schoolID);
 
             // Get attendance by class with student details
-            $attendanceByClass = $this->getAttendanceByClass($searchType, $date, $year, $month, $week, $subclassID, $schoolID);
+            $attendanceByClass = $this->getAttendanceByClass($searchType, $date, $year, $month, $week, $subclassID, $schoolID, $classID, $isCoordinatorView);
 
             return response()->json([
                 'success' => true,
@@ -310,7 +309,7 @@ class ManageAttendanceController extends Controller
             $totalDays = $attendances->count();
             $present = $attendances->where('status', 'Present')->count();
             $absent = $attendances->where('status', 'Absent')->count();
-            $late = $attendances->where('status', 'Late')->count();
+            $sick = $attendances->where('status', 'Sick')->count();
             $excused = $attendances->where('status', 'Excused')->count();
 
             // Prepare data for line chart
@@ -324,7 +323,7 @@ class ManageAttendanceController extends Controller
                     'total_days' => $totalDays,
                     'present' => $present,
                     'absent' => $absent,
-                    'late' => $late,
+                    'sick' => $sick,
                     'excused' => $excused
                 ],
                 'chart_data' => $chartData
@@ -372,7 +371,7 @@ class ManageAttendanceController extends Controller
                     DB::raw('COUNT(DISTINCT attendances.studentID) as total_students'),
                     DB::raw('SUM(CASE WHEN attendances.status = "Present" THEN 1 ELSE 0 END) as present'),
                     DB::raw('SUM(CASE WHEN attendances.status = "Absent" THEN 1 ELSE 0 END) as absent'),
-                    DB::raw('SUM(CASE WHEN attendances.status = "Late" THEN 1 ELSE 0 END) as late'),
+                    DB::raw('SUM(CASE WHEN attendances.status = "Sick" THEN 1 ELSE 0 END) as sick'),
                     DB::raw('SUM(CASE WHEN attendances.status = "Excused" THEN 1 ELSE 0 END) as excused')
                 )
                 ->groupBy('subclasses.subclassID', 'subclasses.subclass_name', 'classes.class_name')
@@ -421,7 +420,7 @@ class ManageAttendanceController extends Controller
                 'gender_stats' => $genderStats,
                 'total_present' => $attendances->where('status', 'Present')->count(),
                 'total_absent' => $attendances->where('status', 'Absent')->count(),
-                'total_late' => $attendances->where('status', 'Late')->count(),
+                'total_sick' => $attendances->where('status', 'Sick')->count(),
                 'total_excused' => $attendances->where('status', 'Excused')->count(),
                 'total_students' => $attendances->unique('studentID')->count()
             ];
@@ -431,23 +430,42 @@ class ManageAttendanceController extends Controller
         return [
             'total_present' => $attendances->where('status', 'Present')->count(),
             'total_absent' => $attendances->where('status', 'Absent')->count(),
-            'total_late' => $attendances->where('status', 'Late')->count(),
+            'total_sick' => $attendances->where('status', 'Sick')->count(),
             'total_excused' => $attendances->where('status', 'Excused')->count(),
             'total_students' => $attendances->unique('studentID')->count()
         ];
     }
 
-    private function getAttendanceByClass($searchType, $date = null, $year = null, $month = null, $week = null, $subclassID = null, $schoolID = null)
+    private function getAttendanceByClass($searchType, $date = null, $year = null, $month = null, $week = null, $subclassID = null, $schoolID = null, $classID = null, $isCoordinatorView = false)
     {
-        if (!in_array($searchType, ['date', 'month', 'year']) || $subclassID || !$schoolID) {
+        if (!in_array($searchType, ['date', 'month', 'year']) || !$schoolID) {
             return [];
         }
 
-        // Get all subclasses for the school
-        $subclasses = DB::table('subclasses')
+        // Get subclasses query
+        $subclassesQuery = DB::table('subclasses')
             ->join('classes', 'subclasses.classID', '=', 'classes.classID')
-            ->where('classes.schoolID', $schoolID)
-            ->select(
+            ->where('classes.schoolID', $schoolID);
+
+        // Coordinator view: filter by main class
+        if ($isCoordinatorView && $classID) {
+            try {
+                $decryptedClassID = Crypt::decrypt($classID);
+            } catch (\Exception $e) {
+                $decryptedClassID = $classID;
+            }
+            $subclassesQuery->where('subclasses.classID', $decryptedClassID);
+            
+            // If subclass is selected, filter by that subclass
+            if ($subclassID) {
+                $subclassesQuery->where('subclasses.subclassID', $subclassID);
+            }
+        } elseif ($subclassID) {
+            // Regular subclass filter
+            $subclassesQuery->where('subclasses.subclassID', $subclassID);
+        }
+
+        $subclasses = $subclassesQuery->select(
                 'subclasses.subclassID',
                 'subclasses.subclass_name',
                 'classes.class_name',
@@ -500,11 +518,11 @@ class ManageAttendanceController extends Controller
                     'has_attendance' => false,
                     'present' => 0,
                     'absent' => 0,
-                    'late' => 0,
+                    'sick' => 0,
                     'excused' => 0,
                     'present_percentage' => 0,
                     'absent_percentage' => 0,
-                    'late_percentage' => 0,
+                    'sick_percentage' => 0,
                     'excused_percentage' => 0,
                     'students' => []
                 ];
@@ -531,28 +549,28 @@ class ManageAttendanceController extends Controller
                     DB::raw('COUNT(DISTINCT studentID) as total_students_with_attendance'),
                     DB::raw('SUM(CASE WHEN status = "Present" THEN 1 ELSE 0 END) as present'),
                     DB::raw('SUM(CASE WHEN status = "Absent" THEN 1 ELSE 0 END) as absent'),
-                    DB::raw('SUM(CASE WHEN status = "Late" THEN 1 ELSE 0 END) as late'),
+                    DB::raw('SUM(CASE WHEN status = "Sick" THEN 1 ELSE 0 END) as sick'),
                     DB::raw('SUM(CASE WHEN status = "Excused" THEN 1 ELSE 0 END) as excused')
                 )
                 ->first();
 
             $present = $attendanceStats->present ?? 0;
             $absent = $attendanceStats->absent ?? 0;
-            $late = $attendanceStats->late ?? 0;
+            $sick = $attendanceStats->sick ?? 0;
             $excused = $attendanceStats->excused ?? 0;
-            $totalRecords = $present + $absent + $late + $excused;
+            $totalRecords = $present + $absent + $sick + $excused;
 
             // Calculate percentages for month and year
             $presentPercentage = 0;
             $absentPercentage = 0;
-            $latePercentage = 0;
+            $sickPercentage = 0;
             $excusedPercentage = 0;
 
             if (in_array($searchType, ['month', 'year']) && $totalStudents > 0) {
                 // For month/year, calculate percentage of students
                 $presentPercentage = $totalRecords > 0 ? round(($present / $totalRecords) * 100, 2) : 0;
                 $absentPercentage = $totalRecords > 0 ? round(($absent / $totalRecords) * 100, 2) : 0;
-                $latePercentage = $totalRecords > 0 ? round(($late / $totalRecords) * 100, 2) : 0;
+                $sickPercentage = $totalRecords > 0 ? round(($sick / $totalRecords) * 100, 2) : 0;
                 $excusedPercentage = $totalRecords > 0 ? round(($excused / $totalRecords) * 100, 2) : 0;
             }
 
@@ -584,7 +602,7 @@ class ManageAttendanceController extends Controller
                     'students.gender',
                     DB::raw('COALESCE(SUM(CASE WHEN attendances.status = "Present" THEN 1 ELSE 0 END), 0) as days_present'),
                     DB::raw('COALESCE(SUM(CASE WHEN attendances.status = "Absent" THEN 1 ELSE 0 END), 0) as days_absent'),
-                    DB::raw('COALESCE(SUM(CASE WHEN attendances.status = "Late" THEN 1 ELSE 0 END), 0) as days_late'),
+                    DB::raw('COALESCE(SUM(CASE WHEN attendances.status = "Sick" THEN 1 ELSE 0 END), 0) as days_sick'),
                     DB::raw('COALESCE(SUM(CASE WHEN attendances.status = "Excused" THEN 1 ELSE 0 END), 0) as days_excused')
                 )
                 ->groupBy('students.studentID', 'students.first_name', 'students.middle_name', 'students.last_name', 'students.admission_number', 'students.gender')
@@ -606,11 +624,11 @@ class ManageAttendanceController extends Controller
                 'has_attendance' => true,
                 'present' => $present,
                 'absent' => $absent,
-                'late' => $late,
+                'sick' => $sick,
                 'excused' => $excused,
                 'present_percentage' => $presentPercentage,
                 'absent_percentage' => $absentPercentage,
-                'late_percentage' => $latePercentage,
+                'sick_percentage' => $sickPercentage,
                 'excused_percentage' => $excusedPercentage,
                 'students' => $studentsQuery
             ];
@@ -629,7 +647,7 @@ class ManageAttendanceController extends Controller
                 return [
                     'present' => $monthAttendances->where('status', 'Present')->count(),
                     'absent' => $monthAttendances->where('status', 'Absent')->count(),
-                    'late' => $monthAttendances->where('status', 'Late')->count(),
+                    'sick' => $monthAttendances->where('status', 'Sick')->count(),
                     'excused' => $monthAttendances->where('status', 'Excused')->count()
                 ];
             });
@@ -641,7 +659,7 @@ class ManageAttendanceController extends Controller
                 return [
                     'present' => $dayAttendances->where('status', 'Present')->count(),
                     'absent' => $dayAttendances->where('status', 'Absent')->count(),
-                    'late' => $dayAttendances->where('status', 'Late')->count(),
+                    'sick' => $dayAttendances->where('status', 'Sick')->count(),
                     'excused' => $dayAttendances->where('status', 'Excused')->count()
                 ];
             });
