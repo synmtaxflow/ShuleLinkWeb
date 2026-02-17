@@ -171,28 +171,11 @@
 
     /* No Data Available Message Styles */
     .no-data-message {
-        min-height: 400px;
+        min-height: 300px;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        width: 100%;
-        text-align: center;
-        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-        border-radius: 15px;
-        border: 2px dashed #dee2e6;
-        margin: 20px 0;
-    }
-    
-    .loading-pulse {
-        animation: pulse 1.5s infinite ease-in-out;
-    }
-    
-    @keyframes pulse {
-        0% { transform: scale(0.95); opacity: 0.7; }
-        50% { transform: scale(1.05); opacity: 1; }
-        100% { transform: scale(0.95); opacity: 0.7; }
-    }
     }
 
     .no-data-message i {
@@ -244,23 +227,8 @@
         width: 110px;
         height: 110px;
         border-radius: 50%;
-        border: 4px solid rgba(255,255,255,0.8);
+        border: 4px solid #fff;
         object-fit: cover;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    }
-    
-    .id-badge {
-        position: absolute;
-        bottom: 10px;
-        right: 15px;
-        background: #28a745;
-        color: white;
-        padding: 4px 12px;
-        border-radius: 50px;
-        font-size: 0.7rem;
-        font-weight: bold;
-        box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);
-        border: 2px solid white;
     }
 
     .student-widget-body {
@@ -696,30 +664,25 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
 
 <div class="container-fluid mt-4">
-    <div class="premium-header d-flex justify-content-between align-items-center">
-        <div>
-            <h2 class="mb-1 fw-bold"><i class="bi bi-people-fill"></i> Manage Students</h2>
-            <p class="mb-0 opacity-75">View, filter, and register students for the current academic session.</p>
-        </div>
-        <div class="d-flex gap-3 align-items-center">
-            @php
-                $canCreate = ($user_type ?? '') == 'Admin' || ($teacherPermissions ?? collect())->contains('student_create');
-                $canUpdate = ($user_type ?? '') == 'Admin' || ($teacherPermissions ?? collect())->contains('student_update');
-                $canDelete = ($user_type ?? '') == 'Admin' || ($teacherPermissions ?? collect())->contains('student_delete');
-            @endphp
-            
-            <div class="d-flex gap-2">
-                <div class="stat-pill text-center">
-                    <div class="fw-bold fs-5" id="statTotalStudentsTop">0</div>
-                    <small class="text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">Students</small>
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body bg-light rounded">
+            <div class="d-flex justify-content-between align-items-center">
+                <h4 class="mb-0 text-primary-custom">
+                    <i class="bi bi-people-fill"></i> Manage Students
+                </h4>
+                <div class="d-flex gap-2">
+                    @php
+                        $canCreate = ($user_type ?? '') == 'Admin' || ($teacherPermissions ?? collect())->contains('student_create');
+                        $canUpdate = ($user_type ?? '') == 'Admin' || ($teacherPermissions ?? collect())->contains('student_update');
+                        $canDelete = ($user_type ?? '') == 'Admin' || ($teacherPermissions ?? collect())->contains('student_delete');
+                    @endphp
+                    @if($canCreate)
+                    <button class="btn btn-outline-primary-custom fw-bold" id="addStudentBtn" type="button" data-bs-toggle="modal" data-bs-target="#classSelectorModal">
+                        <i class="bi bi-person-plus"></i> Register New Student
+                    </button>
+                    @endif
                 </div>
             </div>
-
-            @if($canCreate)
-            <button class="btn btn-light btn-lg fw-bold shadow-sm px-4" id="addStudentBtn" type="button" data-bs-toggle="modal" data-bs-target="#classSelectorModal" style="border-radius: 12px; height: 55px;">
-                <i class="bi bi-person-plus-fill me-2"></i> Register Student
-            </button>
-            @endif
         </div>
     </div>
 
@@ -828,7 +791,7 @@
                 </div>
             </div>
             <div id="studentsWidgetGrid" class="students-widget-grid">
-                <div class="no-data-message w-100 text-center py-5">
+                <div class="no-data-message">
                     <i class="bi bi-people fs-1 text-muted"></i>
                     <p class="text-muted mt-2">Loading students...</p>
                 </div>
@@ -1367,47 +1330,35 @@
     </div>
 </div>
 
-<!-- Custom Styles for Student Management -->
-<style>
-    .premium-header {
-        background: linear-gradient(135deg, #940000 0%, #d40000 100%);
-        color: white;
-        padding: 30px;
-        border-radius: 15px;
-        margin-bottom: 30px;
-        box-shadow: 0 10px 20px rgba(148, 0, 0, 0.15);
-    }
-    
-    .stat-pill {
-        background: rgba(255, 255, 255, 0.15);
-        backdrop-filter: blur(5px);
-        padding: 10px 20px;
-        border-radius: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    
-    .student-widget {
-        transition: all 0.3s ease;
-        border: none !important;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.08) !important;
-    }
-    
-    .student-widget:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 12px 25px rgba(148, 0, 0, 0.15) !important;
-    }
-</style>
-
-{{-- Select2 CSS --}}
+<!-- Select2 CSS -->
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 
-{{-- JS Libraries (jQuery and Bootstrap are in Admin_nav) --}}
+<!-- jQuery - Load first -->
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+
+<!-- Bootstrap 5 JS bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+
+{{-- DataTables JS --}}
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+{{-- Select2 JS --}}
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+{{-- JsBarcode Library for ID Card --}}
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
+{{-- html2canvas Library for ID Card Download --}}
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+{{-- jsPDF and AutoTable for PDF Export --}}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+{{-- SweetAlert --}}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 @include('includes.footer')
 
@@ -1640,7 +1591,7 @@
             // Update currentStatus
             currentStatus = status;
 
-            $('#studentsWidgetGrid').html('<div class="no-data-message text-center py-5 w-100"><i class="bi bi-hourglass-split" style="font-size: 3rem; color: #6c757d;"></i><p class="text-muted mt-2">Loading students...</p></div>');
+            $('#studentsWidgetGrid').html('<div class="no-data-message text-center py-5"><i class="bi bi-hourglass-split" style="font-size: 3rem; color: #6c757d;"></i><p class="text-muted mt-2">Loading students...</p></div>');
 
             $.ajax({
                 url: '{{ route("get_students_list") }}',
@@ -1653,10 +1604,6 @@
                     health: health
                 },
                 dataType: 'json',
-                timeout: 30000, // 30 seconds timeout
-                beforeSend: function() {
-                    console.log('AJAX request sent to get_students_list');
-                },
                 success: function(response) {
                     console.log('Response received:', response);
 
@@ -1666,12 +1613,12 @@
                             renderStudentWidgets(response.students, status);
                         } else {
                             currentStudentsData = [];
-                            $('#studentsWidgetGrid').html('<div class="no-data-message text-center py-5 w-100"><i class="bi bi-inbox" style="font-size: 3rem; color: #6c757d;"></i><h5 class="mt-3 text-muted">No Data Available</h5><p class="text-muted">No students found matching the selected filters.</p></div>');
+                            $('#studentsWidgetGrid').html('<div class="no-data-message text-center py-5"><i class="bi bi-inbox" style="font-size: 3rem; color: #6c757d;"></i><h5 class="mt-3 text-muted">No Data Available</h5><p class="text-muted">No students found matching the selected filters.</p></div>');
                         }
 
                         loadStatistics();
                     } else {
-                        $('#studentsWidgetGrid').html('<div class="no-data-message text-center py-5 w-100"><i class="bi bi-inbox" style="font-size: 3rem; color: #6c757d;"></i><h5 class="mt-3 text-muted">No Data Available</h5><p class="text-muted">Failed to load students: ' + (response.message || 'Unknown error') + '</p></div>');
+                        $('#studentsWidgetGrid').html('<div class="no-data-message text-center py-5"><i class="bi bi-inbox" style="font-size: 3rem; color: #6c757d;"></i><h5 class="mt-3 text-muted">No Data Available</h5><p class="text-muted">Failed to load students.</p></div>');
                         loadStatistics();
                     }
                 },
@@ -1698,11 +1645,10 @@
                         }
                     }
 
-                    let noDataHtml = '<div class="no-data-message text-center py-5 w-100">' +
+                    let noDataHtml = '<div class="no-data-message text-center py-5">' +
                         '<i class="bi bi-exclamation-triangle" style="font-size: 3rem; color: #dc3545;"></i>' +
                         '<h5 class="mt-3 text-danger">Error Loading Data</h5>' +
                         '<p class="text-muted">' + errorMessage + '</p>' +
-                        '<p class="text-muted x-small">Status: ' + status + ' (' + xhr.status + ')</p>' +
                         '<button class="btn btn-sm btn-primary mt-2" onclick="location.reload()">Refresh Page</button>' +
                         '</div>';
                     $('#studentsWidgetGrid').html(noDataHtml);
@@ -1773,18 +1719,17 @@
 
                 html += '<div class="student-widget">' +
                         '<div class="student-widget-header">' +
-                            '<img src="' + student.photo + '" alt="' + student.full_name + '" onerror="this.src=\'{{ asset("images/male.png") }}\'">' +
-                            (student.fingerprint_id ? '<div class="id-badge"><i class="bi bi-fingerprint"></i> ' + student.fingerprint_id + '</div>' : '') +
+                            '<img src="' + student.photo + '" alt="' + student.full_name + '">' +
                         '</div>' +
                         '<div class="student-widget-body">' +
-                            '<h3 class="mb-1">' + (student.full_name || '-') + healthAlarmIcon + '</h3>' +
-                            '<p class="form badge bg-light text-dark px-3 py-2 rounded-pill mb-3">' + (student.class || '-') + '</p>' +
-                            '<div class="info text-start px-2">' +
-                                '<div class="d-flex justify-content-between mb-2"><span class="text-muted small">Admission:</span> <span class="fw-bold small">' + (student.admission_number || '-') + '</span></div>' +
-                                '<div class="d-flex justify-content-between mb-2"><span class="text-muted small">Gender:</span> <span class="fw-bold small">' + (student.gender || '-') + '</span></div>' +
-                                '<div class="d-flex justify-content-between mb-3"><span class="text-muted small">Parent:</span> <span class="fw-bold small text-truncate" style="max-width: 150px;">' + (student.parent_name || '-') + '</span></div>' +
+                            '<h3>' + (student.full_name || '-') + healthAlarmIcon + '</h3>' +
+                            '<p class="form">' + (student.class || '-') + '</p>' +
+                            '<div class="info">' +
+                                '<p><strong>Admission:</strong> ' + (student.admission_number || '-') + '</p>' +
+                                '<p><strong>Gender:</strong> ' + (student.gender || '-') + '</p>' +
+                                '<p><strong>Parent:</strong> ' + (student.parent_name || '-') + '</p>' +
+                                '<p><strong>Fingerprint:</strong> ' + fingerprintIdHtml + '</p>' +
                             '</div>' +
-                            '<hr class="my-3 opacity-10">' +
                             actionsHtml +
                         '</div>' +
                     '</div>';
@@ -1841,7 +1786,7 @@
 
             // Show loading state on statistics
             $('#statTotalStudents, #statMaleCount, #statFemaleCount, #statGoodHealth, #statBadHealth')
-                .html('<div class="w-100 text-center"><i class="bi bi-hourglass-split"></i></div>');
+                .html('<i class="bi bi-hourglass-split"></i>');
 
             $.ajax({
                 url: '{{ route("get_student_statistics") }}',
@@ -2440,15 +2385,13 @@
                             subclassSelect.append('<option value="' + subclass.subclassID + '" ' + selected + '>' + displayName + '</option>');
                         });
 
-                        if (typeof $.fn.select2 === 'function') {
-                            subclassSelect.select2({
-                                theme: 'bootstrap-5',
-                                placeholder: 'Search and select a class...',
-                                allowClear: true,
-                                width: '100%',
-                                dropdownParent: $('#editStudentModal')
-                            });
-                        }
+                        subclassSelect.select2({
+                            theme: 'bootstrap-5',
+                            placeholder: 'Search and select a class...',
+                            allowClear: true,
+                            width: '100%',
+                            dropdownParent: $('#editStudentModal')
+                        });
 
                         if (targetSubclassID) {
                             subclassSelect.val(targetSubclassID).trigger('change');
@@ -2479,15 +2422,13 @@
                             parentSelect.append('<option value="' + parent.parentID + '" ' + selected + '>' + displayText + '</option>');
                         });
 
-                        if (typeof $.fn.select2 === 'function') {
-                            parentSelect.select2({
-                                theme: 'bootstrap-5',
-                                placeholder: 'Search and select a parent...',
-                                allowClear: true,
-                                width: '100%',
-                                dropdownParent: $('#editStudentModal')
-                            });
-                        }
+                        parentSelect.select2({
+                            theme: 'bootstrap-5',
+                            placeholder: 'Search and select a parent...',
+                            allowClear: true,
+                            width: '100%',
+                            dropdownParent: $('#editStudentModal')
+                        });
 
                         if (targetParentID) {
                             parentSelect.val(targetParentID).trigger('change');
@@ -2503,19 +2444,15 @@
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
-                        if (typeof $.fn.select2 === 'function') {
-                            sponsorSelect.select2({
-                                theme: 'bootstrap-5',
-                                placeholder: 'Choose a sponsor...',
-                                allowClear: true,
-                                width: '100%',
-                                dropdownParent: $('#editStudentModal')
-                            });
-                        }
+                        let sponsorSelect = $('#edit_sponsor_id');
+                        sponsorSelect.html('<option value="">Choose a sponsor...</option>');
+                        response.sponsors.forEach(function(sponsor) {
+                            sponsorSelect.append('<option value="' + sponsor.sponsorID + '">' + sponsor.sponsor_name + '</option>');
+                        });
                         
                         // If we have a pending sponsor ID, set it now
                         if (window.pendingEditSponsorID) {
-                            sponsorSelect.val(window.pendingEditSponsorID).trigger('change');
+                            sponsorSelect.val(window.pendingEditSponsorID);
                             window.pendingEditSponsorID = null;
                         }
                     }

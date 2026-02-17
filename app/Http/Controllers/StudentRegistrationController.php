@@ -643,14 +643,6 @@ class StudentRegistrationController extends Controller
             } while (true);
 
             $admissionNumber = $request->admission_number;
-            
-            // Generate unique admission number if collision happens (e.g., random 4 digits collided)
-            $originalAdm = $admissionNumber;
-            $counter = 1;
-            while (\App\Models\Student::where('admission_number', $admissionNumber)->exists() || \App\Models\User::where('name', $admissionNumber)->exists()) {
-                 $admissionNumber = $originalAdm . '-' . $counter;
-                 $counter++;
-            }
 
             $student = Student::create([
                 'studentID' => (int)$fingerprintId, // Set studentID equal to fingerprintID (as integer)
