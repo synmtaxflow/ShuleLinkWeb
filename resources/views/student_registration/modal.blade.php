@@ -463,6 +463,11 @@ document.addEventListener('DOMContentLoaded', function() {
     let schoolNumber = '{{ session("schoolID") ?? "SCH" }}';
     let registrationNumber = '{{ optional(\App\Models\School::find(session("schoolID")))->registration_number ?? session("schoolID") ?? "REG" }}';
 
+     // Cleanup any stale backdrops on load
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('padding-right');
+
     const stepContents = {
         1: document.getElementById('step1'),
         2: document.getElementById('step2'),
@@ -476,17 +481,24 @@ document.addEventListener('DOMContentLoaded', function() {
     if (registrationModal) {
         // Handle both Bootstrap and manual show
         const resetModal = function() {
+            // Check if we are already resetting to prevent loop
+            if (registrationModal.dataset.isResetting === 'true') return;
+            registrationModal.dataset.isResetting = 'true';
+
             console.log('Modal shown, resetting to Step 1');
             const subclassID = document.getElementById('selectedSubclassID').value;
             const subclassName = document.getElementById('selectedSubclassName').textContent;
             
             currentStep = 1;
             showStep(1);
-            document.getElementById('registrationForm').reset();
+            
+            // Only reset if form is dirty or needs it
+            const form = document.getElementById('registrationForm');
+            if (form) form.reset();
             
             // Restore subclass info
-            document.getElementById('selectedSubclassID').value = subclassID;
-            document.getElementById('selectedSubclassName').textContent = subclassName;
+            if (document.getElementById('selectedSubclassID')) document.getElementById('selectedSubclassID').value = subclassID;
+            if (document.getElementById('selectedSubclassName')) document.getElementById('selectedSubclassName').textContent = subclassName;
 
             // Regenerate admission number since reset() cleared it
             if (typeof generateAdmissionNumber === 'function') {
@@ -496,22 +508,16 @@ document.addEventListener('DOMContentLoaded', function() {
             // Clear any error highlights
             document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
             document.querySelectorAll('.text-danger[class*="error-"]').forEach(el => el.classList.add('d-none'));
+
+            // Remove flag after short delay
+            setTimeout(() => {
+                registrationModal.dataset.isResetting = 'false';
+            }, 100);
         };
 
-        registrationModal.addEventListener('show.bs.modal', resetModal);
-        
-        // Also watch for manual show via display:block
-        const observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (mutation.attributeName === 'style') {
-                    const display = registrationModal.style.display;
-                    if (display === 'block') {
-                        resetModal();
-                    }
-                }
-            });
-        });
-        observer.observe(registrationModal, { attributes: true });
+        // Use ONLY ONE event listener to avoid stack overflow
+        const $regModal = $(registrationModal);
+        $regModal.off('shown.bs.modal').on('shown.bs.modal', resetModal);
     }
 
     // Function to populate review section with all entered data

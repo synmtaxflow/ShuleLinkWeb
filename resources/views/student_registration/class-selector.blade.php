@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function openRegistrationModal(id, name, className) {
-        // Set subclass info before closing selector
+        // Set subclass info
         const input = document.getElementById('selectedSubclassID');
         const display = document.getElementById('selectedSubclassName');
         if (input) input.value = id;
@@ -147,65 +147,91 @@ document.addEventListener('DOMContentLoaded', function() {
             display.textContent = label;
         }
 
-        // Fully destroy/close the class selector modal (remove from DOM and cleanup)
+        const selectorEl = document.getElementById('classSelectorModal');
+        const regEl = document.getElementById('registrationModal');
+
+        if (!selectorEl || !regEl) return;
+
+        // Function to open the registration modal
+        const showRegistrationModal = () => {
+             // Small timeout to ensure DOM is settled
+             setTimeout(() => {
+                try {
+                    console.log('Attempting to open registration modal...');
+                    
+                    // Priority 1: jQuery (Most robust for this setup)
+                    if (window.jQuery) {
+                        try {
+                            console.log('Trying jQuery modal...');
+                            jQuery('#registrationModal').modal('show');
+                            return; // Success
+                        } catch (jqErr) {
+                            console.warn('jQuery modal failed, trying Bootstrap 5 native:', jqErr);
+                        }
+                    }
+
+                    // Priority 2: Bootstrap 5 Native
+                    if (window.bootstrap && typeof bootstrap.Modal === 'function') {
+                        console.log('Trying Bootstrap 5 native...');
+                        // Dispose existing instance if any
+                        if (typeof bootstrap.Modal.getInstance === 'function') {
+                            const existingInst = bootstrap.Modal.getInstance(regEl);
+                            if (existingInst) existingInst.dispose();
+                        }
+                        
+                        const reg = new bootstrap.Modal(regEl, { backdrop: 'static', keyboard: false, focus: true });
+                        reg.show();
+                        return; // Success
+                    }
+                    
+                    // Priority 3: Manual Fallback
+                    console.log('Using manual fallback...');
+                    throw new Error('No compatible modal library found');
+                    
+                } catch (err) {
+                     console.error('Modal open failed, forcing manual display:', err);
+                     // Last resort fallback
+                     regEl.classList.add('show');
+                     regEl.style.display = 'block';
+                     regEl.setAttribute('aria-hidden', 'false');
+                     document.body.classList.add('modal-open');
+                     
+                     if (!document.querySelector('.modal-backdrop')) {
+                         const bd = document.createElement('div');
+                         bd.className = 'modal-backdrop show';
+                         bd.id = 'regBackdrop';
+                         document.body.appendChild(bd);
+                     }
+                }
+             }, 150);
+        };
+
+        // Force close selector modal using all available methods
         try {
-            const selectorEl = document.getElementById('classSelectorModal');
-            // Remove all modal backdrops
-            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-            // Remove modal-open class from body
-            document.body.classList.remove('modal-open');
-            // Hide and detach selector modal
-            if (selectorEl) {
-                if (window.bootstrap && typeof bootstrap.Modal === 'function' && typeof bootstrap.Modal.getInstance === 'function') {
-                    const inst = bootstrap.Modal.getInstance(selectorEl);
-                    if (inst) inst.hide();
-                } else if (window.jQuery) {
-                    try { jQuery('#classSelectorModal').modal('hide'); } catch (e) { /* ignore */ }
-                }
-                selectorEl.classList.add('d-none');
-                selectorEl.style.display = 'none';
+            if (window.bootstrap && typeof bootstrap.Modal === 'function' && typeof bootstrap.Modal.getInstance === 'function') {
+                const inst = bootstrap.Modal.getInstance(selectorEl);
+                if (inst) inst.hide();
             }
-        } catch (err) {
-            console.warn('Error closing selector modal:', err);
-        }
+        } catch (e) { console.warn('BS hide failed', e); }
 
-        // Now open registration modal with a small delay to ensure selector is fully hidden
-        setTimeout(() => {
-            try {
-                const regEl = document.getElementById('registrationModal');
-                if (!regEl) return;
-
-                // Add modal-open back to body for new modal
-                document.body.classList.add('modal-open');
-                regEl.classList.remove('d-none');
-                regEl.style.display = 'block';
-                regEl.setAttribute('aria-hidden', 'false');
-
-                // Use bootstrap if available
-                if (window.bootstrap && typeof bootstrap.Modal === 'function') {
-                    const reg = new bootstrap.Modal(regEl, { backdrop: 'static', keyboard: false });
-                    reg.show();
-                } else if (window.jQuery) {
-                    try { jQuery('#registrationModal').modal('show'); } catch (e) { /* ignore */ }
-                } else {
-                    // Fallback: create backdrop and show modal
-                    const bd = document.createElement('div');
-                    bd.className = 'modal-backdrop show';
-                    bd.id = 'regBackdrop';
-                    document.body.appendChild(bd);
-                    regEl.classList.add('show');
-                    regEl.style.zIndex = 1060;
-                }
-
-                // Focus first input after modal is shown
-                setTimeout(() => {
-                    const first = regEl.querySelector('input[name="first_name"]');
-                    if (first) first.focus();
-                }, 100);
-            } catch (err) {
-                console.error('Failed to open registration modal:', err);
+        try {
+            if (window.jQuery) {
+                jQuery(selectorEl).modal('hide');
             }
-        }, 200);
+        } catch (e) { console.warn('jQuery hide failed', e); }
+
+        // Manual cleanup just in case
+        selectorEl.classList.remove('show');
+        selectorEl.style.display = 'none';
+        selectorEl.setAttribute('aria-hidden', 'true');
+        
+        // Remove ANY backdrop immediately to prevent stacking issues
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('padding-right');
+
+        // Open registration modal after short delay
+        setTimeout(showRegistrationModal, 300);
     }
 });
 </script>
