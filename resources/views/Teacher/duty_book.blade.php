@@ -193,173 +193,7 @@
     </div>
 </div>
 
-<!-- Daily Duty Report Modal -->
-<div class="modal fade" id="dutyReportModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-xl" role="document">
-        <div class="modal-content border-0">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title font-weight-bold">
-                    <i class="fa fa-file-text-o"></i> Daily Duty Report 
-                    <span id="modal_status_badge" class="ml-2"></span>
-                    <div style="font-size: 0.8rem; font-weight: normal; opacity: 0.9;">Teacher on Duty: {{ Session::get('full_name') }}</div>
-                </h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body p-4" style="background: #f4f7f6;">
-                <form id="dailyDutyForm">
-                    @csrf
-                    <input type="hidden" name="report_date" id="report_date">
-                    
-                    <div class="card shadow-sm border-0 mb-4">
-                        <div class="card-body">
-                            <div class="alert alert-info py-2 px-3 border-0 shadow-sm mb-4">
-                                <div class="row align-items-center">
-                                    <div class="col-md-4">
-                                        <h6 class="mb-0"><strong>Teacher on Duty:</strong> <u>{{ Session::get('full_name') }}</u></h6>
-                                    </div>
-                                    <div class="col-md-4 text-center">
-                                        <h6 class="mb-0"><strong>Day:</strong> <span id="display_day" class="text-uppercase text-primary"></span></h6>
-                                    </div>
-                                    <div class="col-md-4 text-right">
-                                        <h6 class="mb-0"><strong>Date:</strong> <span id="display_date" class="font-weight-bold"></span></h6>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="table-responsive">
-                                <table class="table table-sm table-bordered text-center" id="attendance_table">
-                                    <thead class="bg-light">
-                                        <tr>
-                                            <th rowspan="2" class="align-middle">CLASS</th>
-                                            <th colspan="3">REGISTERED</th>
-                                            <th colspan="3">PRESENT</th>
-                                            <th colspan="3">SHIFTED</th>
-                                            <th colspan="3">NEW COMERS</th>
-                                            <th colspan="3">ABSENT</th>
-                                            <th colspan="3">PERMISSION</th>
-                                            <th colspan="3">SICK</th>
-                                        </tr>
-                                        <tr style="font-size: 0.7rem;">
-                                            @for($i=0; $i<7; $i++)
-                                                <th>B</th><th>G</th><th>T</th>
-                                            @endfor
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($classes as $cls)
-                                        <tr class="class-row" data-class-id="{{ $cls->classID }}">
-                                            <td class="bg-light font-weight-bold">{{ $cls->class_name }}</td>
-                                            <!-- REGISTERED -->
-                                            <td><input type="number" class="form-control form-control-sm reg-b" value="0"></td>
-                                            <td><input type="number" class="form-control form-control-sm reg-g" value="0"></td>
-                                            <td><input type="number" class="form-control form-control-sm reg-t" readonly value="0"></td>
-                                            <!-- PRESENT -->
-                                            <td><input type="number" class="form-control form-control-sm pres-b" value="0"></td>
-                                            <td><input type="number" class="form-control form-control-sm pres-g" value="0"></td>
-                                            <td><input type="number" class="form-control form-control-sm pres-t" readonly value="0"></td>
-                                            <!-- SHIFTED -->
-                                            <td><input type="number" class="form-control form-control-sm shift-b" value="0"></td>
-                                            <td><input type="number" class="form-control form-control-sm shift-g" value="0"></td>
-                                            <td><input type="number" class="form-control form-control-sm shift-t" readonly value="0"></td>
-                                            <!-- NEW COMERS -->
-                                            <td><input type="number" class="form-control form-control-sm new-b" value="0"></td>
-                                            <td><input type="number" class="form-control form-control-sm new-g" value="0"></td>
-                                            <td><input type="number" class="form-control form-control-sm new-t" readonly value="0"></td>
-                                            <!-- ABSENT -->
-                                            <td><input type="number" class="form-control form-control-sm abs-b" value="0"></td>
-                                            <td><input type="number" class="form-control form-control-sm abs-g" value="0"></td>
-                                            <td><input type="number" class="form-control form-control-sm abs-t" readonly value="0"></td>
-                                            <!-- PERMISSION -->
-                                            <td><input type="number" class="form-control form-control-sm perm-b" value="0"></td>
-                                            <td><input type="number" class="form-control form-control-sm perm-g" value="0"></td>
-                                            <td><input type="number" class="form-control form-control-sm perm-t" readonly value="0"></td>
-                                            <!-- SICK -->
-                                            <td><input type="number" class="form-control form-control-sm sick-b" value="0"></td>
-                                            <td><input type="number" class="form-control form-control-sm sick-g" value="0"></td>
-                                            <td><input type="number" class="form-control form-control-sm sick-t" readonly value="0"></td>
-                                        </tr>
-                                        @endforeach
-                                    </tbody>
-                                    <tfoot>
-                                        <tr class="bg-light font-weight-bold">
-                                            <td>TOTAL</td>
-                                            @for($i=0; $i<21; $i++)
-                                                <td id="total-{{ $i }}">0</td>
-                                            @endfor
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card shadow-sm border-0">
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6 border-right">
-                                    <div class="form-group mb-3">
-                                        <label>1. Attendance report in percentage (%):</label>
-                                        <div class="input-group input-group-sm">
-                                            <input type="number" step="0.01" name="attendance_percentage" id="attendance_percentage" class="form-control">
-                                            <div class="input-group-append"><span class="input-group-text">%</span></div>
-                                        </div>
-                                    </div>
-                                    <div class="form-group mb-3">
-                                        <label>2. School environment:</label>
-                                        <input type="text" name="school_environment" class="form-control form-control-sm" placeholder="e.g. Well cleaned">
-                                    </div>
-                                    <div class="form-group mb-3">
-                                        <label>3. Pupil's cleanliness:</label>
-                                        <input type="text" name="pupils_cleanliness" class="form-control form-control-sm" placeholder="e.g. They were smart">
-                                    </div>
-                                    <div class="form-group mb-3">
-                                        <label>4. Teacher's attendance:</label>
-                                        <textarea name="teachers_attendance" class="form-control form-control-sm" rows="2" placeholder="i) Name... ii) Name..."></textarea>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group mb-3">
-                                        <label>5. Time table:</label>
-                                        <input type="text" name="timetable_status" class="form-control form-control-sm" placeholder="e.g. Well followed">
-                                    </div>
-                                    <div class="form-group mb-3">
-                                        <label>6. Outside activities:</label>
-                                        <input type="text" name="outside_activities" class="form-control form-control-sm" placeholder="e.g. Well conducted">
-                                    </div>
-                                    <div class="form-group mb-3">
-                                        <label>7. Special events:</label>
-                                        <input type="text" name="special_events" class="form-control form-control-sm">
-                                    </div>
-                                    <div class="form-group mb-3">
-                                        <label>8. Teachers' on duty comments:</label>
-                                        <textarea name="teacher_comments" class="form-control form-control-sm" rows="2" placeholder="Sum up the day..."></textarea>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer bg-light d-flex justify-content-between">
-                <div>
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-warning" id="syncFromAttendance" style="display: none;">
-                        <i class="fa fa-refresh"></i> Sync From Attendance
-                    </button>
-                </div>
-                <div>
-                    <button type="button" class="btn btn-danger" id="downloadReportPdf" style="display: none;">
-                        <i class="fa fa-file-pdf-o"></i> Download PDF
-                    </button>
-                    <button type="button" class="btn btn-info" id="saveDraft">Save as Draft</button>
-                    <button type="button" class="btn btn-primary" id="saveAndSend">Send to Admin</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+@include('partials.duty_report_modal', ['classes' => $classes])
 
 <style>
     .card-header { border-bottom: 2px solid #f8f9fa; }
@@ -374,6 +208,7 @@
 </style>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 $(document).ready(function() {
     // Toggle week expansion
@@ -442,6 +277,7 @@ $(document).ready(function() {
         // Modal State Reset
         $('#dailyDutyForm')[0].reset();
         $('#modal_status_badge').html('');
+        $('#adminFeedbackSection, #btnApproveReport').hide();
         
             if (mode === 'view') {
                 $('#dailyDutyForm input, #dailyDutyForm textarea').prop('readonly', true);
@@ -462,6 +298,8 @@ $(document).ready(function() {
             window.totalActiveStudentsInSchool = response.total_active_students || 0;
 
             if (report) {
+                $('#reportID').val(report.reportID);
+                $('#display_teacher_name').text(report.teacher_name || '---');
                 // Set Status Badge
                 let badgeClass = 'badge-secondary';
                 if (report.status === 'Approved') badgeClass = 'badge-success';
@@ -480,9 +318,29 @@ $(document).ready(function() {
                 $('input[name="special_events"]').val(report.special_events);
                 $('textarea[name="teacher_comments"]').val(report.teacher_comments);
                 
+                // Admin feedback handling
+                if (report.signed_by || report.signature_image) {
+                    $('#adminFeedbackSection').show();
+                    $('#admin_comments').val(report.admin_comments).prop('readonly', true);
+                    $('#signed_by').val(report.signed_by).prop('readonly', true);
+                    
+                    if (report.signature_image) {
+                        $('#signature-image-preview').attr('src', report.signature_image);
+                        $('#view-only-signature').show();
+                        $('#signature-pad, #clear-signature').hide();
+                    } else {
+                        $('#view-only-signature, #signature-pad, #clear-signature').hide();
+                    }
+
+                    if (report.signed_at) {
+                        $('#signedAtDate').text(moment(report.signed_at).format('DD/MM/YYYY HH:mm'));
+                        $('#signedAtDisplay').show();
+                    }
+                }
+                
                 // Load attendance grid from report
                 if (report.attendance_data) {
-                    let data = JSON.parse(report.attendance_data);
+                    let data = typeof report.attendance_data === 'string' ? JSON.parse(report.attendance_data) : report.attendance_data;
                     $('.class-row').each(function() {
                         let cid = $(this).data('class-id');
                         if (data[cid]) {
@@ -507,6 +365,11 @@ $(document).ready(function() {
                 $('#modal_status_badge').html('<span class="badge badge-light">NEW REPORT</span>');
                 if (systemData) {
                     // New report: Pre-fill with system defaults
+                    // Set calculated attendance percentage
+                    if (response.calculated_attendance_percentage !== undefined) {
+                        $('input[name="attendance_percentage"]').val(response.calculated_attendance_percentage);
+                    }
+
                     $('.class-row').each(function() {
                         let cid = $(this).data('class-id');
                         if (systemData[cid]) {
@@ -537,11 +400,19 @@ $(document).ready(function() {
     $('#syncFromAttendance').click(function() {
         let date = $('#report_date').val();
         const $btn = $(this);
+        const originalHtml = $btn.html();
+        
         $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Syncing...');
 
         $.get("{{ route('teacher.duty_book.report') }}", { date: date }, function(response) {
             let systemData = response.system_attendance;
+            window.totalActiveStudentsInSchool = response.total_active_students || 0; // Store total active students
             if (systemData) {
+                // Update attendance percentage
+                if (response.calculated_attendance_percentage !== undefined) {
+                    $('input[name="attendance_percentage"]').val(response.calculated_attendance_percentage);
+                }
+
                 $('.class-row').each(function() {
                     let cid = $(this).data('class-id');
                     if (systemData[cid]) {
@@ -560,12 +431,18 @@ $(document).ready(function() {
                     }
                 });
                 $('.class-row').first().find('input').first().trigger('input');
-                Swal.fire('Synced', 'Attendance counts updated from latest system data.', 'success');
+                Swal.fire({
+                    title: 'Synced',
+                    text: 'Attendance counts updated from latest system data.',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
             }
-            $btn.prop('disabled', false).html('<i class="fa fa-refresh"></i> Sync From Attendance');
         }).fail(function() {
             Swal.fire('Error', 'Failed to sync data.', 'error');
-            $btn.prop('disabled', false).html('<i class="fa fa-refresh"></i> Sync From Attendance');
+        }).always(function() {
+            $btn.prop('disabled', false).html(originalHtml);
         });
     });
 
@@ -616,14 +493,28 @@ $(document).ready(function() {
         };
 
         const $btn = $(this);
+        const originalHtml = $btn.html();
+        
+        if (action === 'send') {
+            Swal.fire({
+                title: 'Sending Report...',
+                html: 'Please wait while we process and notify the admin.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+        }
+
         $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Processing...');
 
         $.post("{{ route('teacher.duty_book.save') }}", formData, function(response) {
             Swal.fire({
-                title: 'Success',
+                title: 'Success!',
                 text: response.message,
                 icon: 'success',
-                confirmButtonText: 'OK'
+                timer: 2000,
+                showConfirmButton: false
             }).then(() => {
                 location.reload(); 
             });
@@ -631,7 +522,8 @@ $(document).ready(function() {
             let msg = 'Failed to save report. Please check your network.';
             if (err.responseJSON && err.responseJSON.message) msg = err.responseJSON.message;
             Swal.fire('Error', msg, 'error');
-            $btn.prop('disabled', false).html(action === 'send' ? 'Send to Admin' : 'Save as Draft');
+        }).always(function() {
+            $btn.prop('disabled', false).html(originalHtml);
         });
     });
     
@@ -646,12 +538,30 @@ $(document).ready(function() {
             confirmButtonText: 'Yes, Send'
         }).then((res) => {
             if (res.isConfirmed) {
+                Swal.fire({
+                    title: 'Sending Report...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
                 $.post("{{ route('teacher.duty_book.save') }}", {
                     _token: "{{ csrf_token() }}",
                     report_date: date,
                     action: 'send'
                 }, function(response) {
-                    Swal.fire('Sent', 'Report sent successfully.', 'success');
+                    Swal.fire({
+                        title: 'Sent!',
+                        text: 'Report sent successfully.',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        location.reload();
+                    });
+                }).fail(function() {
+                    Swal.fire('Error', 'Failed to send report.', 'error');
                 });
             }
         });

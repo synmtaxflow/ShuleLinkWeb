@@ -62,6 +62,14 @@ class TeacherDutyController extends Controller
             ->orderBy('first_name')
             ->get();
 
+        // Fetch reports for status indicators
+        $reports = \App\Models\DailyDutyReport::where('schoolID', $schoolID)
+            ->whereBetween('report_date', [$fromDate, $toDate])
+            ->get()
+            ->groupBy(function($item) {
+                return $item->report_date->format('Y-m-d');
+            });
+
         // Get the end date of the last duty assigned to help with continuity
         $lastDuty = TeacherDuty::where('schoolID', $schoolID)->orderBy('end_date', 'desc')->first();
         $lastDutyEndDate = $lastDuty ? $lastDuty->end_date : null;
@@ -69,12 +77,15 @@ class TeacherDutyController extends Controller
         // If AJAX, we only want the table part and the title
         if ($request->ajax()) {
             return response()->json([
-                'html' => view('Admin.teacher_duties.table_body', compact('duties'))->render(),
+                'html' => view('Admin.teacher_duties.table_body', compact('duties', 'reports'))->render(),
                 'title' => 'Teacher on Duties in ' . $monthTitle
             ]);
         }
 
-        return view('Admin.teacher_duties.index', compact('duties', 'teachers', 'activeTerm', 'activeYear', 'lastDutyEndDate', 'fromDate', 'toDate', 'monthTitle'));
+        // Fetch classes for the duty report modal
+        $classes = \App\Models\ClassModel::where('schoolID', $schoolID)->orderBy('class_name', 'asc')->get();
+
+        return view('Admin.teacher_duties.index', compact('duties', 'teachers', 'activeTerm', 'activeYear', 'lastDutyEndDate', 'fromDate', 'toDate', 'monthTitle', 'reports', 'classes'));
     }
 
     public function export_pdf(Request $request)
@@ -167,13 +178,26 @@ class TeacherDutyController extends Controller
         $schoolID = Session::get('schoolID');
         $teacherID = Session::get('teacherID');
         $date = $request->get('date');
+        $reportID = $request->get('reportID');
 
-        if (!$date) return response()->json(['success' => false, 'message' => 'Date is required.'], 400);
+        if (!$reportID && !$date) {
+            return response()->json(['success' => false, 'message' => 'Date or Report ID is required.'], 400);
+        }
 
         // Fetch saved report
-        $report = \App\Models\DailyDutyReport::where('schoolID', $schoolID)
-            ->whereDate('report_date', $date)
-            ->first();
+        $query = \App\Models\DailyDutyReport::where('schoolID', $schoolID);
+        
+        if ($reportID) {
+            $query->where('reportID', $reportID);
+        } else {
+            $query->whereDate('report_date', $date);
+            // If it's a teacher request, optionally narrow by their ID
+            if ($teacherID) {
+                $query->where('teacherID', $teacherID);
+            }
+        }
+        
+        $report = $query->first();
 
         // System Attendance Calculation (Pre-fill data)
         $classes = \App\Models\ClassModel::where('schoolID', $schoolID)->orderBy('class_name', 'asc')->get();
@@ -258,11 +282,24 @@ class TeacherDutyController extends Controller
             ->where('status', '!=', 'Transferred')
             ->count();
 
+        // Calculate total present students for the day
+        $totalPresentAcrossSchool = 0;
+        foreach ($systemAttendance as $classStat) {
+            $totalPresentAcrossSchool += ($classStat['pres_b'] + $classStat['pres_g']);
+        }
+
+        $calculatedPercentage = $totalActiveStudents > 0 
+            ? round(($totalPresentAcrossSchool / $totalActiveStudents) * 100, 2) 
+            : 0;
+
         return response()->json([
             'success' => true, 
-            'report' => $report, 
+            'report' => $report ? array_merge($report->toArray(), [
+                'teacher_name' => $report->teacher ? $report->teacher->first_name . ' ' . $report->teacher->last_name : 'N/A'
+            ]) : null, 
             'system_attendance' => $systemAttendance,
-            'total_active_students' => $totalActiveStudents
+            'total_active_students' => $totalActiveStudents,
+            'calculated_attendance_percentage' => $calculatedPercentage
         ]);
     }
 
@@ -308,6 +345,21 @@ class TeacherDutyController extends Controller
                     'status' => $data['action'] === 'send' ? 'Sent' : 'Draft'
                 ]
             );
+
+            // Send SMS notification to Admin if Sent
+            if ($report->status === 'Sent') {
+                try {
+                    $school = \App\Models\School::find($schoolID);
+                    $teacher = \App\Models\Teacher::find($teacherID);
+                    if ($school && $school->phone) {
+                        $teacherName = $teacher ? $teacher->first_name . ' ' . $teacher->last_name : 'Mwalimu';
+                        $smsMsg = "Habari Admin, " . $teacherName . " ametuma ripoti ya duty book ya tarehe " . date('d/m/Y', strtotime($date)) . ". Tafadhali ipitie ShuleLink.";
+                        $this->smsService->sendSms($school->phone, $smsMsg);
+                    }
+                } catch (\Exception $smsEx) {
+                    \Illuminate\Support\Facades\Log::error("Duty Report SMS Error: " . $smsEx->getMessage());
+                }
+            }
 
             return response()->json(['success' => true, 'message' => 'Report saved as ' . $report->status]);
         } catch (\Illuminate\Validation\ValidationException $ve) {
@@ -480,13 +532,18 @@ class TeacherDutyController extends Controller
     {
         $schoolID = Session::get('schoolID');
         $date = $request->get('date');
-        $teacherID = Session::get('teacherID');
+        $teacherID = $request->get('teacherID'); // Allow passing teacherID
 
         if (!$date) return redirect()->back();
 
-        $report = \App\Models\DailyDutyReport::where('schoolID', $schoolID)
-            ->whereDate('report_date', $date)
-            ->first();
+        $query = \App\Models\DailyDutyReport::where('schoolID', $schoolID)
+            ->whereDate('report_date', $date);
+            
+        if ($teacherID) {
+            $query->where('teacherID', $teacherID);
+        }
+        
+        $report = $query->first();
 
         if (!$report) return redirect()->back()->with('error', 'Report not found.');
 
@@ -505,5 +562,37 @@ class TeacherDutyController extends Controller
         return response()->streamDownload(function() use ($dompdf) {
             echo $dompdf->output();
         }, $filename, ['Content-Type' => 'application/pdf']);
+    }
+
+    public function approveReport(Request $request)
+    {
+        $schoolID = Session::get('schoolID');
+        if (!$schoolID) return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+
+        $request->validate([
+            'reportID' => 'required|exists:daily_duty_reports,reportID',
+            'signed_by' => 'required|string|max:255',
+            'admin_comments' => 'nullable|string',
+            'signature_image' => 'nullable|string'
+        ]);
+
+        try {
+            $report = \App\Models\DailyDutyReport::where('schoolID', $schoolID)
+                ->where('reportID', $request->reportID)
+                ->firstOrFail();
+
+            $report->update([
+                'status' => 'Approved',
+                'signed_by' => $request->signed_by,
+                'signed_at' => now(),
+                'admin_comments' => $request->admin_comments,
+                'signature_image' => $request->signature_image,
+                'approved_by_id' => Session::get('adminID') // Assuming adminID is in session
+            ]);
+
+            return response()->json(['success' => true, 'message' => 'Report approved and signed successfully.']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to approve: ' . $e->getMessage()], 500);
+        }
     }
 }

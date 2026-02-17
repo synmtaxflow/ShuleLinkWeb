@@ -176,6 +176,8 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
+        width: 100%;
+        text-align: center;
     }
 
     .no-data-message i {
@@ -791,7 +793,7 @@
                 </div>
             </div>
             <div id="studentsWidgetGrid" class="students-widget-grid">
-                <div class="no-data-message">
+                <div class="no-data-message w-100 text-center py-5">
                     <i class="bi bi-people fs-1 text-muted"></i>
                     <p class="text-muted mt-2">Loading students...</p>
                 </div>
@@ -1591,7 +1593,7 @@
             // Update currentStatus
             currentStatus = status;
 
-            $('#studentsWidgetGrid').html('<div class="no-data-message text-center py-5"><i class="bi bi-hourglass-split" style="font-size: 3rem; color: #6c757d;"></i><p class="text-muted mt-2">Loading students...</p></div>');
+            $('#studentsWidgetGrid').html('<div class="no-data-message text-center py-5 w-100"><i class="bi bi-hourglass-split" style="font-size: 3rem; color: #6c757d;"></i><p class="text-muted mt-2">Loading students...</p></div>');
 
             $.ajax({
                 url: '{{ route("get_students_list") }}',
@@ -1604,6 +1606,10 @@
                     health: health
                 },
                 dataType: 'json',
+                timeout: 30000, // 30 seconds timeout
+                beforeSend: function() {
+                    console.log('AJAX request sent to get_students_list');
+                },
                 success: function(response) {
                     console.log('Response received:', response);
 
@@ -1613,12 +1619,12 @@
                             renderStudentWidgets(response.students, status);
                         } else {
                             currentStudentsData = [];
-                            $('#studentsWidgetGrid').html('<div class="no-data-message text-center py-5"><i class="bi bi-inbox" style="font-size: 3rem; color: #6c757d;"></i><h5 class="mt-3 text-muted">No Data Available</h5><p class="text-muted">No students found matching the selected filters.</p></div>');
+                            $('#studentsWidgetGrid').html('<div class="no-data-message text-center py-5 w-100"><i class="bi bi-inbox" style="font-size: 3rem; color: #6c757d;"></i><h5 class="mt-3 text-muted">No Data Available</h5><p class="text-muted">No students found matching the selected filters.</p></div>');
                         }
 
                         loadStatistics();
                     } else {
-                        $('#studentsWidgetGrid').html('<div class="no-data-message text-center py-5"><i class="bi bi-inbox" style="font-size: 3rem; color: #6c757d;"></i><h5 class="mt-3 text-muted">No Data Available</h5><p class="text-muted">Failed to load students.</p></div>');
+                        $('#studentsWidgetGrid').html('<div class="no-data-message text-center py-5 w-100"><i class="bi bi-inbox" style="font-size: 3rem; color: #6c757d;"></i><h5 class="mt-3 text-muted">No Data Available</h5><p class="text-muted">Failed to load students: ' + (response.message || 'Unknown error') + '</p></div>');
                         loadStatistics();
                     }
                 },
@@ -1645,10 +1651,11 @@
                         }
                     }
 
-                    let noDataHtml = '<div class="no-data-message text-center py-5">' +
+                    let noDataHtml = '<div class="no-data-message text-center py-5 w-100">' +
                         '<i class="bi bi-exclamation-triangle" style="font-size: 3rem; color: #dc3545;"></i>' +
                         '<h5 class="mt-3 text-danger">Error Loading Data</h5>' +
                         '<p class="text-muted">' + errorMessage + '</p>' +
+                        '<p class="text-muted x-small">Status: ' + status + ' (' + xhr.status + ')</p>' +
                         '<button class="btn btn-sm btn-primary mt-2" onclick="location.reload()">Refresh Page</button>' +
                         '</div>';
                     $('#studentsWidgetGrid').html(noDataHtml);
@@ -1786,7 +1793,7 @@
 
             // Show loading state on statistics
             $('#statTotalStudents, #statMaleCount, #statFemaleCount, #statGoodHealth, #statBadHealth')
-                .html('<i class="bi bi-hourglass-split"></i>');
+                .html('<div class="w-100 text-center"><i class="bi bi-hourglass-split"></i></div>');
 
             $.ajax({
                 url: '{{ route("get_student_statistics") }}',

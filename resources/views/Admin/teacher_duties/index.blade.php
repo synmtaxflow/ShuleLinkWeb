@@ -36,6 +36,12 @@
         border: 1px solid #e3e6f0;
         border-radius: 10px;
     }
+    .modal-xl { max-width: 95%; }
+    .transition-icon { transition: transform 0.3s ease; }
+    .expandable-row[aria-expanded="true"] .transition-icon { transform: rotate(90deg); }
+    .expandable-row:hover { background-color: rgba(0, 123, 255, 0.05) !important; }
+    #attendance_table input { width: 45px; text-align: center; border: 1px solid #eee; padding: 2px; }
+    .btn-xs { padding: 0.1rem 0.3rem; font-size: 0.75rem; }
 </style>
 @endpush
 
@@ -200,12 +206,39 @@
     </div>
 </div>
 
+@include('partials.duty_report_modal', ['classes' => $classes])
 @endsection
 
 @push('scripts')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
 <script>
     jQuery(document).ready(function($) {
+        let signaturePad;
+        const canvas = document.getElementById('signature-pad');
+
+        if (canvas && typeof SignaturePad !== 'undefined') {
+            signaturePad = new SignaturePad(canvas, {
+                backgroundColor: 'rgb(255, 255, 255)',
+                penColor: 'rgb(0, 0, 128)'
+            });
+
+            function resizeCanvas() {
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = canvas.offsetHeight * ratio;
+                canvas.getContext("2d").scale(ratio, ratio);
+                signaturePad.clear();
+            }
+
+            window.onresize = resizeCanvas;
+            $('#dutyReportModal').on('shown.bs.modal', function() {
+                resizeCanvas();
+            });
+
+            $('#clear-signature').click(function() {
+                signaturePad.clear();
+            });
+        }
         
         let lastEndDate = "{{ $lastDutyEndDate }}";
 
@@ -510,6 +543,249 @@
                     $btn.prop('disabled', false).html(originalText);
                 });
         });
+        // Duty Book Row Expansion Icon Toggle
+        $(document).on('click', '.expandable-row', function() {
+            $(this).find('.transition-icon').toggleClass('fa-chevron-right fa-chevron-down');
+        });
+
+        // Event for auto-calculating totals in the modal table (copied from teacher side)
+        $(document).on('input', '#attendance_table input', function() {
+            let $row = $(this).closest('tr');
+            const categories = ['.reg', '.pres', '.shift', '.new', '.abs', '.perm', '.sick'];
+            categories.forEach(cat => {
+                let b = parseInt($row.find(cat + '-b').val()) || 0;
+                let g = parseInt($row.find(cat + '-g').val()) || 0;
+                $row.find(cat + '-t').val(b + g);
+            });
+            calculateModalFooterTotals();
+        });
+
+        function calculateModalFooterTotals() {
+            const columns = ['.reg-b', '.reg-g', '.reg-t', '.pres-b', '.pres-g', '.pres-t', '.shift-b', '.shift-g', '.shift-t', '.new-b', '.new-g', '.new-t', '.abs-b', '.abs-g', '.abs-t', '.perm-b', '.perm-g', '.perm-t', '.sick-b', '.sick-g', '.sick-t'];
+            columns.forEach((selector, index) => {
+                let sum = 0;
+                $('#dutyReportModal ' + selector).each(function() {
+                    sum += parseInt($(this).val()) || 0;
+                });
+                $('#dutyReportModal #total-' + index).text(sum);
+            });
+        }
+
+        // View & Sign Report Action
+        $(document).on('click', '.view-sign-report, .view-report-admin', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const $btn = $(this);
+            const reportID = $btn.data('id');
+            const date = $btn.data('date');
+            const isSigning = $btn.hasClass('view-sign-report');
+
+            console.log('Click detected:', { reportID, date, isSigning });
+
+            try {
+                // Initialize Modal State
+                $('#dutyReportModal').modal('show');
+                $('#dailyDutyForm')[0].reset();
+                $('#display_teacher_name').text('Loading report data...');
+                $('#reportID').val(reportID || '');
+                $('#report_date').val(date || '');
+                
+                if (typeof moment !== 'undefined' && date) {
+                    $('#display_date').text(moment(date).format('DD/MM/YYYY'));
+                    $('#display_day').text(moment(date).format('dddd').toUpperCase());
+                } else {
+                    $('#display_date').text(date || '---');
+                }
+
+                $('#dailyDutyForm input, #dailyDutyForm textarea').prop('readonly', true);
+                $('#dailyDutyForm input[type="number"]').css('background-color', '#f8f9fa');
+                $('#saveDraft, #saveAndSend, #syncFromAttendance').hide();
+                $('#downloadReportPdf').show();
+                
+                if (isSigning) {
+                    $('#adminFeedbackSection').show();
+                    $('#btnApproveReport').show();
+                    $('#admin_comments, #signed_by').prop('readonly', false).css('background-color', '#fff');
+                    $('#signedAtDisplay').hide();
+                } else {
+                    $('#adminFeedbackSection').show();
+                    $('#btnApproveReport').hide();
+                    $('#admin_comments, #signed_by').prop('readonly', true).css('background-color', '#f8f9fa');
+                }
+
+                // Load Data
+                $.get("{{ route('teacher.duty_book.report') }}", { 
+                    date: date,
+                    reportID: reportID
+                }, function(response) {
+                    window.totalActiveStudentsInSchool = response.total_active_students || 0;
+                    if (response.success && response.report) {
+                        const report = response.report;
+                        $('#reportID').val(report.reportID);
+                        $('#display_teacher_name').text(report.teacher_name || '---');
+                        $('input[name="attendance_percentage"]').val(report.attendance_percentage);
+                        $('input[name="school_environment"]').val(report.school_environment);
+                        $('input[name="pupils_cleanliness"]').val(report.pupils_cleanliness);
+                        $('textarea[name="teachers_attendance"]').val(report.teachers_attendance);
+                        $('input[name="timetable_status"]').val(report.timetable_status);
+                        $('input[name="outside_activities"]').val(report.outside_activities);
+                        $('input[name="special_events"]').val(report.special_events);
+                        $('textarea[name="teacher_comments"]').val(report.teacher_comments);
+                        
+                        $('#admin_comments').val(report.admin_comments);
+                        $('#signed_by').val(report.signed_by);
+
+                        // Digital Signature Display Logic
+                        if (report.signature_image) {
+                            $('#signature-image-preview').attr('src', report.signature_image);
+                            $('#view-only-signature').show();
+                            $('#signature-pad, #clear-signature').hide();
+                        } else if (isSigning) {
+                            $('#view-only-signature').hide();
+                            $('#signature-pad, #clear-signature').show();
+                            if(signaturePad) signaturePad.clear();
+                        } else {
+                            $('#view-only-signature').hide();
+                            $('#signature-pad, #clear-signature').hide();
+                        }
+
+                        if (report.signed_at && typeof moment !== 'undefined') {
+                            $('#signedAtDate').text(moment(report.signed_at).format('DD/MM/YYYY HH:mm'));
+                            $('#signedAtDisplay').show();
+                        }
+
+                        if (report.attendance_data) {
+                            let data = typeof report.attendance_data === 'string' ? JSON.parse(report.attendance_data) : report.attendance_data;
+                            $('.class-row').each(function() {
+                                let cid = $(this).data('class-id');
+                                if (data[cid]) {
+                                    $(this).find('.reg-b').val(data[cid].reg_b);
+                                    $(this).find('.reg-g').val(data[cid].reg_g);
+                                    $(this).find('.pres-b').val(data[cid].pres_b);
+                                    $(this).find('.pres-g').val(data[cid].pres_g);
+                                    $(this).find('.shift-b').val(data[cid].shift_b || 0);
+                                    $(this).find('.shift-g').val(data[cid].shift_g || 0);
+                                    $(this).find('.new-b').val(data[cid].new_b || 0);
+                                    $(this).find('.new-g').val(data[cid].new_g || 0);
+                                    $(this).find('.abs-b').val(data[cid].abs_b || 0);
+                                    $(this).find('.abs-g').val(data[cid].abs_g || 0);
+                                    $(this).find('.perm-b').val(data[cid].perm_b || 0);
+                                    $(this).find('.perm-g').val(data[cid].perm_g || 0);
+                                    $(this).find('.sick-b').val(data[cid].sick_b || 0);
+                                    $(this).find('.sick-g').val(data[cid].sick_g || 0);
+                                }
+                            });
+                            if (typeof calculateModalFooterTotals === 'function') calculateModalFooterTotals();
+                        }
+                    } else {
+                        Swal.fire('Info', 'Could not load report details.', 'info');
+                    }
+                }).fail(function() {
+                    Swal.fire('Error', 'Server connection failed.', 'error');
+                });
+            } catch (err) {
+                console.error('Error in View/Sign handler:', err);
+                alert("An error occurred while opening the report.");
+            }
+        });
+
+        // Admin Approval/Sign logic
+        $('#btnApproveReport').click(function() {
+            const reportID = $('#reportID').val();
+            const signedBy = $('#signed_by').val();
+            const comments = $('#admin_comments').val();
+            
+            if (signaturePad && signaturePad.isEmpty()) {
+                Swal.fire('Signature Drawing Required', 'Please draw your signature in the signature area.', 'warning');
+                return;
+            }
+
+            if (!signedBy) {
+                Swal.fire('Name Required', 'Please type your full name below the signature area.', 'warning');
+                return;
+            }
+
+            const signatureImage = signaturePad ? signaturePad.toDataURL() : null;
+
+            Swal.fire({
+                title: 'Signing Report...',
+                text: 'Please wait while we record your signature and approve the report.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            $.post("{{ route('admin.duty_book.approve') }}", {
+                _token: "{{ csrf_token() }}",
+                reportID: reportID,
+                signed_by: signedBy,
+                admin_comments: comments,
+                signature_image: signatureImage
+            }, function(response) {
+                Swal.fire({
+                    title: 'Approved!',
+                    text: response.message,
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload();
+                });
+            }).fail(function(err) {
+                let msg = 'Failed to approve report.';
+                if (err.responseJSON && err.responseJSON.message) msg = err.responseJSON.message;
+                Swal.fire('Error', msg, 'error');
+            });
+        });
+
+        // Download PDF Handler
+        $('#downloadReportPdf').click(function() {
+            let date = $('#report_date').val();
+            window.location.href = "{{ route('teacher.duty_book.export_report') }}?date=" + date;
+        });
+
+        // Attendance Table Calculation Logic
+        $(document).on('input', '#attendance_table input', function() {
+            let $row = $(this).closest('tr');
+            const categories = ['.reg', '.pres', '.shift', '.new', '.abs', '.perm', '.sick'];
+            categories.forEach(cat => {
+                let b = parseInt($row.find(cat + '-b').val()) || 0;
+                let g = parseInt($row.find(cat + '-g').val()) || 0;
+                $row.find(cat + '-t').val(b + g);
+            });
+            calculateModalFooterTotals();
+        });
+
+        function calculateModalFooterTotals() {
+            const columns = [
+                '.reg-b', '.reg-g', '.reg-t',
+                '.pres-b', '.pres-g', '.pres-t',
+                '.shift-b', '.shift-g', '.shift-t',
+                '.new-b', '.new-g', '.new-t',
+                '.abs-b', '.abs-g', '.abs-t',
+                '.perm-b', '.perm-g', '.perm-t',
+                '.sick-b', '.sick-g', '.sick-t'
+            ];
+
+            columns.forEach((selector, index) => {
+                let sum = 0;
+                $(selector).each(function() {
+                    sum += parseInt($(this).val()) || 0;
+                });
+                $('#total-' + index).text(sum);
+            });
+
+            // Recalculate percentage if totalActiveStudents is available
+            let totalPres = parseInt($('#total-5').text()) || 0;
+            let totalActive = window.totalActiveStudentsInSchool || 0;
+            if (totalActive > 0) {
+                let perc = (totalPres / totalActive) * 100;
+                $('#attendance_percentage').val(perc.toFixed(2));
+            }
+        }
+
 
         function showAlert(type, message) {
             let html = `

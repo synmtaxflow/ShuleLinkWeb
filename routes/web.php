@@ -397,6 +397,7 @@ Route::post('admin/teacher-duties/store', [TeacherDutyController::class, 'store'
 Route::delete('admin/teacher-duties/destroy', [TeacherDutyController::class, 'destroy'])->name('admin.teacher_duties.destroy');
 Route::get('admin/teacher-duties/export-pdf', [TeacherDutyController::class, 'export_pdf'])->name('admin.teacher_duties.export_pdf');
 Route::get('admin/teacher-duties/report', [TeacherDutyController::class, 'report'])->name('admin.teacher_duties.report');
+Route::post('admin/teacher-duties/approve', [TeacherDutyController::class, 'approveReport'])->name('admin.duty_book.approve');
 Route::get('teacher/duty-book', [TeacherDutyController::class, 'teacherIndex'])->name('teacher.duty_book');
 Route::get('teacher/duty-book/export', [TeacherDutyController::class, 'export_pdf'])->name('teacher.duty_book.export');
 Route::get('teacher/duty-book/export-report', [TeacherDutyController::class, 'exportDailyReportPdf'])->name('teacher.duty_book.export_report');

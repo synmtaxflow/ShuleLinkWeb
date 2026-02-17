@@ -22,12 +22,17 @@ class DailyDutyReport extends Model
         'special_events',
         'teacher_comments',
         'admin_comments',
+        'signed_by',
+        'signed_at',
+        'approved_by_id',
+        'signature_image',
         'status',
     ];
 
     protected $casts = [
         'attendance_data' => 'array',
         'report_date' => 'date',
+        'signed_at' => 'datetime',
     ];
 
     public function teacher()

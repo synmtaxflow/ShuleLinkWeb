@@ -1350,20 +1350,32 @@ class ManageStudentController extends Controller
             ->orderBy('last_name')
             ->get();
 
+        \Log::info('get_students fetched ' . $students->count() . ' students');
+
         $students = $students->map(function($student) {
-            // Construct image path - check if file exists
-            $studentImgPath = $student->gender == 'Female'
-                ? asset('images/female.png')
-                : asset('images/male.png'); // Default to placeholder
-            
+            // Construct image path - robust checking for live servers
+            $studentImgPath = null;
             if ($student->photo && !empty(trim($student->photo))) {
-                $photoPath = public_path('userImages/' . $student->photo);
-                if (file_exists($photoPath)) {
-                    $studentImgPath = asset('userImages/' . $student->photo);
+                $filename = $student->photo;
+                $docRoot = $_SERVER['DOCUMENT_ROOT'] ?? null;
+                $livePath = $docRoot ? $docRoot . '/userImages/' . $filename : null;
+                $localPath = public_path('userImages/' . $filename);
+
+                if ($livePath && file_exists($livePath)) {
+                    // Use url() for files in public_html/userImages
+                    $studentImgPath = url('userImages/' . $filename);
+                } elseif (file_exists($localPath)) {
+                    // Use asset() for local public/userImages
+                    $studentImgPath = asset('userImages/' . $filename);
                 }
-                // If file doesn't exist, keep using placeholder (already set above)
             }
-            // If no photo, keep using placeholder (already set above)
+            
+            // Fallback to placeholder if no image found
+            if (!$studentImgPath) {
+                $studentImgPath = $student->gender == 'Female'
+                    ? asset('images/female.png')
+                    : asset('images/male.png');
+            }
 
             return [
                 'studentID' => $student->studentID,

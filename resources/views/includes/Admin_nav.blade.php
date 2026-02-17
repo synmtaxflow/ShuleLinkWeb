@@ -507,9 +507,18 @@
                         </li>
 
                         <!-- Duties Book -->
+                        @php
+                            $pendingDutyReports = \App\Models\DailyDutyReport::where('schoolID', Session::get('schoolID'))
+                                ->where('status', 'Sent')
+                                ->count();
+                        @endphp
                         <li class="dropdown-nav-item">
                             <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#dutiesBook" aria-expanded="false">
-                                <i class="fa fa-book"></i> Duties Book <i class="fa fa-chevron-down float-right"></i>
+                                <i class="fa fa-book"></i> Duties Book 
+                                @if($pendingDutyReports > 0)
+                                    <span class="badge badge-danger ml-1" style="font-size: 10px; border-radius: 50%;">{{ $pendingDutyReports }}</span>
+                                @endif
+                                <i class="fa fa-chevron-down float-right"></i>
                             </a>
                             <ul id="dutiesBook" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
                                 <li><a href="{{ route('admin.teacher_duties') }}" class="nav-link"><i class="fa fa-calendar-check-o"></i> Teacher on Duties</a></li>
