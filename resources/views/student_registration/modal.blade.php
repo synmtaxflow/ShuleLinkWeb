@@ -45,7 +45,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">First Name <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="first_name" id="reg_first_name" required>
+                                <input type="text" class="form-control" name="first_name" id="reg_first_name" required placeholder="e.g., John">
                                 <small class="text-danger d-none error-first_name"></small>
                             </div>
                             <div class="col-md-6">
@@ -138,8 +138,10 @@
                         </div>
 
                         <!-- Found Parent Display -->
-                        <div id="foundParentDiv" class="d-none mb-3 p-3 border rounded" style="background-color: #f5f5f5; border-color: #e9ecef;">
-                            <h6 class="mb-2" style="color: #212529;">Found Parent:</h6>
+                        <div id="foundParentDiv" class="d-none mb-3 p-3 border rounded-3 shadow-sm" style="background-color: #f0f7ff; border-color: #b8daff;">
+                            <h6 class="mb-3 fw-bold" style="color: #004085;">
+                                <i class="bi bi-person-check-fill"></i> Parent Account Verified
+                            </h6>
                             <div class="row">
                                 <div class="col-md-3 text-center">
                                     <img id="foundParentImage" src="" alt="Parent Photo" style="width: 100%; max-width: 120px; height: 120px; object-fit: cover; border-radius: 8px;">
@@ -921,13 +923,13 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             const phoneExistsError = document.getElementById('phoneExistsError');
             if (data.success && data.parent && data.in_current_school) {
-                // Parent exists in current school - show danger alert as requested
+                // Parent exists in current school - show info alert
                 phoneExistsInOtherSchool = false;
-                phoneExistsError.innerHTML = '<i class="bi bi-exclamation-triangle"></i> <strong>Parent Already Exists in This School!</strong><br>Click "Search" to use this parent, or use a different phone number.';
-                phoneExistsError.className = 'alert alert-danger mt-2';
+                phoneExistsError.innerHTML = '<i class="bi bi-check-circle"></i> <strong>Existing Parent Found!</strong><br>This parent is already registered in our school. You can link this student to them by clicking the <strong>Search</strong> button.';
+                phoneExistsError.className = 'alert alert-info mt-2';
                 phoneExistsError.classList.remove('d-none');
-                inputElement.classList.add('is-invalid');
-                inputElement.classList.remove('is-warning');
+                inputElement.classList.remove('is-invalid');
+                inputElement.classList.add('is-valid');
             } else if (data.in_other_school) {
                 // Phone exists in another school - show error and block form
                 phoneExistsInOtherSchool = true;
