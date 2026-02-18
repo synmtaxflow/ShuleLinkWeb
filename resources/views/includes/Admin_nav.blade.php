@@ -413,6 +413,7 @@
                                 <li><a href="{{ route('manageTeachers') }}" class="nav-link"><i class="fa fa-users"></i> Teachers And Staff</a></li>
                                 <li><a href="{{ route('manage_watchman') }}" class="nav-link"><i class="fa fa-shield"></i> Watchman</a></li>
                                 <li><a href="{{ route('manage_student') }}" class="nav-link"><i class="fa fa-user"></i> Students</a></li>
+                                <li><a href="{{ route('manage_parents') }}" class="nav-link"><i class="fa fa-user"></i> parents/guardians</a></li>
                                 <li><a href="{{ route('manage_sponsors') }}" class="nav-link"><i class="fa fa-handshake-o"></i> Sponsors</a></li>
                                 <li><a href="{{ route('admin.school_visitors') }}" class="nav-link"><i class="fa fa-id-badge"></i> School Visitors</a></li>
                             </ul>

@@ -51,7 +51,7 @@ class AcademicYearsController extends Controller
         // Get school details
         $school = School::find($schoolID);
 
-        return view('admin.academic_years', compact('pastYears', 'currentYear', 'school'));
+        return view('Admin.academic_years', compact('pastYears', 'currentYear', 'school'));
     }
 
     /**
@@ -82,7 +82,7 @@ class AcademicYearsController extends Controller
         // Get school details
         $school = School::find($schoolID);
 
-        return view('admin.view_academic_year', compact('academicYear', 'yearData', 'school'));
+        return view('Admin.view_academic_year', compact('academicYear', 'yearData', 'school'));
     }
 
     /**
