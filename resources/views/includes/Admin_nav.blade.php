@@ -31,7 +31,7 @@
 
     
     <!-- jQuery (Must be loaded before other scripts that depend on it) -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="{{ asset('vendors/jquery/dist/jquery.min.js') }}"></script>
 
     <style>
 /* Badilisha rangi ya background ya sidebar */

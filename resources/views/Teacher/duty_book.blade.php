@@ -46,9 +46,9 @@
                                     <input type="date" name="to_date" class="form-control form-control-sm mr-2" value="{{ $toDate }}">
                                     <button type="submit" class="btn btn-sm btn-info">Filter</button>
                                 </form>
-                                <a href="{{ route('teacher.duty_book.export', ['from_date' => $fromDate, 'to_date' => $toDate]) }}" class="btn btn-sm btn-danger">
+                                <button type="button" id="exportRosterBtn" data-from="{{ $fromDate }}" data-to="{{ $toDate }}" class="btn btn-sm btn-danger">
                                     <i class="fa fa-file-pdf-o"></i> Export Roster
-                                </a>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -264,6 +264,20 @@ $(document).ready(function() {
         }
     }
 
+    // New helper to refresh both row totals and footer totals
+    function refreshTableTotals() {
+        $('.class-row').each(function() {
+            let $row = $(this);
+            const categories = ['.reg', '.pres', '.shift', '.new', '.abs', '.perm', '.sick'];
+            categories.forEach(cat => {
+                let b = parseInt($row.find(cat + '-b').val()) || 0;
+                let g = parseInt($row.find(cat + '-g').val()) || 0;
+                $row.find(cat + '-t').val(b + g);
+            });
+        });
+        calculateFooterTotals();
+    }
+
     // View/Fill Form
     $('.view-report').click(function() {
         let date = $(this).data('date');
@@ -390,8 +404,8 @@ $(document).ready(function() {
                 }
             }
 
-            // Trigger calculation for totals/sums
-            $('.class-row').first().find('input').first().trigger('input');
+            // Refresh all totals and calculations
+            refreshTableTotals();
             $('#dutyReportModal').modal('show');
         });
     });
@@ -430,7 +444,7 @@ $(document).ready(function() {
                         $(this).find('.sick-g').val(systemData[cid].sick_g);
                     }
                 });
-                $('.class-row').first().find('input').first().trigger('input');
+                refreshTableTotals();
                 Swal.fire({
                     title: 'Synced',
                     text: 'Attendance counts updated from latest system data.',
@@ -449,7 +463,73 @@ $(document).ready(function() {
     // Download Individual Report PDF
     $('#downloadReportPdf').click(function() {
         let date = $('#report_date').val();
-        window.location.href = "{{ route('teacher.duty_book.export_report') }}?date=" + date;
+        const $btn = $(this);
+        const originalHtml = $btn.html();
+        
+        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Generating PDF...');
+
+        fetch("{{ route('teacher.duty_book.export_report') }}?date=" + date)
+            .then(response => {
+                if(!response.ok) throw new Error('Network response was not ok');
+                return response.blob();
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'Daily_Duty_Report_' + date + '.pdf';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                Swal.fire({
+                    title: 'Downloaded',
+                    text: 'Your report has been generated successfully.',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            })
+            .catch(error => {
+                console.error('Download error:', error);
+                Swal.fire('Error', 'Failed to generate PDF. Please try again.', 'error');
+            })
+            .finally(() => {
+                $btn.prop('disabled', false).html(originalHtml);
+            });
+    });
+
+    // Export Roster PDF using AJAX
+    $('#exportRosterBtn').click(function() {
+        const fromDate = $(this).data('from');
+        const toDate = $(this).data('to');
+        const $btn = $(this);
+        const originalHtml = $btn.html();
+        
+        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Generating Roster...');
+
+        fetch("{{ route('teacher.duty_book.export') }}?from_date=" + fromDate + "&to_date=" + toDate)
+            .then(response => {
+                if(!response.ok) throw new Error('Network response was not ok');
+                return response.blob();
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'Teacher_Duty_Roster_' + fromDate + '_to_' + toDate + '.pdf';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            })
+            .catch(error => {
+                console.error('Download error:', error);
+                Swal.fire('Error', 'Failed to generate Roster PDF.', 'error');
+            })
+            .finally(() => {
+                $btn.prop('disabled', false).html(originalHtml);
+            });
     });
 
     // Save Draft or Send

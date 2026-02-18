@@ -676,7 +676,7 @@
                                     $(this).find('.sick-g').val(data[cid].sick_g || 0);
                                 }
                             });
-                            if (typeof calculateModalFooterTotals === 'function') calculateModalFooterTotals();
+                            refreshModalTableTotals();
                         }
                     } else {
                         Swal.fire('Info', 'Could not load report details.', 'info');
@@ -740,10 +740,43 @@
             });
         });
 
-        // Download PDF Handler
+        // Download PDF Handler (Individual Report) using AJAX
         $('#downloadReportPdf').click(function() {
             let date = $('#report_date').val();
-            window.location.href = "{{ route('teacher.duty_book.export_report') }}?date=" + date;
+            const $btn = $(this);
+            const originalHtml = $btn.html();
+            
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Generating PDF...');
+
+            fetch("{{ route('teacher.duty_book.export_report') }}?date=" + date)
+                .then(response => {
+                    if(!response.ok) throw new Error('Network response was not ok');
+                    return response.blob();
+                })
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = 'Daily_Duty_Report_' + date + '.pdf';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    Swal.fire({
+                        title: 'Downloaded',
+                        text: 'Report generated successfully.',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                })
+                .catch(error => {
+                    console.error('Download error:', error);
+                    showAlert('danger', 'Failed to generate PDF. Please try again.');
+                })
+                .finally(() => {
+                    $btn.prop('disabled', false).html(originalHtml);
+                });
         });
 
         // Attendance Table Calculation Logic
@@ -784,6 +817,19 @@
                 let perc = (totalPres / totalActive) * 100;
                 $('#attendance_percentage').val(perc.toFixed(2));
             }
+        }
+
+        function refreshModalTableTotals() {
+            $('.class-row').each(function() {
+                let $row = $(this);
+                const categories = ['.reg', '.pres', '.shift', '.new', '.abs', '.perm', '.sick'];
+                categories.forEach(cat => {
+                    let b = parseInt($row.find(cat + '-b').val()) || 0;
+                    let g = parseInt($row.find(cat + '-g').val()) || 0;
+                    $row.find(cat + '-t').val(b + g);
+                });
+            });
+            calculateModalFooterTotals();
         }
 
 

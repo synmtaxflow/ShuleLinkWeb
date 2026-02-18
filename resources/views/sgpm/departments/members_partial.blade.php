@@ -141,76 +141,100 @@
 </div>
 
 <script>
-    $(document).ready(function() {
-        // Initialize Select2 on the first row
-        initSelect2($('.member-select'));
+    (function() {
+        if (typeof jQuery === 'undefined') return;
+        var $ = jQuery;
 
-        // Load existing selections to disable them in future clones
-        const existingIds = @json($existingPrefixedIds);
+        $(document).ready(function() {
+            // Initialize Select2 on the first row
+            initSelect2($('.member-select'));
 
-        $('#addMoreBtn').on('click', function() {
-            const $container = $('#member_rows_container');
-            const $newRow = $('.member-row').first().clone();
-            
-            // Clean up the new row
-            $newRow.find('.select2-container').remove();
-            $newRow.find('select').attr('class', 'form-control member-select').removeAttr('data-select2-id').show();
-            $newRow.find('select').val('');
-            $newRow.find('.remove-row').show(); // Show remove button for subsequent rows
-            
-            $container.append($newRow);
-            initSelect2($newRow.find('.member-select'));
-            updateDisabledOptions();
-        });
+            // Load existing selections to disable them in future clones
+            const existingIds = @json($existingPrefixedIds);
 
-        $(document).on('click', '.remove-row', function() {
-            $(this).closest('.member-row').remove();
-            updateDisabledOptions();
-        });
-
-        $(document).on('change', '.member-select', function() {
-            updateDisabledOptions();
-        });
-
-        function initSelect2($element) {
-            if (typeof $element.select2 === 'function') {
-                $element.select2({
-                    dropdownParent: $('#membersModal'),
-                    placeholder: "Search member..."
-                });
-            }
-        }
-
-        function updateDisabledOptions() {
-            const selectedValues = [];
-            $('.member-select').each(function() {
-                const val = $(this).val();
-                if (val) selectedValues.push(val);
+            $('#addMoreBtn').on('click', function() {
+                const $container = $('#member_rows_container');
+                /* Clone only the first row div, carefully */
+                const $firstRow = $('.member-row').first();
+                const $newRow = $firstRow.clone();
+                
+                // Clean up the new row
+                $newRow.find('.select2-container').remove(); // remove select2 span
+                const $select = $newRow.find('select');
+                
+                // Reset select
+                $select.removeClass('select2-hidden-accessible');
+                $select.removeAttr('data-select2-id');
+                $select.removeAttr('tabindex');
+                $select.removeAttr('aria-hidden');
+                $select.val('');
+                $select.show(); // Ensure it's visible before re-initializing
+                
+                // Show remove button
+                $newRow.find('.remove-row').show();
+                
+                $container.append($newRow);
+                
+                // Re-init select2
+                initSelect2($select);
+                
+                // Update disabled options
+                updateDisabledOptions();
             });
 
-            $('.member-select').each(function() {
-                const currentVal = $(this).val();
-                $(this).find('option').each(function() {
-                    const optVal = $(this).val();
-                    if (optVal && optVal !== currentVal && selectedValues.includes(optVal)) {
-                        $(this).attr('disabled', 'disabled');
-                    } else {
-                        $(this).removeAttr('disabled');
+            $(document).on('click', '.member-row .remove-row', function() {
+                $(this).closest('.member-row').remove();
+                updateDisabledOptions();
+            });
+
+            $(document).on('change', '.member-select', function() {
+                updateDisabledOptions();
+            });
+
+            function initSelect2($element) {
+                if ($element && $element.length && typeof $element.select2 === 'function') {
+                    $element.select2({
+                        dropdownParent: $('#membersModal'),
+                        placeholder: "Search member...",
+                        width: '100%'
+                    });
+                }
+            }
+
+            function updateDisabledOptions() {
+                const selectedValues = [];
+                $('.member-select').each(function() {
+                    const val = $(this).val();
+                    if (val) selectedValues.push(val);
+                });
+
+                $('.member-select').each(function() {
+                    const $thisSelect = $(this);
+                    const currentVal = $thisSelect.val();
+                    
+                    $thisSelect.find('option').each(function() {
+                        const optVal = $(this).val();
+                        // Disable if selected elsewhere (but not if it's the current value of this select)
+                        if (optVal && optVal !== currentVal && selectedValues.includes(optVal)) {
+                            $(this).prop('disabled', true);
+                        } else {
+                            $(this).prop('disabled', false);
+                        }
+                    });
+                    
+                    // Refresh Select2 to reflect disabled state
+                    if ($thisSelect.hasClass('select2-hidden-accessible')) {
+                        $thisSelect.trigger('change.select2');
                     }
                 });
-                
-                // Refresh Select2 to reflect disabled state
-                if ($(this).data('select2')) {
-                    $(this).trigger('change.select2');
-                }
-            });
-        }
+            }
 
-        // Check All Members Toggle
-        $(document).on('change', '#checkAllMembers', function() {
-            $('.member-checkbox').prop('checked', $(this).prop('checked'));
+            // Check All Members Toggle
+            $(document).on('change', '#checkAllMembers', function() {
+                $('.member-checkbox').prop('checked', $(this).prop('checked'));
+            });
         });
-    });
+    })();
 </script>
 
 <style>

@@ -46,6 +46,9 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    if (typeof jQuery === 'undefined') return; // Exit if jQuery is not loaded
+    const $ = jQuery;
+
     $('.sgpm-notification-item').on('click', function(e) {
         const id = $(this).data('id');
         $.post('{{ route("sgpm.notifications.read") }}', {

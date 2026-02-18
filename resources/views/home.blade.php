@@ -1495,6 +1495,10 @@
                             <p class="mb-2"><i class="fa fa-mobile-alt text-primary me-2"></i><strong>Mobile App:</strong> iOS and Android apps for teachers and parents</p>
                             <p class="mb-2"><i class="fa fa-bell text-primary me-2"></i><strong>Real-time Alerts:</strong> Session notifications to teachers via mobile app</p>
                             <p class="mb-0"><i class="fa fa-comments text-primary me-2"></i><strong>Better Communication:</strong> Enhanced parent-teacher communication</p>
+                            
+                            <a href="{{ asset('shuleXpert.apk') }}" class="btn btn-primary mt-3 w-100 py-2">
+                                <i class="fa fa-download me-2"></i> Download Android APK
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -1785,6 +1789,9 @@
                     <a class="btn btn-link" href="#!">Our Services</a>
                     <a class="btn btn-link" href="#!">Pricing</a>
                     <a class="btn btn-link" href="#!">Documentation</a>
+                    <a class="btn btn-link text-warning" href="{{ asset('shuleXpert.apk') }}">
+                        <i class="fa fa-download me-2"></i> Get Android App (APK)
+                    </a>
                     <p class="mb-0 mt-3"><span class="footer-powered-by">Powered by: EmCa Technologies LTD</span></p>
                 </div>
                 <div class="col-lg-3 col-md-6">
