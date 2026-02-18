@@ -1368,7 +1368,27 @@
     const canUpdate = {{ ($canUpdate ?? false) ? 'true' : 'false' }};
     const canDelete = {{ ($canDelete ?? false) ? 'true' : 'false' }};
 
+    // Ensure $ is bound to jQuery and detect if select2 is available
+    if (typeof jQuery !== 'undefined') {
+        window.$ = window.jQuery = jQuery;
+    }
+
     $(document).ready(function() {
+        // Safety check for Select2
+        function safeInitSelect2(selector, options) {
+            const $el = $(selector);
+            if ($el.length === 0) return;
+            
+            if (typeof $.fn.select2 === 'function') {
+                $el.select2(options);
+            } else {
+                console.warn('Select2 not yet loaded for ' + selector + ', retrying in 200ms...');
+                setTimeout(function() {
+                    safeInitSelect2(selector, options);
+                }, 200);
+            }
+        }
+
         let currentStatus = 'Active';
         let currentStudentsData = [];
 
@@ -1479,13 +1499,15 @@
                         });
 
                         // Initialize Select2 for class select with search
-                        subclassSelect.select2({
-                            theme: 'bootstrap-5',
-                            placeholder: preSelectSubclassID ? 'Class (Pre-selected)' : 'Search and select a class...',
-                            allowClear: !preSelectSubclassID, // Disable clear if pre-selected
-                            width: '100%',
-                            dropdownParent: $('#addStudentModal')
-                        });
+                        if (typeof subclassSelect.select2 === 'function') {
+                            subclassSelect.select2({
+                                theme: 'bootstrap-5',
+                                placeholder: preSelectSubclassID ? 'Class (Pre-selected)' : 'Search and select a class...',
+                                allowClear: !preSelectSubclassID, // Disable clear if pre-selected
+                                width: '100%',
+                                dropdownParent: $('#addStudentModal')
+                            });
+                        }
                         
                         // Pre-select subclass if provided
                         if (preSelectSubclassID) {
@@ -1523,13 +1545,15 @@
                                 parentSelect.select2('destroy');
                             }
 
-                            parentSelect.select2({
-                                theme: 'bootstrap-5',
-                                placeholder: 'Search and select a parent...',
-                                allowClear: true,
-                                width: '100%',
-                                dropdownParent: $('#addStudentModal')
-                            });
+                            if (typeof parentSelect.select2 === 'function') {
+                                parentSelect.select2({
+                                    theme: 'bootstrap-5',
+                                    placeholder: 'Search and select a parent...',
+                                    allowClear: true,
+                                    width: '100%',
+                                    dropdownParent: $('#addStudentModal')
+                                });
+                            }
                         }
                     }
                 }
@@ -2385,13 +2409,15 @@
                             subclassSelect.append('<option value="' + subclass.subclassID + '" ' + selected + '>' + displayName + '</option>');
                         });
 
-                        subclassSelect.select2({
-                            theme: 'bootstrap-5',
-                            placeholder: 'Search and select a class...',
-                            allowClear: true,
-                            width: '100%',
-                            dropdownParent: $('#editStudentModal')
-                        });
+                        if (typeof subclassSelect.select2 === 'function') {
+                            subclassSelect.select2({
+                                theme: 'bootstrap-5',
+                                placeholder: 'Search and select a class...',
+                                allowClear: true,
+                                width: '100%',
+                                dropdownParent: $('#editStudentModal')
+                            });
+                        }
 
                         if (targetSubclassID) {
                             subclassSelect.val(targetSubclassID).trigger('change');
@@ -2422,13 +2448,15 @@
                             parentSelect.append('<option value="' + parent.parentID + '" ' + selected + '>' + displayText + '</option>');
                         });
 
-                        parentSelect.select2({
-                            theme: 'bootstrap-5',
-                            placeholder: 'Search and select a parent...',
-                            allowClear: true,
-                            width: '100%',
-                            dropdownParent: $('#editStudentModal')
-                        });
+                        if (typeof parentSelect.select2 === 'function') {
+                            parentSelect.select2({
+                                theme: 'bootstrap-5',
+                                placeholder: 'Search and select a parent...',
+                                allowClear: true,
+                                width: '100%',
+                                dropdownParent: $('#editStudentModal')
+                            });
+                        }
 
                         if (targetParentID) {
                             parentSelect.val(targetParentID).trigger('change');
@@ -3016,10 +3044,14 @@ Would you like to try direct registration anyway, or use the manual method?`;
                     if (response.success) {
                         // Close the registration modal first
                         if ($('#parentID').hasClass('select2-hidden-accessible')) {
-                            $('#parentID').select2('destroy');
+                            if (typeof $('#parentID').select2 === 'function') {
+                                $('#parentID').select2('destroy');
+                            }
                         }
                         if ($('#subclassID').hasClass('select2-hidden-accessible')) {
-                            $('#subclassID').select2('destroy');
+                            if (typeof $('#subclassID').select2 === 'function') {
+                                $('#subclassID').select2('destroy');
+                            }
                         }
                         hideModal('addStudentModal');
                         $('#addStudentForm')[0].reset();
@@ -3169,10 +3201,14 @@ Would you like to try direct registration anyway, or use the manual method?`;
                         }).then(() => {
                             // Destroy Select2 before hiding modal
                             if ($('#edit_parentID').hasClass('select2-hidden-accessible')) {
-                                $('#edit_parentID').select2('destroy');
+                                if (typeof $('#edit_parentID').select2 === 'function') {
+                                    $('#edit_parentID').select2('destroy');
+                                }
                             }
                             if ($('#edit_subclassID').hasClass('select2-hidden-accessible')) {
-                                $('#edit_subclassID').select2('destroy');
+                                if (typeof $('#edit_subclassID').select2 === 'function') {
+                                    $('#edit_subclassID').select2('destroy');
+                                }
                             }
                             hideModal('editStudentModal');
                             $('#editStudentForm')[0].reset();
@@ -3270,7 +3306,9 @@ Would you like to try direct registration anyway, or use the manual method?`;
                                 }).then(() => {
                                     // Destroy Select2 before hiding modal
                                     if ($('#newSubclassID').hasClass('select2-hidden-accessible')) {
-                                        $('#newSubclassID').select2('destroy');
+                                        if (typeof $('#newSubclassID').select2 === 'function') {
+                                            $('#newSubclassID').select2('destroy');
+                                        }
                                     }
                                     hideModal('transferStudentModal');
                                     $('#transferStudentForm')[0].reset();
@@ -3370,7 +3408,9 @@ Would you like to try direct registration anyway, or use the manual method?`;
             // Destroy Select2 instances in the modal to prevent conflicts
             $('#' + modalId + ' select').each(function() {
                 if ($(this).hasClass('select2-hidden-accessible')) {
-                    $(this).select2('destroy');
+                    if (typeof $(this).select2 === 'function') {
+                        $(this).select2('destroy');
+                    }
                 }
             });
         }
@@ -3408,6 +3448,16 @@ Would you like to try direct registration anyway, or use the manual method?`;
             }
         });
 
+        // Helper function for safe Select2 initialization
+        function safeInitSelect2(element, options) {
+            let $element = $(element);
+            if (typeof $element.select2 === 'function') {
+                $element.select2(options);
+            } else {
+                console.warn('Select2 is not available for element:', element);
+            }
+        }
+
         // Load classes and subclasses for filters
         function loadClassesForFilter() {
             $.ajax({
@@ -3436,8 +3486,8 @@ Would you like to try direct registration anyway, or use the manual method?`;
                         
                         // Initialize Select2
                         if (!classSelect.hasClass('select2-hidden-accessible')) {
-                            classSelect.select2({
-            theme: 'bootstrap-5',
+                            safeInitSelect2(classSelect, {
+                                theme: 'bootstrap-5',
                                 placeholder: 'Select class...',
                                 allowClear: true,
                                 width: '100%'
@@ -3477,12 +3527,14 @@ Would you like to try direct registration anyway, or use the manual method?`;
                         
                         // Initialize Select2
                         if (!subclassSelect.hasClass('select2-hidden-accessible')) {
-                            subclassSelect.select2({
-                                theme: 'bootstrap-5',
-                                placeholder: 'Select subclass...',
-                                allowClear: true,
-                                width: '100%'
-                            });
+                            if (typeof subclassSelect.select2 === 'function') {
+                                subclassSelect.select2({
+                                    theme: 'bootstrap-5',
+                                    placeholder: 'Select subclass...',
+                                    allowClear: true,
+                                    width: '100%'
+                                });
+                            }
                         }
                     }
                 }
@@ -3510,7 +3562,9 @@ Would you like to try direct registration anyway, or use the manual method?`;
                         
                         // Update Select2
                         if (subclassSelect.hasClass('select2-hidden-accessible')) {
-                            subclassSelect.trigger('change');
+                            if (typeof subclassSelect.select2 === 'function') {
+                                subclassSelect.trigger('change');
+                            }
                         }
                     }
                 }
@@ -3727,11 +3781,11 @@ Would you like to try direct registration anyway, or use the manual method?`;
         // Initialize Select2 for filters
         $('#classFilter, #subclassFilter, #genderFilter, #healthFilter, #statusFilter').each(function() {
             if (!$(this).hasClass('select2-hidden-accessible')) {
-                $(this).select2({
+                safeInitSelect2(this, {
                     theme: 'bootstrap-5',
                     placeholder: 'Select...',
-            allowClear: true,
-            width: '100%',
+                    allowClear: true,
+                    width: '100%',
                     minimumResultsForSearch: 0
                 });
             }

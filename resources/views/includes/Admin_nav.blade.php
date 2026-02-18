@@ -17,7 +17,7 @@
     <link rel="apple-touch-icon" href="apple-icon.png">
     <link rel="shortcut icon" href="favicon.ico">
 
-    <link rel="stylesheet" href="{{ asset('vendors/bootstrap/dist/css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="{{ asset('vendors/font-awesome/css/font-awesome.min.css') }}">
     <link rel="stylesheet" href="{{ asset('vendors/themify-icons/css/themify-icons.css') }}">
     <link rel="stylesheet" href="{{ asset('vendors/flag-icon-css/css/flag-icon.min.css') }}">
@@ -31,7 +31,7 @@
 
     
     <!-- jQuery (Must be loaded before other scripts that depend on it) -->
-    <script src="{{ asset('vendors/jquery/dist/jquery.min.js') }}"></script>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
 
     <style>
 /* Badilisha rangi ya background ya sidebar */
@@ -1250,23 +1250,20 @@ function loadScriptOnce(src, onLoad) {
 }
 
 function ensureJqueryAndBootstrap(callback) {
-    if (window.jQuery && window.jQuery.fn && typeof window.jQuery.fn.collapse === 'function') {
-        callback();
+    if (window.jQuery) {
+        // If jQuery exists but Bootstrap collapse doesn't, just load Bootstrap
+        if (typeof window.jQuery.fn.collapse !== 'function') {
+            loadScriptOnce('https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js', callback);
+        } else {
+            callback();
+        }
         return;
     }
 
-    if (!window.jQuery) {
-        loadScriptOnce('https://code.jquery.com/jquery-3.6.0.min.js', function() {
-            if (window.jQuery && window.jQuery.fn && typeof window.jQuery.fn.collapse === 'function') {
-                callback();
-            } else {
-                loadScriptOnce('https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js', callback);
-            }
-        });
-        return;
-    }
-
-    loadScriptOnce('https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js', callback);
+    // Fallback if no jQuery at all
+    loadScriptOnce('https://code.jquery.com/jquery-3.6.0.min.js', function() {
+        loadScriptOnce('https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js', callback);
+    });
 }
 
 // Initialize on page load
