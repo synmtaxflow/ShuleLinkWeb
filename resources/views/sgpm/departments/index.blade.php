@@ -255,233 +255,248 @@
 </div>
 
 <script>
-    const teachers = @json($teachers);
-    const staff = @json($staff);
-
-    function populateHeads(type, selectElement) {
-        selectElement.innerHTML = '<option value="">-- Select Head --</option>';
-        if (type === 'Academic') {
-            teachers.forEach(item => {
-                selectElement.innerHTML += `<option value="t_${item.id}">${item.first_name} ${item.last_name}</option>`;
-            });
-        } else {
-            // Administrative brings both staff and teachers
-            staff.forEach(item => {
-                selectElement.innerHTML += `<option value="s_${item.id}">${item.first_name} ${item.last_name} (Staff)</option>`;
-            });
-            teachers.forEach(item => {
-                selectElement.innerHTML += `<option value="t_${item.id}">${item.first_name} ${item.last_name} (Teacher)</option>`;
-            });
+    document.addEventListener('DOMContentLoaded', function() {
+        // Ensure jQuery is available
+        if (typeof jQuery === 'undefined') {
+            console.error('jQuery is not loaded!');
+            return;
         }
-    }
-
-    // Add Dept Modal Listener
-    const deptTypeSelect = document.getElementById('dept_type');
-    const headSelect = document.getElementById('head_select');
-    if(deptTypeSelect) {
-        deptTypeSelect.addEventListener('change', function() {
-            populateHeads(this.value, headSelect);
-        });
-        // Initial trigger
-        populateHeads(deptTypeSelect.value, headSelect);
-    }
-
-    // Edit Modal Listeners (Dynamic)
-    $(document).on('change', '.edit-dept-type', function() {
-        const $modal = $(this).closest('.modal');
-        const $headSelect = $modal.find('.edit-head-select');
-        populateHeads(this.value, $headSelect[0]);
-    });
-
-    // Fix for the backdrop issue: ensure modals are not nested
-    $(document).on('show.bs.modal', '.modal', function() {
-        $(this).appendTo('body');
-    });
-
-    // Members Management AJAX
-    $(document).on('click', '.view-members', function() {
-        const deptId = $(this).data('id');
-        $('#membersModal').modal('show');
-        loadMembers(deptId);
-    });
-
-    function loadMembers(deptId) {
-        $('#membersModalContent').html('<div class="text-center py-5"><i class="fa fa-spinner fa-spin fa-3x text-primary"></i><br><p class="mt-2">Loading members...</p></div>');
-        $.get(`/sgpm/departments/${deptId}/members`, function(response) {
-            if (response.success) {
-                $('#membersModalContent').html(response.html);
-            }
-        }).fail(function() {
-            $('#membersModalContent').html('<div class="alert alert-danger mx-3">Failed to load members.</div>');
-        });
-    }
-
-    // AJAX handle add member
-    $(document).on('submit', '#addMemberForm', function(e) {
-        e.preventDefault();
-        const activeDeptId = window.currentDeptId;
-        const $form = $(this);
-        const $btn = $form.find('button[type="submit"]');
         
-        // Collect all selected member IDs
-        const selectedMembers = [];
-        $('.member-select').each(function() {
-            if ($(this).val()) selectedMembers.push($(this).val());
-        });
+        const $ = jQuery; // Alias jQuery to $ locally
+        
+        const teachers = @json($teachers);
+        const staff = @json($staff);
 
-        if (selectedMembers.length === 0) return;
-
-        // Show loading state
-        const originalBtnHtml = $btn.html();
-        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Assigning...');
-
-        $.post(`/sgpm/departments/${activeDeptId}/members`, {
-            _token: '{{ csrf_token() }}',
-            members: selectedMembers
-        }, function(response) {
-            if (response.success) {
-                Swal.fire({
-                    icon: 'success', 
-                    title: 'Assigned!', 
-                    text: response.message, 
-                    timer: 1500, 
-                    showConfirmButton: false
+        function populateHeads(type, selectElement) {
+            selectElement.innerHTML = '<option value="">-- Select Head --</option>';
+            if (type === 'Academic') {
+                teachers.forEach(item => {
+                    selectElement.innerHTML += `<option value="t_${item.id}">${item.first_name} ${item.last_name}</option>`;
                 });
-                loadMembers(activeDeptId);
             } else {
-                Swal.fire('Error', response.message || 'Something went wrong', 'error');
-                $btn.prop('disabled', false).html(originalBtnHtml);
-            }
-        }).fail(function() {
-            Swal.fire('Error', 'Server error occurred', 'error');
-            $btn.prop('disabled', false).html(originalBtnHtml);
-        });
-    });
-
-    $(document).on('click', '.remove-member', function() {
-        const memberId = $(this).data('id');
-        const activeDeptId = window.currentDeptId;
-        
-        Swal.fire({
-            title: 'Remove member?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            confirmButtonText: 'Yes, remove'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $.ajax({
-                    url: `/sgpm/departments/members/${memberId}`,
-                    type: 'DELETE',
-                    data: { _token: '{{ csrf_token() }}' },
-                    success: function(response) {
-                        if (response.success) {
-                            loadMembers(activeDeptId);
-                        }
-                    }
+                // Administrative brings both staff and teachers
+                staff.forEach(item => {
+                    selectElement.innerHTML += `<option value="s_${item.id}">${item.first_name} ${item.last_name} (Staff)</option>`;
+                });
+                teachers.forEach(item => {
+                    selectElement.innerHTML += `<option value="t_${item.id}">${item.first_name} ${item.last_name} (Teacher)</option>`;
                 });
             }
-        });
-    });
-
-    $(document).on('click', '.view-members', function() {
-        window.currentDeptId = $(this).data('id');
-    });
-
-    // Group SMS Handler
-    $(document).on('submit', '#groupSmsForm', function(e) {
-        e.preventDefault();
-        const activeDeptId = window.currentDeptId;
-        const $btn = $('#sendSmsBtn');
-        const message = $('#sms_message').val();
-        
-        // Collect checked member IDs
-        const selectedMemberIds = [];
-        $('.member-checkbox:checked').each(function() {
-            selectedMemberIds.push($(this).val());
-        });
-
-        if (selectedMemberIds.length === 0) {
-            Swal.fire('Selection Required', 'Please select at least one member to send SMS.', 'warning');
-            return;
         }
 
-        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Sending...');
-
-        const url = "{{ route('sgpm.departments.members.sms', ':id') }}".replace(':id', activeDeptId);
-        
-        $.ajax({
-            url: url,
-            type: 'POST',
-            data: {
-                _token: '{{ csrf_token() }}',
-                message: message,
-                member_ids: selectedMemberIds
-            },
-            timeout: 60000, // 60 seconds timeout
-            success: function(response) {
-                if (response.success) {
-                    Swal.fire('Sent!', response.message, 'success');
-                    $('#sms_message').val('');
-                } else {
-                    Swal.fire('Error', response.message, 'error');
-                }
-                $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Send SMS');
-            },
-            error: function(xhr) {
-                const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Server error occurred';
-                Swal.fire('Error', msg, 'error');
-                $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Send SMS');
-            }
-        });
-    });
-
-    // Admin SMS to HODs Handler
-    $(document).on('change', '#checkAllDepts', function() {
-        $('.dept-checkbox').prop('checked', $(this).prop('checked'));
-    });
-
-    $(document).on('click', '#sendSmsHodBtn', function() {
-        const message = $('#hod_sms_message').val();
-        if (!message) {
-            Swal.fire('Required', 'Tafadhali andika ujumbe kwanza.', 'warning');
-            return;
+        // Add Dept Modal Listener
+        const deptTypeSelect = document.getElementById('dept_type');
+        const headSelect = document.getElementById('head_select');
+        if(deptTypeSelect) {
+            deptTypeSelect.addEventListener('change', function() {
+                populateHeads(this.value, headSelect);
+            });
+            // Initial trigger
+            populateHeads(deptTypeSelect.value, headSelect);
         }
 
-        const selectedDepts = [];
-        $('.dept-checkbox:checked').each(function() {
-            selectedDepts.push($(this).val());
+        // Edit Modal Listeners (Dynamic)
+        $(document).on('change', '.edit-dept-type', function() {
+            const $modal = $(this).closest('.modal');
+            const $headSelect = $modal.find('.edit-head-select');
+            populateHeads(this.value, $headSelect[0]);
         });
 
-        const $btn = $(this);
-        const originalHtml = $btn.html();
-        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Sending...');
+        // Fix for the backdrop issue: ensure modals are not nested
+        $(document).on('show.bs.modal', '.modal', function() {
+            $(this).appendTo('body');
+        });
 
-        $.ajax({
-            url: `{{ route('sgpm.departments.hods.sms') }}`,
-            type: 'POST',
-            data: {
-                _token: '{{ csrf_token() }}',
-                message: message,
-                department_ids: selectedDepts.length > 0 ? selectedDepts : null
-            },
-            timeout: 60000,
-            success: function(response) {
+        // Members Management AJAX
+        $(document).on('click', '.view-members', function() {
+            const deptId = $(this).data('id');
+            $('#membersModal').modal('show');
+            loadMembers(deptId);
+        });
+
+        function loadMembers(deptId) {
+            $('#membersModalContent').html('<div class="text-center py-5"><i class="fa fa-spinner fa-spin fa-3x text-primary"></i><br><p class="mt-2">Loading members...</p></div>');
+            $.get(`/sgpm/departments/${deptId}/members`, function(response) {
                 if (response.success) {
-                    Swal.fire('Sent!', response.message, 'success');
-                    $('#smsHodModal').modal('hide');
-                    $('#hod_sms_message').val('');
-                    $('.dept-checkbox, #checkAllDepts').prop('checked', false);
-                } else {
-                    Swal.fire('Error', response.message, 'error');
+                    $('#membersModalContent').html(response.html);
                 }
-                $btn.prop('disabled', false).html(originalHtml);
-            },
-            error: function(xhr) {
-                const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Server error';
-                Swal.fire('Error', msg, 'error');
-                $btn.prop('disabled', false).html(originalHtml);
+            }).fail(function() {
+                $('#membersModalContent').html('<div class="alert alert-danger mx-3">Failed to load members.</div>');
+            });
+        }
+
+        // AJAX handle add member
+        $(document).on('submit', '#addMemberForm', function(e) {
+            e.preventDefault();
+            const activeDeptId = window.currentDeptId;
+            const $form = $(this);
+            const $btn = $form.find('button[type="submit"]');
+            
+            // Collect all selected member IDs
+            const selectedMembers = [];
+            $('.member-select').each(function() {
+                if ($(this).val()) selectedMembers.push($(this).val());
+            });
+
+            if (selectedMembers.length === 0) return;
+
+            // Show loading state
+            const originalBtnHtml = $btn.html();
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Assigning...');
+
+            $.post(`/sgpm/departments/${activeDeptId}/members`, {
+                _token: '{{ csrf_token() }}',
+                members: selectedMembers
+            }, function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        icon: 'success', 
+                        title: 'Assigned!', 
+                        text: response.message, 
+                        timer: 1500, 
+                        showConfirmButton: false
+                    });
+                    loadMembers(activeDeptId);
+                } else {
+                    Swal.fire('Error', response.message || 'Something went wrong', 'error');
+                    $btn.prop('disabled', false).html(originalBtnHtml);
+                }
+            }).fail(function() {
+                Swal.fire('Error', 'Server error occurred', 'error');
+                $btn.prop('disabled', false).html(originalBtnHtml);
+            });
+        });
+
+        $(document).on('click', '.remove-member', function() {
+            const memberId = $(this).data('id');
+            const activeDeptId = window.currentDeptId;
+            
+            Swal.fire({
+                title: 'Remove member?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Yes, remove'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: `/sgpm/departments/members/${memberId}`,
+                        type: 'DELETE',
+                        data: { _token: '{{ csrf_token() }}' },
+                        success: function(response) {
+                            if (response.success) {
+                                loadMembers(activeDeptId);
+                            }
+                        }
+                    });
+                }
+            });
+        });
+
+        $(document).on('click', '.view-members', function() {
+            window.currentDeptId = $(this).data('id');
+        });
+
+        // Group SMS Handler
+        $(document).on('click', '#sendSmsBtn', function(e) {
+            e.preventDefault();
+            const activeDeptId = window.currentDeptId;
+            const $btn = $(this);
+            const message = $('#sms_message').val();
+            
+            // Collect checked member IDs
+            const selectedMemberIds = [];
+            $('.member-checkbox:checked').each(function() {
+                selectedMemberIds.push($(this).val());
+            });
+
+            if (selectedMemberIds.length === 0) {
+                Swal.fire('Selection Required', 'Please select at least one member to send SMS.', 'warning');
+                return;
             }
+
+            if (!message) {
+                Swal.fire('Required', 'Please enter a message.', 'warning');
+                return;
+            }
+
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Sending...');
+
+            const url = "{{ route('sgpm.departments.members.sms', ':id') }}".replace(':id', activeDeptId);
+            
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    message: message,
+                    member_ids: selectedMemberIds
+                },
+                timeout: 60000, // 60 seconds timeout
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire('Sent!', response.message, 'success');
+                        $('#sms_message').val('');
+                    } else {
+                        Swal.fire('Error', response.message, 'error');
+                    }
+                    $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Send SMS');
+                },
+                error: function(xhr) {
+                    const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Server error occurred';
+                    Swal.fire('Error', msg, 'error');
+                    $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Send SMS');
+                }
+            });
+        });
+
+        // Admin SMS to HODs Handler
+        $(document).on('change', '#checkAllDepts', function() {
+            $('.dept-checkbox').prop('checked', $(this).prop('checked'));
+        });
+
+        $(document).on('click', '#sendSmsHodBtn', function() {
+            const message = $('#hod_sms_message').val();
+            if (!message) {
+                Swal.fire('Required', 'Tafadhali andika ujumbe kwanza.', 'warning');
+                return;
+            }
+
+            const selectedDepts = [];
+            $('.dept-checkbox:checked').each(function() {
+                selectedDepts.push($(this).val());
+            });
+
+            const $btn = $(this);
+            const originalHtml = $btn.html();
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Sending...');
+
+            $.ajax({
+                url: `{{ route('sgpm.departments.hods.sms') }}`,
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    message: message,
+                    department_ids: selectedDepts.length > 0 ? selectedDepts : null
+                },
+                timeout: 60000,
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire('Sent!', response.message, 'success');
+                        $('#smsHodModal').modal('hide');
+                        $('#hod_sms_message').val('');
+                        $('.dept-checkbox, #checkAllDepts').prop('checked', false);
+                    } else {
+                        Swal.fire('Error', response.message, 'error');
+                    }
+                    $btn.prop('disabled', false).html(originalHtml);
+                },
+                error: function(xhr) {
+                    const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Server error';
+                    Swal.fire('Error', msg, 'error');
+                    $btn.prop('disabled', false).html(originalHtml);
+                }
+            });
         });
     });
 </script>
