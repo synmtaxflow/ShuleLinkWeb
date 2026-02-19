@@ -3738,20 +3738,15 @@ jQuery(document).ready(function($) {
     $('#editExamModal').on('hidden.bs.modal', function() {
         resetEditFormState();
     });
-});
-
-    // Initialize Bootstrap tooltips on page load and after dynamic content updates
-    jQuery(function($) {
-        if (typeof jQuery !== 'undefined' && typeof jQuery.fn.tooltip === 'function') {
-            jQuery('[data-toggle="tooltip"], .btn[title], .exam-widget-action[title]').tooltip();
-        }
-    });
+    // Initialize tooltips
+    if (typeof jQuery !== 'undefined' && typeof jQuery.fn.tooltip === 'function') {
+        $('[data-toggle="tooltip"], .btn[title], .exam-widget-action[title]').tooltip();
+    }
 
     // Re-initialize tooltips after AJAX content updates
-    jQuery(document).ajaxComplete(function() {
-        var $ = jQuery;
+    $(document).ajaxComplete(function() {
         if (typeof jQuery !== 'undefined' && typeof jQuery.fn.tooltip === 'function') {
-            jQuery('[data-toggle="tooltip"], .btn[title], .exam-widget-action[title]').tooltip();
+            $('[data-toggle="tooltip"], .btn[title], .exam-widget-action[title]').tooltip();
         }
     });
 
@@ -4069,16 +4064,14 @@ jQuery(document).ready(function($) {
     });
 
 });
-</script>
 
-<script>
 // Global functions for status management (outside document.ready for onclick handlers)
 window.handleStatusChange = function(examID, status, permission) {
+    if (typeof jQuery === 'undefined') return;
+    var $ = jQuery;
     // Close dropdown
-    if (typeof $ !== 'undefined') {
-        $('.dropdown-menu').removeClass('show');
+    $('.dropdown-menu').removeClass('show');
         $('.dropdown-toggle').attr('aria-expanded', 'false');
-    }
 
     // Map status to display names with better terminology
     var statusNames = {
@@ -4102,6 +4095,8 @@ window.handleStatusChange = function(examID, status, permission) {
 };
 
 window.updateResultsStatus = function(examID, permission, status, statusName, statusMessage) {
+    if (typeof jQuery === 'undefined') return;
+    var $ = jQuery;
     // Check if SweetAlert2 is loaded
     if (typeof Swal === 'undefined') {
         alert('SweetAlert2 is not loaded. Please refresh the page.');
@@ -4355,9 +4350,12 @@ window.updateResultsStatus = function(examID, permission, status, statusName, st
 <script>
 // View Exam Papers - Make it globally accessible
 window.viewExamPapers = function(examID, examName) {
-    // Use jQuery ready to ensure DOM is loaded
-    (function($) {
-        $(function() {
+    if (typeof jQuery === 'undefined') {
+        alert('jQuery is not loaded. Please refresh the page.');
+        return;
+    }
+    var $ = jQuery;
+    $(function() {
             // Check permission
             if (typeof window.hasPermission === 'function') {
                 if (!window.hasPermission('view_exam_papers')) {
@@ -4422,10 +4420,12 @@ window.viewExamPapers = function(examID, examName) {
                 $('#examPapersContent').html('<div class="alert alert-danger">Error: Failed to load exam papers. Please refresh the page.</div>');
             }
         });
-    })(typeof jQuery !== 'undefined' ? jQuery : window.$);
+    });
 };
 
-function updateExamPaperModalCount() {
+window.updateExamPaperModalCount = function() {
+    if (typeof jQuery === 'undefined') return;
+    var $ = jQuery;
     $.get('{{ route("admin.exam_paper_notifications_count") }}', function(response) {
         if (!response || response.success !== true) {
             return;
@@ -4440,19 +4440,24 @@ function updateExamPaperModalCount() {
     });
 }
 
-function applyExamPaperNotificationCounts(counts) {
+window.applyExamPaperNotificationCounts = function(counts) {
+    if (typeof jQuery === 'undefined') return;
+    var $ = jQuery;
     $('.exam-paper-count').each(function() {
-        const examId = String($(this).data('exam-id'));
+        const $this = $(this);
+        const examId = String($this.data('exam-id'));
         const count = parseInt(counts[examId] || 0, 10);
         if (count > 0) {
-            $(this).text(count).removeClass('d-none');
+            $this.text(count).removeClass('d-none');
         } else {
-            $(this).addClass('d-none').text('');
+            $this.addClass('d-none').text('');
         }
     });
 }
 
-function loadExamPaperNotificationCounts() {
+window.loadExamPaperNotificationCounts = function() {
+    if (typeof jQuery === 'undefined') return;
+    var $ = jQuery;
     $.get('{{ route("admin.exam_paper_notifications_by_exam") }}', function(response) {
         if (!response || response.success !== true) {
             return;
@@ -4461,7 +4466,9 @@ function loadExamPaperNotificationCounts() {
     });
 }
 
-function markExamPaperNotificationsReadForExam(examID) {
+window.markExamPaperNotificationsReadForExam = function(examID) {
+    if (typeof jQuery === 'undefined') return;
+    var $ = jQuery;
     $.ajax({
         url: `/admin/mark-exam-paper-notifications-read/${examID}`,
         method: 'POST',
@@ -4472,7 +4479,9 @@ function markExamPaperNotificationsReadForExam(examID) {
     });
 }
 
-function loadExamPapers(examID, search = '', status = '', week = '') {
+window.loadExamPapers = function(examID, search = '', status = '', week = '') {
+    if (typeof jQuery === 'undefined') return;
+    var $ = jQuery;
     $.ajax({
         url: '/get_exam_papers/' + examID,
         method: 'GET',
@@ -4778,6 +4787,8 @@ function loadExamPapers(examID, search = '', status = '', week = '') {
         }
     });
 }
+
+jQuery(function($) {
 
 // Search exam papers
 $('#search_exam_papers').on('input', function() {
@@ -5228,7 +5239,9 @@ $(document).on('click', '.view-paper-btn', function() {
 });
 
 // --- Week Navigator Logic ---
-function updateWeekNavigatorUI() {
+window.updateWeekNavigatorUI = function() {
+    if (typeof jQuery === 'undefined') return;
+    var $ = jQuery;
     if (!window.examPaperWeeks || window.examPaperWeeks.length === 0) {
         $('#current_week_display').text('No weeks available');
         $('#prev_week_btn').prop('disabled', true);
@@ -5297,6 +5310,7 @@ $(document).on('click', '#next_week_btn', function(e) {
 // Week filter is now a hidden input managed by the navigator, so no Select2 initialization needed.
 
 // Old form submission handler removed - now using SweetAlert2 directly
+});
 </script>
 
 @include('includes.footer')
