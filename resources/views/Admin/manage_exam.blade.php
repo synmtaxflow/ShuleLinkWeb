@@ -1110,16 +1110,16 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-$(document).ready(function() {
+jQuery(document).ready(function($) {
     // Initialize tooltips
-    if ($.isFunction($.fn.tooltip)) {
-        $('[data-toggle="tooltip"], .btn[title], .exam-widget-action[title]').tooltip();
+    if (typeof jQuery !== 'undefined' && typeof jQuery.fn.tooltip === 'function') {
+        jQuery('[data-toggle="tooltip"], .btn[title], .exam-widget-action[title]').tooltip();
     }
 
     // Re-initialize tooltips after dynamic content is loaded
     $(document).on('shown.bs.dropdown', function() {
-        if ($.isFunction($.fn.tooltip)) {
-            $('[data-toggle="tooltip"], .btn[title], .exam-widget-action[title]').tooltip();
+        if (typeof jQuery !== 'undefined' && typeof jQuery.fn.tooltip === 'function') {
+            jQuery('[data-toggle="tooltip"], .btn[title], .exam-widget-action[title]').tooltip();
         }
     });
 
@@ -3741,16 +3741,17 @@ $(document).ready(function() {
 });
 
     // Initialize Bootstrap tooltips on page load and after dynamic content updates
-    $(function () {
-        if ($.isFunction($.fn.tooltip)) {
-            $('[data-toggle="tooltip"], .btn[title], .exam-widget-action[title]').tooltip();
+    jQuery(function($) {
+        if (typeof jQuery !== 'undefined' && typeof jQuery.fn.tooltip === 'function') {
+            jQuery('[data-toggle="tooltip"], .btn[title], .exam-widget-action[title]').tooltip();
         }
     });
 
     // Re-initialize tooltips after AJAX content updates
-    $(document).ajaxComplete(function() {
-        if ($.isFunction($.fn.tooltip)) {
-            $('[data-toggle="tooltip"], .btn[title], .exam-widget-action[title]').tooltip();
+    jQuery(document).ajaxComplete(function() {
+        var $ = jQuery;
+        if (typeof jQuery !== 'undefined' && typeof jQuery.fn.tooltip === 'function') {
+            jQuery('[data-toggle="tooltip"], .btn[title], .exam-widget-action[title]').tooltip();
         }
     });
 
@@ -4356,7 +4357,7 @@ window.updateResultsStatus = function(examID, permission, status, statusName, st
 window.viewExamPapers = function(examID, examName) {
     // Use jQuery ready to ensure DOM is loaded
     (function($) {
-        $(document).ready(function() {
+        $(function() {
             // Check permission
             if (typeof window.hasPermission === 'function') {
                 if (!window.hasPermission('view_exam_papers')) {
