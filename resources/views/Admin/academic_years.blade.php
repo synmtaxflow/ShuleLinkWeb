@@ -460,10 +460,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 
 <!-- jQuery and Bootstrap - Load FIRST before any JavaScript code -->
-<script src="{{ asset('vendors/jquery/dist/jquery.min.js') }}"></script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="{{ asset('vendors/bootstrap/dist/js/bootstrap.min.js') }}"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+
 
 <!-- SweetAlert2 JavaScript -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -834,16 +831,6 @@ function closeProgressModal() {
     });
 }
 </script>
-
-@include('includes.footer')
-
-<!-- jQuery - Load first -->
-<script src="{{ asset('vendors/jquery/dist/jquery.min.js') }}"></script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-<!-- Bootstrap JS -->
-<script src="{{ asset('vendors/bootstrap/dist/js/bootstrap.min.js') }}"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
 
 @include('includes.footer')
 

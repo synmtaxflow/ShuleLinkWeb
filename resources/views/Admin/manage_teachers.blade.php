@@ -2314,11 +2314,7 @@
     </div>
 </div>
 
-<!-- jQuery - Load first -->
-<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
 
-<!-- Bootstrap 5 JS bundle -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 {{-- Teacher Attendance Modal --}}
 <div class="modal fade" id="teacherAttendanceModal" tabindex="-1" aria-labelledby="teacherAttendanceModalLabel" aria-hidden="true">

@@ -1104,8 +1104,6 @@
     </div>
 </div>
 
-<!-- Redundant jQuery removed to avoid conflicts -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 

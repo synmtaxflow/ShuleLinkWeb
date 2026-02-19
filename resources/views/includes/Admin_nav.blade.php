@@ -340,6 +340,121 @@
     font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif !important;
 }
 
+/* Mobile navbar header */
+.navbar-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    padding: 10px 14px;
+    min-height: 52px;
+    background: #940000;
+    border-bottom: 2px solid rgba(255,255,255,0.15);
+}
+
+.mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.45rem;
+    font-weight: 800;
+    color: #ffffff !important;
+    font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif !important;
+    text-decoration: none !important;
+    letter-spacing: 0.5px;
+    line-height: 1;
+}
+
+.mobile-brand:hover {
+    color: #ffffff !important;
+    text-decoration: none !important;
+}
+
+.mobile-brand i {
+    color: #ffffff !important;
+    font-size: 1.3rem;
+}
+
+/* Force white color inside navbar-header (overrides #left-panel * rule) */
+#left-panel .navbar-header .mobile-brand,
+#left-panel .navbar .navbar-header .mobile-brand {
+    color: #ffffff !important;
+}
+
+#left-panel .navbar-header .mobile-brand i,
+#left-panel .navbar-header .mobile-brand .fa,
+#left-panel .navbar .navbar-header .mobile-brand i {
+    color: #ffffff !important;
+    font-family: 'FontAwesome' !important;
+}
+
+#left-panel .navbar-header .nav-dot {
+    background-color: #ffffff !important;
+}
+
+.navbar-toggler {
+    border: none;
+    padding: 6px 4px;
+    border-radius: 4px;
+    background: transparent;
+    color: #ffffff;
+    cursor: pointer;
+    margin-left: auto;
+    box-shadow: none;
+    outline: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.navbar-toggler:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.nav-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: #ffffff;
+    display: block;
+}
+
+/* Hide mobile brand on desktop (when sidebar is always visible) */
+@media (min-width: 768px) {
+    .mobile-brand {
+        display: none;
+    }
+    .navbar-header {
+        justify-content: center;
+        padding: 4px 0;
+        background: transparent;
+        border-bottom: none;
+        min-height: unset;
+    }
+    .navbar-toggler {
+        margin-left: 0;
+    }
+    .nav-dot {
+        background-color: #940000;
+    }
+}
+
+/* Mobile: remove aside padding so navbar-header is truly full width */
+@media (max-width: 767px) {
+    aside.left-panel,
+    aside#left-panel {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+    #main-menu {
+        padding-left: 25px;
+        padding-right: 25px;
+    }
+}
+
 /* Sidebar profile block */
 .sidebar-profile {
     display: flex;
@@ -380,10 +495,15 @@
     <nav class="navbar navbar-expand-sm navbar-default">
 
         <div class="navbar-header">
+            <a class="mobile-brand" href="{{ route('AdminDashboard') }}">
+                <i class="fa fa-graduation-cap"></i>
+                ShuleXpert
+            </a>
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#main-menu" aria-controls="main-menu" aria-expanded="false" aria-label="Toggle navigation">
-                <i class="fa fa-bars"></i>
+                <span class="nav-dot"></span>
+                <span class="nav-dot"></span>
+                <span class="nav-dot"></span>
             </button>
-            <a class="navbar-brand hidden" href="#">SL</a>
         </div>
 
         <div id="main-menu" class="main-menu collapse navbar-collapse">
@@ -490,9 +610,9 @@
                             </a>
                             <ul id="hrOperations" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
                                 <li>
-                                    <a href="{{ \Illuminate\Support\Facades\Route::has('admin.hr.leave') ? route('admin.hr.leave') : '#' }}" class="nav-link">
+                                    <!-- <a href="{{ \Illuminate\Support\Facades\Route::has('admin.hr.leave') ? route('admin.hr.leave') : '#' }}" class="nav-link">
                                         <i class="fa fa-calendar"></i> Leave
-                                    </a>
+                                    </a> -->
                                 </li>
                                 <li>
                                     <a href="{{ \Illuminate\Support\Facades\Route::has('admin.hr.permission') ? route('admin.hr.permission') : '#' }}" class="nav-link">
@@ -500,9 +620,9 @@
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="{{ \Illuminate\Support\Facades\Route::has('admin.hr.payroll') ? route('admin.hr.payroll') : '#' }}" class="nav-link">
+                                    <!-- <a href="{{ \Illuminate\Support\Facades\Route::has('admin.hr.payroll') ? route('admin.hr.payroll') : '#' }}" class="nav-link">
                                         <i class="fa fa-money"></i> Payroll
-                                    </a>
+                                    </a> -->
                                 </li>
                             </ul>
                         </li>
@@ -822,11 +942,11 @@
                         </a>
 
                         <div class="user-menu dropdown-menu">
-                            <a class="nav-link" href="#"><i class="fa fa-user"></i> My Profile</a>
+                            <a class="nav-link" href="#"><i class="fa fa-lock"></i></i>Change Password</a>
 
-                            <a class="nav-link" href="#"><i class="fa fa-user"></i> Notifications <span class="count">13</span></a>
+                            <!-- <a class="nav-link" href="#"><i class="fa fa-user"></i> Notifications <span class="count">13</span></a>
 
-                            <a class="nav-link" href="#"><i class="fa fa-cog"></i> Settings</a>
+                            <a class="nav-link" href="#"><i class="fa fa-cog"></i> Settings</a> -->
 
                             <a class="nav-link" href="{{ route('logout') }}"><i class="fa fa-power-off"></i> Logout</a>
                         </div>

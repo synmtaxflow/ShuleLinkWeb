@@ -38,6 +38,67 @@
         transform: translateY(-5px);
         box-shadow: 0 8px 24px rgba(148, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1) !important;
     }
+
+    /* Widget card style (matching my_sessions) */
+    .exam-widget-card {
+        border-radius: 12px !important;
+        border: 1px solid #e7e7e7;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+        padding: 18px;
+        background: white;
+        transition: all 0.3s ease;
+        margin-bottom: 0;
+    }
+    .exam-widget-card:hover {
+        box-shadow: 0 4px 12px rgba(148, 0, 0, 0.15);
+        transform: translateY(-2px);
+    }
+    .exam-widget-card.status-approved {
+        border-left: 4px solid #28a745;
+    }
+    .exam-widget-card.status-rejected {
+        border-left: 4px solid #dc3545;
+    }
+
+    .exam-type-badge {
+        background: #f2dede;
+        color: #7a1f1f;
+        padding: 4px 10px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        border-radius: 6px;
+    }
+
+    .exam-card-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 10px;
+    }
+
+    .btn-exam-action {
+        background: white !important;
+        color: #940000 !important;
+        border: 1px solid #940000;
+        padding: 8px 14px;
+        font-weight: 600;
+        transition: all 0.2s ease-in-out;
+        border-radius: 8px !important;
+        width: 100%;
+        text-align: center;
+    }
+    .btn-exam-action:hover {
+        background: #f8f8f8 !important;
+        color: #940000 !important;
+        border-color: #940000;
+    }
+    .btn-exam-action.btn-danger-outline {
+        color: #dc3545 !important;
+        border-color: #dc3545;
+    }
+    .btn-exam-action.btn-danger-outline:hover {
+        background: #fff5f5 !important;
+    }
     .badge-status-wait-approval {
         background-color: #ffc107;
         color: #000;
@@ -59,21 +120,38 @@
             position: relative;
         }
 
+        /* Force all parent wrappers to full width */
+        .right-panel {
+            width: 100% !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        .right-panel .content {
+            padding: 0 !important;
+        }
+
         .container-fluid {
-            padding-left: 15px !important;
-            padding-right: 15px !important;
-            width: 100%;
+            padding-left: 5px !important;
+            padding-right: 5px !important;
+            width: 100% !important;
+            max-width: 100% !important;
             overflow-x: hidden;
         }
         
         .row {
-            margin-left: -10px !important;
-            margin-right: -10px !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            width: 100% !important;
         }
 
-        .col-12, .col-md-12, .col-lg-12 {
-            padding-left: 10px !important;
-            padding-right: 10px !important;
+        .col-12, .col-md-12, .col-lg-12,
+        [class*="col-"] {
+            padding-left: 2px !important;
+            padding-right: 2px !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            flex: 0 0 100% !important;
         }
         
         .card-body {
@@ -179,6 +257,82 @@
             margin: 0.5rem;
             max-width: calc(100% - 1rem) !important;
         }
+
+        /* Upload form - mobile app layout */
+        .tab-content .card {
+            border: none !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+        }
+
+        .tab-content .card .card-body {
+            padding: 0.5rem 0 !important;
+        }
+
+        .tab-content .card-body .row {
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+        }
+
+        .tab-content .card-body .row > [class*="col-"] {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        #uploadExamPaperForm .form-control,
+        #uploadExamPaperForm .form-control-file,
+        #uploadExamPaperForm select,
+        #uploadExamPaperForm input {
+            width: 98% !important;
+            margin-left: auto;
+            margin-right: auto;
+            display: block;
+            font-size: 1rem;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        #uploadExamPaperForm .form-label,
+        #uploadExamPaperForm label {
+            width: 98%;
+            margin-left: auto;
+            margin-right: auto;
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        #uploadExamPaperForm .form-text {
+            width: 98%;
+            margin-left: auto;
+            margin-right: auto;
+            display: block;
+        }
+
+        #uploadExamPaperForm .btn {
+            width: 98%;
+            margin-left: auto;
+            margin-right: auto;
+            display: block;
+            padding: 12px;
+            font-size: 1rem;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        #uploadExamPaperForm .btn.ml-2 {
+            margin-left: auto !important;
+        }
+
+        /* Question format card stays visible */
+        #question-format-main {
+            width: 98% !important;
+            margin-left: auto;
+            margin-right: auto;
+            border: 1px solid rgba(148,0,0,0.2) !important;
+            border-radius: 8px !important;
+        }
     }
 
     /* Touch targets */
@@ -201,10 +355,7 @@
 
 <!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-<!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <div class="container-fluid mt-4">
     <div class="row">
@@ -245,14 +396,9 @@
             <!-- Page Header -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body bg-primary-custom text-white rounded p-3 p-md-4">
-                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-                        <h4 class="mb-0 page-title">
-                            <i class="bi bi-file-earmark-text"></i> Exam Papers Management
-                        </h4>
-                        <button class="btn btn-light text-primary-custom fw-bold mt-2 mt-md-0" type="button" data-toggle="modal" data-target="#uploadExamPaperModal">
-                            <i class="bi bi-plus-circle"></i> Upload Exam Paper
-                        </button>
-                    </div>
+                    <h4 class="mb-0 page-title">
+                        <i class="bi bi-file-earmark-text"></i> Exam Papers Management
+                    </h4>
                 </div>
             </div>
 
@@ -452,208 +598,228 @@
 
                 <!-- Pending Uploads Tab -->
                 <div class="tab-pane fade" id="pending-uploads" role="tabpanel">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-body">
-                            <h5 class="card-title text-primary-custom mb-4">
-                                <i class="bi bi-clock-history"></i> Scheduled Tests (Pending Paper Upload)
-                            </h5>
-                            @if($pendingSlots && $pendingSlots->count() > 0)
-                                <div class="table-responsive">
-                                    <table class="table table-hover">
-                                        <thead class="bg-light">
-                                            <tr>
-                                                <th>Examination</th>
-                                                <th>Subject</th>
-                                                <th>Class</th>
-                                                <th>Week</th>
-                                                <th>Test Date</th>
-                                                <th>Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach($pendingSlots as $slot)
-                                                <tr>
-                                                    <td data-label="Examination">
-                                                        <strong>{{ $slot->examination->exam_name }}</strong>
-                                                        <br><small class="text-muted">{{ $slot->examination->year }}</small>
-                                                    </td>
-                                                    <td data-label="Subject">{{ $slot->classSubject->subject->subject_name ?? 'N/A' }}</td>
-                                                    <td data-label="Class">
-                                                        @if($slot->classSubject->subclass)
-                                                            {{ $slot->classSubject->subclass->class->class_name ?? 'N/A' }} {{ $slot->classSubject->subclass->subclass_name }}
-                                                        @else
-                                                            {{ $slot->classSubject->class->class_name ?? 'N/A' }}
-                                                        @endif
-                                                    </td>
-                                                    <td data-label="Week">
-                                                        <strong>{{ $slot->test_week }}</strong>
-                                                        <br><small class="text-info">{{ $slot->test_week_range }}</small>
-                                                    </td>
-                                                    <td data-label="Test Date">{{ \Carbon\Carbon::parse($slot->test_date)->format('D, d M Y') }}</td>
-                                                    <td data-label="Action">
-                                                        @php
-                                                            $subjectName = $slot->classSubject->subject->subject_name ?? 'N/A';
-                                                            $classNameRaw = $slot->classSubject->subclass ? ($slot->classSubject->subclass->class->class_name ?? '') . ' ' . ($slot->classSubject->subclass->subclass_name ?? '') : ($slot->classSubject->class->class_name ?? '');
-                                                            $fullSubjectDisplay = $subjectName . ' - ' . trim($classNameRaw);
-                                                        @endphp
-                                                        <button class="btn btn-sm btn-primary-custom upload-pending-btn w-100" 
-                                                            data-exam-id="{{ $slot->examID }}"
-                                                            data-class-subject-id="{{ $slot->class_subjectID }}"
-                                                            data-test-week="{{ $slot->test_week }}"
-                                                            data-test-week-range="{{ $slot->test_week_range }}"
-                                                            data-test-date="{{ $slot->test_date }}"
-                                                            data-full-subject-display="{{ $fullSubjectDisplay }}"
-                                                            data-slot-id="{{ $slot->exam_paperID }}">
-                                                            <i class="bi bi-cloud-upload"></i> Upload Now
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
+                    <h5 class="text-primary-custom mb-3">
+                        <i class="bi bi-clock-history"></i> Scheduled Tests (Pending Paper Upload)
+                    </h5>
+                    @if($pendingSlots && $pendingSlots->count() > 0)
+                        <div class="row">
+                            @foreach($pendingSlots as $slot)
+                                @php
+                                    $subjectName = $slot->classSubject->subject->subject_name ?? 'N/A';
+                                    $classNameRaw = $slot->classSubject->subclass 
+                                        ? ($slot->classSubject->subclass->class->class_name ?? '') . ' ' . ($slot->classSubject->subclass->subclass_name ?? '') 
+                                        : ($slot->classSubject->class->class_name ?? '');
+                                    $fullSubjectDisplay = $subjectName . ' - ' . trim($classNameRaw);
+                                @endphp
+                                <div class="col-md-6 col-lg-4 mb-3">
+                                    <div class="exam-widget-card">
+                                        <!-- Top: Week badge + Pending indicator -->
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <span class="exam-type-badge">
+                                                <i class="bi bi-calendar-week"></i> {{ $slot->test_week }}
+                                            </span>
+                                            <span class="badge badge-warning" style="font-size: 0.75rem;">
+                                                <i class="bi bi-cloud-upload"></i> Pending Upload
+                                            </span>
+                                        </div>
+
+                                        <!-- Exam Name -->
+                                        <h6 class="mb-2" style="font-weight: bold;">
+                                            <i class="bi bi-journal-bookmark text-primary-custom"></i>
+                                            {{ $slot->examination->exam_name }}
+                                            <small class="text-muted">({{ $slot->examination->year }})</small>
+                                        </h6>
+
+                                        <!-- Subject -->
+                                        <p class="mb-1 text-muted" style="font-size: 0.9rem;">
+                                            <i class="bi bi-book"></i> {{ $subjectName }}
+                                        </p>
+
+                                        <!-- Class -->
+                                        <p class="mb-2 text-muted" style="font-size: 0.85rem;">
+                                            <i class="bi bi-people"></i>
+                                            @if($slot->classSubject->subclass)
+                                                {{ $slot->classSubject->subclass->class->class_name ?? 'N/A' }} {{ $slot->classSubject->subclass->subclass_name }}
+                                            @else
+                                                {{ $slot->classSubject->class->class_name ?? 'N/A' }}
+                                            @endif
+                                        </p>
+
+                                        <!-- Week Range & Test Date -->
+                                        <p class="mb-1 text-muted" style="font-size: 0.8rem;">
+                                            <i class="bi bi-calendar-range"></i> {{ $slot->test_week_range }}
+                                        </p>
+                                        <p class="mb-2" style="font-size: 0.85rem; font-weight: 600; color: #940000;">
+                                            <i class="bi bi-calendar-event"></i> {{ \Carbon\Carbon::parse($slot->test_date)->format('D, d M Y') }}
+                                        </p>
+
+                                        <!-- Upload Button -->
+                                        <div class="exam-card-actions">
+                                            <button class="btn btn-exam-action btn-sm upload-pending-btn" 
+                                                data-exam-id="{{ $slot->examID }}"
+                                                data-class-subject-id="{{ $slot->class_subjectID }}"
+                                                data-test-week="{{ $slot->test_week }}"
+                                                data-test-week-range="{{ $slot->test_week_range }}"
+                                                data-test-date="{{ $slot->test_date }}"
+                                                data-full-subject-display="{{ $fullSubjectDisplay }}"
+                                                data-slot-id="{{ $slot->exam_paperID }}">
+                                                <i class="bi bi-cloud-upload"></i> Upload Now
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
-                            @else
-                                <div class="text-center py-5">
-                                    <i class="bi bi-check-circle text-success display-4"></i>
-                                    <h5 class="mt-3">No pending uploads!</h5>
-                                    <p class="text-muted">All scheduled tests have had their papers uploaded or there are no upcoming scheduled tests.</p>
-                                </div>
-                            @endif
+                            @endforeach
                         </div>
-                    </div>
+                    @else
+                        <div class="text-center py-5">
+                            <i class="bi bi-check-circle text-success display-4"></i>
+                            <h5 class="mt-3">No pending uploads!</h5>
+                            <p class="text-muted">All scheduled tests have had their papers uploaded or there are no upcoming scheduled tests.</p>
+                        </div>
+                    @endif
                 </div>
 
                 <!-- My Exam Papers Tab -->
                 <div class="tab-pane fade" id="my-papers" role="tabpanel">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="row mb-3">
-                                <div class="col-md-4 mb-2">
-                                    <input type="text" class="form-control" id="search_my_papers" placeholder="Search my exam papers...">
-                                </div>
-                                <div class="col-md-2 mb-2">
-                                    <select class="form-control" id="filter_my_papers_term">
-                                        <option value="">All Terms</option>
-                                        @php
-                                            $myTerms = $myExamPapers ? $myExamPapers->pluck('examination.term')->filter()->unique() : collect();
-                                        @endphp
-                                        @foreach($myTerms as $term)
-                                            <option value="{{ $term }}">{{ ucfirst(str_replace('_', ' ', $term)) }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-2 mb-2">
-                                    <select class="form-control" id="filter_my_papers_year">
-                                        <option value="">All Years</option>
-                                        @php
-                                            $myYears = $myExamPapers ? $myExamPapers->pluck('examination.year')->filter()->unique()->sort() : collect();
-                                        @endphp
-                                        @foreach($myYears as $year)
-                                            <option value="{{ $year }}">{{ $year }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-4 mb-2">
-                                    <select class="form-control" id="filter_my_papers_exam">
-                                        <option value="">All Exams</option>
-                                        @php
-                                            $myExams = $myExamPapers ? $myExamPapers->pluck('examination')->filter()->unique('examID') : collect();
-                                        @endphp
-                                        @foreach($myExams as $exam)
-                                            <option value="{{ $exam->examID }}">{{ $exam->exam_name }} ({{ $exam->year }})</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                            <div id="my_exam_papers_list">
-                                @if($myExamPapers && $myExamPapers->count() > 0)
-                                    @foreach($myExamPapers as $paper)
-                                        <div class="card exam-paper-card mb-3"
+                    <!-- Filters -->
+                    <div class="row mb-3">
+                        <div class="col-6 col-md-3 mb-2">
+                            <input type="text" class="form-control" id="search_my_papers" placeholder="Search...">
+                        </div>
+                        <div class="col-6 col-md-3 mb-2">
+                            <select class="form-control" id="filter_my_papers_term">
+                                <option value="">All Terms</option>
+                                @php
+                                    $myTerms = $myExamPapers ? $myExamPapers->pluck('examination.term')->filter()->unique() : collect();
+                                @endphp
+                                @foreach($myTerms as $term)
+                                    <option value="{{ $term }}">{{ ucfirst(str_replace('_', ' ', $term)) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-3 mb-2">
+                            <select class="form-control" id="filter_my_papers_year">
+                                <option value="">All Years</option>
+                                @php
+                                    $myYears = $myExamPapers ? $myExamPapers->pluck('examination.year')->filter()->unique()->sort() : collect();
+                                @endphp
+                                @foreach($myYears as $year)
+                                    <option value="{{ $year }}">{{ $year }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-3 mb-2">
+                            <select class="form-control" id="filter_my_papers_exam">
+                                <option value="">All Exams</option>
+                                @php
+                                    $myExams = $myExamPapers ? $myExamPapers->pluck('examination')->filter()->unique('examID') : collect();
+                                @endphp
+                                @foreach($myExams as $exam)
+                                    <option value="{{ $exam->examID }}">{{ $exam->exam_name }} ({{ $exam->year }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Papers Grid -->
+                    <div id="my_exam_papers_list">
+                        @if($myExamPapers && $myExamPapers->count() > 0)
+                            <div class="row">
+                                @foreach($myExamPapers as $paper)
+                                    <div class="col-md-6 col-lg-4 mb-3">
+                                        <div class="exam-widget-card {{ $paper->status == 'approved' ? 'status-approved' : ($paper->status == 'rejected' ? 'status-rejected' : '') }}"
                                              data-paper-id="{{ $paper->exam_paperID }}"
                                              data-term="{{ $paper->examination->term ?? '' }}"
                                              data-year="{{ $paper->examination->year ?? '' }}"
                                              data-exam-id="{{ $paper->examID }}">
-                                            <div class="card-body">
-                                                <div class="d-flex justify-content-between align-items-start">
-                                                    <div class="flex-grow-1">
-                                                        <h5 class="card-title text-primary-custom">
-                                                            <i class="bi bi-file-earmark-text"></i>
-                                                            {{ $paper->examination->exam_name ?? 'N/A' }}
-                                                        </h5>
-                                                        <p class="mb-2">
-                                                            <strong>Subject:</strong> {{ $paper->classSubject->subject->subject_name ?? 'N/A' }} |
-                                                            <strong>Class:</strong>
-                                                            @if($paper->classSubject->subclass)
-                                                                {{ $paper->classSubject->subclass->class->class_name ?? 'N/A' }} {{ $paper->classSubject->subclass->subclass_name }}
-                                                            @else
-                                                                {{ $paper->classSubject->class->class_name ?? 'N/A' }}
-                                                            @endif
-                                                        </p>
-                                                        <p class="mb-2">
-                                                            <strong>Type:</strong>
-                                                            <span class="badge badge-info">{{ ucfirst($paper->upload_type) }}</span>
-                                                        </p>
-                                                        <p class="mb-2">
-                                                            <strong>Status:</strong>
-                                                            <span class="badge badge-status-{{ $paper->status }}">
-                                                                @if($paper->status == 'wait_approval')
-                                                                    <i class="bi bi-clock-history"></i> Waiting Approval
-                                                                @elseif($paper->status == 'approved')
-                                                                    <i class="bi bi-check-circle"></i> Approved
-                                                                @else
-                                                                    <i class="bi bi-x-circle"></i> Rejected
-                                                                @endif
-                                                            </span>
-                                                        </p>
-                                                        @if($paper->status == 'rejected' && $paper->rejection_reason)
-                                                            <div class="alert alert-danger mt-2">
-                                                                <strong><i class="bi bi-exclamation-triangle"></i> Rejection Reason:</strong>
-                                                                <p class="mb-0">{{ $paper->rejection_reason }}</p>
-                                                            </div>
-                                                        @endif
-                                                        @if($paper->status == 'approved' && $paper->approval_comment)
-                                                            <div class="alert alert-success mt-2">
-                                                                <strong><i class="bi bi-check-circle"></i> Approval Comment:</strong>
-                                                                <p class="mb-0">{{ $paper->approval_comment }}</p>
-                                                            </div>
-                                                        @endif
-                                                        <p class="mb-0 text-muted">
-                                                            <small>
-                                                                <i class="bi bi-calendar"></i> Uploaded: {{ $paper->created_at->format('M d, Y H:i') }}
-                                                            </small>
-                                                        </p>
-                                                    </div>
-                                                    <div class="ml-3">
-                                                        @if($paper->status == 'wait_approval')
-                                                            <button class="btn btn-sm btn-warning edit-paper-btn" data-paper-id="{{ $paper->exam_paperID }}">
-                                                                <i class="bi bi-pencil"></i> Edit
-                                                            </button>
-                                                                <button class="btn btn-sm btn-info edit-questions-btn mt-1" data-paper-id="{{ $paper->exam_paperID }}">
-                                                                    <i class="bi bi-list-check"></i> Edit Questions
-                                                                </button>
-                                                        @endif
-                                                        @if($paper->status == 'rejected')
-                                                            <button class="btn btn-sm btn-danger delete-paper-btn" data-paper-id="{{ $paper->exam_paperID }}">
-                                                                <i class="bi bi-trash"></i> Delete
-                                                            </button>
-                                                        @endif
-                                                        @if($paper->upload_type == 'upload' && $paper->file_path)
-                                                            <a href="{{ route('download_exam_paper', $paper->exam_paperID) }}" class="btn btn-sm btn-primary-custom">
-                                                                <i class="bi bi-download"></i> Download
-                                                            </a>
-                                                        @endif
-                                                    </div>
+                                            
+                                            <!-- Top: Status badge -->
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <span class="exam-type-badge">
+                                                    <i class="bi bi-file-earmark-text"></i> {{ ucfirst($paper->upload_type) }}
+                                                </span>
+                                                <span class="badge badge-status-{{ $paper->status }}">
+                                                    @if($paper->status == 'wait_approval')
+                                                        <i class="bi bi-clock-history"></i> Pending
+                                                    @elseif($paper->status == 'approved')
+                                                        <i class="bi bi-check-circle"></i> Approved
+                                                    @else
+                                                        <i class="bi bi-x-circle"></i> Rejected
+                                                    @endif
+                                                </span>
+                                            </div>
+
+                                            <!-- Exam Name -->
+                                            <h6 class="mb-2" style="font-weight: bold;">
+                                                <i class="bi bi-journal-bookmark text-primary-custom"></i>
+                                                {{ $paper->examination->exam_name ?? 'N/A' }}
+                                            </h6>
+
+                                            <!-- Subject & Class -->
+                                            <p class="mb-1 text-muted" style="font-size: 0.9rem;">
+                                                <i class="bi bi-book"></i>
+                                                {{ $paper->classSubject->subject->subject_name ?? 'N/A' }}
+                                            </p>
+                                            <p class="mb-2 text-muted" style="font-size: 0.85rem;">
+                                                <i class="bi bi-people"></i>
+                                                @if($paper->classSubject->subclass)
+                                                    {{ $paper->classSubject->subclass->class->class_name ?? 'N/A' }} {{ $paper->classSubject->subclass->subclass_name }}
+                                                @else
+                                                    {{ $paper->classSubject->class->class_name ?? 'N/A' }}
+                                                @endif
+                                            </p>
+
+                                            <!-- Rejection / Approval messages -->
+                                            @if($paper->status == 'rejected' && $paper->rejection_reason)
+                                                <div class="alert alert-danger py-2 px-3 mb-2" style="font-size: 0.8rem; border-radius: 8px !important;">
+                                                    <strong><i class="bi bi-exclamation-triangle"></i> Reason:</strong>
+                                                    {{ $paper->rejection_reason }}
                                                 </div>
+                                            @endif
+                                            @if($paper->status == 'approved' && $paper->approval_comment)
+                                                <div class="alert alert-success py-2 px-3 mb-2" style="font-size: 0.8rem; border-radius: 8px !important;">
+                                                    <strong><i class="bi bi-check-circle"></i> Comment:</strong>
+                                                    {{ $paper->approval_comment }}
+                                                </div>
+                                            @endif
+
+                                            <!-- Upload date -->
+                                            <p class="mb-2 text-muted" style="font-size: 0.8rem;">
+                                                <i class="bi bi-calendar"></i> {{ $paper->created_at->format('M d, Y H:i') }}
+                                            </p>
+
+                                            <!-- Action Buttons -->
+                                            <div class="exam-card-actions">
+                                                @if($paper->status == 'wait_approval')
+                                                    <button class="btn btn-exam-action btn-sm edit-paper-btn" data-paper-id="{{ $paper->exam_paperID }}">
+                                                        <i class="bi bi-pencil"></i> Edit Paper
+                                                    </button>
+                                                    <button class="btn btn-exam-action btn-sm edit-questions-btn" data-paper-id="{{ $paper->exam_paperID }}">
+                                                        <i class="bi bi-list-check"></i> Edit Questions
+                                                    </button>
+                                                @endif
+                                                @if($paper->status == 'rejected')
+                                                    <button class="btn btn-exam-action btn-sm btn-danger-outline delete-paper-btn" data-paper-id="{{ $paper->exam_paperID }}">
+                                                        <i class="bi bi-trash"></i> Delete
+                                                    </button>
+                                                @endif
+                                                @if($paper->upload_type == 'upload' && $paper->file_path)
+                                                    <a href="{{ route('download_exam_paper', $paper->exam_paperID) }}" class="btn btn-exam-action btn-sm">
+                                                        <i class="bi bi-download"></i> Download
+                                                    </a>
+                                                @endif
                                             </div>
                                         </div>
-                                    @endforeach
-                                @else
-                                    <div class="alert alert-info text-center">
-                                        <i class="bi bi-info-circle"></i> No exam papers uploaded yet.
                                     </div>
-                                @endif
+                                @endforeach
                             </div>
-                        </div>
+                        @else
+                            <div class="text-center py-5">
+                                <i class="bi bi-file-earmark-x text-muted display-4"></i>
+                                <h5 class="mt-3">No exam papers uploaded yet.</h5>
+                                <p class="text-muted">Use the Upload tab to submit your first exam paper.</p>
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>
