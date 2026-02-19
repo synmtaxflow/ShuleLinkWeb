@@ -1104,7 +1104,7 @@
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Redundant jQuery removed to avoid conflicts -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -1112,11 +1112,15 @@
 <script>
 $(document).ready(function() {
     // Initialize tooltips
-    $('[data-toggle="tooltip"]').tooltip();
+    if ($.isFunction($.fn.tooltip)) {
+        $('[data-toggle="tooltip"], .btn[title], .exam-widget-action[title]').tooltip();
+    }
 
     // Re-initialize tooltips after dynamic content is loaded
     $(document).on('shown.bs.dropdown', function() {
-        $('[data-toggle="tooltip"]').tooltip();
+        if ($.isFunction($.fn.tooltip)) {
+            $('[data-toggle="tooltip"], .btn[title], .exam-widget-action[title]').tooltip();
+        }
     });
 
     // Initialize Bootstrap dropdowns manually to ensure they work
@@ -3738,12 +3742,16 @@ $(document).ready(function() {
 
     // Initialize Bootstrap tooltips on page load and after dynamic content updates
     $(function () {
-        $('[data-toggle="tooltip"]').tooltip();
+        if ($.isFunction($.fn.tooltip)) {
+            $('[data-toggle="tooltip"], .btn[title], .exam-widget-action[title]').tooltip();
+        }
     });
 
     // Re-initialize tooltips after AJAX content updates
     $(document).ajaxComplete(function() {
-        $('[data-toggle="tooltip"]').tooltip();
+        if ($.isFunction($.fn.tooltip)) {
+            $('[data-toggle="tooltip"], .btn[title], .exam-widget-action[title]').tooltip();
+        }
     });
 
     // View Exam Papers
