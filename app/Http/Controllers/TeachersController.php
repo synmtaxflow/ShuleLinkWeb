@@ -1533,14 +1533,36 @@ class TeachersController extends Controller
             // Handle Image Upload - only if new image is provided
             $imageName = $teacher->image; // Keep existing image by default
             if ($request->hasFile('image')) {
-                $uploadPath = public_path('userImages');
+                // Determine upload path - Prioritize public_html for cPanel
+                $basePath = base_path();
+                $parentDir = dirname($basePath);
+                $publicHtmlPath = $parentDir . '/public_html/userImages';
+                $docRootPath = $_SERVER['DOCUMENT_ROOT'] . '/userImages';
+                $localPublicPath = public_path('userImages');
+
+                if (file_exists($parentDir . '/public_html')) {
+                    $uploadPath = $publicHtmlPath;
+                } elseif (strpos($_SERVER['DOCUMENT_ROOT'], 'public_html') !== false) {
+                    $uploadPath = $docRootPath;
+                } else {
+                    $uploadPath = $localPublicPath;
+                }
+
                 if (!file_exists($uploadPath)) {
-                    mkdir($uploadPath, 0755, true);
+                    @mkdir($uploadPath, 0755, true);
                 }
 
                 // Delete old image if exists
-                if ($teacher->image && file_exists($uploadPath . '/' . $teacher->image)) {
-                    unlink($uploadPath . '/' . $teacher->image);
+                if ($teacher->image) {
+                    $possibleOldPaths = [
+                        $uploadPath . '/' . $teacher->image,
+                        public_path('userImages/' . $teacher->image)
+                    ];
+                    foreach ($possibleOldPaths as $oldPath) {
+                        if (file_exists($oldPath)) {
+                            @unlink($oldPath);
+                        }
+                    }
                 }
 
                 $imageName = time() . '_' . $request->file('image')->getClientOriginalName();
