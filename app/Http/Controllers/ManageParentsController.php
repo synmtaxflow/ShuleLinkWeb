@@ -156,9 +156,23 @@ class ManageParentsController extends Controller
             // Handle Image Upload
             $imageName = null;
             if ($request->hasFile('photo')) {
-                $uploadPath = public_path('userImages');
+                // Determine upload path - Prioritize public_html for cPanel
+                $basePath = base_path();
+                $parentDir = dirname($basePath);
+                $publicHtmlPath = $parentDir . '/public_html/userImages';
+                $docRootPath = $_SERVER['DOCUMENT_ROOT'] . '/userImages';
+                $localPublicPath = public_path('userImages');
+
+                if (file_exists($parentDir . '/public_html')) {
+                    $uploadPath = $publicHtmlPath;
+                } elseif (strpos($_SERVER['DOCUMENT_ROOT'], 'public_html') !== false) {
+                    $uploadPath = $docRootPath;
+                } else {
+                    $uploadPath = $localPublicPath;
+                }
+
                 if (!file_exists($uploadPath)) {
-                    mkdir($uploadPath, 0755, true);
+                    @mkdir($uploadPath, 0755, true);
                 }
 
                 $imageName = time() . '_' . $request->file('photo')->getClientOriginalName();
@@ -401,9 +415,23 @@ class ManageParentsController extends Controller
             // Handle Image Upload
             $imageName = $parent->photo; // Keep existing photo
             if ($request->hasFile('photo')) {
-                $uploadPath = public_path('userImages');
+                // Determine upload path - Prioritize public_html for cPanel
+                $basePath = base_path();
+                $parentDir = dirname($basePath);
+                $publicHtmlPath = $parentDir . '/public_html/userImages';
+                $docRootPath = $_SERVER['DOCUMENT_ROOT'] . '/userImages';
+                $localPublicPath = public_path('userImages');
+
+                if (file_exists($parentDir . '/public_html')) {
+                    $uploadPath = $publicHtmlPath;
+                } elseif (strpos($_SERVER['DOCUMENT_ROOT'], 'public_html') !== false) {
+                    $uploadPath = $docRootPath;
+                } else {
+                    $uploadPath = $localPublicPath;
+                }
+
                 if (!file_exists($uploadPath)) {
-                    mkdir($uploadPath, 0755, true);
+                    @mkdir($uploadPath, 0755, true);
                 }
 
                 // Delete old image if exists
