@@ -4062,8 +4062,10 @@ jQuery(document).ready(function($) {
                 `);
             }
     });
-
+    });
 });
+
+
 
 // Global functions for status management (outside document.ready for onclick handlers)
 window.handleStatusChange = function(examID, status, permission) {
@@ -4420,7 +4422,6 @@ window.viewExamPapers = function(examID, examName) {
                 $('#examPapersContent').html('<div class="alert alert-danger">Error: Failed to load exam papers. Please refresh the page.</div>');
             }
         });
-    });
 };
 
 window.updateExamPaperModalCount = function() {
