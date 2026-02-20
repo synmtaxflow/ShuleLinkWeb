@@ -6,7 +6,8 @@
                 <h5 class="modal-title fw-bold">
                     <i class="bi bi-person-check"></i> Student Registration Form
                 </h5>
-                <button type="button" class="btn-close btn-close-white" id="registrationModalCloseBtn" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" id="registrationModalCloseBtn" data-bs-dismiss="modal" aria-label="Close"
+                    onclick="var m=document.getElementById('registrationModal'); if(m){m.style.display='none';m.classList.remove('show');m.setAttribute('aria-hidden','true');} document.body.classList.remove('modal-open'); document.querySelectorAll('.modal-backdrop').forEach(b=>b.remove());"></button>
             </div>
 
             <div class="modal-body p-4">
@@ -277,7 +278,7 @@
                                 </h6>
                                 <div class="row">
                                     <div class="col-md-3 text-center mb-3">
-                                        <img id="reviewStudentPhoto" src="" alt="Student Photo" class="rounded-circle" style="width: 120px; height: 120px; object-fit: cover; border: 3px solid #e9ecef;" onerror="this.onerror=null; this.src=this.dataset.placeholder;">
+                                        <img id="reviewStudentPhoto" src="{{ asset('images/male.png') }}" data-placeholder="{{ asset('images/male.png') }}" alt="Student Photo" class="rounded-circle" style="width: 120px; height: 120px; object-fit: cover; border: 3px solid #e9ecef;" onerror="if(this.dataset.placeholder) { this.onerror=null; this.src=this.dataset.placeholder; }">
                                     </div>
                                     <div class="col-md-9">
                                         <div class="row">
@@ -305,7 +306,7 @@
                                 </h6>
                                 <div class="row">
                                     <div class="col-md-3 text-center mb-3">
-                                        <img id="reviewParentPhoto" src="" alt="Parent Photo" class="rounded-circle" style="width: 120px; height: 120px; object-fit: cover; border: 3px solid #e9ecef;" onerror="this.onerror=null; this.src=this.dataset.placeholder;">
+                                        <img id="reviewParentPhoto" src="{{ asset('images/male.png') }}" data-placeholder="{{ asset('images/male.png') }}" alt="Parent Photo" class="rounded-circle" style="width: 120px; height: 120px; object-fit: cover; border: 3px solid #e9ecef;" onerror="if(this.dataset.placeholder) { this.onerror=null; this.src=this.dataset.placeholder; }">
                                     </div>
                                     <div class="col-md-9">
                                         <div id="reviewParentInfo">

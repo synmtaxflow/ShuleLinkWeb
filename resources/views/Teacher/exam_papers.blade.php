@@ -3,15 +3,22 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
 <style>
-    /* Color scheme for #940000 */
-
-    
+    /* Color scheme matching my_sessions.blade.php */
     .bg-primary-custom {
-        background-color: #940000 !important;
+        background-color: #f9eeee !important;
     }
     .text-primary-custom {
         color: #940000 !important;
     }
+    
+    /* Font and Border Radius Resets */
+    div, .card, .exam-widget-card, .btn, .nav-link, .alert {
+        border-radius: 0 !important;
+    }
+    body, .container-fluid, .card, .exam-widget-card, .btn {
+        font-family: "Century Gothic", "CenturyGothic", "AppleGothic", sans-serif;
+    }
+
     .border-primary-custom {
         border-color: #940000 !important;
     }
@@ -19,6 +26,7 @@
         background-color: #940000;
         border-color: #940000;
         color: #ffffff;
+        border-radius: 8px !important;
     }
     .btn-primary-custom:hover {
         background-color: #b30000;
@@ -28,15 +36,6 @@
     .form-control:focus, .form-select:focus {
         border-color: #940000;
         box-shadow: 0 0 0 0.2rem rgba(148, 0, 0, 0.25);
-    }
-    .exam-paper-card {
-        transition: all 0.3s ease;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 4px 16px rgba(148, 0, 0, 0.08) !important;
-        border: 1px solid rgba(148, 0, 0, 0.1) !important;
-    }
-    .exam-paper-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 24px rgba(148, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1) !important;
     }
 
     /* Widget card style (matching my_sessions) */
@@ -72,8 +71,8 @@
     .exam-card-actions {
         display: flex;
         flex-direction: column;
-        gap: 8px;
-        margin-top: 10px;
+        gap: 10px;
+        margin-top: 12px;
     }
 
     .btn-exam-action {
@@ -99,6 +98,33 @@
     .btn-exam-action.btn-danger-outline:hover {
         background: #fff5f5 !important;
     }
+
+    /* Hero header matching my_sessions */
+    .exams-hero {
+        background: linear-gradient(135deg, #fff2f2 0%, #f7dede 100%);
+        border: 1px solid #e8c8c8;
+        color: #7a1f1f;
+    }
+
+    /* Tabs styling matching my_sessions */
+    #examPapersTabs .nav-link {
+        color: #940000;
+        border-radius: 0 !important;
+        border: none;
+        border-bottom: 3px solid transparent;
+        padding: 12px 20px;
+        font-weight: 600;
+    }
+    #examPapersTabs .nav-link:hover {
+        background-color: #f9eeee;
+        border-bottom-color: #e8c8c8;
+    }
+    #examPapersTabs .nav-link.active {
+        background-color: transparent !important;
+        color: #940000 !important;
+        border-bottom: 3px solid #940000 !important;
+    }
+
     .badge-status-wait-approval {
         background-color: #ffc107;
         color: #000;

@@ -1,12 +1,14 @@
 <!-- Subclass Selector Modal -->
-<div class="modal fade" id="classSelectorModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="classSelectorModal" tabindex="-1" aria-hidden="true" 
+    onclick="if(event.target===this){ var m=document.getElementById('classSelectorModal'); if(m){m.style.display='none';m.classList.remove('show');m.setAttribute('aria-hidden','true');} document.body.classList.remove('modal-open'); document.querySelectorAll('.modal-backdrop').forEach(b=>b.remove()); }">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 95vw; width: 95vw;">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header" style="background: white; border-bottom: 1px solid #e9ecef; color: #212529;">
                 <h5 class="modal-title fw-bold">
                     <i class="bi bi-building"></i> Select Class to Register Student
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" 
+                    onclick="var m=document.getElementById('classSelectorModal'); if(m){m.style.display='none';m.classList.remove('show');m.setAttribute('aria-hidden','true');} document.body.classList.remove('modal-open'); document.querySelectorAll('.modal-backdrop').forEach(b=>b.remove());"></button>
             </div>
 
             <div class="modal-body p-3">
@@ -27,40 +29,93 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const classSelectorModal = document.getElementById('classSelectorModal');
-    if (classSelectorModal) {
-        classSelectorModal.addEventListener('show.bs.modal', loadSubclasses);
-    }
+    // Make loadSubclasses globally accessible so it can be called from manage_student.blade.php
+    window.loadSubclasses = function() {
+        const container = document.getElementById('classesContainer');
+        if (!container) {
+            console.error('classesContainer not found');
+            return;
+        }
 
-    function loadSubclasses() {
+        // Avoid double loading if already loaded
+        if (container.dataset.loaded === 'true' && container.querySelectorAll('.small-card').length > 0) {
+            console.log('Classes already loaded, skipping fetch');
+            return;
+        }
+
+        // Show spinner
+        container.innerHTML = `
+            <div class="col-12 text-center py-5">
+                <div class="spinner-border text-danger" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading classes...</p>
+            </div>
+        `;
+
         const url = '{{ route("get_subclasses_with_stats") }}';
         console.log('Fetching subclasses from:', url);
 
         fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
             .then(response => {
-                console.log('Response status:', response.status);
                 if (!response.ok) throw new Error('HTTP status ' + response.status);
                 return response.json();
             })
             .then(data => {
-                console.log('Data:', data);
+                console.log('Subclasses data received:', data);
                 if (data.success && data.subclasses && data.subclasses.length > 0) {
                     displaySubclasses(data.subclasses);
+                    container.dataset.loaded = 'true';
                 } else if (data.success) {
                     showError('No classes found for your school.');
+                    container.dataset.loaded = 'true';
                 } else {
                     showError(data.message || 'Unknown error');
                 }
             })
             .catch(err => {
-                console.error('Fetch error:', err);
-                showError(err.message || 'Failed to load classes');
+                console.error('Fetch error in loadSubclasses:', err);
+                showError(err.message || 'Failed to load classes. Please check your connection.');
             });
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const classSelectorModal = document.getElementById('classSelectorModal');
+        if (classSelectorModal) {
+            classSelectorModal.addEventListener('show.bs.modal', window.loadSubclasses);
+            // Support for jQuery-based show
+            if (window.jQuery) {
+                $(classSelectorModal).on('show.bs.modal', window.loadSubclasses);
+            }
+        }
+
+        // Search functionality
+        const searchInput = document.getElementById('classSearch');
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                const query = this.value.toLowerCase().trim();
+                const cards = document.querySelectorAll('#classesContainer .col-lg-3');
+                cards.forEach(cardCol => {
+                    const card = cardCol.querySelector('.small-card');
+                    const cname = (card.getAttribute('data-subclass-name') || '').toLowerCase();
+                    const pclass = (card.getAttribute('data-class-name') || '').toLowerCase();
+                    const text = cname + ' ' + pclass;
+                    cardCol.style.display = text.includes(query) ? '' : 'none';
+                });
+            });
+        }
+    });
+
+    function showError(message) {
+        const container = document.getElementById('classesContainer');
+        if (container) {
+            container.innerHTML = `<div class="col-12"><div class="alert alert-danger">${message}</div></div>`;
+        }
     }
 
     function displaySubclasses(subclasses) {
         const container = document.getElementById('classesContainer');
+        if (!container) return;
         container.innerHTML = '';
 
         subclasses.forEach(s => {
@@ -85,7 +140,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     <span class="badge bg-primary">${s.male_count} M</span>
                     <span class="badge bg-danger">${s.female_count} F</span>
                 </div>
-                <button class="btn btn-sm btn-outline-success w-100 add-btn" data-subclass-id="${s.subclassID}" data-subclass-name="${s.subclass_name}" data-class-name="${s.class_name}">Add Student</button>
+                <button class="btn btn-sm btn-outline-success w-100 add-btn" 
+                    data-subclass-id="${s.subclassID}" 
+                    data-subclass-name="${s.subclass_name}" 
+                    data-class-name="${s.class_name}">Add Student</button>
             `;
 
             card.appendChild(body);
@@ -93,7 +151,7 @@ document.addEventListener('DOMContentLoaded', function() {
             container.appendChild(col);
         });
 
-        // Add handlers
+        // Add click handlers for buttons
         document.querySelectorAll('.add-btn').forEach(btn => {
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
@@ -104,35 +162,17 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
+        // Add click handlers for cards
         document.querySelectorAll('.small-card').forEach(card => {
             card.addEventListener('click', function() {
                 const id = this.getAttribute('data-subclass-id');
                 const sname = this.getAttribute('data-subclass-name');
-                const cname = this.getAttribute('data-class-name') || (this.querySelector('.fw-bold')?.textContent || '');
+                const cname = this.getAttribute('data-class-name');
                 openRegistrationModal(id, sname, cname);
             });
-
             card.addEventListener('mouseenter', function() { this.style.transform = 'translateY(-4px)'; this.style.boxShadow = '0 0.5rem 1rem rgba(0,0,0,0.1)'; });
             card.addEventListener('mouseleave', function() { this.style.transform = ''; this.style.boxShadow = ''; });
         });
-
-        // Wire search
-        const search = document.getElementById('classSearch');
-        if (search) {
-            search.oninput = function() {
-                const q = this.value.trim().toLowerCase();
-                document.querySelectorAll('#classesContainer .small-card').forEach(card => {
-                    const cname = (card.getAttribute('data-subclass-name') || '').toLowerCase();
-                    const pclass = (card.querySelector('.fw-bold')?.textContent || '').toLowerCase();
-                    const text = cname + ' ' + pclass;
-                    card.parentElement.style.display = text.includes(q) ? '' : 'none';
-                });
-            };
-        }
-    }
-
-    function showError(msg) {
-        document.getElementById('classesContainer').innerHTML = `<div class="col-12 alert alert-danger">${msg}</div>`;
     }
 
     function openRegistrationModal(id, name, className) {
@@ -157,51 +197,22 @@ document.addEventListener('DOMContentLoaded', function() {
              // Small timeout to ensure DOM is settled
              setTimeout(() => {
                 try {
-                    console.log('Attempting to open registration modal...');
-                    
-                    // Priority 1: jQuery (Most robust for this setup)
-                    if (window.jQuery) {
-                        try {
-                            console.log('Trying jQuery modal...');
-                            jQuery('#registrationModal').modal('show');
-                            return; // Success
-                        } catch (jqErr) {
-                            console.warn('jQuery modal failed, trying Bootstrap 5 native:', jqErr);
-                        }
+                    // Priority 1: jQuery
+                    if (window.jQuery && typeof jQuery.fn.modal === 'function') {
+                        jQuery('#registrationModal').modal('show');
+                        return;
                     }
 
-                    // Priority 2: Bootstrap 5 Native
+                    // Priority 2: Bootstrap 5
                     if (window.bootstrap && typeof bootstrap.Modal === 'function') {
-                        console.log('Trying Bootstrap 5 native...');
-                        // Dispose existing instance if any
-                        if (typeof bootstrap.Modal.getInstance === 'function') {
-                            const existingInst = bootstrap.Modal.getInstance(regEl);
-                            if (existingInst) existingInst.dispose();
-                        }
-                        
-                        const reg = new bootstrap.Modal(regEl, { backdrop: 'static', keyboard: false, focus: true });
+                        const reg = new bootstrap.Modal(regEl, { backdrop: 'static', keyboard: false });
                         reg.show();
-                        return; // Success
+                        return;
                     }
-                    
-                    // Priority 3: Manual Fallback
-                    console.log('Using manual fallback...');
-                    throw new Error('No compatible modal library found');
-                    
                 } catch (err) {
-                     console.error('Modal open failed, forcing manual display:', err);
-                     // Last resort fallback
+                     console.error('Modal open failed:', err);
                      regEl.classList.add('show');
                      regEl.style.display = 'block';
-                     regEl.setAttribute('aria-hidden', 'false');
-                     document.body.classList.add('modal-open');
-                     
-                     if (!document.querySelector('.modal-backdrop')) {
-                         const bd = document.createElement('div');
-                         bd.className = 'modal-backdrop show';
-                         bd.id = 'regBackdrop';
-                         document.body.appendChild(bd);
-                     }
                 }
              }, 150);
         };
@@ -212,28 +223,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 const inst = bootstrap.Modal.getInstance(selectorEl);
                 if (inst) inst.hide();
             }
-        } catch (e) { console.warn('BS hide failed', e); }
-
-        try {
-            if (window.jQuery) {
+            if (window.jQuery && typeof jQuery.fn.modal === 'function') {
                 jQuery(selectorEl).modal('hide');
             }
-        } catch (e) { console.warn('jQuery hide failed', e); }
+        } catch (e) { console.warn('Modal hide failed', e); }
 
-        // Manual cleanup just in case
+        // Manual cleanup
         selectorEl.classList.remove('show');
         selectorEl.style.display = 'none';
         selectorEl.setAttribute('aria-hidden', 'true');
-        
-        // Remove ANY backdrop immediately to prevent stacking issues
         document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
         document.body.classList.remove('modal-open');
-        document.body.style.removeProperty('padding-right');
 
         // Open registration modal after short delay
         setTimeout(showRegistrationModal, 300);
     }
-});
 </script>
 
 <style>

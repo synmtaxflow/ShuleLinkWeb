@@ -1393,6 +1393,11 @@
             e.preventDefault();
             const modal = document.getElementById('classSelectorModal');
             if (modal) {
+                // Ensure subclasses are loading
+                if (typeof window.loadSubclasses === 'function') {
+                    window.loadSubclasses();
+                }
+
                 // Try Bootstrap 5 modal
                 if (window.bootstrap && typeof bootstrap.Modal === 'function') {
                     const bsModal = new bootstrap.Modal(modal, {
@@ -1737,9 +1742,14 @@
                     healthAlarmIcon = ' <i class="bi bi-exclamation-triangle-fill text-danger" title="Health Condition Alert"></i>';
                 }
 
+                let studentPhoto = student.photo;
+                if (!studentPhoto || studentPhoto === 'undefined') {
+                    studentPhoto = student.gender === 'Female' ? '{{ asset("images/female.png") }}' : '{{ asset("images/male.png") }}';
+                }
+
                 html += '<div class="student-widget">' +
                         '<div class="student-widget-header">' +
-                            '<img src="' + student.photo + '" alt="' + student.full_name + '">' +
+                            '<img src="' + studentPhoto + '" alt="' + student.full_name + '">' +
                         '</div>' +
                         '<div class="student-widget-body">' +
                             '<h3>' + (student.full_name || '-') + healthAlarmIcon + '</h3>' +
