@@ -1369,7 +1369,8 @@
         window.$ = window.jQuery = jQuery;
     }
 
-    $(document).ready(function() {
+    (function($) {
+        $(document).ready(function() {
         // Safety check for Select2
         function safeInitSelect2(selector, options) {
             const $el = $(selector);
@@ -5125,7 +5126,8 @@ Would you like to try direct registration anyway, or use the manual method?`;
                 $btn.prop('disabled', false).html(originalHtml);
             }
         });
-    });
+        });
+    })(jQuery);
 </script>
 
 <!-- Include Class Selector Modal -->

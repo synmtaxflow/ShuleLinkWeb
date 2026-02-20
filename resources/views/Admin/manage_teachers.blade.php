@@ -2508,7 +2508,8 @@
 @include('includes.footer')
 
 <script>
-    $(document).ready(function() {
+    (function($) {
+        $(document).ready(function() {
         // Store user permissions for JavaScript checks
         var userPermissions = @json($teacherPermissions ?? collect());
         var userType = @json($user_type ?? '');
@@ -6957,4 +6958,5 @@
             }
         }
     });
+})(jQuery);
 </script>
