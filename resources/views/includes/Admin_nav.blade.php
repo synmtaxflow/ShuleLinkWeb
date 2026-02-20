@@ -743,18 +743,31 @@
                             </ul>
                         </li> -->
 
+                        <!-- Goal Management Logic -->
+                        <li class="dropdown-nav-item">
+                            <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#goalManagement" aria-expanded="false">
+                                <i class="fa fa-bullseye"></i> Goal Management <i class="fa fa-chevron-down float-right"></i>
+                            </a>
+                            <ul id="goalManagement" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
+                                <li><a href="{{ route('admin.goals.create') }}" class="nav-link"><i class="fa fa-plus-circle"></i> Create Goal</a></li>
+                                <li><a href="{{ route('admin.goals.index') }}" class="nav-link"><i class="fa fa-list"></i> Goal List</a></li>
+                                <li><a href="{{ route('admin.goals.reports') }}" class="nav-link"><i class="fa fa-bar-chart"></i> Goal Reports</a></li>
+                            </ul>
+                        </li>
+
                         <!-- Strategic Management (SGPM) -->
                         <li class="dropdown-nav-item">
                             <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#strategicManagement" aria-expanded="false">
-                                <i class="fa fa-bullseye"></i> Strategic Management <i class="fa fa-chevron-down float-right"></i>
+                                <i class="fa fa-bullseye"></i> School Depertments <i class="fa fa-chevron-down float-right"></i>
                             </a>
                             <ul id="strategicManagement" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
                                 <li><a href="{{ route('sgpm.departments.index') }}" class="nav-link"><i class="fa fa-sitemap"></i> Departments</a></li>
-                                <li><a href="{{ route('sgpm.goals.index') }}" class="nav-link"><i class="fa fa-flag-checkered"></i> Strategic Goals</a></li>
+                                <!-- <li><a href="{{ route('sgpm.goals.index') }}" class="nav-link"><i class="fa fa-flag-checkered) }}"></i> Strategic Goals</a></li>
                                 <li><a href="{{ route('sgpm.objectives.index') }}" class="nav-link"><i class="fa fa-crosshairs"></i> Objectives</a></li>
-                                <li><a href="{{ route('sgpm.performance.index') }}" class="nav-link"><i class="fa fa-line-chart"></i> Performance</a></li>
+                                <li><a href="{{ route('sgpm.performance.index') }}" class="nav-link"><i class="fa fa-line-chart"></i> Performance</a></li> -->
                             </ul>
                         </li>
+
                     </ul>
                 </li>
 
@@ -831,6 +844,7 @@
                         </div>
 
                         @include('includes.sgpm_notifications')
+                        @include('includes.goal_notifications')
 
                         <div class="dropdown for-message">
                             @php

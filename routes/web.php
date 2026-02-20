@@ -38,8 +38,62 @@ use App\Http\Controllers\AccountantReportController;
 use App\Http\Controllers\ExpenseCategoryController;
 use App\Http\Controllers\IncomeCategoryController;
 use App\Http\Controllers\SponsorController;
+use App\Http\Controllers\GoalManagementController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
+
+// Goal Management Routes
+Route::prefix('goals')->group(function () {
+    // Admin
+    Route::get('/create', [GoalManagementController::class, 'createGoal'])->name('admin.goals.create');
+    Route::post('/store', [GoalManagementController::class, 'storeGoal'])->name('admin.goals.store');
+    Route::get('/list', [GoalManagementController::class, 'goalList'])->name('admin.goals.index');
+    Route::get('/reports', [GoalManagementController::class, 'goalList'])->name('admin.goals.reports'); // Reuse list for now
+    Route::post('/assign-task', [GoalManagementController::class, 'assignTask'])->name('admin.goals.assignTask');
+    Route::get('/view/{id}', [GoalManagementController::class, 'showGoal'])->name('admin.goals.show');
+    Route::get('/edit/{id}', [GoalManagementController::class, 'editGoal'])->name('admin.goals.edit');
+    Route::post('/update/{id}', [GoalManagementController::class, 'updateGoal'])->name('admin.goals.update');
+    Route::delete('/delete/{id}', [GoalManagementController::class, 'deleteGoal'])->name('admin.goals.delete');
+    Route::get('/tasks/{goal_id}', [GoalManagementController::class, 'fetchGoalTasks'])->name('admin.goals.fetchTasks');
+    Route::post('/task/update/{id}', [GoalManagementController::class, 'updateTask'])->name('admin.goals.updateTask');
+    Route::delete('/task/delete/{id}', [GoalManagementController::class, 'deleteTask'])->name('admin.goals.deleteTask');
+    Route::get('/task/details/{id}', [GoalManagementController::class, 'fetchTaskDetails'])->name('admin.goals.getTask');
+    Route::get('/task/full-structure/{id}', [GoalManagementController::class, 'fetchTaskFullStructure'])->name('admin.goals.taskFullStructure');
+    Route::get('/fetch-targets/{type}', [GoalManagementController::class, 'fetchTargets'])->name('goals.fetchTargets');
+
+    // HOD
+    Route::get('/hod/assigned', [GoalManagementController::class, 'hodAssignedTasks'])->name('hod.goals.assigned');
+    Route::get('/hod/view-task/{id}', [GoalManagementController::class, 'showHODTaskDetails'])->name('hod.goals.viewTask');
+    Route::get('/hod/fetch-member-tasks/{parent_task_id}', [GoalManagementController::class, 'fetchMemberTasks']);
+    Route::get('/fetch-dept-members', [GoalManagementController::class, 'fetchDeptMembers'])->name('goals.fetchDeptMembers');
+    Route::post('/hod/assign-member-store', [GoalManagementController::class, 'assignMemberStore'])->name('hod.goals.assignMemberStore');
+    Route::get('/hod/assign-members', [GoalManagementController::class, 'hodAssignedTasks'])->name('hod.goals.assignMebers');
+    Route::get('/hod/progress', [GoalManagementController::class, 'hodAssignedTasks'])->name('hod.goals.progress');
+    Route::get('/hod/review', [GoalManagementController::class, 'hodAssignedTasks'])->name('hod.goals.review');
+
+    // Member
+    Route::get('/my-tasks', [GoalManagementController::class, 'memberTasks'])->name('member.goals.myTasks');
+    Route::get('/fetch-subtasks/{member_task_id}', [GoalManagementController::class, 'fetchSubtasks']);
+    Route::get('/fetch-subtask-details/{id}', [GoalManagementController::class, 'fetchSubtaskDetails']);
+    Route::post('/member/subtask-store', [GoalManagementController::class, 'subtaskStore'])->name('member.goals.subtaskStore');
+    Route::post('/member/update-subtask/{id}', [GoalManagementController::class, 'updateSubtask']);
+    Route::delete('/member/delete-subtask/{id}', [GoalManagementController::class, 'deleteSubtask']);
+    
+    Route::post('/member/save-step', [GoalManagementController::class, 'saveSubtaskStep']);
+    Route::post('/member/update-step/{id}', [GoalManagementController::class, 'updateSubtaskStep']);
+    Route::delete('/member/delete-step/{id}', [GoalManagementController::class, 'deleteSubtaskStep']);
+    
+    Route::post('/member/submit-subtask/{id}', [GoalManagementController::class, 'submitSubtask']);
+
+    // Review Actions
+    Route::post('/review/approve-subtask', [GoalManagementController::class, 'approveSubtask'])->name('goals.review.approve');
+    Route::post('/review/reset-marks/{id}', [GoalManagementController::class, 'resetSubtaskMarks']);
+
+    // Notifications
+    Route::get('/notifications', [GoalManagementController::class, 'getNotifications'])->name('goals.notifications');
+    Route::post('/notifications/read/{id}', [GoalManagementController::class, 'markAsRead'])->name('goals.notifications.read');
+    Route::post('/notifications/read-all', [GoalManagementController::class, 'markAllAsRead'])->name('goals.notifications.read_all');
+});
 
 Route::get('/', function () {
     return view('home');
