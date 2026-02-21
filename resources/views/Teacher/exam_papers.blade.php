@@ -597,7 +597,13 @@
                                             </div>
                                             <div class="optional-ranges-wrapper" data-wrapper-for="#question-rows-main"></div>
                                             <div id="question-rows-main"></div>
-                                            <div class="mt-2">
+                                            <div class="form-check mb-3 mt-3">
+                                                <input class="form-check-input" type="checkbox" name="apply_to_all_subjects" id="apply_all_main" value="1">
+                                                <label class="form-check-label text-primary-custom" for="apply_all_main">
+                                                    <strong><i class="bi bi-megaphone"></i> Apply this question format to all subjects in this examination</strong>
+                                                </label>
+                                            </div>
+                                            <div class="mt-2 text-muted small">
                                                 <small class="text-muted">
                                                     Total Marks: <span class="total-marks" data-total-for="#question-rows-main">0</span>/100
                                                 </small>
@@ -951,7 +957,13 @@
                                 </div>
                                 <div class="optional-ranges-wrapper" data-wrapper-for="#question-rows-modal"></div>
                                 <div id="question-rows-modal"></div>
-                                <div class="mt-2">
+                                <div class="form-check mb-3 mt-3">
+                                    <input class="form-check-input" type="checkbox" name="apply_to_all_subjects" id="apply_all_modal" value="1">
+                                    <label class="form-check-label text-primary-custom" for="apply_all_modal">
+                                        <strong><i class="bi bi-megaphone"></i> Apply this question format to all subjects in this examination</strong>
+                                    </label>
+                                </div>
+                                <div class="mt-2 text-muted small">
                                     <small class="text-muted">
                                         Total Marks: <span class="total-marks" data-total-for="#question-rows-modal">0</span>/100
                                     </small>
@@ -1919,6 +1931,11 @@ $(document).ready(function() {
             formData.append('existing_exam_paper_id', existingUploadId);
         }
         formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
+
+        const applyToAll = isModal ? $('#apply_all_modal').is(':checked') : $('#apply_all_main').is(':checked');
+        if (applyToAll) {
+            formData.append('apply_to_all_subjects', '1');
+        }
 
         // Add test-specific fields if applicable
         const testWeek = isModal ? $('#modal_test_week').val() : $('#test_period').val();

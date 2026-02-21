@@ -1022,6 +1022,14 @@ class ManageExaminationController extends Controller
             // Skip result pre-creation for weekly/monthly tests as they are inserted on-the-fly by teachers
             $isWeeklyOrMonthlyTest = $request->exam_category === 'test' && in_array($request->test_type, ['weekly_test', 'monthly_test']);
 
+            if ($isWeeklyOrMonthlyTest) {
+                try {
+                    $this->preCreateWeeklyTestQuestions($examination, $schoolID, $userType === 'Teacher' ? $teacherID : null);
+                } catch (\Exception $preEx) {
+                    Log::error('Error pre-creating questions: '.$preEx->getMessage());
+                }
+            }
+
             if (($request->exam_category === 'school_exams' || $request->exam_category === 'test') && !$isWeeklyOrMonthlyTest) {
                 // School Exams: All students in the school, except excluded classes
                 $query = Student::with('subclass.class')
@@ -4375,6 +4383,90 @@ class ManageExaminationController extends Controller
                 }
             }
 
+            if ($request->input('apply_to_all_subjects') == '1') {
+                $exceptClassIds = is_string($examination->except_class_ids) ? json_decode($examination->except_class_ids, true) : $examination->except_class_ids;
+                if (!is_array($exceptClassIds)) $exceptClassIds = [];
+
+                $query = DB::table('class_subjects')
+                    ->where('schoolID', Session::get('schoolID'))
+                    ->where('status', 'Active');
+                
+                if ($examination->exam_category === 'school_exams') {
+                    if (!empty($exceptClassIds)) {
+                        $query->whereNotIn('classID', $exceptClassIds);
+                    }
+                } elseif ($examination->exam_category === 'special_exams') {
+                    // For special exams, we look at the classes included in halls
+                    $includedClassIds = DB::table('exam_halls')
+                        ->where('examID', $examination->examID)
+                        ->pluck('classID')
+                        ->unique()
+                        ->toArray();
+                    if (!empty($includedClassIds)) {
+                        $query->whereIn('classID', $includedClassIds);
+                    }
+                }
+
+                $allSubjects = $query->pluck('class_subjectID');
+
+                foreach ($allSubjects as $subID) {
+                    if ($subID == $request->class_subjectID) continue;
+
+                    // Create or update paper for this subject
+                    // Only update if it's a placeholder or rejected or doesn't exist
+                    $targetPaper = ExamPaper::where('examID', $examination->examID)
+                        ->where('class_subjectID', $subID);
+                    
+                    if ($request->test_week) {
+                        $targetPaper->where('test_week', $request->test_week);
+                    } else {
+                        $targetPaper->whereNull('test_week');
+                    }
+
+                    $existingTargetPaper = $targetPaper->first();
+
+                    if (!$existingTargetPaper || in_array($existingTargetPaper->status, ['rejected', 'wait_approval']) || (empty($existingTargetPaper->file_path) && empty($existingTargetPaper->question_content))) {
+                        $subPaper = $existingTargetPaper ?: new ExamPaper;
+                        $subPaper->examID = $examination->examID;
+                        $subPaper->class_subjectID = $subID;
+                        $subPaper->teacherID = $teacherID;
+                        $subPaper->upload_type = 'upload';
+                        $subPaper->test_week = $request->test_week;
+                        $subPaper->test_date = $request->test_date;
+                        $subPaper->status = 'wait_approval';
+                        $subPaper->file_path = $examPaper->file_path;
+                        $subPaper->save();
+
+                        // Copy questions
+                        if ($requiresQuestionFormat) {
+                            ExamPaperQuestion::where('exam_paperID', $subPaper->exam_paperID)->delete();
+                            ExamPaperOptionalRange::where('exam_paperID', $subPaper->exam_paperID)->delete();
+
+                            foreach ($descriptions as $index => $description) {
+                                $markValue = $marks[$index] ?? null;
+                                ExamPaperQuestion::create([
+                                    'exam_paperID' => $subPaper->exam_paperID,
+                                    'question_number' => $index + 1,
+                                    'is_optional' => isset($optionals[$index]) ? (int) $optionals[$index] > 0 : false,
+                                    'optional_range_number' => isset($optionals[$index]) && (int) $optionals[$index] > 0 ? (int) $optionals[$index] : null,
+                                    'question_description' => trim((string) $description),
+                                    'marks' => (int) $markValue,
+                                ]);
+                            }
+
+                            foreach ($optionalTotals as $rangeNumber => $totalMarks) {
+                                ExamPaperOptionalRange::create([
+                                    'exam_paperID' => $subPaper->exam_paperID,
+                                    'range_number' => $rangeNumber,
+                                    'total_marks' => $totalMarks,
+                                    'required_questions' => $optionalRequiredMap[$rangeNumber] ?? 1,
+                                ]);
+                            }
+                        }
+                    }
+                }
+            }
+
             ExamPaperNotification::create([
                 'schoolID' => Session::get('schoolID'),
                 'exam_paperID' => $examPaper->exam_paperID,
@@ -7355,6 +7447,56 @@ class ManageExaminationController extends Controller
         } catch (\Exception $e) {
             \Log::error('Error in getScheduledSubjects: ' . $e->getMessage());
             return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    private function preCreateWeeklyTestQuestions($examination, $schoolID, $teacherID = null)
+    {
+        $exceptClassIds = is_string($examination->except_class_ids) ? json_decode($examination->except_class_ids, true) : $examination->except_class_ids;
+        if (!is_array($exceptClassIds)) $exceptClassIds = [];
+
+        $query = DB::table('class_subjects')
+            ->where('schoolID', $schoolID)
+            ->where('status', 'Active');
+        
+        if (!empty($exceptClassIds)) {
+            $query->whereNotIn('classID', $exceptClassIds);
+        }
+
+        $allSubjects = $query->get();
+        
+        foreach ($allSubjects as $sub) {
+            // Check if paper already exists
+            $exists = DB::table('exam_papers')
+                ->where('examID', $examination->examID)
+                ->where('class_subjectID', $sub->class_subjectID)
+                ->exists();
+            
+            if ($exists) continue;
+
+            // Create paper
+            $paperID = DB::table('exam_papers')->insertGetId([
+                'examID' => $examination->examID,
+                'class_subjectID' => $sub->class_subjectID,
+                'teacherID' => $teacherID ?: $sub->teacherID ?: 1,
+                'upload_type' => 'upload',
+                'status' => 'approved',
+                'test_week' => 'Week 1',
+                'test_date' => $examination->start_date ?? date('Y-m-d'),
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            // Add 4 default questions totaling 100 marks
+            for ($i = 1; $i <= 4; $i++) {
+                DB::table('exam_paper_questions')->insert([
+                    'exam_paperID' => $paperID,
+                    'question_number' => $i,
+                    'question_description' => "Section " . chr(64+$i),
+                    'marks' => 25,
+                    'is_optional' => false,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+            }
         }
     }
 }

@@ -306,6 +306,9 @@
                             <button type="button" class="btn btn-success btn-sm" id="exportAllExcel" title="Export All Students to Excel">
                                 <i class="bi bi-file-excel"></i> Export All Excel
                             </button>
+                            <button type="button" class="btn btn-primary-custom btn-sm" id="sendSmsAll" title="Send Results to Parents via SMS">
+                                <i class="bi bi-chat-dots"></i> Send SMS
+                            </button>
                         </div>
                     </div>
                     @php
@@ -1201,13 +1204,8 @@
                                                     <div class="col-md-3 mb-3">
                                                         <div class="card bg-light">
                                                             <div class="card-body text-center">
-                                                                @if(isset($filters['week']) && $filters['week'] !== 'all')
-                                                                     <h3 class="text-primary-custom mb-0">{{ isset($subjectStats) ? count($subjectStats) : 0 }}</h3>
-                                                                     <small class="text-muted">Total Subject Taken in this Week</small>
-                                                                @else
-                                                                    <h3 class="text-primary-custom mb-0">{{ (isset($totalStudents) && $totalStudents > 0) ? number_format(array_sum(array_column($examStudents, 'total_marks')) / $totalStudents, 1) : '0.0' }}</h3>
-                                                                    <small class="text-muted">Average Marks</small>
-                                                                @endif
+                                                                <h3 class="text-primary-custom mb-0">{{ (isset($passedCount) ? $passedCount : 0) }}</h3>
+                                                                <small class="text-muted">Total Passed</small>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1224,22 +1222,9 @@
                                                     <div class="col-md-4 mb-3">
                                                         <div class="card bg-light">
                                                             <div class="card-body text-center">
-                                                                <h3 class="text-primary-custom mb-0">
-                                                                    @if($genderFilter === 'Male')
-                                                                        {{ is_numeric($maleAverage) ? number_format($maleAverage, 1) : '0.0' }}
-                                                                    @else
-                                                                        {{ is_numeric($femaleAverage) ? number_format($femaleAverage, 1) : '0.0' }}
-                                                                    @endif
-                                                                </h3>
-                                                                <small class="text-muted">{{ $genderFilter }} Average Marks</small>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-md-4 mb-3">
-                                                        <div class="card bg-light">
                                                             <div class="card-body text-center">
-                                                                <h3 class="text-primary-custom mb-0">{{ (isset($totalStudents) && $totalStudents > 0) ? number_format(array_sum(array_column($examStudents, 'total_marks')) / $totalStudents, 1) : '0.0' }}</h3>
-                                                                <small class="text-muted">Average Marks</small>
+                                                                <h3 class="text-primary-custom mb-0">{{ $passedCount }}</h3>
+                                                                <small class="text-muted">Total Passed</small>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1433,16 +1418,10 @@
                                                             <div class="card bg-light">
                                                                 <div class="card-body">
                                                                     <h6 class="text-primary-custom mb-3">Performance Summary</h6>
-                                                                    <p><strong>Class Average:</strong> <span class="badge badge-info">{{ $classAverageGrade }}</span> ({{ is_numeric($classAverage) ? number_format($classAverage, 1) : '0.0' }} marks)</p>
-                                                                    @if(!$genderFilter)
-                                                                        <p><strong>Male Average:</strong> <span class="badge badge-primary">{{ is_numeric($maleAverage) ? number_format($maleAverage, 1) : '0.0' }} marks</span></p>
-                                                                        <p><strong>Female Average:</strong> <span class="badge badge-pink">{{ is_numeric($femaleAverage) ? number_format($femaleAverage, 1) : '0.0' }} marks</span></p>
-                                                                    @else
-                                                                        <p><strong>{{ $genderFilter }} Average:</strong> <span class="badge badge-primary">{{ number_format($genderFilter === 'Male' ? $maleAverage : $femaleAverage, 1) }} marks</span></p>
-                                                                    @endif
+                                                                    <p><strong>Class Grade:</strong> <span class="badge badge-info">{{ $classAverageGrade }}</span></p>
+                                                                    <p><strong>Performance Remark:</strong> <span class="badge badge-info">{{ $performanceRemark }}</span></p>
                                                                     <p><strong>Pass Rate:</strong> <span class="badge badge-success">{{ is_numeric($passRate) ? number_format($passRate, 1) : '0.0' }}%</span></p>
                                                                     <p><strong>Fail Rate:</strong> <span class="badge badge-danger">{{ is_numeric($failRate) ? number_format($failRate, 1) : '0.0' }}%</span></p>
-                                                                    <p><strong>Performance Remark:</strong> <span class="badge badge-info">{{ $performanceRemark }}</span></p>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -3083,7 +3062,6 @@ $(document).ready(function() {
                                 </div>
                                 <div class="col-md-6">
                                     <p><strong>Position:</strong> <span class="badge badge-success">${position}</span></p>
-                                    <p><strong>Overall Average:</strong> <span class="badge badge-info">${average}</span></p>
                                     <p><strong>Grade:</strong> ${gradeOrDivision}</p>
                                 </div>
                             </div>
@@ -4651,7 +4629,7 @@ $(document).ready(function() {
                 ['Total Students', (data.totalStudents || 0).toString()],
                 ['Male', (data.maleCount || 0).toString()],
                 ['Female', (data.femaleCount || 0).toString()],
-                ['Average Marks', (data.averageMarks || 0).toString()]
+                ['Pass Rate', (data.passRate || 0).toString() + '%']
             ];
             
             doc.autoTable({
@@ -5929,7 +5907,6 @@ $(document).ready(function() {
                 else averageGrade = 'F';
             }
             overviewData.push(['Average Grade', averageGrade]);
-            overviewData.push(['Overall Average', parseFloat(reportStudentData.averageMarks || 0).toFixed(1)]);
             overviewData.push(['Grade', reportStudentData.grade || 'N/A']);
             
             doc.autoTable({
@@ -6101,7 +6078,6 @@ $(document).ready(function() {
             else averageGrade = 'F';
         }
         data.push(['Average Grade', averageGrade]);
-        data.push(['Overall Average', parseFloat(reportStudentData.averageMarks || 0).toFixed(1)]);
         data.push(['Grade', reportStudentData.grade || 'N/A']);
         data.push([]);
         
@@ -6834,14 +6810,14 @@ $(document).ready(function() {
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-primary-custom text-white">
-                <h5 class="modal-title" id="smsProgressModalLabel"><i class="bi bi-send-check"></i> Send Weekly Test Results (SMS)</h5>
+                <h5 class="modal-title" id="smsProgressModalLabel"><i class="bi bi-send-check"></i> Send Exam Results (SMS)</h5>
                 <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
                 <div class="alert alert-info border-0 shadow-sm mb-4">
-                    <i class="bi bi-info-circle-fill"></i> Send <strong id="modalSubjectName"></strong> results for <strong id="modalWeekLabel"></strong> to parents.
+                    <i class="bi bi-info-circle-fill"></i> Send results for <strong id="modalContextLabel"></strong> to parents.
                 </div>
                 
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -6897,7 +6873,76 @@ $(document).ready(function() {
     let stopSmsRequest = false;
     const schoolName = window.detailedViewData ? (window.detailedViewData.schoolName || 'Academic Results') : 'Academic Results';
 
-    // Open Modal
+    function openSmsModal(title, studentsData, context = {}) {
+        $('#modalContextLabel').text(title);
+        const list = $('#parentSmsList');
+        list.empty();
+
+        studentsData.forEach(student => {
+            const studentId = student.studentID;
+            const studentName = student.studentName || (student.firstName + ' ' + student.lastName);
+            let phone = student.parentPhone || student.phone;
+            
+            phone = String(phone || '').trim();
+            if (!phone || ['null', 'undefined', 'n/a'].includes(phone.toLowerCase())) phone = '';
+            
+            if (studentId) {
+                const randomId = Math.random().toString(36).substr(2, 5);
+                const checkboxId = `check_${studentId}_${randomId}`;
+                const disabledAttr = phone ? '' : 'disabled="disabled"';
+                const statusHtml = phone 
+                    ? '<span class="status-marker text-muted small">Pending</span>' 
+                    : '<span class="text-danger small">No Phone</span>';
+                
+                // Construct data attributes
+                let dataAttrs = `data-student-id="${studentId}" data-phone="${phone}" `;
+                dataAttrs += `data-week="${context.week || ''}" data-exam-id="${context.examID || ''}" `;
+                dataAttrs += `data-type="${context.type || ''}" data-term="${context.term || ''}" data-year="${context.year || ''}" `;
+                dataAttrs += `data-subject="${student.subject || context.subject || ''}" `;
+                dataAttrs += `data-marks="${student.marks || ''}" data-grade="${student.grade || ''}" `;
+                dataAttrs += `data-division="${student.division || ''}" data-position="${student.position || ''}" `;
+                dataAttrs += `data-total-count="${context.totalCount || studentsData.length}" `;
+                
+                list.append(`
+                    <tr ${dataAttrs}>
+                        <td class="text-center">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input parent-checkbox" id="${checkboxId}" ${disabledAttr}>
+                                <label class="custom-control-label" for="${checkboxId}">&nbsp;&nbsp;&nbsp;</label>
+                            </div>
+                        </td>
+                        <td>Parent of ${studentName}</td>
+                        <td>${phone || '<span class="text-danger small">No Phone</span>'}</td>
+                        <td class="text-center status-col">${statusHtml}</td>
+                    </tr>
+                `);
+            }
+        });
+
+        $('#selectAllParents').prop('checked', false);
+        updateSelectedCount();
+        $('#smsProgressArea').addClass('d-none');
+        $('#smsProgressBar').css('width', '0%').text('0%').removeClass('bg-info').addClass('bg-success');
+        $('#startSendingSms').prop('disabled', true).html('<i class="bi bi-send"></i> Start Sending SMS');
+        $('#smsProgressModal').modal('show');
+    }
+
+    // Top Button: Send SMS All
+    $(document).on('click', '#sendSmsAll', function() {
+        const students = window.detailedViewData.allStudents || [];
+        const examName = window.detailedViewData.examName || 'Examination';
+        const className = window.detailedViewData.className || 'Class';
+        
+        openSmsModal(`${examName} - ${className}`, students, {
+            examID: $('#examID').val(),
+            week: $('#week').val(),
+            type: $('#type').val(),
+            term: $('#term').val(),
+            year: $('#year').val()
+        });
+    });
+
+    // Open Modal for Single Subject (Weekly)
     $(document).on('click', '.btn-send-sms', function() {
         const subject = $(this).data('subject');
         const subjectIndex = $(this).data('subject-index');
@@ -6905,109 +6950,37 @@ $(document).ready(function() {
         const examID = $(this).data('exam-id');
         const tableId = '#weeklyTable' + subjectIndex;
         
-        $('#modalSubjectName').text(subject);
-        $('#modalWeekLabel').text($('#collapseSubject' + subjectIndex + ' .card-header h5').text().split('-').pop().trim() || week);
-        
-        // Populate List
-        const list = $('#parentSmsList');
-        list.empty();
-        
-        // Use DataTables if available to get only visible/filtered rows, or just iterate the table
+        const students = [];
         const table = $(tableId).DataTable();
         table.rows().every(function() {
             const node = $(this.node());
-            const studentId = node.data('student-id');
-            let phone = node.data('parent-phone');
-            const marks = node.data('marks');
-            const grade = node.data('grade');
-            const firstName = node.data('first-name');
-            const lastName = node.data('last-name');
-            const studentName = firstName + ' ' + lastName;
-            
-            // Clean up phone string aggressively
-            phone = String(phone || '').trim();
-            if (!phone || ['null', 'undefined', 'N/A'].includes(phone.toLowerCase())) phone = '';
-            
-            if (studentId) {
-                const disabledAttr = phone ? '' : 'disabled';
-                const statusHtml = phone 
-                    ? '<span class="status-marker text-muted small">Pending</span>' 
-                    : '<span class="text-danger small">No Phone</span>';
-                
-                list.append(`
-                    <tr data-student-id="${studentId}" data-phone="${phone}" data-subject="${subject}" data-marks="${marks}" data-grade="${grade}" data-week="${week}" data-exam-id="${examID}">
-                        <td>
-                            <div class="custom-control custom-checkbox">
-                                <input type="checkbox" class="custom-control-input parent-checkbox" id="check_${studentId}_${subject.replace(/\s+/g, '_')}" ${disabledAttr}>
-                                <label class="custom-control-label" for="check_${studentId}_${subject.replace(/\s+/g, '_')}">&nbsp;</label>
-                            </div>
-                        </td>
-                        <td>Parent of ${studentName}</td>
-                        <td>${phone || '<span class="text-danger small">No Phone</span>'}</td>
-                        <td class="text-center status-col">${statusHtml}</td>
-                    </tr>
-                `);
-            }
+            students.push({
+                studentID: node.data('student-id'),
+                studentName: node.data('first-name') + ' ' + node.data('last-name'),
+                parentPhone: node.data('parent-phone'),
+                marks: node.data('marks'),
+                grade: node.data('grade'),
+                subject: subject
+            });
         });
-        
-        $('#selectAllParents').prop('checked', false); // Explicitly uncheck
-        updateSelectedCount();
-        $('#smsProgressArea').addClass('d-none');
-        $('#smsProgressBar').css('width', '0%').text('0%').removeClass('bg-info').addClass('bg-success');
-        $('#startSendingSms').prop('disabled', true).html('<i class="bi bi-send"></i> Start Sending SMS');
-        $('#smsProgressModal').modal('show');
+
+        openSmsModal(`${subject} Results`, students, {
+            week: week,
+            examID: examID,
+            subject: subject
+        });
     });
     
-    // Open Modal for All Subjects (Consolidated)
+    // Open Modal for All Subjects (Consolidated Weekly)
     $(document).on('click', '.btn-send-all-sms', function() {
         const week = $(this).data('week');
         const examID = $(this).data('exam-id');
         const students = window.detailedViewData.allStudents || [];
         
-        $('#modalSubjectName').text('All Subjects');
-        $('#modalWeekLabel').text(week);
-        
-        // Populate List
-        const list = $('#parentSmsList');
-        list.empty();
-        
-        students.forEach(student => {
-            const studentId = student.studentID;
-            const studentName = student.studentName;
-            let phone = student.parentPhone;
-            
-            // Clean up phone string aggressively
-            phone = String(phone || '').trim();
-            if (!phone || ['null', 'undefined', 'n/a'].includes(phone.toLowerCase())) phone = '';
-            
-            if (studentId) {
-                const disabledAttr = phone ? '' : 'disabled="disabled"';
-                const statusHtml = phone 
-                    ? '<span class="status-marker text-muted small">Pending</span>' 
-                    : '<span class="text-danger small">No Phone</span>';
-                
-                list.append(`
-                    <tr data-student-id="${studentId}" data-phone="${phone}" data-subject="" data-marks="" data-grade="" data-week="${week}" data-exam-id="${examID}">
-                        <td class="text-center">
-                            <div class="custom-control custom-checkbox">
-                                <input type="checkbox" class="custom-control-input parent-checkbox" id="check_all_${studentId}" ${disabledAttr}>
-                                <label class="custom-control-label" for="check_all_${studentId}">&nbsp;&nbsp;&nbsp;</label>
-                            </div>
-                        </td>
-                        <td>Parent of ${studentName}</td>
-                        <td>${phone || '<span class="text-danger small">No Phone</span>'}</td>
-                        <td class="text-center status-col">${statusHtml}</td>
-                    </tr>
-                `);
-            }
+        openSmsModal(`All Subjects - Week ${week}`, students, {
+            week: week,
+            examID: examID
         });
-        
-        $('#selectAllParents').prop('checked', false);
-        updateSelectedCount();
-        $('#smsProgressArea').addClass('d-none');
-        $('#smsProgressBar').css('width', '0%').text('0%').removeClass('bg-info').addClass('bg-success');
-        $('#startSendingSms').prop('disabled', true).html('<i class="bi bi-send"></i> Start Sending SMS');
-        $('#smsProgressModal').modal('show');
     });
 
     // Select All Toggle
@@ -7070,6 +7043,12 @@ $(document).ready(function() {
                 grade: row.data('grade'),
                 week: row.data('week'),
                 examID: row.data('exam-id'),
+                type: row.data('type'),
+                term: row.data('term'),
+                year: row.data('year'),
+                division: row.data('division'),
+                position: row.data('position'),
+                totalStudentsCount: row.data('total-count'),
                 _token: $('meta[name="csrf-token"]').attr('content')
             };
 

@@ -1408,18 +1408,57 @@ class ResultManagementController extends Controller
         // Initialize message parts
         $resultsString = "";
 
+        $type = $request->input('type', 'exam');
+        $term = $request->input('term');
+        $year = $request->input('year', date('Y'));
+
         if ($subject) {
             // Single subject mode (existing)
             $resultsString = "{$subject}-({$marks})-({$grade})";
+        } elseif ($type === 'report') {
+            // Term report: Average across all exams in term
+            $examinations = Examination::where('schoolID', $schoolID)
+                ->where('year', $year)
+                ->where('term', $term)
+                ->where('approval_status', 'Approved')
+                ->pluck('examID');
+
+            $results = Result::where('studentID', $studentID)
+                ->whereIn('examID', $examinations)
+                ->with('classSubject.subject')
+                ->get();
+            
+            if ($results->isEmpty()) {
+                return response()->json(['success' => false, 'error' => 'No results found for this term']);
+            }
+
+            $subjectData = [];
+            foreach ($results as $res) {
+                $sName = $res->classSubject->subject->subject_name ?? 'N/A';
+                if (!isset($subjectData[$sName])) {
+                    $subjectData[$sName] = ['total' => 0, 'count' => 0];
+                }
+                if ($res->marks !== null && $res->marks !== '') {
+                    $subjectData[$sName]['total'] += (float)$res->marks;
+                    $subjectData[$sName]['count']++;
+                }
+            }
+
+            $formattedResults = [];
+            $classID = $student->subclass->classID ?? ($student->oldSubclass->classID ?? null);
+            foreach ($subjectData as $sName => $data) {
+                $avgMarks = $data['count'] > 0 ? $data['total'] / $data['count'] : 0;
+                $gradeRes = $this->getGradeFromDefinition($avgMarks, $classID);
+                $sGrade = $gradeRes['grade'] ?? '-';
+                $formattedResults[] = "{$sName}-(".round($avgMarks).")-({$sGrade})";
+            }
+            $resultsString = implode(", ", $formattedResults);
         } else {
-            // Multi-subject mode
+            // Multi-subject mode (Exam level)
             $allResults = Result::where('studentID', $studentID);
             
             if ($examID && $examID !== 'null' && $examID !== 'undefined' && $examID !== '1') {
                 $allResults->where('examID', $examID);
-            } else {
-                // If examID is 1 or empty, it might be a frontend bug. 
-                \Log::info("sendResultSms: Using flexible exam search for student {$studentID}, week {$week}");
             }
             
             if ($week && $week !== 'all') {
@@ -1427,10 +1466,8 @@ class ResultManagementController extends Controller
             }
             
             $results = $allResults->with('classSubject.subject')->get();
-            \Log::info("sendResultSms: Found " . $results->count() . " results for student {$studentID}");
             
             if ($results->isEmpty()) {
-                \Log::warning("sendResultSms: No results found for student {$studentID} in exam {$examID}, week {$week}");
                 return response()->json(['success' => false, 'error' => 'No results found for this student']);
             }
 
@@ -1473,15 +1510,24 @@ class ResultManagementController extends Controller
         $schoolName = $school ? $school->school_name : 'ShuleLink';
 
         $weekLabel = $week;
-        if (str_contains(strtolower($week), 'week')) {
+        if ($type === 'report') {
+            $weekLabel = "Term " . ucfirst($term) . " " . $year;
+        } elseif (str_contains(strtolower($week), 'week')) {
             $weekLabel = "wiki ya {$weekRange}";
         } elseif (str_contains(strtolower($week), 'month')) {
             $weekLabel = "mwezi wa {$weekRange}";
         } elseif ($weekRange) {
             $weekLabel = $weekRange;
         }
+        
+        $division = $request->input('division', '');
+        $position = $request->input('position', '');
+        $totalStudentsCount = $request->input('totalStudentsCount', '');
 
-        $message = "{$schoolName}: Mzazi wa {$studentName}, mwanao {$studentFirstName} wa darasa {$className} amepata alama zifuatazo katika {$weekLabel}: {$resultsString}. Asante.";
+        $posInfo = ($position && $totalStudentsCount) ? "Nafasi: {$position}/{$totalStudentsCount}. " : "";
+        $divInfo = $division ? " Div: {$division}." : "";
+        
+        $message = "{$schoolName}: Matokeo ya {$studentFirstName} ({$className}). {$posInfo} {$resultsString}.{$divInfo}";
 
         try {
             $smsService = new SmsService();

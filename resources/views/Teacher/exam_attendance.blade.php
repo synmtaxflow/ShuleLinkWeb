@@ -77,10 +77,16 @@
     <!-- Attendance by Subclass -->
     <div id="attendanceTableContainer" style="display:none;">
         <div class="card mb-3">
-            <div class="card-header bg-primary-custom text-white">
+            <div class="card-header bg-primary-custom text-white d-flex justify-content-between align-items-center">
                 <h6 class="mb-0"><i class="bi bi-table"></i> Attendance by Subclass</h6>
+                <div id="takeAttendanceBtnContainer"></div>
             </div>
             <div class="card-body">
+                @if(isset($isActive) && $isActive && isset($assignment->exam_date) && $assignment->exam_date)
+                    <a href="{{ $takeAttendanceUrl }}" target="_blank" class="btn btn-session-action btn-sm mb-3" style="background-color: #940000 !important; color: white !important;">
+                        <i class="bi bi-clipboard-check"></i> Take Attendance
+                    </a>
+                @endif
                 <div class="table-responsive">
                     <table class="table table-bordered table-hover" id="attendanceTable">
                         <thead class="table-light">
@@ -220,11 +226,10 @@ $(document).ready(function() {
             });
     }
 
-    function loadExamsForYearTerm(year, term) {
         $.get('/teacher/get-exams-for-year-term', {
             year: year,
             term: term,
-            subjectID: subjectID
+            // subjectID: subjectID // Removed validation to see all exams
         })
             .done(function(response) {
                 if (response.success) {

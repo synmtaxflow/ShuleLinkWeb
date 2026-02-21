@@ -8168,6 +8168,7 @@ class TeachersController extends Controller
     {
         try {
             $schoolID = Session::get('schoolID');
+            $teacherID = Session::get('teacherID');
             $year = $request->input('year');
             $term = $request->input('term');
             $subjectID = $request->input('subjectID');
@@ -8177,46 +8178,53 @@ class TeachersController extends Controller
             }
 
             // Get exams for year and term
-            $examIDs = DB::table('examinations')
+            $allExamsInTerm = DB::table('examinations')
                 ->where('schoolID', $schoolID)
                 ->where('year', $year)
                 ->where('term', $term)
+                ->get(['examID', 'exam_name', 'start_date', 'end_date', 'exam_category']);
+
+            if ($allExamsInTerm->isEmpty()) {
+                return response()->json(['success' => true, 'exams' => []]);
+            }
+
+            $examIDs = $allExamsInTerm->pluck('examID')->toArray();
+            
+            // Filter: Either a subject they teach or an exam they supervise
+            $supervisedExamIDs = DB::table('exam_hall_supervisors')
+                ->whereIn('examID', $examIDs)
+                ->where('teacherID', $teacherID)
+                ->distinct()
                 ->pluck('examID')
                 ->toArray();
-
-            if (empty($examIDs)) {
-                return response()->json(['success' => true, 'exams' => []]);
-            }
-
-            // If subjectID is provided, filter exams that have this subject in exam_timetable or exam_timetables
+            
+            $teachingExamIDs = DB::table('exam_timetable')
+                ->join('class_subjects', 'exam_timetable.class_subjectID', '=', 'class_subjects.class_subjectID')
+                ->whereIn('exam_timetable.examID', $examIDs)
+                ->where('class_subjects.teacherID', $teacherID)
+                ->distinct()
+                ->pluck('exam_timetable.examID')
+                ->toArray();
+            
+            // Also check exam_timetables
+            $teachingExamIDs2 = DB::table('exam_timetables')
+                ->whereIn('examID', $examIDs)
+                ->where('teacherID', $teacherID)
+                ->distinct()
+                ->pluck('examID')
+                ->toArray();
+            
+            $validExamIDs = array_unique(array_merge($supervisedExamIDs, $teachingExamIDs, $teachingExamIDs2));
+            
+            // If subjectID is provided (from legacy calls), we can still filter, but the user wants to see "zote"
             if ($subjectID) {
-                $examIDsWithSubject = DB::table('exam_timetable')
-                    ->whereIn('examID', $examIDs)
-                    ->where('subjectID', $subjectID)
-                    ->distinct()
-                    ->pluck('examID')
-                    ->toArray();
-                
-                // Also check exam_timetables table
-                $examIDsWithSubject2 = DB::table('exam_timetables')
-                    ->whereIn('examID', $examIDs)
-                    ->where('subjectID', $subjectID)
-                    ->distinct()
-                    ->pluck('examID')
-                    ->toArray();
-                
-                $allExamIDsWithSubject = array_unique(array_merge($examIDsWithSubject, $examIDsWithSubject2));
-                $examIDs = array_intersect($examIDs, $allExamIDsWithSubject);
+                // Keep original behavior if subjectID is explicitly passed and we want to be strict
+                // But the user said "ondoa validation", so if they want everything they supervise, we already got validExamIDs.
             }
-
-            if (empty($examIDs)) {
-                return response()->json(['success' => true, 'exams' => []]);
-            }
-
-            $query = Examination::whereIn('examID', $examIDs);
-
-            $exams = $query->orderBy('start_date', 'desc')
-                ->get(['examID', 'exam_name', 'start_date', 'end_date']);
+            
+            $exams = Examination::whereIn('examID', $validExamIDs)
+                ->orderBy('start_date', 'desc')
+                ->get(['examID', 'exam_name', 'start_date', 'end_date', 'exam_category']);
 
             return response()->json(['success' => true, 'exams' => $exams]);
         } catch (\Exception $e) {
@@ -8290,34 +8298,56 @@ class TeachersController extends Controller
             $subjectID = $request->input('subjectID');
             $classSubjectID = $request->input('classSubjectID');
 
-            if (!$examID || !$subjectID || !$classSubjectID) {
-                return response()->json(['success' => false, 'error' => 'Missing required parameters']);
+            if (!$examID) {
+                return response()->json(['success' => false, 'error' => 'Missing examID']);
             }
 
-            // Verify teacher owns this class subject
-            $classSubject = ClassSubject::where('class_subjectID', $classSubjectID)
+            // Check if teacher is supervisor or teaching the subject
+            $isSupervisor = DB::table('exam_hall_supervisors')
+                ->where('examID', $examID)
                 ->where('teacherID', $teacherID)
-                ->where('status', 'Active')
-                ->first();
+                ->exists();
 
-            if (!$classSubject) {
-                return response()->json(['success' => false, 'error' => 'Unauthorized access']);
+            $classSubject = null;
+            if ($classSubjectID) {
+                $classSubject = ClassSubject::where('class_subjectID', $classSubjectID)
+                    ->where('teacherID', $teacherID)
+                    ->where('status', 'Active')
+                    ->first();
             }
 
-            // Get all subclasses for this teacher's subject
-            // If subclassID exists, get that specific subclass, otherwise get all subclasses in the class
+            if (!$classSubject && !$isSupervisor) {
+                return response()->json(['success' => false, 'error' => 'Unauthorized access. You are neither the subject teacher nor an assigned supervisor for this exam.']);
+            }
+
+            // Get subclasses to show
             $subclassIDs = [];
-            if ($classSubject->subclassID) {
+            if ($classSubject && $classSubject->subclassID) {
                 $subclassIDs = [$classSubject->subclassID];
-            } else {
+            } elseif ($classSubject && $classSubject->classID) {
                 $subclassIDs = DB::table('subclasses')
                     ->where('classID', $classSubject->classID)
                     ->pluck('subclassID')
                     ->toArray();
+            } else {
+                // If supervisor, get all subclasses participating in this exam
+                $subclassIDs = DB::table('exam_timetables')
+                    ->where('examID', $examID)
+                    ->distinct()
+                    ->pluck('subclassID')
+                    ->toArray();
+                
+                if (empty($subclassIDs)) {
+                    // Try exam_timetable
+                    $subclassIDs = DB::table('exam_timetable')
+                        ->join('class_subjects', 'exam_timetable.class_subjectID', '=', 'class_subjects.class_subjectID')
+                        ->where('exam_timetable.examID', $examID)
+                        ->distinct()
+                        ->pluck('class_subjects.subclassID')
+                        ->toArray();
+                }
             }
-
-            if (empty($subclassIDs)) {
-                return response()->json(['success' => true, 'data' => ['subclasses' => []]]);
+                return response()->json(['success' => true, 'data' => ['subclasses' => [], 'students' => []]]);
             }
 
             // Get exam attendance data grouped by subclass and all students

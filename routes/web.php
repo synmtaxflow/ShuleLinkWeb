@@ -763,6 +763,9 @@ Route::post('delete_payment_record', [FeesController::class, 'delete_payment_rec
 Route::post('verify_payment', [FeesController::class, 'verify_payment'])->name('verify_payment');
 Route::post('unverify_payment', [FeesController::class, 'unverify_payment'])->name('unverify_payment');
 Route::post('send_debt_reminders_sms', [FeesController::class, 'send_debt_reminders_sms'])->name('send_debt_reminders_sms');
+Route::post('send_single_debt_reminder', [FeesController::class, 'send_single_debt_reminder'])->name('send_single_debt_reminder');
+Route::get('get_fee_sms_recipients', [FeesController::class, 'get_fee_sms_recipients'])->name('get_fee_sms_recipients');
+Route::post('send_single_fee_sms', [FeesController::class, 'send_single_fee_sms'])->name('send_single_fee_sms');
 
 // Sponsor Management Routes
 Route::get('manage_sponsors', [SponsorController::class, 'index'])->name('manage_sponsors');

@@ -1177,80 +1177,210 @@
         // Load initial data
         loadPaymentsData();
 
-        // Enhance Send SMS to include recipient/target status/sponsorship
-        $('#sendSMSBtn').off('click').on('click', function(e) {
-            e.preventDefault();
-            const html = `
-                <div class="text-start">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold"><i class="bi bi-person-lines-fill"></i> Recipient</label>
-                        <select id="smsRecipient" class="form-select">
-                            <option value="auto" selected>Auto (Sponsor if sponsored else Parent)</option>
-                            <option value="parent">Parent only</option>
-                            <option value="sponsor">Sponsor only</option>
-                            <option value="both">Both (Parent + Sponsor)</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold"><i class="bi bi-funnel"></i> Target Payment Status</label>
-                        <select id="smsTargetStatus" class="form-select">
-                            <option value="">All new (default)</option>
-                            <option value="no_payment">Haven't paid at all</option>
-                            <option value="incomplete">Incomplete</option>
-                            <option value="pending">Pending</option>
-                            <option value="overpaid">Overpaid</option>
-                            <option value="paid">Fullpaid</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold"><i class="bi bi-shield-check"></i> Sponsorship</label>
-                        <select id="smsSponsorshipFilter" class="form-select">
-                            <option value="">All</option>
-                            <option value="sponsored">Sponsored</option>
-                            <option value="self">Self-paying</option>
-                        </select>
-                        <small class="text-muted">Optional: tumia kuchagua wanafunzi wenye sponsor au wanaolipa wenyewe.</small>
-                    </div>
-                </div>`;
+        // ====================================================================
+        // FEE SMS MODAL — shared for "Send Control Numbers" + "Debt Reminders"
+        // Same UX as result_management.blade.php smsProgressModal
+        // ====================================================================
+        let feeIsSendingSms  = false;
+        let feeStopSms       = false;
+        let feeSmsType       = 'control_number'; // 'control_number' | 'debt_reminder'
 
-            Swal.fire({
-                title: 'Send Control Numbers',
-                html: html,
+        function feeUpdateSelectedCount() {
+            const count = $('.fee-parent-checkbox:checked').length;
+            $('#feeSelectedCount').text('Wapokeaji: ' + count);
+            $('#feeStartSendingSms').prop('disabled', count === 0);
+        }
+
+        function openFeeSmsModal(type, year, sponsorshipFilter) {
+            feeSmsType = type;
+
+            // Set modal title & description
+            if (type === 'debt_reminder') {
+                $('#feeSmsModalTitle').text('Tuma Kumbusho la Deni');
+                $('#feeSmsModalDesc').text('Orodha ya wazazi/sponsors wenye bakaa ya malipo. Unaweza kuchagua wote au baadhi.');
+            } else {
+                $('#feeSmsModalTitle').text('Tuma Control Numbers SMS');
+                $('#feeSmsModalDesc').text('Orodha ya wazazi/sponsors watakaopokea SMS ya Control Number. Chagua kisha bonyeza "Anza Kutuma".');
+            }
+
+            // Reset modal state
+            $('#feeSmsLoadingState').removeClass('d-none');
+            $('#feeSmsRecipientsSection').addClass('d-none');
+            $('#feeSmsProgressArea').addClass('d-none');
+            $('#feeSmsProgressBar').css('width', '0%').text('0%').removeClass('bg-info').addClass('bg-success');
+            $('#feeSmsDeliverySummary').empty();
+            $('#feeSmsProgressText').text('0 / 0');
+            $('#feeSelectAllParents').prop('checked', false);
+            $('#feeStartSendingSms').prop('disabled', true).html('<i class="bi bi-send"></i> Anza Kutuma SMS');
+            $('#feeBtnCancelSms').prop('disabled', false).text('Ghairi');
+            $('.fee-parent-checkbox, #feeSelectAllParents').prop('disabled', false);
+            feeIsSendingSms = false;
+            feeStopSms      = false;
+
+            // Show modal
+            $('#feeSmsProgressModal').modal('show');
+
+            // Load recipients from server
+            $.ajax({
+                url: '{{ route("get_fee_sms_recipients") }}',
+                method: 'GET',
+                data: {
+                    type: type,
+                    year: year,
+                    sponsorship_filter: sponsorshipFilter || ''
+                },
+                success: function(response) {
+                    $('#feeSmsLoadingState').addClass('d-none');
+                    const list = $('#feeSmsRecipientsList');
+                    list.empty();
+
+                    if (!response.success || !response.recipients || response.recipients.length === 0) {
+                        list.html('<tr><td colspan="4" class="text-center text-muted py-3">Hakuna wapokeaji waliokutikana.</td></tr>');
+                        $('#feeSmsRecipientsSection').removeClass('d-none');
+                        return;
+                    }
+
+                    response.recipients.forEach(function(r, idx) {
+                        const hasPhone   = r.phone && r.phone.length > 0;
+                        const disabledAt = hasPhone ? '' : 'disabled="disabled"';
+                        const checkId    = 'fee_chk_' + r.paymentID + '_' + idx;
+                        const statusHtml = hasPhone
+                            ? '<span class="fee-status-marker text-muted small">Inasubiri</span>'
+                            : '<span class="text-danger small">Hana Simu</span>';
+
+                        list.append(`
+                            <tr data-payment-id="${r.paymentID}" data-phone="${r.phone || ''}">
+                                <td class="text-center">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input fee-parent-checkbox" id="${checkId}" ${disabledAt}>
+                                        <label class="custom-control-label" for="${checkId}">&nbsp;&nbsp;&nbsp;</label>
+                                    </div>
+                                </td>
+                                <td>${r.recipientLabel}</td>
+                                <td>${r.phone || '<span class="text-muted">-</span>'}</td>
+                                <td class="text-center fee-status-col">${statusHtml}</td>
+                            </tr>
+                        `);
+                    });
+
+                    feeUpdateSelectedCount();
+                    $('#feeSmsRecipientsSection').removeClass('d-none');
+                },
+                error: function(xhr) {
+                    $('#feeSmsLoadingState').addClass('d-none');
+                    const msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Imeshindwa kupakua orodha.';
+                    $('#feeSmsRecipientsList').html(`<tr><td colspan="4" class="text-center text-danger py-3">${msg}</td></tr>`);
+                    $('#feeSmsRecipientsSection').removeClass('d-none');
+                }
+            });
+        }
+
+        // Select All toggle
+        $('#feeSelectAllParents').on('change', function() {
+            $('.fee-parent-checkbox:not(:disabled)').prop('checked', $(this).is(':checked'));
+            feeUpdateSelectedCount();
+        });
+        $(document).on('change', '.fee-parent-checkbox', function() {
+            feeUpdateSelectedCount();
+        });
+
+        // Start Sending — async loop per-row (same as result_management)
+        $('#feeStartSendingSms').on('click', async function() {
+            const selectedRows = $('.fee-parent-checkbox:checked').closest('tr');
+            if (selectedRows.length === 0) return;
+
+            const confirmed = await Swal.fire({
+                title: 'Tuma SMS?',
+                text: `Unataka kutuma SMS kwa wapokeaji ${selectedRows.length}.`,
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonColor: '#940000',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Send SMS',
-                cancelButtonText: 'Cancel',
-                didOpen: () => {
-                    const current = $('#filterSponsorship').val();
-                    if (current !== undefined) {
-                        $('#smsSponsorshipFilter').val(current);
+                confirmButtonText: 'Ndiyo, Tuma Sasa',
+                cancelButtonText: 'Ghairi'
+            });
+            if (!confirmed.isConfirmed) return;
+
+            feeIsSendingSms = true;
+            feeStopSms      = false;
+
+            $('#feeStartSendingSms').prop('disabled', true).html('<i class="spinner-border spinner-border-sm"></i> Inatuma...');
+            $('#feeBtnCancelSms').prop('disabled', true);
+            $('.fee-parent-checkbox, #feeSelectAllParents').prop('disabled', true);
+            $('#feeSmsProgressArea').removeClass('d-none');
+
+            const total = selectedRows.length;
+            let delivered = 0;
+            let failed    = 0;
+
+            $('#feeSmsProgressText').text(`0 / ${total}`);
+            $('#feeSmsDeliverySummary').empty();
+
+            for (let i = 0; i < total; i++) {
+                if (feeStopSms) break;
+
+                const row       = $(selectedRows[i]);
+                const statusCol = row.find('.fee-status-col');
+                const paymentID = row.data('payment-id');
+
+                // Show spinner on this row
+                statusCol.html('<div class="spinner-border spinner-border-sm text-primary" role="status"></div>');
+
+                try {
+                    const response = await $.ajax({
+                        url: '{{ route("send_single_fee_sms") }}',
+                        type: 'POST',
+                        data: {
+                            paymentID: paymentID,
+                            type: feeSmsType,
+                            _token: $('meta[name="csrf-token"]').attr('content')
+                        }
+                    });
+
+                    if (response.success) {
+                        statusCol.html('<i class="bi bi-check-circle-fill text-success" style="font-size:1.2rem;" title="Delivered"></i>');
+                        delivered++;
+                    } else {
+                        statusCol.html('<i class="bi bi-exclamation-circle-fill text-danger" style="font-size:1.2rem;" title="' + (response.message || 'Failed') + '"></i>');
+                        failed++;
                     }
+                } catch (err) {
+                    statusCol.html('<i class="bi bi-exclamation-circle-fill text-danger" style="font-size:1.2rem;" title="Network Error"></i>');
+                    failed++;
                 }
-            }).then(function(result) {
-                if (!result.isConfirmed) return;
-                $.ajax({
-                    url: '{{ route("send_control_numbers_sms") }}',
-                    method: 'POST',
-                    data: {
-                        _token: '{{ csrf_token() }}',
-                        year: $('#filterYear').val(),
-                        recipient: $('#smsRecipient').val(),
-                        target_payment_status: $('#smsTargetStatus').val(),
-                        sponsorship_filter: $('#smsSponsorshipFilter').val()
-                    },
-                    success: function(response) {
-                        Swal.fire('Success', (response && response.message) ? response.message : 'SMS sent!', 'success');
-                    },
-                    error: function(xhr) {
-                        var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to send SMS';
-                        Swal.fire('Error', msg, 'error');
-                    }
-                });
+
+                const current = delivered + failed;
+                const percent = Math.round((current / total) * 100);
+                $('#feeSmsProgressBar').css('width', percent + '%').text(percent + '%');
+                $('#feeSmsProgressText').text(`${current} / ${total}`);
+                $('#feeSmsDeliverySummary').html(
+                    `<span class="text-success font-weight-bold">${delivered} Zimetumwa</span> | <span class="text-danger font-weight-bold">${failed} Zimefeli</span>`
+                );
+            }
+
+            feeIsSendingSms = false;
+            $('#feeStartSendingSms').html('<i class="bi bi-check-all"></i> Imekamilika').prop('disabled', true);
+            $('#feeBtnCancelSms').prop('disabled', false).text('Funga');
+
+            Swal.fire({
+                title: 'SMS Zimekamilika!',
+                text: `Zimetumwa: ${delivered}, Zimefeli: ${failed}`,
+                icon: delivered > 0 ? 'success' : 'info',
+                confirmButtonColor: '#940000'
             });
         });
-        
+
+        // ---------- Button: Send Control Numbers ----------
+        $('#sendSMSBtn').off('click').on('click', function(e) {
+            e.preventDefault();
+            openFeeSmsModal('control_number', $('#filterYear').val(), '');
+        });
+
+        // ---------- Button: Send Debt Reminders ----------
+        $('#sendDebtRemindersBtn').off('click').on('click', function(e) {
+            e.preventDefault();
+            openFeeSmsModal('debt_reminder', $('#filterYear').val(), '');
+        });
+
         // Function to generate PDF Invoice using jsPDF
         function generatePaymentInvoicePDF(data) {
             // Check if jsPDF is available
@@ -3376,57 +3506,6 @@
             });
         });
 
-        // Send Debt Reminders
-        $('#sendDebtRemindersBtn').on('click', function(e) {
-            e.preventDefault();
-            
-            Swal.fire({
-                title: 'Send Debt Reminders?',
-                text: 'Hii itatuma SMS za kumbusho la deni kwa wazazi wote ambao wana bakaa (balance) ya malipo. SMS itajumuisha kiasi wanachodaiwa na Control Number yao.',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#ffc107',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Ndiyo, Tuma Kumbusho',
-                cancelButtonText: 'Ghairi'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const btn = $(this);
-                    const originalHtml = btn.html();
-                    btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Sending...');
-                    
-                    $.ajax({
-                        url: '{{ route("send_debt_reminders_sms") }}',
-                        method: 'POST',
-                        data: {
-                            year: $('#filterYear').val(),
-                            _token: '{{ csrf_token() }}'
-                        },
-                        dataType: 'json',
-                        success: function(response) {
-                            Swal.fire({
-                                icon: response.success ? 'success' : 'error',
-                                title: response.success ? 'Success!' : 'Error!',
-                                text: response.message,
-                                confirmButtonColor: '#940000'
-                            });
-                        },
-                        error: function(xhr) {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error!',
-                                text: 'Imeshindwa kutuma SMS za kumbusho.',
-                                confirmButtonColor: '#940000'
-                            });
-                        },
-                        complete: function() {
-                            btn.prop('disabled', false).html(originalHtml);
-                        }
-                    });
-                }
-            });
-        });
-
         // Resend Individual Control SMS from Modal
         $(document).on('click', '.resend-control-sms-btn', function() {
             const btn = $(this);
@@ -3471,5 +3550,79 @@
     // App is started via waitForJQuery at the top
 })();
 </script>
+
+<!-- ===== FEE SMS PROGRESS MODAL ===== -->
+<div class="modal fade" id="feeSmsProgressModal" tabindex="-1" role="dialog" aria-labelledby="feeSmsProgressModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary-custom text-white">
+                <h5 class="modal-title" id="feeSmsProgressModalLabel">
+                    <i class="bi bi-send-check"></i> <span id="feeSmsModalTitle">Send SMS</span>
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info border-0 shadow-sm mb-3" id="feeSmsInfoAlert">
+                    <i class="bi bi-info-circle-fill"></i> <span id="feeSmsModalDesc">Chagua wazazi/sponsors wa kupokea SMS.</span>
+                </div>
+
+                <!-- Loading state -->
+                <div id="feeSmsLoadingState" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted">Inapakua orodha ya wapokeaji...</p>
+                </div>
+
+                <!-- Recipients table (hidden until loaded) -->
+                <div id="feeSmsRecipientsSection" class="d-none">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="feeSelectAllParents">
+                            <label class="custom-control-label font-weight-bold" for="feeSelectAllParents">Select All</label>
+                        </div>
+                        <span class="badge badge-primary" id="feeSelectedCount" style="font-size: 0.95rem;">Wapokeaji: 0</span>
+                    </div>
+
+                    <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+                        <table class="table table-sm table-hover" id="feeSmsTable">
+                            <thead class="bg-light sticky-top">
+                                <tr>
+                                    <th style="width:40px;"></th>
+                                    <th>Mpokeaji</th>
+                                    <th>Simu</th>
+                                    <th class="text-center" style="width:110px;">Hali</th>
+                                </tr>
+                            </thead>
+                            <tbody id="feeSmsRecipientsList">
+                                <!-- Populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Progress section (hidden until sending) -->
+                    <div id="feeSmsProgressArea" class="mt-3 d-none">
+                        <hr>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="font-weight-bold text-primary-custom">Maendeleo ya Kutuma</span>
+                            <span id="feeSmsProgressText" class="small">0 / 0</span>
+                        </div>
+                        <div class="progress" style="height: 24px; border-radius: 12px; border: 1px solid #ddd;">
+                            <div id="feeSmsProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+                                 role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                        </div>
+                        <div id="feeSmsDeliverySummary" class="text-center small mt-2"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" id="feeBtnCancelSms">Ghairi</button>
+                <button type="button" class="btn btn-primary-custom" id="feeStartSendingSms" disabled>
+                    <i class="bi bi-send"></i> Anza Kutuma SMS
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 @include('includes.footer')

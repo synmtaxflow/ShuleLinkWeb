@@ -89,7 +89,7 @@
                 </a>
 
                 @if($isActive && $assignment->exam_date)
-                    <a href="{{ $takeAttendanceUrl }}" class="btn btn-session-action btn-sm" style="background-color: #940000 !important; color: white !important;">
+                    <a href="{{ $takeAttendanceUrl }}" target="_blank" class="btn btn-session-action btn-sm" style="background-color: #940000 !important; color: white !important;">
                         <i class="bi bi-clipboard-check"></i> Take Attendance
                     </a>
                 @endif
@@ -99,7 +99,7 @@
                     <i class="bi bi-people"></i> View Test Students
                 </a>
                 @if($isActive)
-                    <a href="{{ $takeAttendanceUrl }}" class="btn btn-session-action btn-sm" style="background-color: #940000 !important; color: white !important;">
+                    <a href="{{ $takeAttendanceUrl }}" target="_blank" class="btn btn-session-action btn-sm" style="background-color: #940000 !important; color: white !important;">
                         <i class="bi bi-clipboard-check"></i> Test Attendance
                     </a>
                 @endif

@@ -1076,22 +1076,22 @@
 
                     <div class="row">
                         <div class="col-md-4 mb-3">
-                            <label for="edit_first_name" class="form-label">First Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="edit_first_name" name="first_name" required>
+                            <label for="edit_first_name" class="form-label">First Name</label>
+                            <input type="text" class="form-control" id="edit_first_name" name="first_name">
                         </div>
                         <div class="col-md-4 mb-3">
                             <label for="edit_middle_name" class="form-label">Middle Name</label>
                             <input type="text" class="form-control" id="edit_middle_name" name="middle_name">
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label for="edit_last_name" class="form-label">Last Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="edit_last_name" name="last_name" required>
+                            <label for="edit_last_name" class="form-label">Last Name</label>
+                            <input type="text" class="form-control" id="edit_last_name" name="last_name">
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-4 mb-3">
-                            <label for="edit_gender" class="form-label">Gender <span class="text-danger">*</span></label>
-                            <select class="form-select" id="edit_gender" name="gender" required>
+                            <label for="edit_gender" class="form-label">Gender</label>
+                            <select class="form-select" id="edit_gender" name="gender">
                                 <option value="">Select Gender</option>
                                 <option value="Male">Male</option>
                                 <option value="Female">Female</option>
@@ -1108,8 +1108,8 @@
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="edit_subclassID" class="form-label">Class <span class="text-danger">*</span></label>
-                            <select class="form-select" id="edit_subclassID" name="subclassID" required>
+                            <label for="edit_subclassID" class="form-label">Class</label>
+                            <select class="form-select" id="edit_subclassID" name="subclassID">
                                 <option value="">Choose a class...</option>
                                 <!-- Will be loaded via AJAX -->
                             </select>
@@ -1259,16 +1259,16 @@
                     <h6 class="mb-3 text-primary-custom"><i class="bi bi-telephone"></i> Emergency Contact</h6>
                     <div class="row">
                         <div class="col-md-4 mb-3">
-                            <label for="edit_emergency_contact_name" class="form-label">Contact Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="edit_emergency_contact_name" name="emergency_contact_name" required>
+                            <label for="edit_emergency_contact_name" class="form-label">Contact Name</label>
+                            <input type="text" class="form-control" id="edit_emergency_contact_name" name="emergency_contact_name">
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label for="edit_emergency_contact_relationship" class="form-label">Relationship <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="edit_emergency_contact_relationship" name="emergency_contact_relationship" required>
+                            <label for="edit_emergency_contact_relationship" class="form-label">Relationship</label>
+                            <input type="text" class="form-control" id="edit_emergency_contact_relationship" name="emergency_contact_relationship">
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label for="edit_emergency_contact_phone" class="form-label">Phone Number <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="edit_emergency_contact_phone" name="emergency_contact_phone" required>
+                            <label for="edit_emergency_contact_phone" class="form-label">Phone Number</label>
+                            <input type="text" class="form-control" id="edit_emergency_contact_phone" name="emergency_contact_phone">
                         </div>
                     </div>
 
@@ -3135,44 +3135,6 @@ Would you like to try direct registration anyway, or use the manual method?`;
             // Clear previous error messages
             $('#editStudentModal .text-danger.validation-error').remove();
             $('#editStudentModal .form-control, #editStudentModal .form-select').removeClass('is-invalid');
-
-            let hasErrors = false;
-
-            // Validate required fields
-            if (!first_name) {
-                $('#edit_first_name').addClass('is-invalid').after('<div class="text-danger validation-error small">First name is required</div>');
-                hasErrors = true;
-            }
-
-            if (!last_name) {
-                $('#edit_last_name').addClass('is-invalid').after('<div class="text-danger validation-error small">Last name is required</div>');
-                hasErrors = true;
-            }
-
-            if (!gender) {
-                $('#edit_gender').addClass('is-invalid').after('<div class="text-danger validation-error small">Gender is required</div>');
-                hasErrors = true;
-            }
-
-            if (!subclassID) {
-                $('#edit_subclassID').addClass('is-invalid').after('<div class="text-danger validation-error small">Class is required</div>');
-                hasErrors = true;
-            }
-
-            if (!admission_number) {
-                $('#edit_admission_number').addClass('is-invalid').after('<div class="text-danger validation-error small">Admission number is required</div>');
-                hasErrors = true;
-            }
-
-            if (hasErrors) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Validation Error',
-                    text: 'Please fill in all required fields',
-                    confirmButtonColor: '#940000'
-                });
-                return;
-            }
 
             let formData = new FormData(this);
             let submitBtn = $(this).find('button[type="submit"]');

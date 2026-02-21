@@ -1004,6 +1004,7 @@ class FeesController extends Controller
      */
     public function send_control_numbers_sms(Request $request)
     {
+        set_time_limit(3600); // 60 minutes
         $userType = Session::get('user_type');
         $schoolID = Session::get('schoolID');
 
@@ -1054,8 +1055,9 @@ class FeesController extends Controller
                 return response()->json(['success' => false, 'message' => 'No new control numbers to send.'], 404);
             }
 
-            $sent = 0;
-            $failed = 0;
+            $sent    = 0;
+            $failed  = 0;
+            $results = [];
 
             foreach ($payments as $payment) {
                 $student = $payment->student;
@@ -1125,29 +1127,37 @@ class FeesController extends Controller
                 $sponsorShareMsg = number_format($sponsorShare, 0);
 
                 $sentAtLeastOne = false;
+                $rowResult = [
+                    'student_name' => 'Parent of ' . $studentName,
+                    'phone'        => null,
+                    'success'      => false,
+                ];
 
                 // Send to sponsor if requested and available
                 if ($sendToSponsor && $sponsor && $sponsor->phone && $p > 0) {
-                    $messageSponsor = "HABARI! {$school->school_name} inakujulisha kuwa unadhamini mwanafunzi {$studentName}. Control Number: {$controlNumber}. ";
-                    $messageSponsor .= "Unaombwa kulipa TZS {$sponsorShareMsg} (" . (int)$p . "% ya jumla TZS {$totalAmountForMsg}). Lipia kupitia benki au mitandao ya simu.";
+                    $sponsorPct = (int)$p;
+                    $messageSponsor = "Mdhamini wa {$studentName}, Control Number: {$controlNumber}. Lipa TZS {$sponsorShareMsg} ({$sponsorPct}% ya TZS {$totalAmountForMsg}). Lipia benki/mitandao.";
                     $res = $this->smsService->sendSms($sponsor->phone, $messageSponsor);
+                    $rowResult['phone']   = $sponsor->phone;
+                    $rowResult['success'] = $res['success'];
                     if ($res['success']) { $sent++; $sentAtLeastOne = true; } else { $failed++; }
                 }
 
                 // Send to parent if requested and available
                 if ($sendToParent && $parent && $parent->phone) {
                     if ($p > 0) {
-                        $messageParent = "HABARI! {$school->school_name} inakujulisha kuwa mwanafunzi {$studentName} ana Control Number: {$controlNumber}. ";
-                        $messageParent .= "Jumla ya ada/michango ni TZS {$totalAmountForMsg}. Mzazi unatakiwa kulipa TZS {$parentShareMsg}; kiasi kingine TZS {$sponsorShareMsg} kitalipwa na mdhamini. ";
-                        $messageParent .= "Kiasi cha lazima kuanza shule ni TZS {$requiredAmount}.";
+                        $messageParent = "Mzazi wa {$studentName}, CN: {$controlNumber}. Jumla TZS {$totalAmountForMsg}, ulipe TZS {$parentShareMsg} (mdhamini TZS {$sponsorShareMsg}). Kuanza: TZS {$requiredAmount}.";
                     } else {
                         $totalAmount = number_format($payment->amount_required ?? 0, 0);
-                        $messageParent = "HABARI! {$school->school_name} inakujulisha kuwa mwanafunzi {$studentName} amepangiwa Control Number: {$controlNumber}. ";
-                        $messageParent .= "Jumla ya ada na michango yote ni TZS {$totalAmount}. Kiasi cha lazima kuanza shule ni TZS {$requiredAmount}. Lipia kupitia benki au mitandao ya simu.";
+                        $messageParent = "Mzazi wa {$studentName}, amepangiwa CN: {$controlNumber}. Kiasi: TZS {$totalAmount}, kuanza: TZS {$requiredAmount}. Lipa kuepuka usumbufu.";
                     }
                     $res = $this->smsService->sendSms($parent->phone, $messageParent);
+                    $rowResult['phone']   = $parent->phone;
+                    $rowResult['success'] = $res['success'];
                     if ($res['success']) { $sent++; $sentAtLeastOne = true; } else { $failed++; }
                 }
+
+                $results[] = $rowResult;
 
                 if ($sentAtLeastOne) {
                     $payment->update(['sms_sent' => 'Yes', 'sms_sent_at' => now()]);
@@ -1155,6 +1165,7 @@ class FeesController extends Controller
                     // If neither parent nor sponsor had a phone, count as failed once
                     if (!(($parent && $parent->phone) || ($sponsor && $sponsor->phone))) {
                         $failed++;
+                        $rowResult['success'] = false;
                     }
                 }
             }
@@ -1162,8 +1173,9 @@ class FeesController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => "SMS zimetumwa! Imefanikiwa: {$sent}, Imefeli: {$failed}",
-                'sent' => $sent,
-                'failed' => $failed
+                'sent'    => $sent,
+                'failed'  => $failed,
+                'results' => $results,
             ], 200);
 
         } catch (\Exception $e) {
@@ -1177,6 +1189,7 @@ class FeesController extends Controller
      */
     public function send_debt_reminders_sms(Request $request)
     {
+        set_time_limit(3600); // 60 minutes
         $userType = Session::get('user_type');
         $schoolID = Session::get('schoolID');
 
@@ -1205,8 +1218,9 @@ class FeesController extends Controller
                 return response()->json(['success' => false, 'message' => 'Hakuna mwanafunzi mwenye deni la kutumiwa ujumbe.'], 404);
             }
 
-            $sent = 0;
-            $failed = 0;
+            $sent    = 0;
+            $failed  = 0;
+            $results = [];
 
             foreach ($payments as $payment) {
                 $student = $payment->student;
@@ -1217,16 +1231,21 @@ class FeesController extends Controller
                     continue;
                 }
 
-                $studentName = $student->first_name . ' ' . $student->last_name;
+                $studentName   = ($student->first_name ?? '') . ' ' . ($student->last_name ?? '');
                 $controlNumber = $payment->control_number;
-                $balance = number_format($payment->balance, 0);
+                $balance       = number_format($payment->balance, 0);
 
-                // Kiswahili Message for Debt Reminder
-                $message = "HABARI! {$school->school_name} inakujulisha kuwa mwanafunzi {$studentName} ana deni la ada/michango TZS {$balance}. ";
-                $message .= "Tafadhali kamilisha malipo kupitia Control Number: {$controlNumber}. Asante.";
+                // Short Kiswahili Message for Debt Reminder (≤163 chars)
+                $message = "Mzazi wa {$studentName} unakumbushwa kulipa deni, sh {$balance}, control number {$controlNumber}. Lipa kuepuka usumbufu.";
 
                 // Send SMS using the service
                 $smsResult = $this->smsService->sendSms($parent->phone, $message);
+
+                $results[] = [
+                    'student_name' => 'Parent of ' . $studentName,
+                    'phone'        => $parent->phone,
+                    'success'      => $smsResult['success'],
+                ];
 
                 if ($smsResult['success']) {
                     $sent++;
@@ -1238,8 +1257,9 @@ class FeesController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => "SMS za kukumbusha deni zimetumwa! Imefanikiwa: {$sent}, Imefeli: {$failed}",
-                'sent' => $sent,
-                'failed' => $failed
+                'sent'    => $sent,
+                'failed'  => $failed,
+                'results' => $results,
             ], 200);
 
         } catch (\Exception $e) {
@@ -1249,10 +1269,172 @@ class FeesController extends Controller
     }
 
     /**
+     * Get list of recipients (parents/sponsors) for the fee SMS modal
+     * type: 'control_number' or 'debt_reminder'
+     */
+    public function get_fee_sms_recipients(Request $request)
+    {
+        $schoolID  = Session::get('schoolID');
+        $userType  = Session::get('user_type');
+        if (!$userType || !$schoolID) {
+            return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+        }
+
+        $type              = $request->input('type', 'control_number'); // 'control_number' | 'debt_reminder'
+        $requestedYear     = $request->input('year');
+        $sponsorshipFilter = $request->input('sponsorship_filter', '');
+
+        try {
+            $academicYearID = $this->getCurrentAcademicYearID($schoolID, $requestedYear);
+
+            $query = Payment::where('schoolID', $schoolID)
+                ->where('academic_yearID', $academicYearID)
+                ->with(['student.parent', 'student.sponsor']);
+
+            if ($type === 'debt_reminder') {
+                $query->where('balance', '>', 0);
+            }
+
+            // Sponsorship filter
+            if ($sponsorshipFilter === 'sponsored') {
+                $query->whereHas('student', fn($q) => $q->whereNotNull('sponsor_id')->where('sponsorship_percentage', '>', 0));
+            } elseif ($sponsorshipFilter === 'self') {
+                $query->whereHas('student', fn($q) => $q->whereNull('sponsor_id')->orWhere('sponsorship_percentage', '<=', 0));
+            }
+
+            $payments = $query->get();
+
+            $recipients = [];
+            foreach ($payments as $payment) {
+                $student = $payment->student;
+                if (!$student) continue;
+
+                $parent  = $student->parent  ?? null;
+                $sponsor = $student->sponsor ?? null;
+                $p       = (float)($student->sponsorship_percentage ?? 0);
+
+                $studentName = trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''));
+                $balance     = $payment->balance ?? 0;
+                $cn          = $payment->control_number ?? '';
+
+                // Determine phone to display (sponsor first if auto)
+                $phone = null;
+                $recipientLabel = 'Parent of ' . $studentName;
+                if ($p > 0 && $sponsor && $sponsor->phone) {
+                    $phone          = $sponsor->phone;
+                    $recipientLabel = 'Sponsor of ' . $studentName;
+                } elseif ($parent && $parent->phone) {
+                    $phone          = $parent->phone;
+                    $recipientLabel = 'Parent of ' . $studentName;
+                }
+
+                $recipients[] = [
+                    'paymentID'      => $payment->paymentID,
+                    'recipientLabel' => $recipientLabel,
+                    'studentName'    => $studentName,
+                    'phone'          => $phone ?? '',
+                    'balance'        => $balance,
+                    'controlNumber'  => $cn,
+                ];
+            }
+
+            return response()->json(['success' => true, 'recipients' => $recipients]);
+
+        } catch (\Exception $e) {
+            Log::error('get_fee_sms_recipients error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Send a single fee SMS (control number OR debt reminder) for one payment.
+     * Called per-row by the JS async loop (same pattern as send_result_sms).
+     */
+    public function send_single_fee_sms(Request $request)
+    {
+        set_time_limit(120);
+        $schoolID = Session::get('schoolID');
+        $userType = Session::get('user_type');
+        if (!$userType || !$schoolID) {
+            return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+        }
+
+        $paymentID = $request->input('paymentID');
+        $type      = $request->input('type', 'control_number'); // 'control_number' | 'debt_reminder'
+
+        try {
+            $payment = Payment::where('paymentID', $paymentID)
+                ->where('schoolID', $schoolID)
+                ->with(['student.parent', 'student.sponsor', 'school'])
+                ->first();
+
+            if (!$payment) {
+                return response()->json(['success' => false, 'message' => 'Payment not found'], 404);
+            }
+
+            $student = $payment->student;
+            $parent  = $student ? $student->parent  : null;
+            $sponsor = $student ? $student->sponsor : null;
+            $school  = $payment->school;
+
+            if (!$student) {
+                return response()->json(['success' => false, 'message' => 'Student not found'], 404);
+            }
+
+            $studentName    = trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''));
+            $cn             = $payment->control_number ?? '';
+            $p              = (float)($student->sponsorship_percentage ?? 0);
+            $balance        = number_format($payment->balance ?? 0, 0);
+            $totalAmount    = number_format($payment->amount_required ?? 0, 0);
+            $requiredAmount = number_format($payment->required_fees_amount ?? 0, 0);
+
+            // Determine phone (sponsor first if sponsored)
+            $phone = null;
+            if ($p > 0 && $sponsor && $sponsor->phone) {
+                $phone = $sponsor->phone;
+            } elseif ($parent && $parent->phone) {
+                $phone = $parent->phone;
+            }
+
+            if (!$phone) {
+                return response()->json(['success' => false, 'message' => 'No phone number found'], 404);
+            }
+
+            // Build message based on type
+            if ($type === 'debt_reminder') {
+                $message = "Mzazi wa {$studentName} unakumbushwa kulipa deni, sh {$balance}, control number {$cn}. Lipa kuepuka usumbufu.";
+            } else {
+                // control_number
+                if ($p > 0) {
+                    $sponsorShare  = number_format(round($payment->amount_required * $p / 100), 0);
+                    $parentShare   = number_format(max(0, ($payment->amount_required ?? 0) - round(($payment->amount_required ?? 0) * $p / 100)), 0);
+                    $message = "Mzazi wa {$studentName}, CN: {$cn}. Jumla TZS {$totalAmount}, ulipe TZS {$parentShare} (mdhamini TZS {$sponsorShare}). Kuanza: TZS {$requiredAmount}.";
+                } else {
+                    $message = "Mzazi wa {$studentName}, amepangiwa CN: {$cn}. Kiasi: TZS {$totalAmount}, kuanza: TZS {$requiredAmount}. Lipa kuepuka usumbufu.";
+                }
+            }
+
+            $smsResult = $this->smsService->sendSms($phone, $message);
+
+            if ($smsResult['success']) {
+                $payment->update(['sms_sent' => 'Yes', 'sms_sent_at' => now()]);
+                return response()->json(['success' => true, 'message' => 'SMS sent successfully.']);
+            } else {
+                return response()->json(['success' => false, 'message' => $smsResult['message'] ?? 'SMS failed.']);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('send_single_fee_sms error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Resend control number to specific parent
      */
     public function resend_control_number($paymentID)
     {
+        set_time_limit(3600); // 60 minutes
         $userType = Session::get('user_type');
         $schoolID = Session::get('schoolID');
 
@@ -1278,15 +1460,13 @@ class FeesController extends Controller
                 return response()->json(['success' => false, 'message' => 'Parent or phone number not found'], 404);
             }
 
-            $studentName = $student->first_name . ' ' . $student->last_name;
+            $studentName = ($student->first_name ?? '') . ' ' . ($student->last_name ?? '');
             $controlNumber = $payment->control_number;
             $totalAmount = number_format($payment->amount_required, 0);
             $requiredAmount = number_format($payment->required_fees_amount, 0);
 
-            // Kiswahili Template for Fee Assigned
-            $message = "HABARI! Shule ya {$school->school_name} inakujulisha kuwa mwanafunzi {$studentName} amepangiwa Control Number: {$controlNumber}. \n";
-            $message .= "Kiasi cha lazima kuanza shule ni TZS {$requiredAmount}. Jumla ya ada na michango yote ni TZS {$totalAmount}.\n";
-            $message .= "Lipia kupitia benki (CRDB/NMB) au mitandao ya simu kwa kutumia Control Number hiyo. Asante.";
+            // Shortered Message for Control Number
+            $message = "Mzazi wa {$studentName}, mwanafunzi amepangiwa Control Number: {$controlNumber}. Kiasi kuanza: sh {$requiredAmount}, Jumla: sh {$totalAmount}. Lipa kuepuka usumbufu.";
 
             $smsResult = $this->smsService->sendSms($parent->phone, $message);
 
@@ -1299,6 +1479,52 @@ class FeesController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Error resending control number: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Send single debt reminder
+     */
+    public function send_single_debt_reminder(Request $request)
+    {
+        set_time_limit(3600);
+        $paymentID = $request->input('paymentID');
+        $schoolID = Session::get('schoolID');
+
+        if (!$paymentID || !$schoolID) {
+            return response()->json(['success' => false, 'message' => 'Missing data'], 400);
+        }
+
+        try {
+            $payment = Payment::where('paymentID', $paymentID)
+                ->where('schoolID', $schoolID)
+                ->with(['student.parent'])
+                ->first();
+
+            if (!$payment || !$payment->student || !$payment->student->parent || !$payment->student->parent->phone) {
+                return response()->json(['success' => false, 'message' => 'Student or parent phone not found'], 404);
+            }
+
+            $student = $payment->student;
+            $parent = $student->parent;
+            $studentName = ($student->first_name ?? '') . ' ' . ($student->last_name ?? '');
+            $balance = number_format($payment->balance, 0);
+            $controlNumber = $payment->control_number;
+
+            // Shortered Message for Debt Reminder
+            $message = "Mzazi wa {$studentName} unakumbushwa kulipa deni, sh {$balance}, control number {$controlNumber}. Lipa kuepuka usumbufu.";
+
+            $smsResult = $this->smsService->sendSms($parent->phone, $message);
+
+            if ($smsResult['success']) {
+                $payment->update(['sms_sent' => 'Yes', 'sms_sent_at' => now()]);
+                return response()->json(['success' => true, 'message' => 'Debt reminder sent successfully.'], 200);
+            } else {
+                return response()->json(['success' => false, 'message' => 'Failed to send SMS: ' . $smsResult['message']], 500);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error sending single debt reminder: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
     }
