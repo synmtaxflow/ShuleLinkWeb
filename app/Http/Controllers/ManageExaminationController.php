@@ -7448,6 +7448,8 @@ class ManageExaminationController extends Controller
             \Log::error('Error in getScheduledSubjects: ' . $e->getMessage());
             return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
+    }
+
     private function preCreateWeeklyTestQuestions($examination, $schoolID, $teacherID = null)
     {
         $exceptClassIds = is_string($examination->except_class_ids) ? json_decode($examination->except_class_ids, true) : $examination->except_class_ids;

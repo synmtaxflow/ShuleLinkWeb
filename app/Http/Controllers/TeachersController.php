@@ -8347,6 +8347,7 @@ class TeachersController extends Controller
                         ->toArray();
                 }
             }
+            if (empty($subclassIDs)) {
                 return response()->json(['success' => true, 'data' => ['subclasses' => [], 'students' => []]]);
             }
 

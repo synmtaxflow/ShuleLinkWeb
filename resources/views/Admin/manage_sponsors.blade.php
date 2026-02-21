@@ -40,7 +40,7 @@
                 <h4 class="mb-0 text-primary-custom">
                     <i class="bi bi-handshake-fill"></i> Manage Sponsors
                 </h4>
-                <button class="btn btn-primary-custom" id="addSponsorBtn" data-bs-toggle="modal" data-bs-target="#addSponsorModal">
+                <button class="btn btn-primary-custom" type="button" id="addSponsorBtn" data-bs-toggle="modal" data-bs-target="#addSponsorModal" data-toggle="modal" data-target="#addSponsorModal">
                     <i class="bi bi-plus-circle"></i> Register New Sponsor
                 </button>
             </div>
@@ -108,7 +108,7 @@
                 <h5 class="modal-title" id="addSponsorModalLabel">
                     <i class="bi bi-plus-circle"></i> Register New Sponsor
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="addSponsorForm">
                 @csrf
@@ -168,7 +168,7 @@
                 <h5 class="modal-title" id="editSponsorModalLabel">
                     <i class="bi bi-pencil-square"></i> Edit Sponsor
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="editSponsorForm">
                 @csrf
@@ -238,6 +238,17 @@
         $('#sponsorsTable').DataTable({
             order: [[1, 'asc']],
             pageLength: 25
+        });
+
+        // Trigger for Add Sponsor Modal (Manual backup)
+        $('#addSponsorBtn').on('click', function() {
+            // Try both BS4 and BS5 modal methods
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                var modal = new bootstrap.Modal(document.getElementById('addSponsorModal'));
+                modal.show();
+            } else if ($.fn.modal) {
+                $('#addSponsorModal').modal('show');
+            }
         });
 
         // Add Sponsor Form Submit
