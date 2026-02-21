@@ -229,39 +229,69 @@ class GoalManagementController extends Controller
         return view('Teacher.goals.hod_assigned', compact('tasks', 'department'));
     }
 
-    public function memberTasks()
+    public function memberTasks(Request $request)
     {
         $teacherID = Session::get('teacherID');
         $staffID = Session::get('staffID');
 
-        $query = GoalMemberTask::with(['parentTask.goal', 'subtasks.steps']);
-
-        if ($teacherID) {
-            $query->where('member_id', $teacherID)->where('member_type', 'Teacher');
-        } elseif ($staffID) {
-            $query->where('member_id', $staffID)->where('member_type', 'Staff');
-        } else {
+        if (!$teacherID && !$staffID) {
             return redirect()->back()->with('error', 'Unauthorized access.');
         }
 
-        $myTasks = $query->get();
+        $type = $teacherID ? 'Teacher' : 'Staff';
+        $id = $teacherID ?: $staffID;
+        $filterType = $request->query('type'); // 'direct' or null
 
-        foreach ($myTasks as $task) {
-            // Member task progress is simply the sum of approved marks (since max sum of marks is 100)
-            $task->progress = $task->subtasks->where('is_approved', true)->sum('marks');
-            
-            // Total subtasks weight budget (target 100%)
-            $task->subtasks_weight_sum = $task->subtasks->sum('weight');
+        // 1. Fetch Delegated Tasks (via Department)
+        $delegatedTasks = collect();
+        if ($filterType !== 'direct') {
+            $delegatedTasks = GoalMemberTask::with(['parentTask.goal', 'subtasks.steps'])
+                ->where('member_id', $id)
+                ->where('member_type', $type)
+                ->get();
+
+            foreach ($delegatedTasks as $task) {
+                $task->is_direct = false;
+                $task->display_name = $task->task_name;
+                $task->parent_goal_name = $task->parentTask->goal->goal_name ?? 'N/A';
+                $task->assigned_weight = $task->weight;
+                $task->progress_val = $task->subtasks->where('is_approved', true)->sum('marks');
+                $task->weight_sum = $task->subtasks->sum('weight');
+            }
         }
 
-        return view('Teacher.goals.my_tasks', compact('myTasks'));
+        // 2. Fetch Direct Tasks (Assigned by Admin)
+        $directTasks = GoalTask::with(['goal', 'subtasks.steps'])
+            ->where('assigned_to_id', $id)
+            ->where('assigned_to_type', $type)
+            ->get();
+
+        foreach ($directTasks as $task) {
+            $task->is_direct = true;
+            $task->display_name = $task->task_name;
+            $task->parent_goal_name = $task->goal->goal_name ?? 'N/A';
+            $task->assigned_weight = $task->weight;
+            $task->progress_val = $task->subtasks->where('is_approved', true)->sum('marks');
+            $task->weight_sum = $task->subtasks->sum('weight');
+            
+            // For backward compatibility with some parts of view
+            $task->subtasks_count = $task->subtasks->count(); 
+        }
+
+        if ($filterType === 'direct') {
+            $myTasks = $directTasks;
+        } else {
+            $myTasks = $delegatedTasks->concat($directTasks);
+        }
+
+        return view('Teacher.goals.my_tasks', compact('myTasks', 'filterType'));
     }
 
     private function sendAssignmentNotification($task)
     {
         $title = "New Task Assigned";
         $message = "You have been assigned a new task: " . $task->task_name;
-        $link = "";
+        $link = route('member.goals.myTasks');
 
         if ($task->assigned_to_type === 'Teacher') {
             $teacher = Teacher::find($task->assigned_to_id);
@@ -489,13 +519,19 @@ class GoalManagementController extends Controller
         ]);
     }
 
-    public function fetchSubtasks(Request $request, $member_task_id)
+    public function fetchSubtasks(Request $request, $task_id)
     {
-        $query = GoalSubtask::with('steps')
-            ->where('member_task_id', $member_task_id);
+        $isDirect = $request->get('is_direct') === '1';
+        $query = GoalSubtask::with('steps');
+
+        if ($isDirect) {
+            $query->where('direct_task_id', $task_id);
+        } else {
+            $query->where('member_task_id', $task_id);
+        }
 
         if ($request->get('role') === 'hod') {
-            // HOD only sees submitted or approved
+            // Reviewer only sees submitted or approved
             $query->whereIn('status', ['Submitted', 'Approved']);
         }
 
@@ -526,31 +562,38 @@ class GoalManagementController extends Controller
     public function subtaskStore(Request $request)
     {
         $request->validate([
-            'member_task_id' => 'required_without:direct_task_id|exists:goal_member_tasks,id',
-            'direct_task_id' => 'required_without:member_task_id|exists:goal_tasks,id',
+            'member_task_id' => 'nullable|exists:goal_member_tasks,id',
+            'direct_task_id' => 'nullable|exists:goal_tasks,id',
             'subtasks' => 'required|array',
             'subtasks.*.subtask_name' => 'required|string',
             'subtasks.*.weight' => 'required|numeric|min:0.1',
         ]);
 
+        $m_id = $request->member_task_id ?: null;
+        $d_id = $request->direct_task_id ?: null;
+
+        if (!$m_id && !$d_id) {
+            return response()->json(['success' => false, 'message' => 'Task ID is missing.']);
+        }
+
         $incomingWeight = collect($request->subtasks)->sum('weight');
         $currentWeight = 0;
 
-        if ($request->member_task_id) {
-            $currentWeight = GoalSubtask::where('member_task_id', $request->member_task_id)->sum('weight');
+        if ($m_id) {
+            $currentWeight = GoalSubtask::where('member_task_id', $m_id)->sum('weight');
             if (($currentWeight + $incomingWeight) > 100) {
                 return response()->json(['success' => false, 'message' => 'Total subtasks weight exceeds 100%']);
             }
-        } else {
-            $currentWeight = GoalSubtask::where('direct_task_id', $request->direct_task_id)->sum('weight');
+        } elseif ($d_id) {
+            $currentWeight = GoalSubtask::where('direct_task_id', $d_id)->sum('weight');
             if (($currentWeight + $incomingWeight) > 100) {
                 return response()->json(['success' => false, 'message' => 'Total subtasks weight exceeds 100%']);
             }
         }
 
         foreach ($request->subtasks as $subData) {
-            $subData['member_task_id'] = $request->member_task_id;
-            $subData['direct_task_id'] = $request->direct_task_id;
+            $subData['member_task_id'] = $m_id;
+            $subData['direct_task_id'] = $d_id;
             GoalSubtask::create($subData);
         }
 
@@ -633,13 +676,29 @@ class GoalManagementController extends Controller
                 $hod = $department->headTeacher ?? $department->headStaff ?? null;
                 if ($hod) {
                     $reviewerPhone = $hod->phone_number ?? null;
+                    // System notification for HOD
+                    $this->createSystemNotification(
+                        $hod->email, 
+                        "Subtask Review Needed", 
+                        "{$memberName} has submitted subtask \"{$subtaskName}\" for review.",
+                        route('hod.goals.assigned')
+                    );
                 }
             }
         } else {
-            // Direct Task -> Goes to Admin
-            // For now, we assume the reviewer is the school admin (who doesn't have a single phone in settings typically, but we can notify via system)
-            // If there's a specific admin phone, you'd fetch it here.
+            // Direct Task -> Goes to Admin (Creator of the Goal)
+            $goal = $directTask->goal;
+            if ($goal && $goal->creator) {
+                // System notification for Admin
+                $this->createSystemNotification(
+                    $goal->creator->email, 
+                    "Direct Subtask Review Needed", 
+                    "{$memberName} has submitted a subtask for a direct assignment.",
+                    route('admin.goals.show', $goal->id)
+                );
+            }
         }
+        // If there's a specific admin phone, you'd fetch it here.
 
         // SMS to Performer
         if ($memberPhone) {
@@ -663,48 +722,74 @@ class GoalManagementController extends Controller
     public function approveSubtask(Request $request)
     {
         $request->validate([
-            'id'    => 'required|exists:goal_subtasks,id',
-            'marks' => 'required|numeric',
+            'id'     => 'required|exists:goal_subtasks,id',
+            'action' => 'required|in:Approve,Reject',
+            'marks'  => 'required_if:action,Approve|numeric|nullable',
         ]);
 
-        $sub = GoalSubtask::with(['memberTask.parentTask.department'])->findOrFail($request->id);
+        $sub = GoalSubtask::with(['memberTask.parentTask', 'directTask'])->findOrFail($request->id);
 
-        if ($request->marks > $sub->weight) {
-            return response()->json(['success' => false, 'message' => 'Marks cannot exceed subtask weight (' . $sub->weight . ')']);
+        if ($request->action === 'Approve') {
+            if ($request->marks > $sub->weight) {
+                return response()->json(['success' => false, 'message' => 'Marks cannot exceed subtask weight (' . $sub->weight . ')']);
+            }
+
+            $sub->update([
+                'marks'       => $request->marks,
+                'is_approved' => true,
+                'status'      => 'Approved',
+                'approved_by' => auth()->id() ?? Session::get('userID')
+            ]);
+            $msg = "approved and marks assigned.";
+            $smsStatus = "reviewed and approved. Score: {$request->marks}/{$sub->weight}. Well done!";
+        } else {
+            // Reject - Reset status to Draft or Rejected
+            $sub->update([
+                'marks'       => 0,
+                'is_approved' => false,
+                'status'      => 'Draft', // Set back to draft so user can edit
+                'is_sent_to_hod' => false, // Reset submission flag
+                'approved_by' => null
+            ]);
+            $msg = "rejected. User will be able to edit and resubmit.";
+            $smsStatus = "reviewed and returned for adjustments. Please check and resubmit.";
         }
 
-        $sub->update([
-            'marks'       => $request->marks,
-            'is_approved' => true,
-            'status'      => 'Approved',
-            'approved_by' => auth()->id() ?? 1
-        ]);
-
-        // ---- Get member phone ----
-        $memberTask  = $sub->memberTask;
+        // ---- Get performer phone (Supports both delegated and direct) ----
         $memberPhone = null;
         $memberName  = 'Staff';
+        $p_type = null; $p_id = null;
 
-        if ($memberTask) {
-            $member = $memberTask->member_type === 'Teacher'
-                ? Teacher::find($memberTask->member_id)
-                : OtherStaff::find($memberTask->member_id);
+        if ($sub->member_task_id) {
+            $p_type = $sub->memberTask->member_type;
+            $p_id   = $sub->memberTask->member_id;
+        } elseif ($sub->direct_task_id) {
+            $p_type = $sub->directTask->assigned_to_type;
+            $p_id   = $sub->directTask->assigned_to_id;
+        }
 
+        if ($p_type && $p_id) {
+            $member = ($p_type === 'Teacher') ? Teacher::find($p_id) : OtherStaff::find($p_id);
             if ($member) {
                 $memberPhone = $member->phone_number ?? null;
                 $memberName  = trim(($member->first_name ?? '') . ' ' . ($member->last_name ?? ''));
+                
+                // Also create a system notification
+                $this->createSystemNotification(
+                    $member->email, 
+                    "Subtask " . ($request->action === 'Approve' ? 'Approved' : 'Returned'), 
+                    "Your subtask \"{$sub->subtask_name}\" has been {$smsStatus}",
+                    route('member.goals.myTasks')
+                );
             }
         }
 
         // ---- SMS to Member ----
         if ($memberPhone) {
-            $this->smsService->sendSms(
-                $memberPhone,
-                "ShuleLink: Dear {$memberName}, your subtask \"{$sub->subtask_name}\" has been reviewed and approved. Score: {$request->marks}/{$sub->weight}. Well done! - ShuleLink"
-            );
+            $this->smsService->sendSms($memberPhone, "ShuleLink: Dear {$memberName}, your subtask \"{$sub->subtask_name}\" has been {$smsStatus} - ShuleLink");
         }
 
-        return response()->json(['success' => true, 'message' => 'Subtask approved and marks assigned.']);
+        return response()->json(['success' => true, 'message' => 'Subtask ' . $msg]);
     }
 
     public function deleteSubtask($id)

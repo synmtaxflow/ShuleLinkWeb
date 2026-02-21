@@ -1,12 +1,5 @@
 @include('includes.teacher_nav')
 
-<style>
-    .text-primary-shule { color: #940000 !important; }
-    .bg-primary-shule { background-color: #940000 !important; }
-</style>
-
-@include('includes.teacher_nav')
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
 <style>
@@ -14,6 +7,8 @@
     .text-maroon { color: #940000 !important; }
     .btn-maroon { background-color: #940000 !important; color: white !important; }
     .btn-outline-maroon { border: 1.5px solid #940000; color: #940000; background: transparent; font-weight: 600; border-radius: 10px; }
+    .text-primary-shule { color: #940000 !important; }
+    .bg-primary-shule { background-color: #940000 !important; }
     
     /* Sticky Mobile Header */
     .mobile-header {

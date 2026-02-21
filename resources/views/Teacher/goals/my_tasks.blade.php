@@ -180,7 +180,7 @@
 
     <!-- Sticky Header -->
     <div class="task-header d-flex justify-content-between align-items-center">
-        <h4><i class="fa fa-thumb-tack mr-2"></i>My Assigned Tasks</h4>
+        <h4><i class="fa fa-{{ (isset($filterType) && $filterType == 'direct') ? 'star' : 'thumb-tack' }} mr-2"></i>{{ (isset($filterType) && $filterType == 'direct') ? 'Direct Goals / Tasks' : 'My Assigned Tasks' }}</h4>
         <span class="portal-pill">Member Portal</span>
     </div>
 
@@ -230,6 +230,7 @@
                             </button>
                             <button class="btn btn-maroon btn-view-subtasks"
                                 data-id="{{ $task->id }}"
+                                data-is-direct="{{ $task->is_direct ? '1' : '0' }}"
                                 data-name="{{ $task->display_name }}">
                                 <i class="fa fa-eye"></i> View
                             </button>
@@ -240,7 +241,7 @@
                 <div class="empty-state">
                     <i class="fa fa-tasks"></i>
                     <h5 style="color:#bbb;">Hujapangiwa kazi yoyote hivi sasa.</h5>
-                    <p>HOD atakapokupa kazi, itaonekana hapa.</p>
+                    <p>{{ (isset($filterType) && $filterType == 'direct') ? 'Admin atakapokupa kazi moja kwa moja, itaonekana hapa.' : 'HOD au Admin atakapokupa kazi, itaonekana hapa.' }}</p>
                 </div>
             @endforelse
         </div>
@@ -492,23 +493,24 @@ $(document).ready(function() {
     $('.btn-view-subtasks').click(function() {
         const id   = $(this).data('id');
         const name = $(this).data('name');
+        const isDirect = $(this).data('is-direct') == '1';
         currentViewTaskId = id;
         $('#view_modal_task_name').text(name);
-        loadSubtasks(id);
+        loadSubtasks(id, isDirect);
         $('#viewSubtasksModal').modal('show');
     });
 
-    function loadSubtasks(memberTaskId) {
+    function loadSubtasks(taskId, isDirect = false) {
         const container = $('#subtasks_list_container');
         container.html('<div class="text-center py-4 text-muted"><i class="fa fa-spinner fa-spin fa-2x"></i></div>');
-        $.get('{{ url("goals/fetch-subtasks") }}/' + memberTaskId, function(subtasks) {
-            renderSubtasks(subtasks);
+        $.get('{{ url("goals/fetch-subtasks") }}/' + taskId + '?is_direct=' + (isDirect ? '1' : '0'), function(subtasks) {
+            renderSubtasks(subtasks, isDirect);
         }).fail(function() {
             container.html('<div class="text-center py-4 text-danger">Failed to load subtasks. Please try again.</div>');
         });
     }
 
-    function renderSubtasks(subtasks) {
+    function renderSubtasks(subtasks, isDirect = false) {
         const container = $('#subtasks_list_container');
         container.empty();
 
@@ -538,12 +540,12 @@ $(document).ready(function() {
                         </div>
                     </div>
                     <span style="font-weight:800; color:#27ae60; font-size:0.85rem; white-space:nowrap;">
-                        ${s.marks}/${s.weight} pts &bull; ${scorePercent}%
+                        ${s.marks}/${s.weight} pts &bull; ${scorePercent}<sup>%</sup>
                     </span>
                 </div>
             ` : (s.status === 'Submitted' ? `
                 <div style="background:#fff8f0; border-radius:8px; padding:7px 10px; margin:6px 0; font-size:0.78rem; color:#e67e22;">
-                    <i class="fa fa-hourglass-half mr-1"></i> Awaiting HOD review...
+                    <i class="fa fa-hourglass-half mr-1"></i> Awaiting ${isDirect ? 'Admin' : 'HOD'} review...
                 </div>
             ` : '');
 
@@ -554,8 +556,8 @@ $(document).ready(function() {
                 <button class="btn btn-sm btn-outline-primary btn-edit-subtask" data-id="${s.id}" data-name="${s.subtask_name}" data-weight="${s.weight}" data-desc="${(s.description||'').replace(/"/g,'&quot;')}">
                     <i class="fa fa-pencil"></i>
                 </button>
-                <button class="btn btn-sm btn-send-hod btn-submit-hod" data-id="${s.id}" title="Send to HOD">
-                    <i class="fa fa-send"></i> HOD
+                <button class="btn btn-sm btn-send-hod btn-submit-hod" data-id="${s.id}" data-is-direct="${isDirect ? '1' : '0'}" title="${isDirect ? 'Send to Admin' : 'Send to HOD'}">
+                    <i class="fa fa-send"></i> ${isDirect ? 'Admin' : 'HOD'}
                 </button>
                 <button class="btn btn-sm btn-outline-danger btn-delete-subtask" data-id="${s.id}">
                     <i class="fa fa-trash"></i>
@@ -754,9 +756,12 @@ $(document).ready(function() {
     // ======== SEND TO HOD ========
     $(document).on('click', '.btn-submit-hod', function() {
         const id = $(this).data('id');
+        const isDirect = $(this).data('is-direct') == '1';
+        const reviewer = isDirect ? 'Admin' : 'HOD';
+
         Swal.fire({
-            title: 'Send to HOD?',
-            text: 'This will send your subtask to your HOD for review and marking.',
+            title: `Send to ${reviewer}?`,
+            text: `This will send your subtask to ${isDirect ? 'the Admin' : 'your HOD'} for review and marking.`,
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#940000',

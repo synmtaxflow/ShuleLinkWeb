@@ -283,16 +283,20 @@
                         <small class="text-muted d-block mb-1">Subtask Name:</small>
                         <h6 id="review_sub_name" class="font-weight-bold text-dark"></h6>
                     </div>
+
+                    <input type="hidden" name="action" value="Approve">
+
                     <div class="form-group mb-3">
                         <label class="font-weight-600">Marks / Score (Max: <span id="review_sub_weight_label">0</span>)</label>
                         <div class="input-group">
-                            <input type="number" name="marks" id="review_sub_marks" class="form-control" required min="1" step="0.1">
+                            <input type="number" name="marks" id="review_sub_marks" class="form-control" required min="0" step="0.1">
                             <div class="input-group-append">
                                 <span class="input-group-text">/ <span id="review_sub_weight_val">0</span></span>
                             </div>
                         </div>
-                        <small class="text-muted italic">Assign a score based on the implementation quality (max weight is 100%).</small>
+                        <small class="text-muted italic">Assessed marks will contribute directly to task and goal completion percentage.</small>
                     </div>
+
                     <div id="review_progress_container" style="display:none;">
                         <div class="progress" style="height: 10px; border-radius: 5px;">
                             <div id="review_progress_bar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" style="width: 0%;"></div>
@@ -332,7 +336,7 @@ $(document).ready(function() {
                 html += `
                     <div class="mb-4">
                         <h6 class="font-weight-bold text-primary-shule mb-3">
-                            <i class="fa fa-chevron-circle-right mr-2"></i> HOD Direct Breakdown (Subtasks)
+                            <i class="fa fa-shield mr-2 text-primary"></i> Admin Progress Breakdown (Direct Assignments)
                         </h6>
                         <div class="list-group shadow-sm">
                 `;
@@ -438,20 +442,24 @@ $(document).ready(function() {
                         <span class="font-weight-bold text-dark d-block mb-1" style="font-size: 0.9rem;">${sub.subtask_name}</span>
                         <div class="small text-muted mb-2" style="font-size: 0.8rem; line-height: 1.4;">${sub.description || 'No description'}</div>
                         
-                        <div class="d-flex align-items-center">
+                        <div class="mb-2">
                             <span class="badge badge-pill badge-${statusColor} mr-2" style="font-size: 0.65rem; padding: 4px 8px;">${statusText}</span>
-                            @if(auth()->user()) {{-- Basic check, ideally check for admin/hod role --}}
-                                ${sub.status === 'Submitted' && !isApproved ? `
-                                    <button class="btn btn-xs btn-success btn-review-subtask py-1 px-3 shadow-sm" 
-                                        data-id="${sub.id}" 
-                                        data-name="${sub.subtask_name}" 
-                                        data-weight="${sub.weight}"
-                                        style="font-size: 0.7rem; border-radius: 20px; font-weight: 700;">
-                                        <i class="fa fa-pencil"></i> Review & Mark
-                                    </button>
-                                ` : ''}
-                            @endif
                         </div>
+
+                        ${(sub.status || '').toLowerCase() === 'submitted' && (!sub.is_approved) ? `
+                            <div class="d-flex" style="gap:8px; margin-top: 10px;">
+                                <button class="btn btn-xs btn-success btn-approve-subtask-trigger py-2 px-3 shadow-sm" 
+                                    data-id="${sub.id}" data-name="${sub.subtask_name}" data-weight="${sub.weight}"
+                                    style="font-size: 0.75rem; border-radius: 20px; font-weight: 700;">
+                                    <i class="fa fa-check-circle"></i> Approve & Mark
+                                </button>
+                                <button class="btn btn-xs btn-danger btn-reject-subtask-trigger py-2 px-3 shadow-sm" 
+                                    data-id="${sub.id}" data-name="${sub.subtask_name}"
+                                    style="font-size: 0.75rem; border-radius: 20px; font-weight: 700;">
+                                    <i class="fa fa-times-circle"></i> Reject
+                                </button>
+                            </div>
+                        ` : ''}
                     </div>
                     <div class="text-right ml-3" style="min-width: 100px;">
                         <div class="small text-muted uppercase font-weight-bold mb-1" style="font-size: 0.6rem; letter-spacing: 0.5px;">Performance</div>
@@ -534,19 +542,48 @@ $(document).ready(function() {
         });
     });
 
-    // --- Review Subtask Logic ---
-    $(document).on('click', '.btn-review-subtask', function() {
+    // Approve Trigger
+    $(document).on('click', '.btn-approve-subtask-trigger', function() {
         const id = $(this).data('id');
         const name = $(this).data('name');
         const weight = $(this).data('weight');
 
         $('#review_sub_id').val(id);
         $('#review_sub_name').text(name);
-        $('#review_sub_weight_label').text(weight);
-        $('#review_sub_weight_val').text(weight);
-        $('#review_sub_marks').attr('max', weight).val(weight);
+        $('#review_sub_weight_label, #review_sub_weight_val').text(weight);
+        $('#review_sub_marks').attr('max', weight).val(weight); // Default to full marks
         
         $('#reviewSubtaskModal').modal('show');
+    });
+
+    // Reject Trigger
+    $(document).on('click', '.btn-reject-subtask-trigger', function() {
+        const id = $(this).data('id');
+        const name = $(this).data('name');
+
+        Swal.fire({
+            title: 'Reject Subtask?',
+            text: `Unataka kuirudisha subtask "${name}" kwa mwalimu ili afanye marekebisho? Hali ya kazi itarudi kuwa Draft.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Ndiyo, Irudishe'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.post('{{ route("goals.review.approve") }}', {
+                    _token: '{{ csrf_token() }}',
+                    id: id,
+                    action: 'Reject'
+                }, function(res) {
+                    if (res.success) {
+                        Swal.fire('Imerejeshwa!', res.message, 'success').then(() => location.reload());
+                    } else {
+                        Swal.fire('Hitilafu', res.message, 'error');
+                    }
+                });
+            }
+        });
     });
 
     $('#reviewSubtaskForm').submit(function(e) {
@@ -564,8 +601,8 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.success) {
                     Swal.fire({
-                        title: 'Approved!',
-                        text: 'Subtask has been marked and approved.',
+                        title: 'Success!',
+                        text: response.message,
                         icon: 'success',
                         timer: 2000,
                         showConfirmButton: false
@@ -573,13 +610,13 @@ $(document).ready(function() {
                         location.reload();
                     });
                 } else {
-                    Swal.fire('Error', response.message || 'Approval failed', 'error');
-                    $btn.prop('disabled', false).text('Approve & Mark');
+                    Swal.fire('Error', response.message || 'Review failed', 'error');
+                    $btn.prop('disabled', false).text('Save Review');
                 }
             },
             error: function() {
                 Swal.fire('Error', 'Server communication failed.', 'error');
-                $btn.prop('disabled', false).text('Approve & Mark');
+                $btn.prop('disabled', false).text('Save Review');
             }
         });
     });

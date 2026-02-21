@@ -587,22 +587,23 @@
                         <!-- Goal Management - HOD View -->
                         <li class="dropdown-nav-item">
                             <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#departmentGoals" aria-expanded="false">
-                                <i class="fa fa-bullseye"></i> Department Goals <i class="fa fa-chevron-down float-right"></i>
+                                <i class="fa fa-users"></i> Department Goals <i class="fa fa-chevron-down float-right"></i>
                             </a>
                             <ul id="departmentGoals" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
-                                <li><a href="{{ route('hod.goals.assigned') }}" class="nav-link"><i class="fa fa-tasks"></i> Assigned Tasks</a></li>
-                                <li><a href="{{ route('hod.goals.assignMebers') }}" class="nav-link"><i class="fa fa-users"></i> Assign to Members</a></li>
-                                <li><a href="{{ route('hod.goals.progress') }}" class="nav-link"><i class="fa fa-line-chart"></i> Department Progress</a></li>
-                                <li><a href="{{ route('hod.goals.review') }}" class="nav-link"><i class="fa fa-upload"></i> Submit for Review</a></li>
+                                <li><a href="{{ route('hod.goals.assigned') }}" class="nav-link"><i class="fa fa-tasks"></i> Team Assignments</a></li>
                             </ul>
                         </li>
                         @endif
 
-                        <!-- My Assigned Tasks -->
-                        <li>
-                            <a href="{{ route('member.goals.myTasks') }}" class="nav-link">
-                                <i class="fa fa-thumb-tack"></i> My Assigned Tasks
+                        <!-- Member Goals Section -->
+                        <li class="dropdown-nav-item">
+                            <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#memberGoals" aria-expanded="false">
+                                <i class="fa fa-thumb-tack"></i> Member Portal <i class="fa fa-chevron-down float-right"></i>
                             </a>
+                            <ul id="memberGoals" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
+                                <li><a href="{{ route('member.goals.myTasks', ['type' => 'direct']) }}" class="nav-link"><i class="fa fa-star"></i> Direct Goals/Tasks</a></li>
+                                <li><a href="{{ route('member.goals.myTasks') }}" class="nav-link"><i class="fa fa-list-ul"></i> All Assigned Tasks</a></li>
+                            </ul>
                         </li>
 
                         <!-- My Performance Tasks (For both HOD and normal Teachers) -->
