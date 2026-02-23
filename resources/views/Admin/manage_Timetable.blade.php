@@ -6,6 +6,7 @@
 @include('includes.teacher_nav')
 @endif
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
 <style>
@@ -906,6 +907,7 @@
 </div>
 
 <script>
+(function($) {
 // Store subclasses with timetables globally
 let subclassesWithTimetables = [];
 
@@ -949,7 +951,7 @@ function disableSubclassesWithTimetables() {
     });
 }
 
-$(document).ready(function() {
+$(function() {
     // Utility for Select2 Initialization to prevent errors
     function initSelect2(selector, options) {
         if (typeof $.fn.select2 === 'function') {
@@ -7715,7 +7717,8 @@ $(document).ready(function() {
             });
         }
     });
-});
+    });
+})(window.jQuery);
 </script>
 
 @include('includes.footer')

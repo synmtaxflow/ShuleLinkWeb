@@ -1000,7 +1000,7 @@
 
 <script>
 // Ensure $ inside this block refers to jQuery (pass window.jQuery into IIFE)
-(function(){
+(function($){
 // Function to initialize menu and dropdowns
 function initializeMenuDropdowns() {
     // Wait for jQuery to be available and for Bootstrap collapse plugin

@@ -6312,6 +6312,18 @@ class ManageExaminationController extends Controller
             ->selectRaw('(select count(*) from student_exam_halls seh where seh.exam_hallID = eh.exam_hallID) as students_count')
             ->get();
 
+        // Add is_active and is_past flags to standard assignments
+        foreach ($standardAssignments as $assignment) {
+            $examDate = $assignment->exam_date ? \Carbon\Carbon::parse($assignment->exam_date) : null;
+            if ($examDate) {
+                $assignment->is_active = $examDate->isSameDay($today) ? 1 : 0;
+                $assignment->is_past = $examDate->lt($today) && !$examDate->isToday() ? 1 : 0;
+            } else {
+                $assignment->is_active = 0;
+                $assignment->is_past = 0;
+            }
+        }
+
         // 2. Weekly Test Assignments
         $testSchedulesQuery = \App\Models\WeeklyTestSchedule::with(['examination', 'subject'])
             ->where('schoolID', $schoolID)
