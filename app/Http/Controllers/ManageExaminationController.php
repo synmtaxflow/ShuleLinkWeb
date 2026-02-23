@@ -4273,10 +4273,9 @@ class ManageExaminationController extends Controller
                 }
 
                 $sameSubject = $reuseClassSubject->subjectID == $classSubject->subjectID;
-                $sameClass = $reuseClassSubject->classID == $classSubject->classID;
-                if (! $sameSubject || ! $sameClass) {
+                if (! $sameSubject) {
                     DB::rollBack();
-                    return response()->json(['error' => 'Existing upload must be from the same subject and class.'], 422);
+                    return response()->json(['error' => 'Existing upload must be from the same subject.'], 422);
                 }
             }
 
@@ -4912,6 +4911,8 @@ class ManageExaminationController extends Controller
                     'subclassID' => $paper->classSubject->subclass->subclassID ?? null,
                     'class_display' => $classDisplay ?: ($className ?: 'N/A'),
                     'status' => $paper->status,
+                    'test_week' => $paper->test_week,
+                    'test_date' => $paper->test_date ? \Carbon\Carbon::parse($paper->test_date)->format('d M Y') : null,
                 ];
             })->values();
 
@@ -6535,7 +6536,8 @@ class ManageExaminationController extends Controller
             'hall' => $hall,
             'timetable_id' => request()->input('timetable_id'),
             'classID' => request()->input('classID'),
-            'scope' => request()->input('scope')
+            'scope' => request()->input('scope'),
+            'date' => request()->input('date')
         ]);
     }
 

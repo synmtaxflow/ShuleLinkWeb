@@ -123,19 +123,34 @@ $(document).ready(function() {
 
     $('#subtaskForm').submit(function(e) {
         e.preventDefault();
+        const $btn = $(this).find('button[type="submit"]');
+        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Saving...');
+        
         $.post('{{ url("goals/member/subtask-store") }}', $(this).serialize(), function(response) {
             if (response.success) {
                 location.reload();
             } else {
+                $btn.prop('disabled', false).text('Save Subtask');
                 Swal.fire('Error', response.message, 'error');
             }
+        }).fail(function(xhr) {
+            $btn.prop('disabled', false).text('Save Subtask');
+            let msg = 'Something went wrong on the server.';
+            if(xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+            Swal.fire('Error', msg, 'error');
         });
     });
 
     $('.mark-done').click(function() {
         const id = $(this).data('id');
+        const $btn = $(this);
+        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+        
         $.post('{{ url("goals/member/subtask-done") }}/' + id, { _token: '{{ csrf_token() }}' }, function(response) {
             location.reload();
+        }).fail(function(xhr) {
+            $btn.prop('disabled', false).text('Mark Done');
+            Swal.fire('Error', 'Failed to mark as done.', 'error');
         });
     });
 });

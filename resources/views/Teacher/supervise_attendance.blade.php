@@ -74,9 +74,9 @@
             <div>
                 <h4 class="mb-0"><i class="bi bi-clipboard-check"></i> Take Exam Attendance</h4>
                 <p class="mb-0">
-                    <strong>Exam:</strong> {{ $exam->exam_name }} | 
-                    <strong>Subject:</strong> {{ $subject->subject_name }} | 
-                    <strong>Date:</strong> {{ date('D, M d, Y', strtotime($date)) }}
+                    <strong>Exam:</strong> {{ $exam->exam_name ?? 'N/A' }} | 
+                    <strong>Subject:</strong> {{ $subject->subject_name ?? 'N/A' }} | 
+                    <strong>Date:</strong> {{ isset($date) ? date('D, M d, Y', strtotime($date)) : 'N/A' }}
                 </p>
             </div>
             <a href="{{ route('supervise_exams') }}" class="btn btn-custom">

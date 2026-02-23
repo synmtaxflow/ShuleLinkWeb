@@ -1368,13 +1368,17 @@ $(document).ready(function() {
 
         const matches = existingExamPapers.filter(paper => {
             return String(paper.subjectID) === String(subjectID)
-                && String(paper.classID) === String(classID)
                 && String(paper.class_subjectID) !== String(classSubjectID)
                 && paper.status !== 'rejected';
         });
 
         matches.forEach(paper => {
-            const label = `${paper.class_display} (${paper.status})`;
+            let weekInfo = '';
+            if (paper.test_week) {
+                weekInfo = ` - ${paper.test_week}`;
+                if (paper.test_date) weekInfo += ` (${paper.test_date})`;
+            }
+            const label = `${paper.class_display}${weekInfo} (${paper.status})`;
             $reuseSelect.append(`<option value="${paper.exam_paperID}">${label}</option>`);
         });
 

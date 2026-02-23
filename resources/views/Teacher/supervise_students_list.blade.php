@@ -58,8 +58,8 @@
             <div>
                 <h4 class="mb-0"><i class="bi bi-people"></i> Students List</h4>
                 <p class="mb-0">
-                    <strong>Exam:</strong> {{ $exam->exam_name }} | 
-                    <strong>Subject:</strong> {{ $subject->subject_name }} | 
+                    <strong>Exam:</strong> {{ $exam->exam_name ?? 'N/A' }} | 
+                    <strong>Subject:</strong> {{ $subject->subject_name ?? 'N/A' }} | 
                     <strong>Hall:</strong> {{ $hall->hall_name ?? 'Class Assignment' }}
                 </p>
             </div>
@@ -68,6 +68,38 @@
             </a>
         </div>
     </div>
+
+    @if(isset($date) && $date)
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card border-0 shadow-sm text-white" style="background-color: #940000;">
+                <div class="card-body d-flex justify-content-between align-items-center p-3">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-white text-primary-custom d-flex align-items-center justify-content-center mr-3" style="width: 45px; height: 45px;">
+                            <i class="bi bi-clipboard-check" style="font-size: 1.5rem; color: #940000;"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0 fw-bold">Collect Attendance</h5>
+                            <p class="mb-0 small opacity-75">Record students presence for {{ date('D, M d, Y', strtotime($date)) }}</p>
+                        </div>
+                    </div>
+                    <a href="{{ route('supervise_exam.take_attendance', [
+                        'hall_id' => $hallID,
+                        'subject_id' => $subjectID,
+                        'timetable_id' => $timetable_id,
+                        'examID' => $examID,
+                        'date' => $date,
+                        'exam_category' => $exam_category,
+                        'classID' => $classID,
+                        'scope' => $scope
+                    ]) }}" class="btn btn-light btn-sm px-4 fw-bold shadow-sm" style="border-radius: 8px !important; color: #940000;">
+                        <i class="bi bi-pencil-square"></i> Record Now
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
 
     <div class="card border-0 shadow-sm">
         <div class="card-body">

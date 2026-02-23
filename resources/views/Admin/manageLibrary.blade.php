@@ -40,8 +40,8 @@
     .stat-card {
         background: white;
         border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
+        padding: 12px 15px;
+        margin-bottom: 15px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
         transition: all 0.2s ease;
         border-top: 3px solid #e9ecef;
@@ -54,16 +54,16 @@
     }
 
     .stat-icon {
-        width: 50px;
-        height: 50px;
-        border-radius: 8px;
+        width: 35px;
+        height: 35px;
+        border-radius: 6px;
         display: flex;
         align-items: center;
         justify-content: center;
         background: #f8f9fa;
         color: #495057;
-        font-size: 24px;
-        margin-bottom: 12px;
+        font-size: 18px;
+        margin-bottom: 8px;
     }
 
     .stat-card:hover .stat-icon {
@@ -72,14 +72,14 @@
     }
 
     .stat-number {
-        font-size: 2rem;
+        font-size: 1.4rem;
         font-weight: 700;
         color: #212529;
-        margin: 8px 0;
+        margin: 4px 0;
     }
 
     .stat-label {
-        font-size: 0.9rem;
+        font-size: 0.8rem;
         color: #6c757d;
         font-weight: 500;
         margin: 0;
@@ -405,7 +405,7 @@
     }
 
     .student-widget {
-        width: 320px;
+        width: 260px;
         background: #ffffff;
         border-radius: 12px;
         overflow: hidden;
@@ -421,12 +421,12 @@
     }
 
     #studentsWidgetContainer .student-widget-col {
-        flex: 0 0 320px;
+        flex: 0 0 260px;
     }
 
     .student-header {
         background: #940000;
-        padding: 20px;
+        padding: 12px;
         text-align: center;
     }
 
@@ -463,15 +463,15 @@
     }
 
     .student-header img {
-        width: 110px;
-        height: 110px;
+        width: 80px;
+        height: 80px;
         border-radius: 50%;
-        border: 4px solid #fff;
+        border: 3px solid #fff;
         object-fit: cover;
     }
 
     .student-body {
-        padding: 15px;
+        padding: 10px;
         text-align: center;
     }
 
@@ -510,49 +510,85 @@
 </div>
 
 <div class="content mt-3">
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="stat-card border-primary-custom">
-                <div class="stat-icon"><i class="fa fa-book"></i></div>
-                <div class="stat-number" id="totalBooks">{{ $totalBooks ?? 0 }}</div>
-                <p class="stat-label">Total Books</p>
+    <div class="row mb-3">
+        <div class="col-sm-6 col-lg-3">
+            <div class="card text-white bg-flat-color-1">
+                <div class="card-body">
+                    <div class="float-right mt-1">
+                        <i class="fa fa-book fa-2x"></i>
+                    </div>
+                    <h4 class="mb-0">
+                        <span class="count" id="totalBooks">{{ $totalBooks ?? 0 }}</span>
+                    </h4>
+                    <p class="text-light">Total Books</p>
+                </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="stat-card" style="border-top-color:#28a745;">
-                <div class="stat-icon" style="color:#28a745;"><i class="fa fa-check"></i></div>
-                <div class="stat-number" id="availableBooks">{{ $availableBooks ?? 0 }}</div>
-                <p class="stat-label">Available Books</p>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <div class="float-right mt-1">
+                        <i class="fa fa-check fa-2x"></i>
+                    </div>
+                    <h4 class="mb-0 text-white">
+                        <span class="count" id="availableBooks">{{ $availableBooks ?? 0 }}</span>
+                    </h4>
+                    <p class="text-white opacity-8">Available Books</p>
+                </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="stat-card" style="border-top-color:#ffc107;">
-                <div class="stat-icon" style="color:#ffc107;"><i class="fa fa-hand-paper-o"></i></div>
-                <div class="stat-number" id="issuedBooks">{{ $issuedBooks ?? 0 }}</div>
-                <p class="stat-label">Borrowed Books</p>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card text-white bg-flat-color-2">
+                <div class="card-body">
+                    <div class="float-right mt-1">
+                        <i class="fa fa-hand-paper-o fa-2x"></i>
+                    </div>
+                    <h4 class="mb-0">
+                        <span class="count" id="issuedBooks">{{ $issuedBooks ?? 0 }}</span>
+                    </h4>
+                    <p class="text-light">Borrowed Books</p>
+                </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="stat-card" style="border-top-color:#dc3545;">
-                <div class="stat-icon" style="color:#dc3545;"><i class="fa fa-exclamation-triangle"></i></div>
-                <div class="stat-number" id="overdueBooks">{{ $overdueBooks ?? 0 }}</div>
-                <p class="stat-label">Overdue Books</p>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card text-white bg-danger">
+                <div class="card-body">
+                    <div class="float-right mt-1">
+                        <i class="fa fa-exclamation-triangle fa-2x text-white"></i>
+                    </div>
+                    <h4 class="mb-0 text-white">
+                        <span class="count" id="overdueBooks">{{ $overdueBooks ?? 0 }}</span>
+                    </h4>
+                    <p class="text-white opacity-8">Overdue Books</p>
+                </div>
             </div>
         </div>
     </div>
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="stat-card" style="border-top-color:#6f42c1;">
-                <div class="stat-icon" style="color:#6f42c1;"><i class="fa fa-ban"></i></div>
-                <div class="stat-number" id="lostBooks">{{ $lostBooks ?? 0 }}</div>
-                <p class="stat-label">Lost Books</p>
+    <div class="row mb-3">
+        <div class="col-sm-6 col-lg-3">
+            <div class="card text-white bg-flat-color-5">
+                <div class="card-body">
+                    <div class="float-right mt-1">
+                        <i class="fa fa-ban fa-2x text-white"></i>
+                    </div>
+                    <h4 class="mb-0 text-white">
+                        <span class="count" id="lostBooks">{{ $lostBooks ?? 0 }}</span>
+                    </h4>
+                    <p class="text-white opacity-8">Lost Books</p>
+                </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="stat-card" style="border-top-color:#fd7e14;">
-                <div class="stat-icon" style="color:#fd7e14;"><i class="fa fa-wrench"></i></div>
-                <div class="stat-number" id="damagedBooks">{{ $damagedBooks ?? 0 }}</div>
-                <p class="stat-label">Damaged Books</p>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <div class="float-right mt-1">
+                        <i class="fa fa-wrench fa-2x text-white"></i>
+                    </div>
+                    <h4 class="mb-0 text-white">
+                        <span class="count" id="damagedBooks">{{ $damagedBooks ?? 0 }}</span>
+                    </h4>
+                    <p class="text-white opacity-8">Damaged Books</p>
+                </div>
             </div>
         </div>
     </div>
@@ -1992,9 +2028,9 @@
                     }
                     $('#borrowsTableBody').html(html);
                     
-                    // Initialize or reinitialize DataTable
-                    if (borrowsDataTable) {
-                        borrowsDataTable.destroy();
+                    // New approach to fix the DataTables re-initialization warning
+                    if ($.fn.DataTable.isDataTable('#borrowsTable')) {
+                        $('#borrowsTable').DataTable().destroy();
                     }
                     
                     borrowsDataTable = $('#borrowsTable').DataTable({

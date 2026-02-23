@@ -13,16 +13,17 @@ class BudgetController extends Controller
 {
     public function index()
     {
-        $budgets = Budget::orderBy('fiscal_year', 'desc')->get();
+        $schoolID = Session::get('schoolID');
+        $budgets = Budget::where('schoolID', $schoolID)->orderBy('fiscal_year', 'desc')->get();
 
         // Calculate summary statistics
         $currentYear = date('Y');
-        $totalAllocated = Budget::where('fiscal_year', $currentYear)->sum('allocated_amount');
-        $totalSpent = Budget::where('fiscal_year', $currentYear)->sum('spent_amount');
-        $totalRemaining = Budget::where('fiscal_year', $currentYear)->sum('remaining_amount');
+        $totalAllocated = Budget::where('schoolID', $schoolID)->where('fiscal_year', $currentYear)->sum('allocated_amount');
+        $totalSpent = Budget::where('schoolID', $schoolID)->where('fiscal_year', $currentYear)->sum('spent_amount');
+        $totalRemaining = Budget::where('schoolID', $schoolID)->where('fiscal_year', $currentYear)->sum('remaining_amount');
 
         // Get active budgets
-        $activeBudgets = Budget::where('status', 'Active')->count();
+        $activeBudgets = Budget::where('schoolID', $schoolID)->where('status', 'Active')->count();
 
         return view('accountant.budget.index', compact('budgets', 'totalAllocated', 'totalSpent', 'totalRemaining', 'activeBudgets'));
     }
@@ -87,9 +88,11 @@ class BudgetController extends Controller
 
     public function show($id)
     {
-        $budget = Budget::with('createdBy')->findOrFail($id);
+        $schoolID = Session::get('schoolID');
+        $budget = Budget::where('schoolID', $schoolID)->with('createdBy')->findOrFail($id);
         // Get expenses related to this budget category and fiscal year
-        $expenses = Expense::where('expense_category', $budget->budget_category)
+        $expenses = Expense::where('schoolID', $schoolID)
+            ->where('expense_category', $budget->budget_category)
             ->whereYear('date', $budget->fiscal_year)
             ->where('status', 'Approved')
             ->orderBy('date', 'desc')
@@ -100,7 +103,8 @@ class BudgetController extends Controller
 
     public function edit($id)
     {
-        $budget = Budget::findOrFail($id);
+        $schoolID = Session::get('schoolID');
+        $budget = Budget::where('schoolID', $schoolID)->findOrFail($id);
 
         // Load dynamic categories from expense_categories table for this school
         $schoolID = Session::get('schoolID');
@@ -135,7 +139,8 @@ class BudgetController extends Controller
 
     public function update(Request $request, $id)
     {
-        $budget = Budget::findOrFail($id);
+        $schoolID = Session::get('schoolID');
+        $budget = Budget::where('schoolID', $schoolID)->findOrFail($id);
 
         $request->validate([
             'budget_category' => 'required',
@@ -158,7 +163,8 @@ class BudgetController extends Controller
 
     public function destroy($id)
     {
-        $budget = Budget::findOrFail($id);
+        $schoolID = Session::get('schoolID');
+        $budget = Budget::where('schoolID', $schoolID)->findOrFail($id);
         $budget->delete();
 
         return redirect()->route('accountant.budget.index')->with('success', 'Budget deleted successfully.');

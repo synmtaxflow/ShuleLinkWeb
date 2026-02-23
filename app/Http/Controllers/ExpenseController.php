@@ -12,13 +12,15 @@ class ExpenseController extends Controller
 {
     public function index()
     {
-        $expenses = Expense::orderBy('date', 'desc')->get();
+        $schoolID = Session::get('schoolID');
+        $expenses = Expense::where('schoolID', $schoolID)->orderBy('date', 'desc')->get();
+        
         // Calculate totals for dashboard cards
         $today = date('Y-m-d');
-        $totalToday = Expense::whereDate('date', $today)->sum('amount');
-        $totalWeek = Expense::whereBetween('date', [now()->startOfWeek(), now()->endOfWeek()])->sum('amount');
-        $totalMonth = Expense::whereMonth('date', now()->month)->whereYear('date', now()->year)->sum('amount');
-        $totalYear = Expense::whereYear('date', now()->year)->sum('amount');
+        $totalToday = Expense::where('schoolID', $schoolID)->whereDate('date', $today)->sum('amount');
+        $totalWeek = Expense::where('schoolID', $schoolID)->whereBetween('date', [now()->startOfWeek(), now()->endOfWeek()])->sum('amount');
+        $totalMonth = Expense::where('schoolID', $schoolID)->whereMonth('date', now()->month)->whereYear('date', now()->year)->sum('amount');
+        $totalYear = Expense::where('schoolID', $schoolID)->whereYear('date', now()->year)->sum('amount');
 
         return view('accountant.expenses.index', compact('expenses', 'totalToday', 'totalWeek', 'totalMonth', 'totalYear'));
     }
@@ -72,7 +74,7 @@ class ExpenseController extends Controller
             ];
         }
 
-        $lastExpense = Expense::latest()->first();
+        $lastExpense = Expense::where('schoolID', $schoolID)->latest()->first();
         $sequence = $lastExpense ? ($lastExpense->id + 1) : 1;
         $voucherPreview = "PCV-{$year}-" . str_pad($sequence, 3, '0', STR_PAD_LEFT);
         return view('accountant.expenses.create', compact('categories', 'voucherPreview'));
@@ -136,13 +138,15 @@ class ExpenseController extends Controller
 
     public function show($id)
     {
-        $expense = Expense::with(['enteredBy', 'approvedBy'])->findOrFail($id);
+        $schoolID = Session::get('schoolID');
+        $expense = Expense::where('schoolID', $schoolID)->with(['enteredBy', 'approvedBy'])->findOrFail($id);
         return view('accountant.expenses.show', compact('expense'));
     }
 
     public function edit($id)
     {
-        $expense = Expense::findOrFail($id);
+        $schoolID = Session::get('schoolID');
+        $expense = Expense::where('schoolID', $schoolID)->findOrFail($id);
         $schoolID = Session::get('schoolID');
         $categories = [];
         try {
@@ -178,7 +182,8 @@ class ExpenseController extends Controller
 
     public function update(Request $request, $id)
     {
-        $expense = Expense::findOrFail($id);
+        $schoolID = Session::get('schoolID');
+        $expense = Expense::where('schoolID', $schoolID)->findOrFail($id);
 
         $request->validate([
             'date' => 'required|date',
@@ -207,7 +212,8 @@ class ExpenseController extends Controller
 
     public function destroy($id)
     {
-        $expense = Expense::findOrFail($id);
+        $schoolID = Session::get('schoolID');
+        $expense = Expense::where('schoolID', $schoolID)->findOrFail($id);
         $expense->delete();
 
         return redirect()->route('accountant.expenses.index')->with('success', 'Expense deleted successfully.');
@@ -215,7 +221,8 @@ class ExpenseController extends Controller
 
     public function approve($id)
     {
-        $expense = Expense::findOrFail($id);
+        $schoolID = Session::get('schoolID');
+        $expense = Expense::where('schoolID', $schoolID)->findOrFail($id);
 
         if ($expense->status !== 'Pending') {
             return redirect()->back()->with('error', 'This expense is already ' . $expense->status);
@@ -250,7 +257,8 @@ class ExpenseController extends Controller
 
     public function reject($id)
     {
-        $expense = Expense::findOrFail($id);
+        $schoolID = Session::get('schoolID');
+        $expense = Expense::where('schoolID', $schoolID)->findOrFail($id);
 
         if ($expense->status !== 'Pending') {
             return redirect()->back()->with('error', 'This expense is already ' . $expense->status);

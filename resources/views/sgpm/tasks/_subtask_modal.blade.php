@@ -9,18 +9,38 @@
             <div class="modal-body">
                 <!-- Progress Summary -->
                 <div class="alert alert-info">
-                    <strong>Task Weight:</strong> {{ $task->weight }}% | 
-                    <strong>Allocated:</strong> {{ $task->subtasks->sum('weight_percentage') }}% | 
+                    <strong>Task Weight:</strong> {{ $task->weight }}% |
+                    <strong>Allocated:</strong> {{ $task->subtasks->sum('weight_percentage') }}% |
                     <strong>Remaining:</strong> {{ $task->weight - $task->subtasks->sum('weight_percentage') }}%
                 </div>
 
-                <!-- Add Subtask Form -->
+                <!-- Sending Progress Bar (hidden by default) -->
+                <div id="sendingProgress{{ $task->taskID }}" style="display:none;" class="mb-3">
+                    <div class="card border-0" style="background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 100%); border-left: 4px solid #940000 !important; border-left: solid;">
+                        <div class="card-body py-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fa fa-paper-plane fa-spin text-danger mr-2"></i>
+                                <strong style="color: #940000;" id="sendingLabel{{ $task->taskID }}">Sending sub-task to HOD...</strong>
+                            </div>
+                            <div class="progress" style="height: 10px; border-radius: 5px; background: #f0e0e0;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated"
+                                     role="progressbar"
+                                     style="width: 100%; background-color: #940000 !important;"
+                                     id="sendingProgressBar{{ $task->taskID }}">
+                                </div>
+                            </div>
+                            <small class="text-muted mt-1 d-block">Please wait, do not close this window...</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Subtask Form (using specific class, NOT ajax-form to avoid footer global handler) -->
                 <div class="card mb-3">
                     <div class="card-header" style="background-color: #f8f9fa; color: #940000; font-weight: 600;">
                         <strong>Create New Sub-task</strong>
                     </div>
                     <div class="card-body">
-                        <form class="ajax-form" action="{{ route('sgpm.subtasks.store') }}" method="POST">
+                        <form class="subtask-create-form" data-task="{{ $task->taskID }}" action="{{ route('sgpm.subtasks.store') }}" method="POST">
                             @csrf
                             <input type="hidden" name="taskID" value="{{ $task->taskID }}">
                             <div class="row">
@@ -41,7 +61,7 @@
                                 <label class="form-label">Description (Optional)</label>
                                 <textarea name="description" class="form-control" rows="2" placeholder="Details about this sub-task"></textarea>
                             </div>
-                            <button type="submit" class="btn btn-sm text-white" style="background-color: #940000;">
+                            <button type="submit" class="btn btn-sm text-white subtask-save-btn" style="background-color: #940000;">
                                 <i class="fa fa-plus"></i> Add Sub-task
                             </button>
                         </form>
@@ -76,19 +96,47 @@
                                         <td>{{ $subtask->weight_percentage }}%</td>
                                         <td>{{ $subtask->due_date }}</td>
                                         <td>
-                                            <span class="badge {{ $subtask->status == 'Draft' ? 'bg-secondary' : ($subtask->status == 'Submitted' ? 'bg-info' : ($subtask->status == 'Approved' ? 'bg-success' : 'bg-danger')) }}">
-                                                {{ $subtask->status }}
-                                            </span>
+                                            @php
+                                                $statusColor = match($subtask->status) {
+                                                    'Draft'     => 'bg-secondary',
+                                                    'Submitted' => 'bg-info',
+                                                    'Approved'  => 'bg-success',
+                                                    'Rejected'  => 'bg-danger',
+                                                    default     => 'bg-secondary',
+                                                };
+                                                $statusLabel = match($subtask->status) {
+                                                    'Submitted' => '⏳ Awaiting Review',
+                                                    'Approved'  => '✓ Approved',
+                                                    'Rejected'  => '✗ Returned',
+                                                    default     => 'Draft',
+                                                };
+                                            @endphp
+                                            <span class="badge {{ $statusColor }}">{{ $statusLabel }}</span>
+                                            @if($subtask->status == 'Approved')
+                                                <br><small class="text-success"><strong>Score: {{ $subtask->achieved_score }}/{{ $subtask->weight_percentage }}%</strong></small>
+                                            @elseif($subtask->status == 'Rejected' && $subtask->hod_comments)
+                                                <br><small class="text-danger"><i class="fa fa-comment"></i> {{ $subtask->hod_comments }}</small>
+                                            @endif
                                         </td>
                                         <td>
                                             @if($subtask->status == 'Draft')
-                                                <button class="btn btn-xs btn-success send-subtask" data-id="{{ $subtask->subtaskID }}">
+                                                <button class="btn btn-xs btn-success send-subtask-btn"
+                                                        data-id="{{ $subtask->subtaskID }}"
+                                                        data-task="{{ $task->taskID }}"
+                                                        data-label="Sending to HOD...">
                                                     <i class="fa fa-paper-plane"></i> Send to HOD
                                                 </button>
                                             @elseif($subtask->status == 'Rejected')
-                                                <button class="btn btn-xs btn-warning send-subtask" data-id="{{ $subtask->subtaskID }}">
+                                                <button class="btn btn-xs btn-warning send-subtask-btn"
+                                                        data-id="{{ $subtask->subtaskID }}"
+                                                        data-task="{{ $task->taskID }}"
+                                                        data-label="Resubmitting to HOD...">
                                                     <i class="fa fa-refresh"></i> Resubmit
                                                 </button>
+                                            @elseif($subtask->status == 'Submitted')
+                                                <small class="text-info"><i class="fa fa-clock-o"></i> Awaiting HOD Review</small>
+                                            @elseif($subtask->status == 'Approved')
+                                                <small class="text-success"><i class="fa fa-check-circle"></i> Done</small>
                                             @endif
                                         </td>
                                     </tr>

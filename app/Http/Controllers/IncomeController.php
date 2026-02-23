@@ -12,13 +12,15 @@ class IncomeController extends Controller
 {
     public function index()
     {
-        $incomes = Income::orderBy('date', 'desc')->get();
+        $schoolID = Session::get('schoolID');
+        $incomes = Income::where('schoolID', $schoolID)->orderBy('date', 'desc')->get();
+        
         // Calculate totals for dashboard cards
         $today = date('Y-m-d');
-        $totalToday = Income::whereDate('date', $today)->sum('amount');
-        $totalWeek = Income::whereBetween('date', [now()->startOfWeek(), now()->endOfWeek()])->sum('amount');
-        $totalMonth = Income::whereMonth('date', now()->month)->whereYear('date', now()->year)->sum('amount');
-        $totalYear = Income::whereYear('date', now()->year)->sum('amount');
+        $totalToday = Income::where('schoolID', $schoolID)->whereDate('date', $today)->sum('amount');
+        $totalWeek = Income::where('schoolID', $schoolID)->whereBetween('date', [now()->startOfWeek(), now()->endOfWeek()])->sum('amount');
+        $totalMonth = Income::where('schoolID', $schoolID)->whereMonth('date', now()->month)->whereYear('date', now()->year)->sum('amount');
+        $totalYear = Income::where('schoolID', $schoolID)->whereYear('date', now()->year)->sum('amount');
 
         return view('accountant.income.index', compact('incomes', 'totalToday', 'totalWeek', 'totalMonth', 'totalYear'));
     }
@@ -53,7 +55,7 @@ class IncomeController extends Controller
         }
         
         $year = date('Y');
-        $lastIncome = Income::latest()->first();
+        $lastIncome = Income::where('schoolID', $schoolID)->latest()->first();
         $sequence = $lastIncome ? ($lastIncome->id + 1) : 1;
         $receiptPreview = "REC-{$year}-" . str_pad($sequence, 3, '0', STR_PAD_LEFT);
 
@@ -70,7 +72,8 @@ class IncomeController extends Controller
         ]);
 
         $year = date('Y');
-        $count = Income::whereYear('date', $year)->count() + 1;
+        $schoolID = Session::get('schoolID');
+        $count = Income::where('schoolID', $schoolID)->whereYear('date', $year)->count() + 1;
         $receiptNumber = "REC-{$year}-" . str_pad($count, 3, '0', STR_PAD_LEFT);
 
         $income = new Income();
@@ -97,14 +100,15 @@ class IncomeController extends Controller
 
     public function show($id)
     {
-        $income = Income::with('enteredBy')->findOrFail($id);
+        $schoolID = Session::get('schoolID');
+        $income = Income::where('schoolID', $schoolID)->with('enteredBy')->findOrFail($id);
         return view('accountant.income.show', compact('income'));
     }
 
     public function edit($id)
     {
         $schoolID = Session::get('schoolID');
-        $income = Income::findOrFail($id);
+        $income = Income::where('schoolID', $schoolID)->findOrFail($id);
         
         $categories = \App\Models\IncomeCategory::where('schoolID', $schoolID)
             ->where('status', 'Active')
@@ -137,7 +141,8 @@ class IncomeController extends Controller
 
     public function update(Request $request, $id)
     {
-        $income = Income::findOrFail($id);
+        $schoolID = Session::get('schoolID');
+        $income = Income::where('schoolID', $schoolID)->findOrFail($id);
 
         $request->validate([
             'date' => 'required|date',
@@ -166,7 +171,8 @@ class IncomeController extends Controller
 
     public function destroy($id)
     {
-        $income = Income::findOrFail($id);
+        $schoolID = Session::get('schoolID');
+        $income = Income::where('schoolID', $schoolID)->findOrFail($id);
         $income->delete();
 
         return redirect()->route('accountant.income.index')->with('success', 'Income deleted successfully.');

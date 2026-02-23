@@ -720,14 +720,27 @@
                         </li>
 
                         <!-- Accountant Module -->
+                        @php
+                            $navSchoolID = Session::get('schoolID');
+                            $navPendingExpenses = $navSchoolID ? \App\Models\Expense::where('schoolID', $navSchoolID)->where('status', 'Pending')->count() : 0;
+                        @endphp
                         <li class="dropdown-nav-item">
                             <a href="#" class="nav-link dropdown-toggle" data-toggle="collapse" data-target="#accountantModule" aria-expanded="false">
                                 <i class="fa fa-calculator"></i> Accountant Module <i class="fa fa-chevron-down float-right"></i>
                             </a>
                             <ul id="accountantModule" class="collapse submenu" style="list-style: none; padding-left: 20px; margin: 0;">
-                                <li><a href="{{ route('accountant.expenses.index') }}" class="nav-link"><i class="fa fa-money"></i> School Expenses</a></li>
+                                <li>
+                                    <a href="{{ route('accountant.expenses.index') }}" class="nav-link">
+                                        <i class="fa fa-money"></i> School Expenses
+                                        @if($navPendingExpenses > 0)
+                                            <span class="badge badge-warning ml-1" style="font-size: 10px; border-radius: 50%;">{{ $navPendingExpenses }}</span>
+                                        @endif
+                                    </a>
+                                </li>
                                 <li><a href="{{ route('accountant.income.index') }}" class="nav-link"><i class="fa fa-usd"></i> School Income</a></li>
                                 <li><a href="{{ route('accountant.budget.index') }}" class="nav-link"><i class="fa fa-pie-chart"></i> School Budget</a></li>
+                                <li><a href="{{ route('accountant.expense_categories.index') }}" class="nav-link"><i class="fa fa-tags"></i> Expense Categories</a></li>
+                                <li><a href="{{ route('accountant.income_categories.index') }}" class="nav-link"><i class="fa fa-list-alt"></i> Income Categories</a></li>
                                 <li><a href="{{ route('accountant.reports.index') }}" class="nav-link"><i class="fa fa-line-chart"></i> Financial Reports</a></li>
                             </ul>
                         </li>

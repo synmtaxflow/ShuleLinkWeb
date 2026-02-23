@@ -68,7 +68,8 @@
                     'exam_category' => $assignment->exam_category,
                     'examID' => $assignment->examID,
                     'classID' => $assignment->classID,
-                    'scope' => $assignment->scope ?? null
+                    'scope' => $assignment->scope ?? null,
+                    'date' => $assignment->exam_date
                 ]);
 
                 $takeAttendanceUrl = route('supervise_exam.take_attendance', [

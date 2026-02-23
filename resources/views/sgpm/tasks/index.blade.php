@@ -95,13 +95,28 @@
                                         <div class="modal fade" id="submitProgressModal{{ $task->taskID }}" tabindex="-1">
                                             <div class="modal-dialog">
                                                 <div class="modal-content">
-                                                    <form action="{{ route('sgpm.tasks.submit', $task->taskID) }}" method="POST" enctype="multipart/form-data" class="ajax-form">
+                                                    <form action="{{ route('sgpm.tasks.submit', $task->taskID) }}" method="POST" enctype="multipart/form-data" class="submit-progress-form">
                                                         @csrf
-                                                        <div class="modal-header">
-                                                            <h5 class="modal-title">Submit Evidence for Task</h5>
-                                                            <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                                                        <div class="modal-header text-white" style="background-color: #940000;">
+                                                            <h5 class="modal-title">Submit Evidence for Review</h5>
+                                                            <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
                                                         </div>
                                                         <div class="modal-body">
+                                                            <!-- Sending Progress Bar -->
+                                                            <div class="sending-overlay" style="display:none; margin-bottom:12px;">
+                                                                <div class="card border-0" style="background: linear-gradient(135deg,#fff5f5,#ffe8e8); border-left: 4px solid #940000 !important; border-left: solid;">
+                                                                    <div class="card-body py-2">
+                                                                        <div class="d-flex align-items-center mb-1">
+                                                                            <i class="fa fa-cloud-upload fa-spin text-danger mr-2"></i>
+                                                                            <strong style="color:#940000;">Sending to Admin for Review...</strong>
+                                                                        </div>
+                                                                        <div class="progress" style="height:8px;border-radius:4px;background:#f0e0e0;">
+                                                                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width:100%;background-color:#940000 !important;"></div>
+                                                                        </div>
+                                                                        <small class="text-muted">Please wait...</small>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
                                                             <div class="mb-3">
                                                                 <label class="form-label">Work Remarks</label>
                                                                 <textarea name="remarks" class="form-control" rows="3" required></textarea>
@@ -113,7 +128,9 @@
                                                         </div>
                                                         <div class="modal-footer">
                                                             <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                                                            <button type="submit" class="btn btn-primary">Submit for Review</button>
+                                                            <button type="submit" class="btn text-white" style="background-color:#940000;">
+                                                                <i class="fa fa-send"></i> Submit for Admin Review
+                                                            </button>
                                                         </div>
                                                     </form>
                                                 </div>
@@ -124,7 +141,7 @@
                                         <div class="modal fade" id="evaluateModal{{ $task->taskID }}" tabindex="-1">
                                             <div class="modal-dialog">
                                                 <div class="modal-content">
-                                                    <form action="{{ route('sgpm.tasks.evaluate', $task->taskID) }}" method="POST" class="ajax-form">
+                                                    <form action="{{ route('sgpm.tasks.evaluate', $task->taskID) }}" method="POST" class="evaluate-task-form">
                                                         @csrf
                                                         <div class="modal-header text-white bg-warning">
                                                             <h5 class="modal-title">Task Evaluation & Scoring</h5>
@@ -153,7 +170,7 @@
                                                         </div>
                                                         <div class="modal-footer">
                                                             <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                                                            <button type="submit" class="btn btn-warning">Save Score</button>
+                                                            <button type="submit" class="btn btn-warning eval-submit-btn">Save Score</button>
                                                         </div>
                                                     </form>
                                                 </div>
@@ -244,23 +261,30 @@
 
 <script>
 // Clean up modal backdrops to prevent them from getting stuck
-$('.modal').on('hidden.bs.modal', function () {
+$(document).on('hidden.bs.modal', '.modal', function () {
+    if ($('.modal:visible').length) return; // Don't remove if another modal open
     $('.modal-backdrop').remove();
     $('body').removeClass('modal-open').css('padding-right', '');
 });
 
-// Handle subtask submission to HOD
-$(document).on('click', '.send-subtask', function(e) {
+// ====================================================
+// Handle: Create New Sub-task (form inside modal)
+// ====================================================
+$(document).on('submit', '.subtask-create-form', function(e) {
     e.preventDefault();
-    const $btn = $(this);
-    const subtaskId = $btn.data('id');
+    const $form = $(this);
+    const $btn = $form.find('.subtask-save-btn');
     const originalHtml = $btn.html();
-    
-    $btn.html('<i class="fa fa-spinner fa-spin"></i> Sending...').prop('disabled', true);
-    
+    const taskId = $form.data('task');
+
+    $btn.html('<i class="fa fa-spinner fa-spin"></i> Saving...').prop('disabled', true);
+
     $.ajax({
-        url: `/sgpm/subtasks/${subtaskId}/submit`,
+        url: $form.attr('action'),
         method: 'POST',
+        data: new FormData(this),
+        processData: false,
+        contentType: false,
         headers: {
             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
         },
@@ -268,13 +292,77 @@ $(document).on('click', '.send-subtask', function(e) {
             if (response.success) {
                 Swal.fire({
                     icon: 'success',
-                    title: 'Sent!',
+                    title: 'Added!',
                     text: response.message,
-                    timer: 2000,
+                    timer: 1800,
                     showConfirmButton: false
                 }).then(() => {
                     location.reload();
                 });
+            } else {
+                Swal.fire('Error', response.message || 'Failed to add sub-task', 'error');
+                $btn.html(originalHtml).prop('disabled', false);
+            }
+        },
+        error: function(xhr) {
+            let errMsg = 'Failed to add sub-task';
+            if (xhr.responseJSON) {
+                if (xhr.responseJSON.errors) {
+                    errMsg = Object.values(xhr.responseJSON.errors).flat().join('\n');
+                } else if (xhr.responseJSON.message) {
+                    errMsg = xhr.responseJSON.message;
+                }
+            }
+            Swal.fire('Error', errMsg, 'error');
+            $btn.html(originalHtml).prop('disabled', false);
+        }
+    });
+});
+
+// ====================================================
+// Handle: Send Sub-task to HOD / Resubmit
+// ====================================================
+$(document).on('click', '.send-subtask-btn', function(e) {
+    e.preventDefault();
+    const $btn = $(this);
+    const subtaskId = $btn.data('id');
+    const taskId = $btn.data('task');
+    const label = $btn.data('label') || 'Sending to HOD...';
+    const originalHtml = $btn.html();
+
+    // Show progress bar inside modal
+    const $progressBox = $('#sendingProgress' + taskId);
+    const $progressLabel = $('#sendingLabel' + taskId);
+    $progressLabel.text(label);
+    $progressBox.slideDown(200);
+
+    // Disable the button
+    $btn.html('<i class="fa fa-spinner fa-spin"></i>').prop('disabled', true);
+
+    $.ajax({
+        url: '/sgpm/subtasks/' + subtaskId + '/submit',
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        },
+        success: function(response) {
+            if (response.success) {
+                $progressLabel.text('✓ Sent successfully! Reloading...');
+                setTimeout(function() {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Sent!',
+                        text: response.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        location.reload();
+                    });
+                }, 400);
+            } else {
+                Swal.fire('Error', response.message || 'Failed to send', 'error');
+                $progressBox.slideUp(200);
+                $btn.html(originalHtml).prop('disabled', false);
             }
         },
         error: function(xhr) {
@@ -283,25 +371,31 @@ $(document).on('click', '.send-subtask', function(e) {
                 errorMsg = xhr.responseJSON.message;
             }
             Swal.fire('Error', errorMsg, 'error');
+            $progressBox.slideUp(200);
             $btn.html(originalHtml).prop('disabled', false);
         }
     });
 });
 
-// Handle subtask approval/rejection (for HOD)
+// ====================================================
+// Handle: HOD Reject Sub-task (with reason prompt)
+// ====================================================
 $(document).on('click', '.approve-subtask', function(e) {
     e.preventDefault();
     const $btn = $(this);
     const subtaskId = $btn.data('id');
     const action = $btn.data('action'); // 'reject'
-    
+    const originalHtml = $btn.html();
+
     Swal.fire({
-        title: `Are you sure?`,
-        text: `Do you want to ${action} this sub-task?`,
-        icon: 'question',
+        title: 'Reject Sub-task?',
+        text: 'This will return the sub-task to the staff member for revision.',
+        icon: 'warning',
+        input: 'text',
+        inputPlaceholder: 'Enter reason for rejection (optional)...',
         showCancelButton: true,
         confirmButtonColor: '#dc3545',
-        confirmButtonText: `Yes, ${action} it!`
+        confirmButtonText: 'Yes, Reject it!'
     }).then((result) => {
         if (result.isConfirmed) {
             $btn.html('<i class="fa fa-spinner fa-spin"></i>').prop('disabled', true);
@@ -309,6 +403,7 @@ $(document).on('click', '.approve-subtask', function(e) {
             $.ajax({
                 url: `/sgpm/subtasks/${subtaskId}/${action}`,
                 method: 'POST',
+                data: { hod_comments: result.value || '' },
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 },
@@ -316,7 +411,7 @@ $(document).on('click', '.approve-subtask', function(e) {
                     if (response.success) {
                         Swal.fire({
                             icon: 'success',
-                            title: 'Done!',
+                            title: 'Rejected!',
                             text: response.message,
                             timer: 2000,
                             showConfirmButton: false
@@ -326,15 +421,18 @@ $(document).on('click', '.approve-subtask', function(e) {
                     }
                 },
                 error: function(xhr) {
-                    Swal.fire('Error', 'An error occurred', 'error');
-                    $btn.prop('disabled', false);
+                    let errMsg = xhr.responseJSON?.message || 'An error occurred';
+                    Swal.fire('Error', errMsg, 'error');
+                    $btn.html(originalHtml).prop('disabled', false);
                 }
             });
         }
     });
 });
 
-// Handle approve subtask form submission (with score)
+// ====================================================
+// Handle: HOD Approve Sub-task (with score modal)
+// ====================================================
 $(document).on('submit', '.approve-subtask-form', function(e) {
     e.preventDefault();
     const $form = $(this);
@@ -363,6 +461,9 @@ $(document).on('submit', '.approve-subtask-form', function(e) {
                 }).then(() => {
                     location.reload();
                 });
+            } else {
+                Swal.fire('Error', response.message || 'Could not approve sub-task', 'error');
+                $submitBtn.html(originalHtml).prop('disabled', false);
             }
         },
         error: function(xhr) {
@@ -415,5 +516,88 @@ $(document).on('change', '.filter-member, .filter-status', function() {
             '<tr class="no-results-row"><td colspan="7" class="text-center text-muted py-3">No subtasks match the selected filters.</td></tr>'
         );
     }
+    });
+});
+
+// ====================================================
+// Handle: Submit Evidence for Admin Review (task-level)
+// ====================================================
+$(document).on('submit', '.submit-progress-form', function(e) {
+    e.preventDefault();
+    const $form = $(this);
+    const $submitBtn = $form.find('button[type="submit"]');
+    const originalHtml = $submitBtn.html();
+    const $overlay = $form.find('.sending-overlay');
+
+    $overlay.slideDown(200);
+    $submitBtn.html('<i class="fa fa-spinner fa-spin"></i> Submitting...').prop('disabled', true);
+
+    $.ajax({
+        url: $form.attr('action'),
+        method: 'POST',
+        data: new FormData(this),
+        processData: false,
+        contentType: false,
+        headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
+        success: function(response) {
+            if (response.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Submitted!',
+                    text: response.message || 'Evidence submitted for Admin review.',
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => location.reload());
+            } else {
+                Swal.fire('Error', response.message || 'Could not submit', 'error');
+                $overlay.slideUp(200);
+                $submitBtn.html(originalHtml).prop('disabled', false);
+            }
+        },
+        error: function(xhr) {
+            let errMsg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to submit evidence';
+            Swal.fire('Error', errMsg, 'error');
+            $overlay.slideUp(200);
+            $submitBtn.html(originalHtml).prop('disabled', false);
+        }
+    });
+});
+
+// ====================================================
+// Handle: Evaluate Task (HOD/Admin scoring)
+// ====================================================
+$(document).on('submit', '.evaluate-task-form', function(e) {
+    e.preventDefault();
+    const $form = $(this);
+    const $submitBtn = $form.find('.eval-submit-btn');
+    const originalHtml = $submitBtn.html();
+
+    $submitBtn.html('<i class="fa fa-spinner fa-spin"></i> Saving...').prop('disabled', true);
+
+    $.ajax({
+        url: $form.attr('action'),
+        method: 'POST',
+        data: $form.serialize(),
+        headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
+        success: function(response) {
+            if (response.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Saved!',
+                    text: response.message || 'Evaluation saved.',
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => location.reload());
+            } else {
+                Swal.fire('Error', response.message || 'Could not save evaluation', 'error');
+                $submitBtn.html(originalHtml).prop('disabled', false);
+            }
+        },
+        error: function(xhr) {
+            let errMsg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to save evaluation';
+            Swal.fire('Error', errMsg, 'error');
+            $submitBtn.html(originalHtml).prop('disabled', false);
+        }
+    });
 });
 </script>

@@ -144,21 +144,11 @@ class SgpmPerformanceController extends Controller
         $subtask->hod_comments = $request->hod_comments;
         $subtask->save();
 
-        // Update task progress
-        $task = $subtask->task;
-        $totalApprovedProgress = $task->subtasks()->where('status', 'Approved')->sum('achieved_score');
-        $task->progress = $totalApprovedProgress;
-        
-        if ($task->progress >= $task->weight) {
-            $task->status = 'Completed';
-            $task->completion_date = now();
-        } else {
-            $task->status = 'In Progress';
-        }
-        $task->save();
+        // Update progress
+        $this->updateTaskProgress($subtask->task);
 
         // Update departmental objective progress
-        $this->updateObjectiveProgress($task);
+        $task = $subtask->task;
 
         // Notify & SMS
         $user = $task->assignee;
@@ -187,10 +177,32 @@ class SgpmPerformanceController extends Controller
     {
         $subtask = SgpmSubtask::findOrFail($id);
         $subtask->status = 'Rejected';
+        $subtask->achieved_score = 0; // Reset score if rejected
         $subtask->hod_comments = $request->hod_comments ?? null;
         $subtask->save();
 
-        return response()->json(['success' => true, 'message' => 'Sub-task rejected.']);
+        // Update task progress
+        $this->updateTaskProgress($subtask->task);
+
+        return response()->json(['success' => true, 'message' => 'Sub-task rejected and progress updated.']);
+    }
+
+    private function updateTaskProgress($task)
+    {
+        $totalApprovedProgress = $task->subtasks()->where('status', 'Approved')->sum('achieved_score');
+        $task->progress = $totalApprovedProgress;
+        
+        // If progress reaches task weight, mark as completed
+        if ($task->progress >= $task->weight) {
+            $task->status = 'Completed';
+            $task->completion_date = now();
+        } else {
+            $task->status = 'In Progress';
+        }
+        $task->save();
+
+        // Update Departmental Objective Progress
+        $this->updateObjectiveProgress($task);
     }
 
     /**
@@ -208,6 +220,9 @@ class SgpmPerformanceController extends Controller
 
         if ($totalWeight > 0 && $totalProgress >= $totalWeight) {
             $objective->status = 'Completed';
+            $objective->save();
+        } else {
+            $objective->status = 'In Progress';
             $objective->save();
         }
     }

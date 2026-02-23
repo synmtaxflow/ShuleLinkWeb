@@ -265,6 +265,8 @@ class SgpmTaskController extends Controller
     {
         $subtask = SgpmSubtask::findOrFail($id);
         $subtask->status = 'Submitted';
+        $subtask->achieved_score = 0;     // Reset on resubmission
+        $subtask->hod_comments = null;    // Clear previous rejection comments
         $subtask->save();
 
         // Notify HOD
@@ -306,19 +308,10 @@ class SgpmTaskController extends Controller
         $subtask->hod_comments = $request->hod_comments;
         $subtask->save();
 
-        // Update task progress using achieved scores
-        $task = $subtask->task;
-        $totalApprovedProgress = $task->subtasks()->where('status', 'Approved')->sum('achieved_score');
-        $task->progress = $totalApprovedProgress;
-        
-        // If progress reaches task weight, mark as completed
-        if ($task->progress >= $task->weight) {
-            $task->status = 'Completed';
-            $task->completion_date = now();
-        } else {
-            $task->status = 'In Progress';
-        }
-        $task->save();
+        // Update progress
+        $this->updateTaskProgress($subtask->task);
+
+        $task = $subtask->fresh()->task; // Refresh to get updated progress
 
         // Notify the staff/teacher
         $user = $task->assignee;
@@ -345,8 +338,50 @@ class SgpmTaskController extends Controller
     {
         $subtask = SgpmSubtask::findOrFail($id);
         $subtask->status = 'Rejected';
+        $subtask->achieved_score = 0; // Reset score if rejected
+        $subtask->hod_comments = $request->hod_comments ?? null;
         $subtask->save();
 
-        return response()->json(['success' => true, 'message' => 'Sub-task rejected.']);
+        // Update task progress
+        $this->updateTaskProgress($subtask->task);
+
+        return response()->json(['success' => true, 'message' => 'Sub-task rejected and progress updated.']);
+    }
+
+    private function updateTaskProgress($task)
+    {
+        $totalApprovedProgress = $task->subtasks()->where('status', 'Approved')->sum('achieved_score');
+        $task->progress = $totalApprovedProgress;
+        
+        // If progress reaches task weight, mark as completed
+        if ($task->progress >= $task->weight) {
+            $task->status = 'Completed';
+            $task->completion_date = now();
+        } else {
+            $task->status = 'In Progress';
+        }
+        $task->save();
+
+        // Update Departmental Objective Progress
+        $this->updateObjectiveProgress($task);
+    }
+
+    private function updateObjectiveProgress($task)
+    {
+        $objective = $task->actionPlan->objective;
+        $allTasks = SgpmTask::whereHas('actionPlan', function($q) use ($objective) {
+            $q->where('objectiveID', $objective->objectiveID);
+        })->get();
+
+        $totalWeight = $allTasks->sum('weight');
+        $totalProgress = $allTasks->sum('progress');
+
+        if ($totalWeight > 0 && $totalProgress >= $totalWeight) {
+            $objective->status = 'Completed';
+            $objective->save();
+        } else {
+            $objective->status = 'In Progress';
+            $objective->save();
+        }
     }
 }

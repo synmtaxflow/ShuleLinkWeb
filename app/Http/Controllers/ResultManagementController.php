@@ -1406,7 +1406,9 @@ class ResultManagementController extends Controller
         }
 
         // Initialize message parts
+        // Initialize results collection to prevent undefined variable error later
         $resultsString = "";
+        $results = collect();
 
         $type = $request->input('type', 'exam');
         $term = $request->input('term');
@@ -1486,7 +1488,7 @@ class ResultManagementController extends Controller
         $actualExamID = ($examID && $examID !== '1' && $examID !== 'null') ? $examID : null;
         
         // If we have results, use the examID from the first result if the provided one was generic
-        if (!$actualExamID && !$results->isEmpty()) {
+        if (!$actualExamID && isset($results) && !$results->isEmpty()) {
             $actualExamID = $results->first()->examID;
         }
 
@@ -1527,7 +1529,8 @@ class ResultManagementController extends Controller
         $posInfo = ($position && $totalStudentsCount) ? "Nafasi: {$position}/{$totalStudentsCount}. " : "";
         $divInfo = $division ? " Div: {$division}." : "";
         
-        $message = "{$schoolName}: Matokeo ya {$studentFirstName} ({$className}). {$posInfo} {$resultsString}.{$divInfo}";
+        $periodInfo = $weekLabel ? " kwa {$weekLabel}" : "";
+        $message = "{$schoolName}: Matokeo ya {$studentFirstName} ({$className}){$periodInfo}. {$posInfo} {$resultsString}.{$divInfo}";
 
         try {
             $smsService = new SmsService();

@@ -156,6 +156,7 @@
             <form id="approveForm">
                 @csrf
                 <input type="hidden" name="id" id="approve_subtask_id">
+                <input type="hidden" name="action" id="approve_action_val" value="Approve">
                 <div class="modal-body">
                     <p class="mb-3">Subtask: <b id="approve_subtask_name"></b></p>
                     <div class="form-group">
@@ -243,7 +244,10 @@ $(document).ready(function() {
                                             </div>
                                          ` : `
                                             <div class="text-muted small italic">Not yet marked</div>
-                                            <button class="btn btn-sm btn-success btn-approve-now" data-id="${s.id}" data-name="${s.subtask_name}" data-max="${s.weight}">Approve & Mark</button>
+                                             <div class="btn-group">
+                                                <button class="btn btn-sm btn-success btn-approve-now" data-id="${s.id}" data-name="${s.subtask_name}" data-max="${s.weight}">Approve & Mark</button>
+                                                <button class="btn btn-sm btn-danger btn-reject-now ml-1" data-id="${s.id}" data-name="${s.subtask_name}">Reject</button>
+                                             </div>
                                          `}
                                     </div>
                                 </div>
@@ -264,11 +268,45 @@ $(document).ready(function() {
         const current = $(this).data('marks') || '';
 
         $('#approve_subtask_id').val(id);
+        $('#approve_action_val').val('Approve');
         $('#approve_subtask_name').text(name);
         $('#max_marks_display').text(max);
         $('#approve_marks_input').val(current).attr('max', max);
         
         $('#approveSubtaskModal').modal('show');
+    });
+
+    $(document).on('click', '.btn-reject-now', function() {
+        const id = $(this).data('id');
+        const name = $(this).data('name');
+
+        Swal.fire({
+            title: 'Reject Subtask?',
+            text: `Are you sure you want to reject "${name}"? It will be returned to the teacher as a Draft for corrections.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, Reject'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.post('{{ route("goals.review.approve") }}', {
+                    _token: '{{ csrf_token() }}',
+                    id: id,
+                    action: 'Reject'
+                }, function(res) {
+                    if (res.success) {
+                        Swal.fire('Rejected!', res.message, 'success').then(() => location.reload());
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                }).fail(function(xhr) {
+                    let msg = 'Something went wrong on the server.';
+                    if(xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+                    Swal.fire('Error', msg, 'error');
+                });
+            }
+        });
     });
 
     $('#approveForm').submit(function(e) {
@@ -280,14 +318,16 @@ $(document).ready(function() {
             if(response.success) {
                 Swal.fire('Success', response.message, 'success');
                 $('#approveSubtaskModal').modal('hide');
-                // Reload performance content
-                loadMemberPerformance($('.btn-view-performance[data-id]').first().data('id')); // Simple hack, better tracking needed
-                // Better approach: store current memberTaskId in a global var
-                location.reload(); // Refresh to update main cards too
+                location.reload(); 
             } else {
                 $btn.prop('disabled', false).text('Approve & Save Marks');
                 Swal.fire('Error', response.message, 'error');
             }
+        }).fail(function(xhr) {
+            $btn.prop('disabled', false).text('Approve & Save Marks');
+            let msg = 'Something went wrong on the server.';
+            if(xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+            Swal.fire('Error', msg, 'error');
         });
     });
 
@@ -304,7 +344,13 @@ $(document).ready(function() {
                 $.post('{{ url("goals/review/reset-marks") }}/' + id, {_token: '{{ csrf_token() }}'}, function(response) {
                     if (response.success) {
                         location.reload();
+                    } else {
+                        Swal.fire('Error', response.message, 'error');
                     }
+                }).fail(function(xhr) {
+                    let msg = 'Something went wrong on the server.';
+                    if(xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+                    Swal.fire('Error', msg, 'error');
                 });
             }
         });
