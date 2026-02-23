@@ -5093,7 +5093,67 @@ class ManageExaminationController extends Controller
         return response()->json(['success' => true, 'count' => $count]);
     }
 
+    public function getRecentExamPaperNotifications()
+    {
+        $userType = Session::get('user_type');
+        $schoolID = Session::get('schoolID');
+
+        if ($userType !== 'Admin' || ! $schoolID) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $teacherHasImage = \Illuminate\Support\Facades\Schema::hasColumn('teachers', 'image');
+        $teacherHasGender = \Illuminate\Support\Facades\Schema::hasColumn('teachers', 'gender');
+
+        $notifications = DB::table('exam_paper_notifications')
+            ->join('exam_papers', 'exam_paper_notifications.exam_paperID', '=', 'exam_papers.exam_paperID')
+            ->join('examinations', 'exam_papers.examID', '=', 'examinations.examID')
+            ->join('class_subjects', 'exam_papers.class_subjectID', '=', 'class_subjects.class_subjectID')
+            ->join('school_subjects', 'class_subjects.subjectID', '=', 'school_subjects.subjectID')
+            ->leftJoin('subclasses', 'class_subjects.subclassID', '=', 'subclasses.subclassID')
+            ->leftJoin('classes', 'class_subjects.classID', '=', 'classes.classID')
+            ->join('teachers', 'exam_paper_notifications.teacherID', '=', 'teachers.id')
+            ->where('exam_paper_notifications.schoolID', $schoolID)
+            ->where(function($query) {
+                $query->whereNotNull('exam_papers.file_path')
+                      ->orWhereNotNull('exam_papers.question_content');
+            })
+            ->orderBy('exam_paper_notifications.created_at', 'desc')
+            ->limit(5);
+
+        $selectColumns = [
+            'exam_paper_notifications.exam_paper_notificationID',
+            'exam_paper_notifications.created_at',
+            'exam_paper_notifications.is_read',
+            'examinations.exam_name',
+            'school_subjects.subject_name',
+            'classes.class_name',
+            'subclasses.subclass_name',
+            'teachers.first_name',
+            'teachers.last_name',
+        ];
+        if ($teacherHasImage) $selectColumns[] = 'teachers.image';
+        if ($teacherHasGender) $selectColumns[] = 'teachers.gender';
+
+        $notes = $notifications->get($selectColumns)->map(function($note) {
+            $created = \Carbon\Carbon::parse($note->created_at);
+            $note->time_label = $created->isToday() ? $created->diffForHumans() : $created->format('d M Y');
+            $note->teacher_name = trim(($note->first_name ?? '') . ' ' . ($note->last_name ?? ''));
+            $note->class_display = trim(($note->class_name ?? '') . ' ' . ($note->subclass_name ?? ''));
+            
+            $gender = strtolower($note->gender ?? '');
+            $note->photo_url = !empty($note->image ?? null)
+                ? asset('userImages/'.$note->image)
+                : ($gender === 'female' ? asset('images/female.png') : asset('images/male.png'));
+            
+            return $note;
+        });
+
+        return response()->json(['success' => true, 'notifications' => $notes]);
+    }
+
     public function getExamPaperNotificationCountsByExam()
+
     {
         $userType = Session::get('user_type');
         $schoolID = Session::get('schoolID');

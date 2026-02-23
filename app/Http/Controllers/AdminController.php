@@ -3406,4 +3406,63 @@ class AdminController extends Controller
             return response()->json(['success' => false, 'error' => $e->getMessage()]);
         }
     }
+
+    public function getVisitorNotificationCount()
+    {
+        $isAdmin = Session::get('user_type') === 'Admin';
+        $schoolID = Session::get('schoolID');
+        if (!$isAdmin || !$schoolID) {
+            return response()->json(['success' => false, 'error' => 'Unauthorized'], 403);
+        }
+
+        $lastSeen = Session::get('visitors_last_seen');
+        $lastSeenAt = $lastSeen ? Carbon::parse($lastSeen) : Carbon::createFromTimestamp(0);
+
+        $count = DB::table('school_visitors')
+            ->where('schoolID', $schoolID)
+            ->where('created_at', '>', $lastSeenAt)
+            ->count();
+
+        return response()->json(['success' => true, 'count' => $count]);
+    }
+
+    public function markVisitorNotificationsRead()
+    {
+        $isAdmin = Session::get('user_type') === 'Admin';
+        if (!$isAdmin) {
+            return response()->json(['success' => false, 'error' => 'Unauthorized'], 403);
+        }
+
+        Session::put('visitors_last_seen', now()->toDateTimeString());
+        return response()->json(['success' => true]);
+    }
+
+    public function getRecentVisitors()
+    {
+        $isAdmin = Session::get('user_type') === 'Admin';
+        $schoolID = Session::get('schoolID');
+        if (!$isAdmin || !$schoolID) {
+            return response()->json(['success' => false, 'error' => 'Unauthorized'], 403);
+        }
+
+        $lastSeenAt = Session::get('visitors_last_seen');
+        
+        $visitors = DB::table('school_visitors')
+            ->where('schoolID', $schoolID)
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get()
+            ->map(function($visitor) use ($lastSeenAt) {
+                $created = Carbon::parse($visitor->created_at);
+                $visitor->time_label = $created->isToday() 
+                    ? $created->diffForHumans() 
+                    : $created->format('d M Y');
+                $visitor->is_new = $lastSeenAt ? $created->gt(Carbon::parse($lastSeenAt)) : true;
+                return $visitor;
+            });
+
+        return response()->json(['success' => true, 'visitors' => $visitors]);
+    }
 }
+
+

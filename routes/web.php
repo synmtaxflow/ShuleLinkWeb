@@ -570,6 +570,11 @@ Route::post('admin/school-visitors/store', [AdminController::class, 'storeSchool
 Route::post('admin/school-visitors/update', [AdminController::class, 'updateSchoolVisitor'])->name('admin.school_visitors.update');
 Route::post('admin/school-visitors/delete', [AdminController::class, 'deleteSchoolVisitor'])->name('admin.school_visitors.delete');
 Route::post('admin/school-visitors/sms', [AdminController::class, 'sendVisitorSms'])->name('admin.school_visitors.sms');
+Route::get('admin/visitor-notifications-count', [AdminController::class, 'getVisitorNotificationCount'])->name('admin.visitor_notifications_count');
+Route::get('admin/get-recent-visitors', [AdminController::class, 'getRecentVisitors'])->name('admin.get_recent_visitors');
+Route::post('admin/mark-visitor-notifications-read', [AdminController::class, 'markVisitorNotificationsRead'])->name('admin.mark_visitor_notifications_read');
+
+
 Route::post('damaged-lost', [AdminController::class, 'storeDamagedLostRecord'])->name('damaged_lost.store');
 Route::post('damaged-lost/update', [AdminController::class, 'updateDamagedLostRecord'])->name('damaged_lost.update');
 Route::post('damaged-lost/delete', [AdminController::class, 'deleteDamagedLostRecord'])->name('damaged_lost.delete');
@@ -627,7 +632,9 @@ Route::get('get_exam_paper_questions/{examPaperID}', [ManageExaminationControlle
 Route::post('update_exam_paper_questions/{examPaperID}', [ManageExaminationController::class, 'updateExamPaperQuestions'])->name('update_exam_paper_questions');
 Route::post('mark_exam_paper_notifications_read', [ManageExaminationController::class, 'markExamPaperNotificationsRead'])->name('mark_exam_paper_notifications_read');
 Route::get('admin/exam-paper-notifications-count', [ManageExaminationController::class, 'getExamPaperNotificationCount'])->name('admin.exam_paper_notifications_count');
+Route::get('admin/get-recent-exam-paper-notifications', [ManageExaminationController::class, 'getRecentExamPaperNotifications'])->name('admin.get_recent_exam_paper_notifications');
 Route::get('admin/exam-paper-notifications-by-exam', [ManageExaminationController::class, 'getExamPaperNotificationCountsByExam'])->name('admin.exam_paper_notifications_by_exam');
+
 Route::post('admin/mark-exam-paper-notifications-read/{examID}', [ManageExaminationController::class, 'markExamPaperNotificationsReadForExam'])->name('admin.mark_exam_paper_notifications_read_exam');
 Route::get('get_exam_papers/{examID}', [ManageExaminationController::class, 'getExamPapers'])->name('get_exam_papers');
 Route::get('teacher/get-exam-paper-summary/{examID}', [ManageExaminationController::class, 'getTeacherExamPaperSummary'])->name('teacher.get_exam_paper_summary');

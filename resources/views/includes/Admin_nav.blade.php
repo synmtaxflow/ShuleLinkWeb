@@ -815,32 +815,35 @@
                             <button class="btn btn-secondary dropdown-toggle position-relative" type="button" id="notification" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 <i class="fa fa-bell-o header-icon-muted"></i>
                                 @if($newVisitorCount > 0)
-                                    <span class="count bg-danger notification-count">{{ $newVisitorCount }}</span>
+                                    <span class="count bg-danger notification-count" id="visitorNotificationCount">{{ $newVisitorCount }}</span>
                                 @endif
                             </button>
                             <div class="dropdown-menu" aria-labelledby="notification">
-                                <p class="red">New Visitors: {{ $newVisitorCount }}</p>
-                                @if($newVisitorCount === 0)
-                                    <span class="dropdown-item text-muted">No new visitor notifications.</span>
-                                @else
-                                    @foreach($recentVisitors as $visitor)
-                                        @php
-                                            $created = \Carbon\Carbon::parse($visitor->created_at);
-                                            $timeLabel = $created->isToday()
-                                                ? $created->diffForHumans()
-                                                : $created->format('d M Y');
-                                        @endphp
-                                        <a class="dropdown-item media" href="{{ route('admin.school_visitors') }}">
-                                            <i class="fa fa-user"></i>
-                                            <p>
-                                                {{ $visitor->name }}<br>
-                                                <small>{{ $visitor->reason ?? 'N/A' }} | {{ $visitor->contact ?? 'N/A' }}</small>
-                                                <span class="time float-right">{{ $timeLabel }}</span>
-                                            </p>
-                                        </a>
-                                    @endforeach
-                                @endif
+                                <p class="red" id="visitorNotificationHeader">New Visitors: {{ $newVisitorCount }}</p>
+                                <div id="visitorNotificationList">
+                                    @if($newVisitorCount === 0)
+                                        <span class="dropdown-item text-muted">No new visitor notifications.</span>
+                                    @else
+                                        @foreach($recentVisitors as $visitor)
+                                            @php
+                                                $created = \Carbon\Carbon::parse($visitor->created_at);
+                                                $timeLabel = $created->isToday()
+                                                    ? $created->diffForHumans()
+                                                    : $created->format('d M Y');
+                                            @endphp
+                                            <a class="dropdown-item media" href="{{ route('admin.school_visitors') }}">
+                                                <i class="fa fa-user"></i>
+                                                <p>
+                                                    {{ $visitor->name }}<br>
+                                                    <small>{{ $visitor->reason ?? 'N/A' }} | {{ $visitor->contact ?? 'N/A' }}</small>
+                                                    <span class="time float-right">{{ $timeLabel }}</span>
+                                                </p>
+                                            </a>
+                                        @endforeach
+                                    @endif
+                                </div>
                             </div>
+
                         </div>
 
                         @include('includes.sgpm_notifications')
@@ -915,36 +918,39 @@
                             </button>
                             <div class="dropdown-menu" aria-labelledby="message" id="examPaperNotificationsMenu">
                                 <p class="red">Exam Paper Notifications</p>
-                                @if($examPaperNotifications->isEmpty())
-                                    <span class="dropdown-item text-muted">No new exam paper notifications.</span>
-                                @else
-                                    @foreach($examPaperNotifications as $note)
-                                        @php
-                                            $created = \Carbon\Carbon::parse($note->created_at);
-                                            $timeLabel = $created->isToday() ? $created->diffForHumans() : $created->format('d M Y');
-                                            $teacherName = trim(($note->first_name ?? '') . ' ' . ($note->last_name ?? ''));
-                                            $classDisplay = trim(($note->class_name ?? '') . ' ' . ($note->subclass_name ?? ''));
-                                            $teacherGender = strtolower($note->gender ?? '');
-                                            $photoUrl = !empty($note->image ?? null)
-                                                ? asset('userImages/'.$note->image)
-                                                : ($teacherGender === 'female' ? asset('images/female.png') : asset('images/male.png'));
-                                            $isUnread = isset($note->is_read) ? !((int) $note->is_read === 1) : false;
-                                        @endphp
-                                        <a class="dropdown-item media" href="{{ route('manageExamination') }}">
-                                            <span class="photo media-left"><img alt="avatar" src="{{ $photoUrl }}"></span>
-                                            <span class="message media-body">
-                                                <span class="name float-left">{{ $teacherName }}</span>
-                                                @if($isUnread)
-                                                    <span class="badge badge-danger ml-2">New</span>
-                                                @endif
-                                                <span class="time float-right">{{ $timeLabel }}</span>
-                                                <p>New exam paper: {{ $note->exam_name }} | {{ $note->subject_name }} | {{ $classDisplay }}</p>
-                                            </span>
-                                        </a>
-                                    @endforeach
-                                @endif
+                                <div id="examPaperNotificationList">
+                                    @if($examPaperNotifications->isEmpty())
+                                        <span class="dropdown-item text-muted">No new exam paper notifications.</span>
+                                    @else
+                                        @foreach($examPaperNotifications as $note)
+                                            @php
+                                                $created = \Carbon\Carbon::parse($note->created_at);
+                                                $timeLabel = $created->isToday() ? $created->diffForHumans() : $created->format('d M Y');
+                                                $teacherName = trim(($note->first_name ?? '') . ' ' . ($note->last_name ?? ''));
+                                                $classDisplay = trim(($note->class_name ?? '') . ' ' . ($note->subclass_name ?? ''));
+                                                $teacherGender = strtolower($note->gender ?? '');
+                                                $photoUrl = !empty($note->image ?? null)
+                                                    ? asset('userImages/'.$note->image)
+                                                    : ($teacherGender === 'female' ? asset('images/female.png') : asset('images/male.png'));
+                                                $isUnread = isset($note->is_read) ? !((int) $note->is_read === 1) : false;
+                                            @endphp
+                                            <a class="dropdown-item media" href="{{ route('manageExamination') }}">
+                                                <span class="photo media-left"><img alt="avatar" src="{{ $photoUrl }}"></span>
+                                                <span class="message media-body">
+                                                    <span class="name float-left">{{ $teacherName }}</span>
+                                                    @if($isUnread)
+                                                        <span class="badge badge-danger ml-2">New</span>
+                                                    @endif
+                                                    <span class="time float-right">{{ $timeLabel }}</span>
+                                                    <p>New exam paper: {{ $note->exam_name }} | {{ $note->subject_name }} | {{ $classDisplay }}</p>
+                                                </span>
+                                            </a>
+                                        @endforeach
+                                    @endif
+                                </div>
                                 <a class="dropdown-item text-center" href="{{ route('manageExamination') }}">View all exam papers</a>
                             </div>
+
                         </div>
                     </div>
                 </div>
@@ -1323,7 +1329,86 @@ function initializeMenuDropdowns() {
     });
 }
 
+function initializeVisitorNotifications() {
+    if (typeof window.jQuery === 'undefined') {
+        setTimeout(initializeVisitorNotifications, 100);
+        return;
+    }
+    var $ = window.jQuery;
+    $('#notification').off('show.bs.dropdown.visitor').on('show.bs.dropdown.visitor', function() {
+        $.ajax({
+            url: '{{ route("admin.mark_visitor_notifications_read") }}',
+            method: 'POST',
+            data: { _token: $('meta[name="csrf-token"]').attr('content') },
+            success: function() {
+                $('#visitorNotificationCount').remove();
+                $('#visitorNotificationHeader').text('New Visitors: 0');
+            }
+        });
+    });
+}
+
+function updateVisitorNotificationCount() {
+    if (typeof window.jQuery === 'undefined') {
+        return;
+    }
+    var $ = window.jQuery;
+    $.get('{{ route("admin.visitor_notifications_count") }}', function(response) {
+        if (!response || response.success !== true) {
+            return;
+        }
+        const count = parseInt(response.count || 0, 10);
+        const $button = $('#notification');
+        const $badge = $('#visitorNotificationCount');
+
+        if (count > 0) {
+            if ($badge.length) {
+                $badge.text(count);
+            } else {
+                $button.append(`<span class="count bg-danger notification-count" id="visitorNotificationCount">${count}</span>`);
+            }
+            $('#visitorNotificationHeader').text('New Visitors: ' + count);
+            
+            // Also refresh the visitor list if there are new ones
+            fetchRecentVisitors();
+        } else {
+            $badge.remove();
+            $('#visitorNotificationHeader').text('New Visitors: 0');
+        }
+    });
+}
+
+function fetchRecentVisitors() {
+    var $ = window.jQuery;
+    $.get('{{ route("admin.get_recent_visitors") }}', function(response) {
+        if (!response || response.success !== true) return;
+        
+        const $list = $('#visitorNotificationList');
+        if (response.visitors.length === 0) {
+            $list.html('<span class="dropdown-item text-muted">No new visitor notifications.</span>');
+            return;
+        }
+
+        let html = '';
+        response.visitors.forEach(visitor => {
+            html += `
+                <a class="dropdown-item media" href="{{ route('admin.school_visitors') }}">
+                    <i class="fa fa-user"></i>
+                    <p>
+                        ${visitor.name}<br>
+                        <small>${visitor.reason || 'N/A'} | ${visitor.contact || 'N/A'}</small>
+                        <span class="time float-right">${visitor.time_label}</span>
+                    </p>
+                </a>
+            `;
+        });
+        $list.html(html);
+    });
+}
+
+
 function initializeExamPaperNotifications() {
+
     if (typeof window.jQuery === 'undefined') {
         setTimeout(initializeExamPaperNotifications, 100);
         return;
@@ -1360,11 +1445,45 @@ function updateExamPaperNotificationCount() {
             } else {
                 $button.append(`<span class="count bg-primary" id="examPaperNotificationCount">${count}</span>`);
             }
+            
+            // Also refresh the exam paper list if there are new ones
+            fetchRecentExamPaperNotifications();
         } else {
             $badge.remove();
         }
     });
 }
+
+function fetchRecentExamPaperNotifications() {
+    var $ = window.jQuery;
+    $.get('{{ route("admin.get_recent_exam_paper_notifications") }}', function(response) {
+        if (!response || response.success !== true) return;
+        
+        const $list = $('#examPaperNotificationList');
+        if (response.notifications.length === 0) {
+            $list.html('<span class="dropdown-item text-muted">No new exam paper notifications.</span>');
+            return;
+        }
+
+        let html = '';
+        response.notifications.forEach(note => {
+            const isUnread = parseInt(note.is_read) === 0;
+            html += `
+                <a class="dropdown-item media" href="{{ route('manageExamination') }}">
+                    <span class="photo media-left"><img alt="avatar" src="${note.photo_url}"></span>
+                    <span class="message media-body">
+                        <span class="name float-left">${note.teacher_name}</span>
+                        ${isUnread ? '<span class="badge badge-danger ml-2">New</span>' : ''}
+                        <span class="time float-right">${note.time_label}</span>
+                        <p>New exam paper: ${note.exam_name} | ${note.subject_name} | ${note.class_display}</p>
+                    </span>
+                </a>
+            `;
+        });
+        $list.html(html);
+    });
+}
+
 
 function loadScriptOnce(src, onLoad) {
     if (document.querySelector('script[src="' + src + '"]')) {
@@ -1404,8 +1523,14 @@ function ensureJqueryAndBootstrap(callback) {
 document.addEventListener('DOMContentLoaded', function() {
     ensureJqueryAndBootstrap(function() {
         initializeMenuDropdowns();
+        initializeVisitorNotifications();
         initializeExamPaperNotifications();
+        updateVisitorNotificationCount();
         updateExamPaperNotificationCount();
+        
+        // Setup intervals for polling (every 30 seconds)
+        setInterval(updateVisitorNotificationCount, 30000);
+        setInterval(updateExamPaperNotificationCount, 30000);
     });
 });
 
@@ -1414,7 +1539,9 @@ window.addEventListener('pageshow', function(event) {
     if (event.persisted) {
         ensureJqueryAndBootstrap(function() {
             initializeMenuDropdowns();
+            initializeVisitorNotifications();
             initializeExamPaperNotifications();
+            updateVisitorNotificationCount();
             updateExamPaperNotificationCount();
         });
     }
@@ -1424,7 +1551,9 @@ window.addEventListener('pageshow', function(event) {
 setTimeout(function() {
     ensureJqueryAndBootstrap(function() {
         initializeMenuDropdowns();
+        initializeVisitorNotifications();
         initializeExamPaperNotifications();
+        updateVisitorNotificationCount();
         updateExamPaperNotificationCount();
     });
 }, 500);
